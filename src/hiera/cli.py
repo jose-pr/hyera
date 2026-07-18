@@ -1,6 +1,6 @@
 """Command-line interface for hiera, built on duho.
 
-``hiera lookup KEY --config hiera.yaml --scope environment=production``
+``hiera KEY --config hiera.yaml --scope environment=production``
 
 Designed for unattended use: no interactive prompts, deterministic output,
 and meaningful exit codes (0 found, 1 missing, 2 usage/config error).
@@ -22,6 +22,13 @@ _LOGGER = _logging.getLogger("hiera")
 _MERGE_TYPES = {"array": list, "hash": dict, "set": set}
 
 
+class _ScopeError(ValueError):
+    """A ``--scope`` entry was not in ``key=value`` form."""
+
+    def __init__(self, item: str):
+        super().__init__("invalid --scope {!r} (expected key=value)".format(item))
+
+
 def _parse_scope(items: "_ty.Iterable[str]") -> dict:
     """Parse ``key=value`` scope entries into a context dict."""
     context: dict = {}
@@ -29,7 +36,7 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
         if not item:
             continue
         if "=" not in item:
-            raise SystemExit("hiera: invalid --scope {!r} (expected key=value)".format(item))
+            raise _ScopeError(item)
         k, v = item.split("=", 1)
         context[k] = v
     return context
@@ -67,7 +74,11 @@ class Lookup(duho.LoggingArgs, duho.Cli):
     """Value to print when the key is missing (otherwise exit 1)."""
 
     def __call__(self) -> int:
-        context = _parse_scope(self.scope)
+        try:
+            context = _parse_scope(self.scope)
+        except _ScopeError as e:
+            _LOGGER.error("%s", e)
+            return 2
         try:
             hiera = Hiera(self.config, context=context)
         except HieraError as e:

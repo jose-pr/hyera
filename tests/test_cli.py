@@ -39,6 +39,21 @@ def test_array_merge_json_output(hiera_root, capsys):
     assert json.loads(capsys.readouterr().out) == ["prod", "web", "base"]
 
 
-def test_invalid_scope_exits(hiera_root):
-    with pytest.raises(SystemExit):
-        main(["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "noequals"])
+def test_invalid_scope_exit_2(hiera_root):
+    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "noequals"])
+    assert rc == 2
+
+
+def test_module_entrypoint_smoke():
+    # `python -m hiera` wires through to cli.main.
+    import runpy
+    import sys
+
+    argv = sys.argv
+    sys.argv = ["hiera", "--help"]
+    try:
+        with pytest.raises(SystemExit) as exc:
+            runpy.run_module("hiera", run_name="__main__")
+        assert exc.value.code == 0  # --help exits 0
+    finally:
+        sys.argv = argv
