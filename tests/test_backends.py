@@ -44,6 +44,18 @@ def test_json_backend_loads(tmp_path):
     assert h.get("k") == "v"
 
 
+def test_json_backend_via_alias(tmp_path):
+    # The short `json` data_hash alias resolves the same backend.
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.json").write_text(json.dumps({"k": "aliased"}))
+    (tmp_path / "hiera.yaml").write_text(
+        "defaults:\n  data_hash: json\n  data_dir: data\n"
+        "hierarchy:\n  - name: c\n    path: common.json\n"
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    assert h.get("k") == "aliased"
+
+
 def test_datadir_key_accepts_both_spellings():
     assert YAMLBackend({"datadir": "d"}).datadir == "d"
     assert YAMLBackend({"data_dir": "d"}).datadir == "d"

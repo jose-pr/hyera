@@ -22,7 +22,10 @@ __all__ = [
 function = re.compile(
     r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
 )
-interpolate = re.compile(r"""%\{(?:::|)([^\}]*)\}""")
+# A bare ``%{var}`` reference. Excludes ``(`` so it does not also match a
+# function-style ``%{hiera('x')}`` token (those are handled by ``function``);
+# without this, an unresolved function leftover would be blanked here.
+interpolate = re.compile(r"""%\{(?:::|)([^(}]*)\}""")
 # A bare ``%{var}`` reference; the captured name becomes a ``{var}`` format
 # field. The character class allows the identifier chars Puppet permits.
 rformat = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
@@ -69,7 +72,11 @@ class Merge(object):
 
     def deep_merge(self, a, b):
         """Recursively merge dicts. When both ``a`` and ``b`` hold a dict at
-        the same key, recurse; lists are concatenated without duplicates."""
+        the same key, recurse; lists are concatenated without duplicates.
+
+        ``a`` is the higher-priority side (an earlier hierarchy level). When
+        both hold a scalar at the same key, ``a`` wins — later levels never
+        clobber a value an earlier level already provided."""
         if not isinstance(b, dict):
             return b
         result = deepcopy(a)
@@ -82,7 +89,9 @@ class Merge(object):
                     result[k] += deepcopy(v)
                 else:
                     result[k].append(v)
-            else:
+            elif k not in result:
+                # Key only in the lower-priority side; take it. An existing
+                # scalar in ``result`` (higher priority) is left untouched.
                 result[k] = deepcopy(v)
         return result
 
@@ -195,6 +204,8 @@ class Hiera(object):
 
         self.hierarchy: "list[HieraLevel]" = []
         self.cache: dict = {}
+        #: Per-context cache of resolved source path lists (see ``sources``).
+        self._source_cache: dict = {}
 
         self.load(backends or [YAMLBackend, SopsYAMLBackend, JSONBackend], base_path)
 
@@ -307,29 +318,43 @@ class Hiera(object):
                 )
 
         for call, arg in calls:
+            replace = None
             if call == "hiera" or call == "lookup":
-                replace = self.get_key(arg, paths, context, merge)
+                try:
+                    replace = self.get_key(arg, paths, context, merge)
+                except KeyError:
+                    replace = None
             elif call == "scope":
                 replace = context.get(arg)
             elif call == "literal":
                 replace = arg
             elif call == "alias":
                 raise InterpolationError("Invalid alias function call: `{}`".format(s))
+            else:  # pragma: no cover - guarded by the `function` regex
+                raise InterpolationError(
+                    "Unknown function call {!r} in: `{}`".format(call, s)
+                )
 
-            if not replace:
+            # Reject only a genuinely absent value; falsy results (0, "",
+            # False) are legitimate and must interpolate as themselves.
+            if replace is None:
                 raise InterpolationError(
                     "Could not resolve value for function call: `{}`".format(s)
                 )
 
-            if isinstance(replace, str):
-                # Replace only the current call; use a function replacement so
-                # backslashes/`\g` in the value are treated as literal text.
-                s = function.sub(lambda _m, r=replace: r, s, 1)
-            elif call == "scope":
+            # A function call standing alone as the whole value keeps the
+            # resolved value's native type (so `%{alias(...)}`-style single
+            # calls to a list/dict pass through). When it is embedded in a
+            # larger string, the resolved value is stringified.
+            if function.sub("", s) == "" and len(calls) == 1:
                 s = replace
+            elif isinstance(replace, (str, int, float, bool)):
+                text = str(replace)
+                s = function.sub(lambda _m, r=text: r, s, 1)
             else:
                 raise InterpolationError(
-                    "Resolved value is not a string for function call: `{}`".format(s)
+                    "Cannot interpolate non-scalar value {!r} into string: "
+                    "`{}`".format(replace, s)
                 )
 
         return s
@@ -422,8 +447,23 @@ class Hiera(object):
 
         When ``_load`` is True, existing files are parsed and cached and their
         cache-key paths returned; otherwise the raw candidate paths are yielded.
+
+        The filesystem walk (glob/iterdir/stat) is cached per resolved context
+        so a merge lookup across many keys does not re-walk the tree for each
+        key. This shares the staleness assumption of the parsed-content cache:
+        a single instance reflects the tree as first seen for a given context.
         """
         context = self.buildcontext(context, **kwargs)
+        try:
+            cache_key = (_load, frozenset(context.items()))
+        except TypeError:
+            # An unhashable context value (e.g. a list) — skip caching.
+            cache_key = None
+        if cache_key is not None:
+            cached = self._source_cache.get(cache_key)
+            if cached is not None:
+                return list(cached)
+
         files = []
         for level in self.hierarchy:
             for path in level.paths(self.base_path, context):
@@ -434,6 +474,8 @@ class Hiera(object):
                             files.append(self.load_file(path, level.backend))
                     else:
                         files.append(path)
+        if cache_key is not None:
+            self._source_cache[cache_key] = list(files)
         return files
 
     def get(

@@ -57,6 +57,18 @@ def test_literal_percent(hiera_root):
     assert h.get("literal_pct") == "100% done"
 
 
+def test_standalone_alias_preserves_list_type(hiera_root):
+    # A single stand-alone alias returns the referenced value's native type.
+    h = make(hiera_root, environment="production")
+    assert h.get("alias_list") == ["prod.pool.ntp.org"]
+
+
+def test_numeric_value_stringified_in_interpolation(hiera_root):
+    # An int resolved by %{hiera(...)} embedded in a string is stringified.
+    h = make(hiera_root, environment="production")
+    assert h.get("port_msg") == "listening on 5432"
+
+
 def test_array_merge_includes_glob_level(hiera_root):
     h = make(hiera_root, environment="production")
     merged = h.get("classes", merge=list)
@@ -88,6 +100,54 @@ def test_scoped_does_not_leak_context(hiera_root):
     h.scoped(environment="production")
     fresh = h.scoped()
     assert fresh.context == {}
+
+
+def test_falsy_values_are_returned(tmp_path):
+    # Regression: `%{hiera('x')}` where x is 0/""/False must resolve, not error.
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.yaml").write_text(
+        "zero: 0\n"
+        "empty: ''\n"
+        "flag: false\n"
+        "ref_zero: \"value=%{hiera('zero')}\"\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "hiera.yaml").write_text(
+        "defaults:\n  data_hash: yaml_data\n  data_dir: data\n"
+        "hierarchy:\n  - name: c\n    path: common.yaml\n",
+        encoding="utf-8",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    assert h.get("zero") == 0
+    assert h.get("empty") == ""
+    assert h.get("flag") is False
+    assert h.get("ref_zero") == "value=0"
+
+
+def test_deep_hash_merge(tmp_path):
+    (tmp_path / "data" / "environments").mkdir(parents=True)
+    (tmp_path / "data" / "common.yaml").write_text(
+        "conf:\n  db:\n    host: localhost\n    port: 5432\n  cache:\n    ttl: 60\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "data" / "environments" / "prod.yaml").write_text(
+        "conf:\n  db:\n    host: prod.db\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "hiera.yaml").write_text(
+        "defaults:\n  data_hash: yaml_data\n  data_dir: data\n"
+        "hierarchy:\n"
+        "  - name: env\n    path: environments/%{environment}.yaml\n"
+        "  - name: c\n    path: common.yaml\n",
+        encoding="utf-8",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"), context={"environment": "prod"})
+    merged = h.get("conf", merge=dict, merge_deep=True)
+    # prod overrides db.host but keeps db.port and the whole cache subtree.
+    assert merged == {
+        "db": {"host": "prod.db", "port": 5432},
+        "cache": {"ttl": 60},
+    }
 
 
 def test_dict_base_config(hiera_root):

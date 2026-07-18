@@ -71,7 +71,7 @@ Backends (by `data_hash` name):
 ## Command line
 
 ```sh
-hiera lookup KEY [options]
+hiera KEY [options]
 
 hiera ntp::servers --config hiera.yaml --scope environment=production
 hiera classes --merge array --output json

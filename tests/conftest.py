@@ -44,7 +44,9 @@ def hiera_root(tmp_path):
           host: localhost
           port: 5432
         alias_target: "%{alias('app::name')}"
+        alias_list: "%{alias('ntp::servers')}"
         literal_pct: "100%{literal('%')} done"
+        port_msg: "listening on %{hiera('db.port')}"
         """,
     )
     _write(

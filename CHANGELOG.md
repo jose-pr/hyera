@@ -11,7 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `src/` package layout, `pyproject.toml`, and PyPI-ready metadata.
 - Glob hierarchy levels (`glob:` / `globs:`), expanded via `pathlib_next` and
   resolved in sorted (deterministic) order.
-- Command-line interface `hiera lookup KEY` (built on `duho`), with
+- Command-line interface `hiera KEY` (built on `duho`), with
   `--config`, repeatable `--scope key=value`, `--merge`, `--deep`,
   `--output raw|json|yaml`, and `--default`. Exit codes: `0` found, `1`
   missing, `2` usage/config error. Installed as the `hiera` console script and
@@ -35,6 +35,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unknown/missing `data_hash` backends now raise a clear `ConfigError` naming
   the known backends, rather than an opaque `KeyError`.
 - `LookupDict` is no longer (unsafely) hashable.
+- Function calls resolving to a falsy value (`0`, `""`, `False`) no longer
+  raise `InterpolationError` — only a genuinely absent value is rejected. A
+  `%{hiera(...)}` whose key is missing now degrades to that rejection instead
+  of propagating a `KeyError`.
+- The bare-`%{var}` interpolation regex no longer also matches function-style
+  `%{hiera(...)}` tokens, so an unresolved function leftover is not blanked.
+- Invalid `--scope` values are reported through the logger and exit `2`, in
+  line with the CLI's exit-code contract (previously a raw `SystemExit`).
+- Deep hash merge now respects hiera precedence: a scalar provided by an
+  earlier (higher-priority) hierarchy level is no longer clobbered by a later
+  level. Previously the last level won for scalars, inverting precedence.
+- Non-string scalar values (ints, floats, booleans) resolved by a
+  `%{hiera(...)}`/`%{lookup(...)}` call embedded in a larger string are now
+  stringified instead of raising; a single stand-alone call still preserves
+  the resolved value's native type.
 
 ### Changed
 
@@ -45,3 +60,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sops` binary is missing.
 - Backends register under multiple `data_hash` names (e.g. `yaml_data`/`yaml`,
   `json_data`/`json`).
+- The per-context filesystem walk in `sources()` is cached, so a merge lookup
+  across many keys no longer re-globs/re-stats the tree for each key.
