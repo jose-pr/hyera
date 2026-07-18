@@ -39,6 +39,14 @@ def test_array_merge_json_output(hiera_root, capsys):
     assert json.loads(capsys.readouterr().out) == ["prod", "web", "base"]
 
 
+def test_unique_merge_alias(hiera_root, capsys):
+    rc = main(["classes", "-c", str(hiera_root / "hiera.yaml"),
+               "-s", "environment=production", "--merge", "unique", "-o", "json"])
+    assert rc == 0
+    import json
+    assert json.loads(capsys.readouterr().out) == ["prod", "web", "base"]
+
+
 def test_invalid_scope_exit_2(hiera_root):
     rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "noequals"])
     assert rc == 2

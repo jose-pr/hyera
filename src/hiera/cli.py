@@ -19,7 +19,8 @@ from .phiera import Hiera
 
 _LOGGER = _logging.getLogger("hiera")
 
-_MERGE_TYPES = {"array": list, "hash": dict, "set": set}
+#: CLI merge choice -> spec strategy name (array/set are legacy aliases).
+_MERGE_ALIASES = {"array": "unique", "set": "unique"}
 
 
 class _ScopeError(ValueError):
@@ -64,14 +65,27 @@ class Lookup(duho.LoggingArgs, duho.Cli):
     config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = "hiera.yaml"
     scope: "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]" = None
     """Context variable ``key=value`` (repeatable)."""
-    merge: "duho.Arg[str, duho.Choice('first', 'array', 'hash', 'set')]" = "first"
-    """Merge strategy across the hierarchy (default: first match wins)."""
+    merge: "duho.Arg[str, duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]" = "first"
+    """Merge strategy across the hierarchy (default: first match wins).
+    ``array``/``set`` are legacy aliases for ``unique``."""
     deep: bool = False
-    """Deep-merge dict values (only meaningful with ``--merge hash``)."""
+    """Promote ``--merge hash`` to a deep merge (legacy convenience)."""
+    knockout_prefix: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]" = None
+    """Deep-merge knockout prefix (marks keys/values to remove)."""
     output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = "raw"
     """Output format for the resolved value."""
     default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
     """Value to print when the key is missing (otherwise exit 1)."""
+
+    def _merge_spec(self):
+        strategy = _MERGE_ALIASES.get(self.merge, self.merge)
+        if strategy == "hash" and self.deep:
+            strategy = "deep"
+        if strategy == "first":
+            return None
+        if strategy == "deep" and self.knockout_prefix:
+            return {"strategy": "deep", "knockout_prefix": self.knockout_prefix}
+        return strategy
 
     def __call__(self) -> int:
         try:
@@ -88,9 +102,9 @@ class Lookup(duho.LoggingArgs, duho.Cli):
             _LOGGER.error("could not open config %s: %s", self.config, e)
             return 2
 
-        merge = None if self.merge == "first" else _MERGE_TYPES[self.merge]
+        merge = self._merge_spec()
         try:
-            value = hiera.get(self.key, merge=merge, merge_deep=self.deep, throw=True)
+            value = hiera.get(self.key, merge=merge, throw=True)
         except KeyError:
             if self.default is not None:
                 print(_dump(self.default, self.output))
