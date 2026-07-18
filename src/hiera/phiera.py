@@ -8,7 +8,14 @@ from copy import deepcopy
 
 from pathlib_next import Path
 
-from .backends import Backend, JSONBackend, SopsYAMLBackend, YAMLBackend
+from .backends import (
+    Backend,
+    HOCONBackend,
+    JSONBackend,
+    SopsYAMLBackend,
+    YAMLBackend,
+    has_hocon,
+)
 from .exceptions import ConfigError, InterpolationError
 from .util import LookupDict
 
@@ -17,7 +24,18 @@ __all__ = [
     "ScopedHiera",
     "HieraLevel",
     "Hiera",
+    "Sensitive",
+    "make_merge",
+    "default_backends",
 ]
+
+
+def default_backends():
+    """The default backend list: YAML, sops-YAML, JSON, and HOCON if available."""
+    backends = [YAMLBackend, SopsYAMLBackend, JSONBackend]
+    if has_hocon():
+        backends.append(HOCONBackend)
+    return backends
 
 function = re.compile(
     r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
@@ -41,59 +59,240 @@ def _normalize_source(source: str) -> str:
     return rformat.sub(r"{\g<1>}", source, count=0)
 
 
-class Merge(object):
-    def __init__(self, typ, deep=False):
-        self.typ = typ
-        self.deep = deep
+#: Strategy names that build a Merge; also mapped from the legacy type API.
+_MERGE_STRATEGIES = {"first", "unique", "hash", "deep"}
 
-        if typ == dict:
+#: Legacy type-based merge= values -> strategy name.
+_TYPE_TO_STRATEGY = {list: "unique", set: "unique", dict: "hash"}
+
+_UNSET = object()
+
+
+class Sensitive(object):
+    """Thin marker wrapping a value flagged ``Sensitive`` via ``convert_to``.
+
+    ``str()`` redacts; ``.unwrap()`` returns the real value. Mirrors Puppet's
+    Sensitive type without pulling in a dependency.
+    """
+
+    def __init__(self, value):
+        self._value = value
+
+    def unwrap(self):
+        return self._value
+
+    def __repr__(self):
+        return "Sensitive(<redacted>)"
+
+    __str__ = __repr__
+
+
+def _is_regex(pattern):
+    """Heuristic: a lookup_options key with regex metacharacters is a pattern."""
+    return isinstance(pattern, str) and bool(re.search(r"[.*+?^${}()|\[\]\\]", pattern))
+
+
+def _convert_to(value, spec):
+    """Best-effort ``convert_to`` cast. Unknown types leave the value as-is.
+
+    ``spec`` is a type name (``"Integer"``) or ``[name, *args]``. Kept
+    dependency-free and non-raising so unattended lookups never crash on a
+    cast; a failed/unknown cast logs at debug and returns the original value.
+    """
+    args = []
+    if isinstance(spec, (list, tuple)):
+        name, args = spec[0], list(spec[1:])
+    else:
+        name = spec
+    try:
+        if name == "Integer":
+            return int(value, *(args or []))
+        if name == "Float":
+            return float(value)
+        if name == "String":
+            return str(value)
+        if name == "Boolean":
+            if isinstance(value, str):
+                return value.strip().lower() in ("true", "yes", "1", "on")
+            return bool(value)
+        if name == "Array":
+            if isinstance(value, list):
+                return value
+            return [value]
+        if name == "Sensitive":
+            return Sensitive(value)
+    except (ValueError, TypeError) as e:
+        LOGGER.debug("convert_to %s failed for %r: %s", name, value, e)
+        return value
+    LOGGER.debug("convert_to: unknown type %r; leaving value unchanged", name)
+    return value
+
+
+def make_merge(spec):
+    """Build a :class:`Merge` from a caller ``merge=`` spec, or ``None``.
+
+    Accepts a strategy name (``"first"``/``"unique"``/``"hash"``/``"deep"``),
+    a legacy type (``list``/``set``/``dict``), or a hash
+    ``{"strategy": "deep", "knockout_prefix": "--", ...}``. ``None``/``"first"``
+    yields ``None`` (first-match-wins, no accumulation).
+    """
+    if spec is None:
+        return None
+    options: dict = {}
+    if isinstance(spec, dict):
+        options = dict(spec)
+        strategy = options.pop("strategy", None) or options.pop("merge", None)
+    elif isinstance(spec, type):
+        strategy = _TYPE_TO_STRATEGY.get(spec)
+        if strategy is None:
+            raise ValueError("Unsupported merge type: {!r}".format(spec))
+    else:
+        strategy = spec
+    if strategy in (None, "first"):
+        return None
+    if strategy not in _MERGE_STRATEGIES:
+        raise ValueError("Unknown merge strategy: {!r}".format(strategy))
+    return Merge(strategy, **options)
+
+
+class Merge(object):
+    """Accumulates matches across the hierarchy per a merge strategy.
+
+    Strategies: ``unique`` (flatten scalars+arrays, dedupe, first-seen order),
+    ``hash`` (shallow, higher priority wins per key), ``deep`` (recursive, with
+    ``knockout_prefix`` / ``sort_merged_arrays`` / ``merge_hash_arrays``).
+    """
+
+    def __init__(
+        self,
+        strategy,
+        knockout_prefix=None,
+        sort_merged_arrays=False,
+        merge_hash_arrays=False,
+        **_ignored
+    ):
+        self.strategy = strategy
+        self.knockout_prefix = knockout_prefix
+        self.sort_merged_arrays = sort_merged_arrays
+        self.merge_hash_arrays = merge_hash_arrays
+        # Back-compat attributes used elsewhere.
+        self.deep = strategy == "deep"
+        self.typ = {"hash": dict, "deep": dict}.get(strategy, list)
+
+        if strategy == "unique":
+            self.value = []
+        elif strategy == "hash":
             self.value = LookupDict()
+        elif strategy == "deep":
+            # Deep values may be dicts OR lists; let the first match set the
+            # type rather than presuming a dict.
+            self.value = _UNSET
         else:
-            self.value = typ()
+            self.value = None
 
     def merge_value(self, value):
-        if isinstance(self.value, list):
-            self.value += list(value)
-        elif isinstance(self.value, set):
-            self.value = self.value | set(value)
-        elif isinstance(self.value, dict):
-            if self.deep:
-                self.value = self.deep_merge(self.value, value)
+        if self.strategy == "unique":
+            if isinstance(value, (list, tuple, set)):
+                self.value += list(value)
             else:
+                self.value.append(value)
+        elif self.strategy == "hash":
+            if isinstance(value, dict):
                 for k, v in value.items():
-                    if k not in self.value:
+                    if k not in self.value:  # higher priority (earlier) wins
                         self.value[k] = v
-        elif isinstance(self.value, str):
+        elif self.strategy == "deep":
+            self.value = self.deep_merge(self.value, value)
+        else:  # pragma: no cover - first never accumulates
             self.value = value
-        else:
-            raise TypeError(
-                "Cannot handle merge_value of type {}".format(type(self.value))
-            )
+
+    def finalize(self):
+        """Return the accumulated value, applying post-merge normalization."""
+        if self.strategy == "unique":
+            seen: list = []
+            for item in self.value:
+                if item not in seen:
+                    seen.append(item)
+            if self.sort_merged_arrays:
+                try:
+                    seen.sort()
+                except TypeError:
+                    pass
+            return seen
+        if self.strategy == "deep":
+            return self._knockout(self.value)
+        return self.value
+
+    def _knockout(self, obj):
+        """Apply knockout_prefix removals to a merged structure."""
+        prefix = self.knockout_prefix
+        if not prefix:
+            return obj
+        if isinstance(obj, dict):
+            removed = {
+                k[len(prefix):]
+                for k in obj
+                if isinstance(k, str) and k.startswith(prefix)
+            }
+            out = LookupDict()
+            for k, v in obj.items():
+                if isinstance(k, str) and k.startswith(prefix):
+                    continue
+                if k in removed:
+                    continue
+                out[k] = self._knockout(v)
+            return out
+        if isinstance(obj, list):
+            drop = {
+                item[len(prefix):]
+                for item in obj
+                if isinstance(item, str) and item.startswith(prefix)
+            }
+            return [
+                self._knockout(item)
+                for item in obj
+                if not (isinstance(item, str) and item.startswith(prefix))
+                and item not in drop
+            ]
+        return obj
 
     def deep_merge(self, a, b):
-        """Recursively merge dicts. When both ``a`` and ``b`` hold a dict at
-        the same key, recurse; lists are concatenated without duplicates.
+        """Recursively merge ``b`` (lower priority) into ``a`` (higher).
 
-        ``a`` is the higher-priority side (an earlier hierarchy level). When
-        both hold a scalar at the same key, ``a`` wins — later levels never
-        clobber a value an earlier level already provided."""
-        if not isinstance(b, dict):
-            return b
+        Hashes recurse; lists concatenate (deduped); a scalar already present
+        in ``a`` wins — later levels never clobber an earlier level's value.
+        With ``merge_hash_arrays``, equal-length lists of dicts are merged
+        element-wise by index."""
+        if a is _UNSET or a is None:
+            return deepcopy(b)
+        if isinstance(a, list) and isinstance(b, list):
+            return self._merge_lists(a, b)
+        if not isinstance(a, dict) or not isinstance(b, dict):
+            # Mismatched or scalar types: higher-priority (a) wins.
+            return a
         result = deepcopy(a)
         for k, v in b.items():
             if k in result and isinstance(result[k], dict):
                 result[k] = self.deep_merge(result[k], v)
             elif k in result and isinstance(result[k], list):
-                if isinstance(v, list):
-                    v = [_ for _ in v if _ not in result[k]]
-                    result[k] += deepcopy(v)
-                else:
-                    result[k].append(v)
+                result[k] = self._merge_lists(result[k], v)
             elif k not in result:
                 # Key only in the lower-priority side; take it. An existing
                 # scalar in ``result`` (higher priority) is left untouched.
                 result[k] = deepcopy(v)
         return result
+
+    def _merge_lists(self, a, v):
+        if not isinstance(v, list):
+            out = list(a)
+            out.append(v)
+            return out
+        if self.merge_hash_arrays and len(a) == len(v) and all(
+            isinstance(x, dict) for x in a
+        ) and all(isinstance(x, dict) for x in v):
+            return [self.deep_merge(x, y) for x, y in zip(a, v)]
+        extra = [item for item in v if item not in a]
+        return a + deepcopy(extra)
 
 
 class ScopedHiera(object):
@@ -132,15 +331,19 @@ class HieraLevel(_ty.NamedTuple):
     sources: "list[str]"
     #: True when sources are glob patterns rather than literal relative paths.
     glob: bool = False
+    #: ``(collection_var, item_var, template)`` for a mapped_paths level, else None.
+    mapped: "tuple" = None
 
     @classmethod
     def new(cls, conf: dict, backend: Backend) -> "HieraLevel":
         sources: "list[str]" = []
         is_glob = False
+        mapped = None
         path = conf.get("path")
         paths = conf.get("paths")
         glob = conf.get("glob")
         globs = conf.get("globs")
+        mapped_paths = conf.get("mapped_paths")
         if path:
             sources = [path]
         elif paths:
@@ -151,27 +354,57 @@ class HieraLevel(_ty.NamedTuple):
         elif globs:
             sources = list(globs)
             is_glob = True
+        elif mapped_paths:
+            # [collection_var, item_var, template]
+            collection_var, item_var, template = mapped_paths
+            mapped = (collection_var, item_var, _normalize_source(template))
 
         return HieraLevel(
             backend,
             [_normalize_source(source) for source in sources if source],
             is_glob,
+            mapped,
         )
 
     def paths(self, base_path: Path, context: dict):
         """Yield the candidate source paths for this level in a given context.
 
         Glob levels expand their patterns against the filesystem (sorted for
-        determinism); literal levels format each source with the context.
-        Sources referencing a context var that is absent are skipped.
+        determinism); mapped_paths bind each element of a context collection to
+        the item var and format the template; literal levels format each source
+        with the context. Sources referencing an absent context var are skipped.
         """
+        try:
+            datadir = self.backend.datadir.format_map(context)
+        except KeyError:
+            return
+        root = base_path / datadir
+
+        if self.mapped:
+            collection_var, item_var, template = self.mapped
+            collection = context.get(collection_var)
+            if collection is None:
+                return
+            if isinstance(collection, dict):
+                items = list(collection.values())
+            elif isinstance(collection, (list, tuple, set)):
+                items = list(collection)
+            else:
+                items = [collection]
+            for item in items:
+                mapped_ctx = dict(context)
+                mapped_ctx[item_var] = item
+                try:
+                    yield root / template.format_map(mapped_ctx)
+                except KeyError:
+                    continue
+            return
+
         for source in self.sources:
             try:
-                datadir = self.backend.datadir.format_map(context)
                 rel = source.format_map(context)
             except KeyError:
                 continue
-            root = base_path / datadir
             if self.glob:
                 for match in sorted(root.glob(rel)):
                     yield match
@@ -203,11 +436,12 @@ class Hiera(object):
         self.context.update(kwargs)
 
         self.hierarchy: "list[HieraLevel]" = []
+        self.default_hierarchy: "list[HieraLevel]" = []
         self.cache: dict = {}
         #: Per-context cache of resolved source path lists (see ``sources``).
         self._source_cache: dict = {}
 
-        self.load(backends or [YAMLBackend, SopsYAMLBackend, JSONBackend], base_path)
+        self.load(backends or default_backends(), base_path)
 
     def buildcontext(self, context: dict = None, **kwargs) -> dict:
         new_context = {}
@@ -253,13 +487,29 @@ class Hiera(object):
         if not self.backends:
             raise ConfigError("No backends could be loaded")
 
+        version = self.base.get("version")
+        if version is not None and version != 5:
+            raise ConfigError(
+                "Unsupported hiera config version {!r}; this implements "
+                "version 5".format(version)
+            )
+
         hierarchy = self.base.get("hierarchy")
         defaults = self.base.get("defaults") or {}
         if hierarchy is None:
             raise ConfigError("Invalid base Hiera config: missing 'hierarchy' key")
 
-        self.hierarchy = []
         defaults.setdefault("data_dir", DEFAULT_DATA_DIR)
+        self.hierarchy = self._build_levels(hierarchy, defaults)
+        self.default_hierarchy = self._build_levels(
+            self.base.get("default_hierarchy") or [], defaults
+        )
+
+        # Pre-load/cache global (context-free) data.
+        self.get(None)
+
+    def _build_levels(self, hierarchy, defaults):
+        levels: "list[HieraLevel]" = []
         for level in hierarchy:
             conf = {**level}
             for k, v in defaults.items():
@@ -267,7 +517,8 @@ class Hiera(object):
             data_hash = conf.get("data_hash")
             if data_hash is None:
                 raise ConfigError(
-                    "Hierarchy level {!r} is missing a 'data_hash' backend".format(
+                    "Hierarchy level {!r} is missing a 'data_hash' backend "
+                    "(only file-based data_hash backends are supported)".format(
                         conf.get("name", conf)
                     )
                 )
@@ -283,10 +534,8 @@ class Hiera(object):
             conf.setdefault("datadir", conf.get("data_dir"))
             backend = backend_cls(conf)
             backend.datadir = _normalize_source(backend.datadir)
-            self.hierarchy.append(HieraLevel.new(conf, backend))
-
-        # Pre-load/cache global (context-free) data.
-        self.get(None)
+            levels.append(HieraLevel.new(conf, backend))
+        return levels
 
     def load_file(self, path: Path, backend: Backend, ignore_cache=False):
         """Load ``path`` via ``backend``, caching the parsed result."""
@@ -320,8 +569,10 @@ class Hiera(object):
         for call, arg in calls:
             replace = None
             if call == "hiera" or call == "lookup":
+                # Inline interpolation needs a single value; do not thread the
+                # parent's array/hash merge into the referenced key.
                 try:
-                    replace = self.get_key(arg, paths, context, merge)
+                    replace = self.get_key(arg, paths, context, None)
                 except KeyError:
                     replace = None
             elif call == "scope":
@@ -368,11 +619,16 @@ class Hiera(object):
         return s
 
     def resolve(self, s, paths, context, merge):
-        """Fully resolve ``s``: functions, interpolation, and nested structures."""
+        """Fully resolve ``s``: functions, interpolation, and nested structures.
+
+        ``merge`` is only meaningful for a top-level ``%{alias(key)}`` (which
+        may carry the caller's merge onto the aliased key). Nested structure
+        elements resolve without it — accumulation happens once, in get_key.
+        """
         if isinstance(s, dict):
-            return self.resolve_dict(s, paths, context, merge)
+            return self.resolve_dict(s, paths, context, None)
         elif isinstance(s, list):
-            return list(self.resolve_list(s, paths, context, merge))
+            return list(self.resolve_list(s, paths, context, None))
         elif not self.can_resolve(s):
             return s
 
@@ -392,8 +648,11 @@ class Hiera(object):
             yield self.resolve(item, paths, context, merge)
 
     def get_key(self, key, paths, context, merge):
-        """Get the value of ``key``, resolving it, walking ``paths`` in order."""
-        merges: dict = {}
+        """Get the value of ``key``, resolving it, walking ``paths`` in order.
+
+        ``merge`` is a :class:`Merge` accumulator or ``None`` (first wins).
+        """
+        found = False
         for path in paths:
             if self.cache[path] is not None and key is not None:
                 cache = None
@@ -403,23 +662,14 @@ class Hiera(object):
                     pass
 
                 if cache is not None:
-                    if merge and key not in merges:
-                        merges[key] = Merge(merge.typ, merge.deep)
-
-                    value = self.resolve(
-                        cache,
-                        paths,
-                        context,
-                        (merges[key] if merge and merge.deep else merge),
-                    )
-
-                    if merge and merges[key]:
-                        merges[key].merge_value(value)
-                    else:
+                    value = self.resolve(cache, paths, context, merge)
+                    if merge is None:
                         return value
+                    merge.merge_value(value)
+                    found = True
 
-        if merge and key in merges and merges[key].value is not None:
-            return merges[key].value
+        if merge is not None and found:
+            return merge.finalize()
 
         if key is not None and len(key.split(".")) > 1:
             LOGGER.debug(
@@ -454,8 +704,11 @@ class Hiera(object):
         a single instance reflects the tree as first seen for a given context.
         """
         context = self.buildcontext(context, **kwargs)
+        return self._files_for(self.hierarchy, context, _load, "main")
+
+    def _files_for(self, hierarchy, context, _load, tag):
         try:
-            cache_key = (_load, frozenset(context.items()))
+            cache_key = (tag, _load, frozenset(context.items()))
         except TypeError:
             # An unhashable context value (e.g. a list) — skip caching.
             cache_key = None
@@ -465,7 +718,7 @@ class Hiera(object):
                 return list(cached)
 
         files = []
-        for level in self.hierarchy:
+        for level in hierarchy:
             for path in level.paths(self.base_path, context):
                 paths = path.iterdir() if path.is_dir() else [path]
                 for path in paths:
@@ -477,6 +730,37 @@ class Hiera(object):
         if cache_key is not None:
             self._source_cache[cache_key] = list(files)
         return files
+
+    def _default_files(self, context):
+        return self._files_for(self.default_hierarchy, context, True, "default")
+
+    def _lookup_options_for(self, key, files, context):
+        """Return the merged ``lookup_options`` entry matching ``key``, or None.
+
+        ``lookup_options`` is a reserved data key: ``{pattern: {merge, convert_to}}``.
+        Higher-priority (earlier) levels win per pattern. An exact key match
+        wins over a regex pattern match; the first regex match otherwise wins.
+        """
+        try:
+            options = self.get_key("lookup_options", files, context, make_merge("hash"))
+        except KeyError:
+            return None
+        if not isinstance(options, dict):
+            return None
+        if key in options and isinstance(options[key], dict):
+            return options[key]
+        for pattern, entry in options.items():
+            if not isinstance(entry, dict):
+                continue
+            if pattern == key:
+                return entry
+            if _is_regex(pattern):
+                try:
+                    if re.fullmatch(pattern, key):
+                        return entry
+                except re.error:
+                    continue
+        return None
 
     def get(
         self,
@@ -492,9 +776,13 @@ class Hiera(object):
 
         :param key: the hiera key to retrieve.
         :param default: returned when the key is missing (unless ``throw``).
-        :param merge: ``list``/``dict``/``set`` to array/hash-merge across the
-            whole hierarchy instead of returning the first match.
-        :param merge_deep: deep-merge dict values when merging.
+        :param merge: merge strategy. A name (``"first"``/``"unique"``/
+            ``"hash"``/``"deep"``), a legacy type (``list``/``set``/``dict``),
+            or a hash ``{"strategy": "deep", "knockout_prefix": "--", ...}``.
+            When omitted, ``lookup_options`` in the data (if any) decides;
+            otherwise first-match wins.
+        :param merge_deep: legacy flag — with ``merge`` a type, promote a hash
+            merge to a deep merge.
         :param throw: raise ``KeyError`` on a missing key instead of returning
             ``default``.
         :param context: per-call context variables.
@@ -503,12 +791,39 @@ class Hiera(object):
         new_context = self.buildcontext(context, **kwargs)
         files = self.sources(context)
 
-        if merge:
-            merge = Merge(merge, merge_deep)
+        explicit = merge is not None
+        if merge_deep and merge in (dict, "hash"):
+            merge = "deep"
+        merge_obj = make_merge(merge)
+
+        convert_to = None
+        if not explicit and key is not None:
+            opts = self._lookup_options_for(key, files, new_context)
+            if opts is not None:
+                if opts.get("merge") is not None:
+                    merge_obj = make_merge(opts["merge"])
+                convert_to = opts.get("convert_to")
 
         try:
-            return self.get_key(key, files, new_context, merge=merge)
+            value = self.get_key(key, files, new_context, merge=merge_obj)
         except KeyError:
-            if throw:
+            if self.default_hierarchy:
+                try:
+                    value = self.get_key(
+                        key,
+                        self._default_files(new_context),
+                        new_context,
+                        merge=make_merge(merge) if explicit else merge_obj,
+                    )
+                except KeyError:
+                    if throw:
+                        raise
+                    return default
+            elif throw:
                 raise
-            return default
+            else:
+                return default
+
+        if convert_to is not None:
+            value = _convert_to(value, convert_to)
+        return value
