@@ -1,20 +1,41 @@
+"""Core hiera engine: hierarchy loading, key lookup, and interpolation."""
+
 import logging
 import os
 import re
+import typing as _ty
 from copy import deepcopy
-from pathlib import Path
+
+from pathlib_next import Path
 
 from .backends import Backend, JSONBackend, SopsYAMLBackend, YAMLBackend
-from .exceptions import InterpolationError
-from .util import LookupDict, sym_lookup
+from .exceptions import ConfigError, InterpolationError
+from .util import LookupDict
+
+__all__ = [
+    "Merge",
+    "ScopedHiera",
+    "HieraLevel",
+    "Hiera",
+]
 
 function = re.compile(
     r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
 )
 interpolate = re.compile(r"""%\{(?:::|)([^\}]*)\}""")
-rformat = re.compile(r"""%{(?:::|)([a-zA-Z_-|\d]+)}""")
+# A bare ``%{var}`` reference; the captured name becomes a ``{var}`` format
+# field. The character class allows the identifier chars Puppet permits.
+rformat = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
 
 LOGGER = logging.getLogger(__name__)
+
+#: Default puppet-style data dir, used when a hierarchy omits ``datadir``.
+DEFAULT_DATA_DIR = "/etc/puppetlabs/code/environments/%{environment}/hieradata"
+
+
+def _normalize_source(source: str) -> str:
+    """Convert puppet ``%{var}`` references into ``str.format`` ``{var}`` fields."""
+    return rformat.sub(r"{\g<1>}", source, count=0)
 
 
 class Merge(object):
@@ -42,12 +63,13 @@ class Merge(object):
         elif isinstance(self.value, str):
             self.value = value
         else:
-            raise TypeError("Cannot handle merge_value of type %s", type(self.value))
+            raise TypeError(
+                "Cannot handle merge_value of type {}".format(type(self.value))
+            )
 
     def deep_merge(self, a, b):
-        """recursively merges dicts. not just simple a['key'] = b['key'], if
-        both a and bhave a key who's value is a dict then dict_merge is called
-        on both values and the result stored in the returned dictionary."""
+        """Recursively merge dicts. When both ``a`` and ``b`` hold a dict at
+        the same key, recurse; lists are concatenated without duplicates."""
         if not isinstance(b, dict):
             return b
         result = deepcopy(a)
@@ -66,9 +88,9 @@ class Merge(object):
 
 
 class ScopedHiera(object):
-    def __init__(self, hiera, context={}):
+    def __init__(self, hiera, context=None):
         self.hiera = hiera
-        self.context = context
+        self.context = context or {}
 
     def has(self, key, **kwargs):
         kwargs.update(self.context)
@@ -81,205 +103,209 @@ class ScopedHiera(object):
         merge=None,
         merge_deep=False,
         throw=False,
-        context={},
+        context=None,
         **kwargs
     ):
         new_context = {}
         new_context.update(self.context)
-        new_context.update(context)
+        new_context.update(context or {})
         new_context.update(kwargs)
         return self.hiera.get(key, default, merge, merge_deep, throw, new_context)
 
     def __getattr__(self, name):
         if hasattr(self.hiera, name):
             return getattr(self.hiera, name)
-        raise AttributeError
-
-
-import typing as _ty
-
-
-def _nomarlize_source(source: str):
-    return rformat.sub(r"{\g<1>}", source, count=0)
+        raise AttributeError(name)
 
 
 class HieraLevel(_ty.NamedTuple):
     backend: Backend
-    sources: list[str]
+    sources: "list[str]"
+    #: True when sources are glob patterns rather than literal relative paths.
+    glob: bool = False
 
     @classmethod
-    def new(
-        cls,
-        conf: dict[str],
-        backend: Backend,
-    ):
-
-        sources = []
+    def new(cls, conf: dict, backend: Backend) -> "HieraLevel":
+        sources: "list[str]" = []
+        is_glob = False
         path = conf.get("path")
         paths = conf.get("paths")
         glob = conf.get("glob")
+        globs = conf.get("globs")
         if path:
             sources = [path]
         elif paths:
-            sources = paths
+            sources = list(paths)
         elif glob:
-            # TODO
-            sources = []
+            sources = [glob]
+            is_glob = True
+        elif globs:
+            sources = list(globs)
+            is_glob = True
 
         return HieraLevel(
             backend,
-            [_nomarlize_source(source) for source in sources if source],
+            [_normalize_source(source) for source in sources if source],
+            is_glob,
         )
 
-    def paths(self, context: dict):
-        backend, sources = self
-        for path in sources:
+    def paths(self, base_path: Path, context: dict):
+        """Yield the candidate source paths for this level in a given context.
+
+        Glob levels expand their patterns against the filesystem (sorted for
+        determinism); literal levels format each source with the context.
+        Sources referencing a context var that is absent are skipped.
+        """
+        for source in self.sources:
             try:
-                yield Path(backend.datadir.format(**context), path.format(**context))
+                datadir = self.backend.datadir.format_map(context)
+                rel = source.format_map(context)
             except KeyError:
                 continue
+            root = base_path / datadir
+            if self.glob:
+                for match in sorted(root.glob(rel)):
+                    yield match
+            else:
+                yield root / rel
 
 
 class Hiera(object):
-    """
-    The Hiera object represents a first-class interaction between Python and
-    Hiera data. It takes a base-hiera config YAML file, and exposes methods
-    to retrieve and fully resolve Hiera data.
+    """A first-class Python interface to Hiera data.
 
-    # XXX fix doc, this can be a dict
-    :param base_config: The Hiera base configuration: file path, file-like object, or dict
-    :param backends: A list of backends to use for loading, by default this is
-        YAMLBackend, SopsYAMLBackend and JSONBackend
-    :param context: Any dictionary of format/context variables to default for the
-        liftime of this instance.
-    :param kwargs: Any additional kwargs will be added to the context
+    It takes a base hiera config (YAML file path, file-like object, or dict)
+    and exposes methods to retrieve and fully resolve hiera values.
+
+    :param base_config: hiera base configuration: file path, file-like object,
+        or a pre-parsed ``dict``.
+    :param backends: backend classes to use for loading; defaults to
+        ``[YAMLBackend, SopsYAMLBackend, JSONBackend]``.
+    :param base_path: root that relative data dirs/paths resolve against.
+    :param context: default format/context variables for this instance's
+        lifetime.
+    :param kwargs: additional context variables (merged into ``context``).
     """
 
     def __init__(
-        self, base_config, backends=None, base_path=None, context: dict = {}, **kwargs
+        self, base_config, backends=None, base_path=None, context: dict = None, **kwargs
     ):
         self.base_config = base_config
-        self.context = context
+        self.context = dict(context or {})
         self.context.update(kwargs)
 
-        self.hierarchy: list[HieraLevel] = []
-
-        self.cache = {}
+        self.hierarchy: "list[HieraLevel]" = []
+        self.cache: dict = {}
 
         self.load(backends or [YAMLBackend, SopsYAMLBackend, JSONBackend], base_path)
 
-    def buildcontext(self, context: dict, **kwargs):
+    def buildcontext(self, context: dict = None, **kwargs) -> dict:
         new_context = {}
         new_context.update(self.context)
-        new_context.update(context)
+        new_context.update(context or {})
         new_context.update(kwargs)
+        # Filter out empty/None values so they don't satisfy a format field.
+        return {k: v for k, v in new_context.items() if v}
 
-        # Filter None values
-        return {k: v for k, v in list(new_context.items()) if v}
-
-    def format(self, text: str, context: dict = {}, **kwargs):
+    def format(self, text: str, context: dict = None, **kwargs) -> str:
         context = self.buildcontext(context, **kwargs)
-        return _nomarlize_source(text).format(context)
+        return _normalize_source(text).format_map(context)
 
-    def load(self, backends: list[type[Backend]], base_path=None):
+    def load(self, backends, base_path=None):
+        """Load and validate the base configuration, building hierarchy state.
+
+        Raises :class:`ConfigError` on any invalid/missing configuration.
         """
-        This function loads the base Hiera configuration, attempting to parse and
-        build state based on it. This will raise exceptions if the loading process
-        fails due to invalid configuration.
-        """
+        # Register each backend under every name it answers to.
+        self.backends: "dict[str, type[Backend]]" = {}
+        for backend in backends:
+            for name in backend.NAMES:
+                self.backends[name] = backend
 
-        self.backends = {backend.NAME: backend for backend in backends}
-
-        # If we don't have a file-like object, attempt to open as a file path
-        if type(self.base_config) is dict:
+        if isinstance(self.base_config, dict):
             self.base = self.base_config
-            if base_path is None:
-                self.base_path = os.getcwd()
-            else:
-                self.base_path = base_path
+            self.base_path = Path(os.getcwd() if base_path is None else base_path)
         else:
             if not hasattr(self.base_config, "read"):
                 configpath = Path(self.base_config)
                 self.base_path = configpath.parent
                 self.base_config = configpath.open()
             else:
-                self.base_path = os.getcwd()
-
-            # Load our base YAML configuration
+                self.base_path = Path(os.getcwd())
             self.base = YAMLBackend.load_ordered(self.base_config)
 
         if not self.base:
-            raise Exception("Failed to parse base Hiera configuration")
+            raise ConfigError("Failed to parse base Hiera configuration")
 
-        # Make sure we have at least a single backend
-        if not len(self.backends):
-            raise Exception("No backends could be loaded")
+        if base_path is not None:
+            self.base_path = Path(base_path)
+
+        if not self.backends:
+            raise ConfigError("No backends could be loaded")
 
         hierarchy = self.base.get("hierarchy")
         defaults = self.base.get("defaults") or {}
         if hierarchy is None:
-            raise Exception("Invalid Base Hiera Config: missing hierarchy key")
+            raise ConfigError("Invalid base Hiera config: missing 'hierarchy' key")
 
         self.hierarchy = []
-        defaults.setdefault(
-            "data_dir", "/etc/puppetlabs/code/environments/%{environment}/hieradata"
-        )
-        # Load our heirarchy
+        defaults.setdefault("data_dir", DEFAULT_DATA_DIR)
         for level in hierarchy:
             conf = {**level}
             for k, v in defaults.items():
                 conf.setdefault(k, v)
-            backend = self.backends[conf["data_hash"]](conf)
-            backend.datadir = rformat.sub(r"{\g<1>}", backend.datadir, count=0)
+            data_hash = conf.get("data_hash")
+            if data_hash is None:
+                raise ConfigError(
+                    "Hierarchy level {!r} is missing a 'data_hash' backend".format(
+                        conf.get("name", conf)
+                    )
+                )
+            try:
+                backend_cls = self.backends[data_hash]
+            except KeyError:
+                raise ConfigError(
+                    "Unknown backend {!r}; known: {}".format(
+                        data_hash, ", ".join(sorted(self.backends))
+                    )
+                )
+            # Normalize datadir spelling for the backend.
+            conf.setdefault("datadir", conf.get("data_dir"))
+            backend = backend_cls(conf)
+            backend.datadir = _normalize_source(backend.datadir)
             self.hierarchy.append(HieraLevel.new(conf, backend))
 
-        # Now pre-load/cache a bunch of global stuff. If context vars where provided
-        #  in the constructor, we'll also load those files into the cache.
+        # Pre-load/cache global (context-free) data.
         self.get(None)
 
     def load_file(self, path: Path, backend: Backend, ignore_cache=False):
-        """
-        Attempts to load a file for a specific backend, caching the result.
-        """
+        """Load ``path`` via ``backend``, caching the parsed result."""
         if path not in self.cache or ignore_cache:
             try:
                 self.cache[path] = backend.load(backend.read_file(path))
             except Exception as e:
-                raise Exception("Failed to load file {}: `{}`".format(path, e))
+                raise ConfigError("Failed to load file {}: `{}`".format(path, e)) from e
         return path
 
-    def can_resolve(self, s):
-        """
-        Returns true if any resolving or interpolation can be done on the provided
-        string
-        """
-        if (isinstance(s, str) or isinstance(s, str)) and (
-            function.findall(s) or interpolate.findall(s)
-        ):
-            return True
-        return False
+    def can_resolve(self, s) -> bool:
+        """True if any function call or interpolation is present in ``s``."""
+        return isinstance(s, str) and bool(function.findall(s) or interpolate.findall(s))
 
     def resolve_function(self, s, paths, context, merge):
-        """
-        Attempts to fully resolve a hiera function call within a value. This includes
-        interpolation for relevant calls.
-        """
+        """Fully resolve hiera function calls (``%{hiera(...)}`` etc.) in ``s``."""
         calls = function.findall(s)
-        # If this is an alias, just replace it (doesn't require interpolation)
+        # An alias replaces the whole value (no string interpolation).
         if len(calls) == 1 and calls[0][0] == "alias":
             if function.sub("", s) != "":
-                raise Exception(
-                    "Alias can not be used for string interpolation: `{}`".format(s)
+                raise InterpolationError(
+                    "Alias cannot be used for string interpolation: `{}`".format(s)
                 )
             try:
-                value = self.get_key(calls[0][1], paths, context, merge)
-                return value
-            except KeyError as e:
+                return self.get_key(calls[0][1], paths, context, merge)
+            except KeyError:
                 raise InterpolationError(
                     "Alias lookup failed: key '{}' does not exist".format(calls[0][1])
                 )
 
-        # Iterate over all function calls and string interpolate their resolved values
         for call, arg in calls:
             if call == "hiera" or call == "lookup":
                 replace = self.get_key(arg, paths, context, merge)
@@ -288,42 +314,36 @@ class Hiera(object):
             elif call == "literal":
                 replace = arg
             elif call == "alias":
-                raise Exception("Invalid alias function call: `{}`".format(s))
+                raise InterpolationError("Invalid alias function call: `{}`".format(s))
 
             if not replace:
-                raise Exception(
+                raise InterpolationError(
                     "Could not resolve value for function call: `{}`".format(s)
                 )
 
             if isinstance(replace, str):
-                # Replace only the current function call with our resolved value
-                s = function.sub(replace, s, 1)
+                # Replace only the current call; use a function replacement so
+                # backslashes/`\g` in the value are treated as literal text.
+                s = function.sub(lambda _m, r=replace: r, s, 1)
             elif call == "scope":
                 s = replace
             else:
-                raise Exception(
+                raise InterpolationError(
                     "Resolved value is not a string for function call: `{}`".format(s)
                 )
 
         return s
 
     def resolve_interpolates(self, s, context):
-        """
-        Attempts to resolve context-based string interpolation
-        """
-        interps = interpolate.findall(s)
-
-        for i in interps:
-            # XXX - should this throw an error, interpolate to an empty string, or be configurable?
-            # what does ruby hiera do?
-            s = interpolate.sub((context.get(i) or ""), s, 1)
-
+        """Resolve context-based ``%{var}`` string interpolation."""
+        for i in interpolate.findall(s):
+            # Missing vars interpolate to empty string (matches ruby hiera).
+            replacement = context.get(i) or ""
+            s = interpolate.sub(lambda _m, r=str(replacement): r, s, 1)
         return s
 
     def resolve(self, s, paths, context, merge):
-        """
-        Fully resolves an object, including function and interpolation based resolving.
-        """
+        """Fully resolve ``s``: functions, interpolation, and nested structures."""
         if isinstance(s, dict):
             return self.resolve_dict(s, paths, context, merge)
         elif isinstance(s, list):
@@ -332,18 +352,11 @@ class Hiera(object):
             return s
 
         base = self.resolve_function(s, paths, context, merge)
-
-        # If we can string interpolate the result, lets do that
         if isinstance(base, str):
             base = self.resolve_interpolates(base, context)
-
         return base
 
     def resolve_dict(self, obj, paths, context, merge):
-        """
-        Recursively and completely resolves all Hiera interoplates/functions
-        within a dictionary.
-        """
         new_obj = LookupDict()
         for k, v in obj.items():
             new_obj[k] = self.resolve(v, paths, context, merge)
@@ -354,20 +367,18 @@ class Hiera(object):
             yield self.resolve(item, paths, context, merge)
 
     def get_key(self, key, paths, context, merge):
-        """
-        Get the value of a key within hiera, resolving if required
-        """
-        merges = {}
+        """Get the value of ``key``, resolving it, walking ``paths`` in order."""
+        merges: dict = {}
         for path in paths:
             if self.cache[path] is not None and key is not None:
                 cache = None
                 try:
                     cache = self.cache[path].lookup(key)
-                except KeyError as e:
+                except (KeyError, IndexError):
                     pass
 
                 if cache is not None:
-                    if merge and not key in merges:
+                    if merge and key not in merges:
                         merges[key] = Merge(merge.typ, merge.deep)
 
                     value = self.resolve(
@@ -384,41 +395,41 @@ class Hiera(object):
 
         if merge and key in merges and merges[key].value is not None:
             return merges[key].value
-        else:
-            if key != None and len(key.split(".")) > 1:
-                LOGGER.error(
-                    "Lookup key: '{}' not found. Make sure you are providing this key in YAML configuration.".format(
-                        key
-                    )
-                )
-            raise KeyError(key)
 
-    def scoped(self, context={}, **kwargs):
+        if key is not None and len(key.split(".")) > 1:
+            LOGGER.debug(
+                "Lookup key '%s' not found; ensure it is provided in the "
+                "hiera data.",
+                key,
+            )
+        raise KeyError(key)
+
+    def scoped(self, context=None, **kwargs):
+        context = dict(context or {})
         context.update(kwargs)
         return ScopedHiera(self, context)
 
-    def has(self, key, **kwargs):
-        """
-        Returns true if the key exists in hiera, false otherwise
-        """
+    def has(self, key, **kwargs) -> bool:
+        """Return True if ``key`` exists in hiera, False otherwise."""
         try:
             self.get(key, throw=True, **kwargs)
             return True
         except KeyError:
             return False
 
-    def sources(self, context={}, __load=True, **kwargs):
-        # Filter None values
-        context = self.buildcontext(context, **kwargs)
-        # First, we need to resolve a list of valid paths, in order and load them
-        files = []
+    def sources(self, context=None, _load=True, **kwargs):
+        """Resolve the ordered list of source paths for a context.
 
+        When ``_load`` is True, existing files are parsed and cached and their
+        cache-key paths returned; otherwise the raw candidate paths are yielded.
+        """
+        context = self.buildcontext(context, **kwargs)
+        files = []
         for level in self.hierarchy:
-            for source in level.paths(context):
-                path = self.base_path / source
+            for path in level.paths(self.base_path, context):
                 paths = path.iterdir() if path.is_dir() else [path]
                 for path in paths:
-                    if __load:
+                    if _load:
                         if path.exists() and path.is_file():
                             files.append(self.load_file(path, level.backend))
                     else:
@@ -432,31 +443,27 @@ class Hiera(object):
         merge=None,
         merge_deep=False,
         throw=False,
-        context={},
+        context=None,
         **kwargs
     ):
-        """
-        Attempts to retrieve a hiera variable by fully resolving its location.
+        """Retrieve a hiera value by fully resolving its location.
 
-        :param key: They Hiera key to retrieve
-        :param default: If the Hiera key is not found, return this value
-        :param merge: If set to a list or dictionary, will perform a array or hash
-            merge accordingly.
-        :param throw: If true, will ignore default and throw KeyError on a missing
-            key.
-        :param context: A dictionary of key-value pairs to be passed in as context
-            variables.
-        :param kwargs: Any kwargs passed will override context-variables.
+        :param key: the hiera key to retrieve.
+        :param default: returned when the key is missing (unless ``throw``).
+        :param merge: ``list``/``dict``/``set`` to array/hash-merge across the
+            whole hierarchy instead of returning the first match.
+        :param merge_deep: deep-merge dict values when merging.
+        :param throw: raise ``KeyError`` on a missing key instead of returning
+            ``default``.
+        :param context: per-call context variables.
+        :param kwargs: override context variables.
         """
         new_context = self.buildcontext(context, **kwargs)
-
-        # First, we need to resolve a list of valid paths, in order and load them
         files = self.sources(context)
 
         if merge:
             merge = Merge(merge, merge_deep)
 
-        # Locate the value, or fail and return the defaults
         try:
             return self.get_key(key, files, new_context, merge=merge)
         except KeyError:

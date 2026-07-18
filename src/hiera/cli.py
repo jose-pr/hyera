@@ -1,0 +1,104 @@
+"""Command-line interface for hiera, built on duho.
+
+``hiera lookup KEY --config hiera.yaml --scope environment=production``
+
+Designed for unattended use: no interactive prompts, deterministic output,
+and meaningful exit codes (0 found, 1 missing, 2 usage/config error).
+"""
+
+import json as _json
+import logging as _logging
+import sys as _sys
+import typing as _ty
+
+import duho
+
+from . import __version__
+from .exceptions import HieraError
+from .phiera import Hiera
+
+_LOGGER = _logging.getLogger("hiera")
+
+_MERGE_TYPES = {"array": list, "hash": dict, "set": set}
+
+
+def _parse_scope(items: "_ty.Iterable[str]") -> dict:
+    """Parse ``key=value`` scope entries into a context dict."""
+    context: dict = {}
+    for item in items or ():
+        if not item:
+            continue
+        if "=" not in item:
+            raise SystemExit("hiera: invalid --scope {!r} (expected key=value)".format(item))
+        k, v = item.split("=", 1)
+        context[k] = v
+    return context
+
+
+def _dump(value, fmt: str) -> str:
+    if fmt == "json":
+        return _json.dumps(value, default=str, indent=2, sort_keys=True)
+    if fmt == "yaml":
+        import yaml
+
+        return yaml.safe_dump(value, default_flow_style=False).rstrip("\n")
+    # raw
+    if isinstance(value, (dict, list)):
+        return _json.dumps(value, default=str)
+    return str(value)
+
+
+class Lookup(duho.LoggingArgs, duho.Cli):
+    """Look up a key in a hiera hierarchy and print the resolved value."""
+
+    _version_ = __version__
+
+    key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
+    config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = "hiera.yaml"
+    scope: "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]" = None
+    """Context variable ``key=value`` (repeatable)."""
+    merge: "duho.Arg[str, duho.Choice('first', 'array', 'hash', 'set')]" = "first"
+    """Merge strategy across the hierarchy (default: first match wins)."""
+    deep: bool = False
+    """Deep-merge dict values (only meaningful with ``--merge hash``)."""
+    output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = "raw"
+    """Output format for the resolved value."""
+    default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
+    """Value to print when the key is missing (otherwise exit 1)."""
+
+    def __call__(self) -> int:
+        context = _parse_scope(self.scope)
+        try:
+            hiera = Hiera(self.config, context=context)
+        except HieraError as e:
+            _LOGGER.error("%s", e)
+            return 2
+        except OSError as e:
+            _LOGGER.error("could not open config %s: %s", self.config, e)
+            return 2
+
+        merge = None if self.merge == "first" else _MERGE_TYPES[self.merge]
+        try:
+            value = hiera.get(self.key, merge=merge, merge_deep=self.deep, throw=True)
+        except KeyError:
+            if self.default is not None:
+                print(_dump(self.default, self.output))
+                return 0
+            _LOGGER.error("key not found: %s", self.key)
+            return 1
+        except HieraError as e:
+            _LOGGER.error("%s", e)
+            return 2
+
+        print(_dump(value, self.output))
+        return 0
+
+
+def main(argv=None) -> int:
+    # duho.main sets up stderr logging (honoring -v/-q/--loglevel) and
+    # dispatches to Lookup.__call__, whose int return becomes the exit code.
+    return duho.main(Lookup, argv)
+
+
+if __name__ == "__main__":
+    _sys.exit(main())
