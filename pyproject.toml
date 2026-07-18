@@ -29,6 +29,7 @@ dependencies = ["pyyaml", "pathlib_next"]
 
 [project.optional-dependencies]
 cli = ["duho"]
+hocon = ["pyhocon"]
 dev = ["build", "twine", "hatchling", "pytest", "duho"]
 
 [project.scripts]

@@ -95,6 +95,29 @@ def test_sops_timeout(monkeypatch, tmp_path):
         SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
 
 
+def test_hocon_backend(tmp_path):
+    pytest.importorskip("pyhocon")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.conf").write_text('k = v\nn { a = 1 }\n')
+    (tmp_path / "hiera.yaml").write_text(
+        "version: 5\n"
+        "defaults:\n  data_hash: hocon_data\n  data_dir: data\n"
+        "hierarchy:\n  - name: c\n    path: common.conf\n"
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    assert h.get("k") == "v"
+    assert h.get("n.a") == 1
+
+
+def test_hocon_backend_missing_dep_errors():
+    from hiera.backends import HOCONBackend, has_hocon
+
+    if has_hocon():
+        pytest.skip("pyhocon is installed")
+    with pytest.raises(BackendError, match="pyhocon"):
+        HOCONBackend().load(b"k = v")
+
+
 def test_unknown_backend_raises_config_error(tmp_path):
     (tmp_path / "hiera.yaml").write_text(
         "hierarchy:\n  - name: c\n    data_hash: nonsense\n    path: common.yaml\n"

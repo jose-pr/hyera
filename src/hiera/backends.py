@@ -14,7 +14,9 @@ __all__ = [
     "YAMLBackend",
     "SopsYAMLBackend",
     "JSONBackend",
+    "HOCONBackend",
     "BackendError",
+    "has_hocon",
 ]
 
 #: How long (seconds) to wait for the ``sops`` subprocess before giving up.
@@ -126,3 +128,44 @@ class JSONBackend(Backend):
             return json.loads(data, object_pairs_hook=LookupDict)
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             raise BackendError("Failed to parse JSON: {}".format(e)) from e
+
+
+class HOCONBackend(Backend):
+    """HOCON (``.conf``) data via the optional ``pyhocon`` package."""
+
+    NAMES = ("hocon_data", "hocon")
+
+    def load(self, data):
+        try:
+            from pyhocon import ConfigFactory
+        except ImportError as e:  # pragma: no cover - optional dependency
+            raise BackendError(
+                "hocon_data backend requires the 'pyhocon' package "
+                "(pip install hiera[hocon])"
+            ) from e
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        try:
+            parsed = ConfigFactory.parse_string(data)
+        except Exception as e:
+            raise BackendError("Failed to parse HOCON: {}".format(e)) from e
+        return _as_lookupdict(parsed)
+
+
+def _as_lookupdict(obj):
+    """Recursively convert a parsed mapping into :class:`LookupDict`."""
+    if isinstance(obj, dict):
+        return LookupDict((k, _as_lookupdict(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return [_as_lookupdict(v) for v in obj]
+    return obj
+
+
+def has_hocon() -> bool:
+    """True if the optional ``pyhocon`` dependency is importable."""
+    try:
+        import pyhocon  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
