@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hiera"
+version = "0.1.0"
+authors = [{ name = "jose-pr" }]
+description = "A Python implementation of Puppet Hiera hierarchical data lookup"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["hiera", "puppet", "config", "hierarchy", "yaml", "lookup"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+dependencies = ["pyyaml", "pathlib_next"]
+
+[project.optional-dependencies]
+cli = ["duho"]
+dev = ["build", "twine", "hatchling", "pytest", "duho"]
+
+[project.scripts]
+hiera = "hiera.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jose-pr/hiera/"
+Issues = "https://github.com/jose-pr/hiera/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hiera"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/.*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.pyright]
+reportPrivateImportUsage = false
