@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Hiera 5 spec compliance: `version: 5` validation (a non-5 version is
+  rejected); the `unique`/`hash`/`deep` merge strategies (plus `first`),
+  selectable by name, legacy type, or an options hash
+  (`knockout_prefix`, `sort_merged_arrays`, `merge_hash_arrays`); the reserved
+  `lookup_options` data key (per-key and regex-pattern merge strategy +
+  `convert_to`, with an explicit `merge=` argument overriding it);
+  `mapped_paths` source levels; and `default_hierarchy` fallback.
+- `convert_to` casts: `Integer`, `Float`, `String`, `Boolean`, `Array`, and
+  `Sensitive` (a redacting `hiera.Sensitive` wrapper). Unknown/failed casts
+  leave the value unchanged (never raise — unattended-safe).
+- `HOCONBackend` (`hocon_data`/`hocon`) via the optional `pyhocon` dependency
+  (`pip install hiera[hocon]`); registered automatically when importable.
+- CLI merge surface: `--merge first|unique|hash|deep` (with `array`/`set`
+  aliases) and `--knockout-prefix`.
 - `src/` package layout, `pyproject.toml`, and PyPI-ready metadata.
 - Glob hierarchy levels (`glob:` / `globs:`), expanded via `pathlib_next` and
   resolved in sorted (deterministic) order.

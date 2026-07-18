@@ -39,11 +39,12 @@ prod.get("ntp::servers")
 
 ### Base config
 
-A standard Hiera 5 config works. Each level names a `data_hash` backend and a
-`path`, `paths`, `glob`, or `globs`:
+A standard Hiera 5 `hiera.yaml` works. Each level names a `data_hash` backend
+and a source (`path`, `paths`, `glob`, `globs`, or `mapped_paths`):
 
 ```yaml
 ---
+version: 5
 defaults:
   data_hash: yaml_data
   data_dir: data
@@ -53,11 +54,17 @@ hierarchy:
     path: "nodes/%{trusted.certname}.yaml"
   - name: "Per-environment"
     path: "environments/%{environment}.yaml"
+  - name: "Per-role"
+    mapped_paths: [roles, role, "roles/%{role}.yaml"]
   - name: "Modules"
     globs:
       - "modules/*.yaml"
   - name: "Common"
     path: "common.yaml"
+
+default_hierarchy:            # consulted only when the hierarchy above misses
+  - name: "Module defaults"
+    path: "module_defaults.yaml"
 ```
 
 Backends (by `data_hash` name):
@@ -67,6 +74,41 @@ Backends (by `data_hash` name):
 | `YAMLBackend`     | `yaml_data`, `yaml`     | parsed with PyYAML `SafeLoader`         |
 | `JSONBackend`     | `json_data`, `json`     |                                         |
 | `SopsYAMLBackend` | `yaml.enc`, `sops`      | decrypts via the `sops` CLI on the fly  |
+| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install hiera[hocon]`     |
+
+### Merging and `lookup_options`
+
+Pass `merge=` to `get()` — a strategy name, a legacy type, or a hash of deep
+options:
+
+```python
+h.get("classes", merge="unique")                 # flatten + dedupe arrays
+h.get("classes", merge=list)                      # legacy alias for unique
+h.get("conf", merge="deep")                       # recursive hash merge
+h.get("conf", merge={"strategy": "deep",          # deep-merge options
+                     "knockout_prefix": "--",
+                     "sort_merged_arrays": True,
+                     "merge_hash_arrays": True})
+```
+
+More idiomatically, declare the strategy (and optional `convert_to`) in the
+data under the reserved `lookup_options` key — then callers need not pass
+`merge=` at all:
+
+```yaml
+# common.yaml
+classes:
+  - base
+lookup_options:
+  classes:            { merge: unique }
+  "^app::.*":         { merge: { strategy: deep } }   # regex keys supported
+  port:               { convert_to: Integer }
+  db::password:       { convert_to: Sensitive }
+```
+
+An explicit `merge=` argument overrides `lookup_options`. `convert_to`
+supports `Integer`, `Float`, `String`, `Boolean`, `Array`, and `Sensitive`
+(the last wraps the value in a redacting `hiera.Sensitive` marker).
 
 ## Command line
 
@@ -74,13 +116,14 @@ Backends (by `data_hash` name):
 hiera KEY [options]
 
 hiera ntp::servers --config hiera.yaml --scope environment=production
-hiera classes --merge array --output json
+hiera classes --merge unique --output json
 hiera missing::key --default '(none)'
 ```
 
 Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
-first|array|hash|set`, `--deep`, `--output/-o raw|json|yaml`, `--default`,
-plus duho's `-v/-q/--loglevel`.
+first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
+`--knockout-prefix`, `--output/-o raw|json|yaml`, `--default`, plus duho's
+`-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides.
 
 The CLI is built for unattended use: no interactive prompts, deterministic
 output, and meaningful exit codes — `0` found, `1` key missing, `2`
@@ -94,6 +137,20 @@ hardened so an automated lookup never hangs or dies opaquely:
 - a finite subprocess timeout (`hiera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
 - a clear error when the `sops` binary is not on `PATH`.
+
+## Hiera 5 spec coverage
+
+Supported: `version: 5` validation · `defaults` · `hierarchy` · `name` ·
+`path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir`/`data_dir` ·
+`default_hierarchy` · `data_hash` backends (yaml/json/hocon/sops) · all five
+interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted
+subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
+`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
+`lookup_options` (per-key/regex merge strategy + `convert_to`).
+
+Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
+sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
+`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
 
 ## Notes
 
