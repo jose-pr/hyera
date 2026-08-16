@@ -39,9 +39,11 @@ the project overview, see the shipped `README.md`, or <https://github.com/jose-p
     context; a fresh `Hiera` instance if the on-disk tree may have changed).
   - **`.format(text, context=None, **kwargs) -> str`** — resolve `%{var}`
     references in an arbitrary string against the instance context.
-  - Gotcha: a single `Hiera` instance caches both parsed file contents
-    (`.cache`) and resolved source-path lists (`._source_cache`) — it does
-    not notice on-disk changes after first load for a given context.
+  - Gotcha: a single `Hiera` instance caches parsed file contents
+    (`.cache`), resolved source-path lists (`._source_cache`) and the merged
+    `lookup_options` mapping (`._lookup_options_cache`), all per resolved
+    context — it does not notice on-disk changes after first load for a
+    given context.
 - **`ScopedHiera(hiera, context=None)`** — wraps a `Hiera` with a bound
   context; `.get(key, ..., context=None, **kwargs)` and
   `.has(key, context=None, **kwargs)` merge the bound context *under*

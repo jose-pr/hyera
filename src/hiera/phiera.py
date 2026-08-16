@@ -521,7 +521,8 @@ class Hiera(object):
     :param base_config: hiera base configuration: file path, file-like object,
         or a pre-parsed ``dict``.
     :param backends: backend classes to use for loading; defaults to
-        ``[YAMLBackend, SopsYAMLBackend, JSONBackend]``.
+        :func:`default_backends` — ``[YAMLBackend, SopsYAMLBackend,
+        JSONBackend]``, plus ``HOCONBackend`` when ``pyhocon`` is importable.
     :param base_path: root that relative data dirs/paths resolve against.
     :param context: default format/context variables for this instance's
         lifetime.
@@ -540,6 +541,8 @@ class Hiera(object):
         self.cache: dict = {}
         #: Per-context cache of resolved source path lists (see ``sources``).
         self._source_cache: dict = {}
+        #: Per-context cache of the merged ``lookup_options`` mapping.
+        self._lookup_options_cache: dict = {}
 
         self.load(backends or default_backends(), base_path)
 
@@ -842,6 +845,32 @@ class Hiera(object):
     def _default_files(self, context):
         return self._files_for(self.default_hierarchy, context, True, "default")
 
+    def _lookup_options_map(self, files, context, tag="main"):
+        """The merged ``lookup_options`` mapping for a context, or ``None``.
+
+        Merging it walks every file in the hierarchy, and a default-merge
+        ``get()`` needs it for every key — so the result is cached per
+        resolved context alongside ``_source_cache``, sharing the same
+        instance-lifetime staleness contract.
+        """
+        try:
+            cache_key = (tag, frozenset(context.items()))
+        except TypeError:
+            # An unhashable context value (e.g. a list) — skip caching.
+            cache_key = None
+        if cache_key is not None and cache_key in self._lookup_options_cache:
+            return self._lookup_options_cache[cache_key]
+
+        try:
+            options = self.get_key("lookup_options", files, context, make_merge("hash"))
+        except KeyError:
+            options = None
+        if not isinstance(options, dict):
+            options = None
+        if cache_key is not None:
+            self._lookup_options_cache[cache_key] = options
+        return options
+
     def _lookup_options_for(self, key, files, context):
         """Return the merged ``lookup_options`` entry matching ``key``, or None.
 
@@ -849,11 +878,8 @@ class Hiera(object):
         Higher-priority (earlier) levels win per pattern. An exact key match
         wins over a regex pattern match; the first regex match otherwise wins.
         """
-        try:
-            options = self.get_key("lookup_options", files, context, make_merge("hash"))
-        except KeyError:
-            return None
-        if not isinstance(options, dict):
+        options = self._lookup_options_map(files, context)
+        if options is None:
             return None
         if key in options and isinstance(options[key], dict):
             return options[key]

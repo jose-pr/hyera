@@ -233,6 +233,60 @@ def test_explicit_merge_overrides_lookup_options(tmp_path):
     assert h.get("classes", merge="first") == ["web"]
 
 
+def test_lookup_options_merged_once_per_context(tmp_path):
+    # Merging lookup_options walks every file in the hierarchy; a
+    # default-merge get() needs it for every key, so it is cached per
+    # resolved context rather than re-merged on each call.
+    _two_level(
+        tmp_path,
+        "classes: [web]\nother: [x]\nlookup_options: {classes: {merge: unique}}\n",
+        "classes: [base]\nother: [y]\n",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+
+    calls = []
+    real_get_key = h.get_key
+
+    def counting_get_key(key, paths, context, merge):
+        calls.append(key)
+        return real_get_key(key, paths, context, merge)
+
+    h.get_key = counting_get_key
+    assert h.get("classes") == ["web", "base"]
+    assert h.get("other") == ["x"]
+    assert h.get("classes") == ["web", "base"]
+    # Three default-merge lookups, but lookup_options is merged at most once.
+    assert calls.count("lookup_options") <= 1
+
+
+def test_lookup_options_cache_is_per_context(tmp_path):
+    # Different contexts must not share a cached options mapping.
+    build(
+        tmp_path,
+        """\
+        version: 5
+        defaults: {data_hash: yaml_data, data_dir: data}
+        hierarchy:
+          - {name: env, path: "environments/%{environment}.yaml"}
+          - {name: c, path: common.yaml}
+        """,
+        {
+            "data/environments/a.yaml": (
+                "vals: [1]\nlookup_options: {vals: {merge: unique}}\n"
+            ),
+            "data/environments/b.yaml": "vals: [1]\n",
+            "data/common.yaml": "vals: [2]\n",
+        },
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    # Context a declares a unique merge; context b declares nothing.
+    assert h.get("vals", environment="a") == [1, 2]
+    assert h.get("vals", environment="b") == [1]
+    # Re-run in the opposite order to catch a cache that ignores context.
+    assert h.get("vals", environment="b") == [1]
+    assert h.get("vals", environment="a") == [1, 2]
+
+
 def test_convert_to_integer(tmp_path):
     build(
         tmp_path,
