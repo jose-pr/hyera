@@ -30,7 +30,9 @@ dependencies = ["pyyaml", "pathlib_next"]
 [project.optional-dependencies]
 cli = ["duho"]
 hocon = ["pyhocon"]
-dev = ["build", "twine", "hatchling", "pytest", "duho"]
+# Includes every extra that has tests depending on it -- without pyhocon the
+# HOCON backend tests silently skip instead of running.
+dev = ["build", "twine", "hatchling", "pytest", "duho", "pyhocon", "black"]
 
 [project.scripts]
 hiera = "hiera.cli:main"
@@ -62,6 +64,11 @@ exclude = ["/.*", "*.local.*"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+# Pinned to the project's minimum supported Python so black never emits
+# syntax the floor cannot parse.
+[tool.black]
+target-version = ["py39"]
 
 [tool.pyright]
 reportPrivateImportUsage = false
