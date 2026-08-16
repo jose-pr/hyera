@@ -5,7 +5,7 @@ site/
 
 # Agent/harness tooling
 .agents
-*.local.md
+*.local.*
 CLAUDE.md
 CLAUDE.local.md
 .claude/
@@ -14,8 +14,11 @@ CLAUDE.local.md
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.hypothesis/
 .mypy_cache/
 .ruff_cache/
+.coverage*
+htmlcov/
 *.egg-info/
 .venv/
 
