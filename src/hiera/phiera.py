@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+import string
 import typing as _ty
 from copy import deepcopy
 
@@ -57,6 +58,69 @@ DEFAULT_DATA_DIR = "/etc/puppetlabs/code/environments/%{environment}/hieradata"
 def _normalize_source(source: str) -> str:
     """Convert puppet ``%{var}`` references into ``str.format`` ``{var}`` fields."""
     return rformat.sub(r"{\g<1>}", source, count=0)
+
+
+#: Sentinel for "no such context reference" (``None`` is a legitimate value).
+_MISSING = object()
+
+
+def _ctx_lookup(context, name, default=_MISSING):
+    """Resolve a possibly-dotted context reference against nested containers.
+
+    Hiera 5 defines ``%{trusted.certname}`` as *nested key access*, so a
+    dotted name walks into nested dicts (and indexes lists with numeric
+    segments), mirroring :meth:`LookupDict.lookup`.
+
+    A flat key that literally contains dots wins over the nested walk, so an
+    explicit ``{"a.b": 1}`` context entry keeps working.
+    """
+    if not isinstance(context, dict):
+        return default
+    if name in context:
+        return context[name]
+    if "." not in name:
+        return default
+    obj = context
+    for segment in name.split("."):
+        if isinstance(obj, dict):
+            if segment not in obj:
+                return default
+            obj = obj[segment]
+        elif isinstance(obj, (list, tuple)):
+            try:
+                obj = obj[int(segment)]
+            except (ValueError, IndexError):
+                return default
+        else:
+            return default
+    return obj
+
+
+class _ContextFormatter(string.Formatter):
+    """``str.format`` where a dotted field is *mapping*, not attribute, access.
+
+    ``"{a.b}".format_map({"a": {"b": 1}})`` raises ``AttributeError`` because
+    ``str.format`` reads ``.b`` as an attribute. Hierarchy sources are full of
+    dotted references (``%{trusted.certname}``), and the contexts they resolve
+    against are plain dicts — so the default behavior is never what hiera
+    wants. Overriding ``get_field`` routes the whole dotted name through
+    :func:`_ctx_lookup` instead of letting ``str.format`` split it.
+    """
+
+    def get_field(self, field_name, args, kwargs):
+        value = _ctx_lookup(kwargs, field_name)
+        if value is _MISSING:
+            # KeyError is the signal callers already use to skip a level.
+            raise KeyError(field_name)
+        return value, field_name
+
+
+_FORMATTER = _ContextFormatter()
+
+
+def _format_source(source: str, context: dict) -> str:
+    """Format a normalized source/template against a (possibly nested) context."""
+    return _FORMATTER.vformat(source, (), context)
 
 
 #: Strategy names that build a Merge; also mapped from the legacy type API.
@@ -381,8 +445,8 @@ class HieraLevel(_ty.NamedTuple):
         with the context. Sources referencing an absent context var are skipped.
         """
         try:
-            datadir = self.backend.datadir.format_map(context)
-        except KeyError:
+            datadir = _format_source(self.backend.datadir, context)
+        except (KeyError, IndexError, TypeError, AttributeError):
             return
         root = base_path / datadir
 
@@ -401,15 +465,15 @@ class HieraLevel(_ty.NamedTuple):
                 mapped_ctx = dict(context)
                 mapped_ctx[item_var] = item
                 try:
-                    yield root / template.format_map(mapped_ctx)
-                except KeyError:
+                    yield root / _format_source(template, mapped_ctx)
+                except (KeyError, IndexError, TypeError, AttributeError):
                     continue
             return
 
         for source in self.sources:
             try:
-                rel = source.format_map(context)
-            except KeyError:
+                rel = _format_source(source, context)
+            except (KeyError, IndexError, TypeError, AttributeError):
                 continue
             if self.glob:
                 for match in sorted(root.glob(rel)):
@@ -459,7 +523,7 @@ class Hiera(object):
 
     def format(self, text: str, context: dict = None, **kwargs) -> str:
         context = self.buildcontext(context, **kwargs)
-        return _normalize_source(text).format_map(context)
+        return _format_source(_normalize_source(text), context)
 
     def load(self, backends, base_path=None):
         """Load and validate the base configuration, building hierarchy state.
@@ -582,7 +646,9 @@ class Hiera(object):
                 except KeyError:
                     replace = None
             elif call == "scope":
-                replace = context.get(arg)
+                # Dotted names resolve as nested lookups here too, so
+                # %{scope('facts.os')} agrees with %{facts.os}.
+                replace = _ctx_lookup(context, arg, None)
             elif call == "literal":
                 replace = arg
             elif call == "alias":
@@ -620,7 +686,9 @@ class Hiera(object):
         """Resolve context-based ``%{var}`` string interpolation."""
         for i in interpolate.findall(s):
             # Missing vars interpolate to empty string (matches ruby hiera).
-            replacement = context.get(i) or ""
+            # Dotted names are nested lookups here too, so a reference means
+            # the same thing in a value as it does in a hierarchy path.
+            replacement = _ctx_lookup(context, i, "") or ""
             s = interpolate.sub(lambda _m, r=str(replacement): r, s, 1)
         return s
 

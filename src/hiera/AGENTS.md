@@ -27,8 +27,11 @@ the project overview, see the shipped `README.md`, or <https://github.com/jose-p
     of returning `default` on a miss. Falls back to `default_hierarchy` when
     the main hierarchy misses. `context`/`kwargs` layer over the instance's
     default context for this call only.
-  - **`.has(key, **kwargs) -> bool`** — `True` iff `.get(key, throw=True,
-    **kwargs)` would not raise `KeyError`.
+  - **`.has(key, context=None, **kwargs) -> bool`** — `True` iff
+    `.get(key, throw=True, context=context, **kwargs)` would not raise
+    `KeyError`. `context`/`kwargs` layer over the instance context exactly
+    as in `.get`, and reach hierarchy path resolution as well as
+    interpolation.
   - **`.scoped(context=None, **kwargs) -> ScopedHiera`** — bind context
     variables once for reuse.
   - **`.sources(context=None, **kwargs) -> list`** — resolve+load the
@@ -40,8 +43,10 @@ the project overview, see the shipped `README.md`, or <https://github.com/jose-p
     (`.cache`) and resolved source-path lists (`._source_cache`) — it does
     not notice on-disk changes after first load for a given context.
 - **`ScopedHiera(hiera, context=None)`** — wraps a `Hiera` with a bound
-  context; `.get`/`.has` merge the bound context under per-call overrides.
-  Unknown attributes proxy to the wrapped `Hiera`.
+  context; `.get(key, ..., context=None, **kwargs)` and
+  `.has(key, context=None, **kwargs)` merge the bound context *under*
+  per-call overrides, so a per-call value always wins. Unknown attributes
+  proxy to the wrapped `Hiera`.
 - **`make_merge(spec) -> Merge | None`** — normalize a `merge=` spec (name,
   legacy type, or options dict) into a `Merge` accumulator, or `None` for
   first-match. Raises `ValueError` on an unrecognized strategy/type.
@@ -139,3 +144,10 @@ paths work since `__init__` re-exports it too).
 - A missing bare `%{var}` interpolation resolves to `""` (matches Ruby
   Hiera); a missing function-call argument raises `InterpolationError`
   instead — the two failure modes are not symmetric.
+- A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) is
+  nested *mapping* access into the context, in hierarchy paths, `data_dir`,
+  `mapped_paths` templates, values, `.format()`, and `%{scope('a.b')}`
+  alike. Numeric segments index lists (`%{roles.0}`). A context key that
+  literally contains dots takes precedence over the nested walk. An
+  unresolvable reference skips the hierarchy level (in a path) or
+  interpolates as `""` (in a value) — it never raises.
