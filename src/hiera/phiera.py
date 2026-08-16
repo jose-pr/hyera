@@ -38,6 +38,7 @@ def default_backends():
         backends.append(HOCONBackend)
     return backends
 
+
 function = re.compile(
     r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
 )
@@ -238,7 +239,7 @@ class Merge(object):
         knockout_prefix=None,
         sort_merged_arrays=False,
         merge_hash_arrays=False,
-        **_ignored
+        **_ignored,
     ):
         self.strategy = strategy
         self.knockout_prefix = knockout_prefix
@@ -324,7 +325,7 @@ class Merge(object):
             return obj
         if isinstance(obj, dict):
             removed = {
-                k[len(prefix):]
+                k[len(prefix) :]
                 for k in obj
                 if isinstance(k, str) and k.startswith(prefix)
             }
@@ -338,7 +339,7 @@ class Merge(object):
             return out
         if isinstance(obj, list):
             drop = {
-                item[len(prefix):]
+                item[len(prefix) :]
                 for item in obj
                 if isinstance(item, str) and item.startswith(prefix)
             }
@@ -381,9 +382,12 @@ class Merge(object):
             out = list(a)
             out.append(v)
             return out
-        if self.merge_hash_arrays and len(a) == len(v) and all(
-            isinstance(x, dict) for x in a
-        ) and all(isinstance(x, dict) for x in v):
+        if (
+            self.merge_hash_arrays
+            and len(a) == len(v)
+            and all(isinstance(x, dict) for x in a)
+            and all(isinstance(x, dict) for x in v)
+        ):
             return [self.deep_merge(x, y) for x, y in zip(a, v)]
         extra = [item for item in v if item not in a]
         return a + deepcopy(extra)
@@ -412,7 +416,7 @@ class ScopedHiera(object):
         merge_deep=False,
         throw=False,
         context=None,
-        **kwargs
+        **kwargs,
     ):
         new_context = {}
         new_context.update(self.context)
@@ -651,7 +655,9 @@ class Hiera(object):
 
     def can_resolve(self, s) -> bool:
         """True if any function call or interpolation is present in ``s``."""
-        return isinstance(s, str) and bool(function.findall(s) or interpolate.findall(s))
+        return isinstance(s, str) and bool(
+            function.findall(s) or interpolate.findall(s)
+        )
 
     def resolve_function(self, s, paths, context, merge):
         """Fully resolve hiera function calls (``%{hiera(...)}`` etc.) in ``s``."""
@@ -904,7 +910,7 @@ class Hiera(object):
         merge_deep=False,
         throw=False,
         context=None,
-        **kwargs
+        **kwargs,
     ):
         """Retrieve a hiera value by fully resolving its location.
 

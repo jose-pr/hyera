@@ -23,22 +23,21 @@ def test_value_with_backslash_is_literal(tmp_path):
     # separator: C:\Users\me
     h = _hiera(
         tmp_path,
-        'winpath: "C:\\\\Users\\\\me"\n'
-        "ref: \"%{hiera('winpath')}\"\n",
+        'winpath: "C:\\\\Users\\\\me"\n' "ref: \"%{hiera('winpath')}\"\n",
     )
     stored = h.get("winpath")
     assert stored == "C:\\Users\\me"  # sanity: one backslash each
-    assert h.get("ref") == stored     # interpolation preserves it verbatim
+    assert h.get("ref") == stored  # interpolation preserves it verbatim
 
 
 def test_scope_value_with_group_ref_is_literal(tmp_path):
     # A context value containing "\g<0>" must not be treated as a group ref.
-    h = _hiera(tmp_path, "msg: \"got %{token}\"\n")
+    h = _hiera(tmp_path, 'msg: "got %{token}"\n')
     assert h.get("msg", token=r"\g<0>") == r"got \g<0>"
 
 
 def test_missing_scope_interpolates_empty(tmp_path):
-    h = _hiera(tmp_path, "msg: \"[%{absent}]\"\n")
+    h = _hiera(tmp_path, 'msg: "[%{absent}]"\n')
     assert h.get("msg") == "[]"
 
 

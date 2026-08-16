@@ -19,6 +19,7 @@ def build(tmp_path, config, files):
 
 # --- P1: version ---------------------------------------------------------
 
+
 def test_version_5_accepted(tmp_path):
     build(
         tmp_path,
@@ -47,6 +48,7 @@ def test_version_4_rejected(tmp_path):
 
 
 # --- P2: merges ----------------------------------------------------------
+
 
 def _two_level(tmp_path, high, low):
     return build(
@@ -97,9 +99,7 @@ def test_unique_sort_merged_arrays(tmp_path):
     # it was named for is covered below and was previously unimplemented.
     _two_level(tmp_path, "items: [c, a]\n", "items: [b]\n")
     h = Hiera(str(tmp_path / "hiera.yaml"))
-    merged = h.get(
-        "items", merge={"strategy": "unique", "sort_merged_arrays": True}
-    )
+    merged = h.get("items", merge={"strategy": "unique", "sort_merged_arrays": True})
     assert merged == ["a", "b", "c"]
 
 
@@ -112,9 +112,7 @@ def test_deep_merge_sort_merged_arrays(tmp_path):
         "conf: {items: [b], nested: {more: [y]}}\n",
     )
     h = Hiera(str(tmp_path / "hiera.yaml"))
-    merged = h.get(
-        "conf", merge={"strategy": "deep", "sort_merged_arrays": True}
-    )
+    merged = h.get("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
     # Sorting reaches lists nested anywhere in the merged structure.
     assert merged == {"items": ["a", "b", "c"], "nested": {"more": ["x", "y", "z"]}}
 
@@ -131,9 +129,7 @@ def test_deep_merge_sort_tolerates_unsortable_lists(tmp_path):
     # rather than failing the whole lookup.
     _two_level(tmp_path, "conf: {items: [2, 'a']}\n", "conf: {items: [1]}\n")
     h = Hiera(str(tmp_path / "hiera.yaml"))
-    merged = h.get(
-        "conf", merge={"strategy": "deep", "sort_merged_arrays": True}
-    )
+    merged = h.get("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
     assert merged == {"items": [2, "a", 1]}
 
 
@@ -163,9 +159,7 @@ def test_merge_hash_arrays(tmp_path):
         "rows: [{extra: 1}, {v: 2}]\n",
     )
     h = Hiera(str(tmp_path / "hiera.yaml"))
-    merged = h.get(
-        "rows", merge={"strategy": "deep", "merge_hash_arrays": True}
-    )
+    merged = h.get("rows", merge={"strategy": "deep", "merge_hash_arrays": True})
     assert merged == [{"name": "a", "v": 1, "extra": 1}, {"name": "b", "v": 2}]
 
 
@@ -175,6 +169,7 @@ def test_make_merge_first_is_none():
 
 
 # --- P3: lookup_options --------------------------------------------------
+
 
 def test_lookup_options_sets_merge(tmp_path):
     _two_level(
@@ -326,6 +321,7 @@ def test_convert_to_sensitive(tmp_path):
 
 # --- P4: mapped_paths ----------------------------------------------------
 
+
 def test_mapped_paths(tmp_path):
     build(
         tmp_path,
@@ -347,6 +343,7 @@ def test_mapped_paths(tmp_path):
 
 
 # --- P5: default_hierarchy ----------------------------------------------
+
 
 def test_default_hierarchy_fallback(tmp_path):
     build(

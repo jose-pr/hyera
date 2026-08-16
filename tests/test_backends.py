@@ -98,7 +98,7 @@ def test_sops_timeout(monkeypatch, tmp_path):
 def test_hocon_backend(tmp_path):
     pytest.importorskip("pyhocon")
     (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.conf").write_text('k = v\nn { a = 1 }\n')
+    (tmp_path / "data" / "common.conf").write_text("k = v\nn { a = 1 }\n")
     (tmp_path / "hiera.yaml").write_text(
         "version: 5\n"
         "defaults:\n  data_hash: hocon_data\n  data_dir: data\n"

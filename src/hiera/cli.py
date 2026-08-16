@@ -62,17 +62,23 @@ class Lookup(duho.LoggingArgs, duho.Cli):
     _version_ = __version__
 
     key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
-    config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = "hiera.yaml"
-    scope: "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]" = None
+    config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")
+    scope: (
+        "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]"
+    ) = None
     """Context variable ``key=value`` (repeatable)."""
-    merge: "duho.Arg[str, duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]" = "first"
+    merge: (
+        "duho.Arg[str, duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]"
+    ) = "first"
     """Merge strategy across the hierarchy (default: first match wins).
     ``array``/``set`` are legacy aliases for ``unique``."""
     deep: bool = False
     """Promote ``--merge hash`` to a deep merge (legacy convenience)."""
-    knockout_prefix: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]" = None
+    knockout_prefix: (
+        "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]"
+    ) = None
     """Deep-merge knockout prefix (marks keys/values to remove)."""
-    output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = "raw"
+    output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = ("raw")
     """Output format for the resolved value."""
     default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
     """Value to print when the key is missing (otherwise exit 1)."""
