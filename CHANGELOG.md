@@ -116,3 +116,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unshared `*.local.*` files are excluded from the sdist and the wheel, and
   ignored by git — previously any such file other than `*.local.md` was
   packaged into both artifacts.
+- Dependency ranges pinned to a minor series: `pathlib_next>=0.9.0,<0.10`,
+  and `duho>=0.5.0,<0.6` in both the `cli` and `dev` extras. Both were
+  previously unversioned, so a resolver could pick any release ever
+  published. The upper bounds stop the next pre-1.0 minor, where these
+  projects are free to break their API.
