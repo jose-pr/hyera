@@ -20,13 +20,13 @@ def test_value_with_backslash_is_literal(tmp_path):
     # Regression: re.sub treated the resolved value as a replacement template,
     # so a backslash (e.g. a Windows path) raised or was mangled. Use a YAML
     # double-quoted scalar so the stored value has exactly ONE backslash per
-    # separator: C:\Users\me
+    # separator: C:\data\sub
     h = _hiera(
         tmp_path,
-        'winpath: "C:\\\\Users\\\\me"\n' "ref: \"%{hiera('winpath')}\"\n",
+        'winpath: "C:\\\\data\\\\sub"\n' "ref: \"%{hiera('winpath')}\"\n",
     )
     stored = h.get("winpath")
-    assert stored == "C:\\Users\\me"  # sanity: one backslash each
+    assert stored == "C:\\data\\sub"  # sanity: one backslash each
     assert h.get("ref") == stored  # interpolation preserves it verbatim
 
 
