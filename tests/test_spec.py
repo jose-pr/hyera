@@ -92,13 +92,68 @@ def test_deep_merge_knockout_prefix(tmp_path):
     assert "drop" not in merged
 
 
-def test_deep_merge_sort_merged_arrays(tmp_path):
+def test_unique_sort_merged_arrays(tmp_path):
+    # Renamed: this exercises the *unique* strategy, not deep. The deep case
+    # it was named for is covered below and was previously unimplemented.
     _two_level(tmp_path, "items: [c, a]\n", "items: [b]\n")
     h = Hiera(str(tmp_path / "hiera.yaml"))
     merged = h.get(
         "items", merge={"strategy": "unique", "sort_merged_arrays": True}
     )
     assert merged == ["a", "b", "c"]
+
+
+def test_deep_merge_sort_merged_arrays(tmp_path):
+    # sort_merged_arrays is a deep-merge option in Puppet; it used to be
+    # swallowed by Merge.__init__ and never applied on the deep path.
+    _two_level(
+        tmp_path,
+        "conf: {items: [c, a], nested: {more: [z, x]}}\n",
+        "conf: {items: [b], nested: {more: [y]}}\n",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    merged = h.get(
+        "conf", merge={"strategy": "deep", "sort_merged_arrays": True}
+    )
+    # Sorting reaches lists nested anywhere in the merged structure.
+    assert merged == {"items": ["a", "b", "c"], "nested": {"more": ["x", "y", "z"]}}
+
+
+def test_deep_merge_without_sort_keeps_merge_order(tmp_path):
+    # The option must be opt-in: without it, merge order is preserved.
+    _two_level(tmp_path, "conf: {items: [c, a]}\n", "conf: {items: [b]}\n")
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    assert h.get("conf", merge="deep") == {"items": ["c", "a", "b"]}
+
+
+def test_deep_merge_sort_tolerates_unsortable_lists(tmp_path):
+    # Mixed types have no total order in Python 3; leave them in merge order
+    # rather than failing the whole lookup.
+    _two_level(tmp_path, "conf: {items: [2, 'a']}\n", "conf: {items: [1]}\n")
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    merged = h.get(
+        "conf", merge={"strategy": "deep", "sort_merged_arrays": True}
+    )
+    assert merged == {"items": [2, "a", 1]}
+
+
+def test_deep_merge_sort_applies_after_knockout(tmp_path):
+    # Knockout removes entries first; the survivors are then sorted.
+    _two_level(
+        tmp_path,
+        "conf: {items: [c, a, '--b']}\n",
+        "conf: {items: [b, d]}\n",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    merged = h.get(
+        "conf",
+        merge={
+            "strategy": "deep",
+            "knockout_prefix": "--",
+            "sort_merged_arrays": True,
+        },
+    )
+    assert merged == {"items": ["a", "c", "d"]}
 
 
 def test_merge_hash_arrays(tmp_path):

@@ -284,8 +284,33 @@ class Merge(object):
                     pass
             return seen
         if self.strategy == "deep":
-            return self._knockout(self.value)
+            value = self._knockout(self.value)
+            if self.sort_merged_arrays:
+                value = self._sort_arrays(value)
+            return value
         return self.value
+
+    def _sort_arrays(self, obj):
+        """Recursively sort every list in a merged structure, best-effort.
+
+        ``sort_merged_arrays`` is a deep-merge option in Puppet, so it has to
+        reach lists nested anywhere in the result, not just a top-level one.
+        Heterogeneous lists have no total order in Python 3; those are left
+        in merge order rather than failing the whole lookup.
+        """
+        if isinstance(obj, dict):
+            out = LookupDict()
+            for k, v in obj.items():
+                out[k] = self._sort_arrays(v)
+            return out
+        if isinstance(obj, list):
+            items = [self._sort_arrays(item) for item in obj]
+            try:
+                items.sort()
+            except TypeError:
+                pass
+            return items
+        return obj
 
     def _knockout(self, obj):
         """Apply knockout_prefix removals to a merged structure."""

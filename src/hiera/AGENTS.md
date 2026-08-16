@@ -58,7 +58,9 @@ the project overview, see the shipped `README.md`, or <https://github.com/jose-p
   element-wise by index with `merge_hash_arrays` when both sides are
   equal-length lists of dicts), a scalar already set by a higher-priority
   level is never clobbered; `knockout_prefix` marks keys/values to remove
-  post-merge.
+  post-merge. `sort_merged_arrays` applies to `"unique"` and `"deep"`; on
+  `"deep"` it runs after knockout and sorts lists nested anywhere in the
+  result, leaving any list with no total order (mixed types) in merge order.
 - **`HieraLevel`** (`NamedTuple`: `backend`, `sources`, `glob`, `mapped`) —
   one hierarchy entry. `.new(conf, backend)` builds one from a hierarchy
   dict (`path`/`paths`/`glob`/`globs`/`mapped_paths`). `.paths(base_path,
