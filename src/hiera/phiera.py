@@ -300,9 +300,15 @@ class ScopedHiera(object):
         self.hiera = hiera
         self.context = context or {}
 
-    def has(self, key, **kwargs):
-        kwargs.update(self.context)
-        return self.hiera.has(key, **kwargs)
+    def has(self, key, context=None, **kwargs):
+        # Same layering as .get(): the bound context goes *under* per-call
+        # overrides. The old `kwargs.update(self.context)` inverted this, so
+        # a scoped .has() disagreed with the equivalent .get().
+        new_context = {}
+        new_context.update(self.context)
+        new_context.update(context or {})
+        new_context.update(kwargs)
+        return self.hiera.has(key, context=new_context)
 
     def get(
         self,
@@ -684,10 +690,14 @@ class Hiera(object):
         context.update(kwargs)
         return ScopedHiera(self, context)
 
-    def has(self, key, **kwargs) -> bool:
-        """Return True if ``key`` exists in hiera, False otherwise."""
+    def has(self, key, context=None, **kwargs) -> bool:
+        """Return True if ``key`` exists in hiera, False otherwise.
+
+        ``context``/``kwargs`` layer over the instance context exactly as in
+        :meth:`get`.
+        """
         try:
-            self.get(key, throw=True, **kwargs)
+            self.get(key, throw=True, context=context, **kwargs)
             return True
         except KeyError:
             return False
@@ -789,7 +799,12 @@ class Hiera(object):
         :param kwargs: override context variables.
         """
         new_context = self.buildcontext(context, **kwargs)
-        files = self.sources(context)
+        # Resolve sources against the *built* context: per-call **kwargs are
+        # documented context overrides, so they must reach hierarchy path
+        # resolution too, not just interpolation and lookup_options. (The
+        # default_hierarchy retry below has always used new_context; passing
+        # the raw `context` here let the two hierarchies disagree.)
+        files = self.sources(new_context)
 
         explicit = merge is not None
         if merge_deep and merge in (dict, "hash"):

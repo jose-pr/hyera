@@ -94,6 +94,54 @@ def test_scoped_reuses_context(hiera_root):
     assert prod.get("ntp::servers") == ["prod.pool.ntp.org"]
 
 
+def test_get_kwargs_context_reaches_source_resolution(hiera_root):
+    # Regression: per-call **kwargs are documented context overrides, but
+    # sources() was called with the raw `context` arg, so the
+    # environments/%{environment}.yaml level was skipped and the lookup fell
+    # through to common.yaml.
+    h = make(hiera_root)  # no instance context at all
+    assert h.get("ntp::servers", environment="production") == ["prod.pool.ntp.org"]
+
+
+def test_get_context_arg_and_kwargs_agree(hiera_root):
+    # The positional context= path already worked; kwargs must match it.
+    h = make(hiera_root)
+    assert h.get("ntp::servers", context={"environment": "production"}) == h.get(
+        "ntp::servers", environment="production"
+    )
+
+
+def test_has_kwargs_context_reaches_source_resolution(hiera_root):
+    # has() funnels context through kwargs, so it inherited the same bug.
+    h = make(hiera_root)
+    assert h.has("lookup_greeting", environment="production") is True
+    # Absent the environment, that key exists only in the production level.
+    assert h.has("lookup_greeting") is False
+
+
+def test_scoped_has_uses_bound_context(hiera_root):
+    # Regression: ScopedHiera.has ignored its own scope for path resolution.
+    h = make(hiera_root)
+    assert h.scoped(environment="production").has("lookup_greeting") is True
+
+
+def test_scoped_has_per_call_override_wins(hiera_root):
+    # Regression: `kwargs.update(self.context)` let the bound context clobber
+    # per-call overrides -- the opposite of .get(). The two must agree.
+    # Bind an environment with no data file, then override it per call with
+    # the real one. Only correct precedence (per-call over bound) consults
+    # the production level; the old code let the bound "staging" win.
+    staging = make(hiera_root).scoped(environment="staging")
+    assert staging.has("lookup_greeting", environment="production") is True
+    assert staging.get("lookup_greeting", environment="production") == "myapp in prod"
+    # Without the override, the bound scope stands and the key is absent.
+    assert staging.has("lookup_greeting") is False
+    # .has and .get agree on the overridden value, not just on existence.
+    assert staging.get("ntp::servers", environment="production") == [
+        "prod.pool.ntp.org"
+    ]
+
+
 def test_scoped_does_not_leak_context(hiera_root):
     # Regression: mutable-default-arg contamination between scoped() calls.
     h = make(hiera_root)
