@@ -37,6 +37,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Per-call context now reaches hierarchy path resolution. `Hiera.get()` built
+  its context from `context=` plus `**kwargs` but resolved sources from the
+  raw `context` argument, so `get(key, environment="production")` silently
+  skipped the `environments/%{environment}.yaml` level and fell through to
+  `common.yaml`. `has()` funnels all context through `**kwargs` and so was
+  affected wholesale; it now takes an explicit `context=`.
+- `ScopedHiera.has()` no longer lets its bound context override per-call
+  arguments. It layered the bound context *over* `**kwargs`, the inverse of
+  `ScopedHiera.get()` and of the documented contract, so `.has()` and `.get()`
+  could disagree about the same lookup.
+- Dotted context references (`%{trusted.certname}`) resolve as nested lookups
+  instead of raising. They became `str.format` attribute access, which raises
+  `AttributeError` on the dict contexts hiera actually uses — and
+  `HieraLevel.paths()` caught only `KeyError`, so the error escaped and
+  crashed `get()`. The documented example config, which leads with
+  `nodes/%{trusted.certname}.yaml`, failed at construction time. Paths,
+  `data_dir`, `mapped_paths` templates, values, `format()` and
+  `%{scope('a.b')}` now share one nested-lookup rule; numeric segments index
+  lists, a flat context key containing dots still wins, and an unresolvable
+  reference skips the level or yields `""` rather than raising.
+- `sort_merged_arrays` now applies to `deep` merges, where Puppet defines it.
+  It was honoured only on the `unique` branch and silently swallowed on
+  `deep`, which both the README and the API header advertised as supported.
+  Sorting runs after knockout and reaches lists nested anywhere in the
+  result; a list with no total order is left in merge order.
+- A `lookup_options` key is treated as a regular expression only when it
+  starts with `^`, per Hiera 5. Any key containing a regex metacharacter was
+  compiled as a pattern, so an entry for `db.port` also matched `dbxport`.
 - Interpolation no longer treats resolved values as `re.sub` replacement
   templates — backslashes and `\g<...>` sequences in data now pass through
   literally instead of raising or being mangled.
@@ -76,3 +104,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `json_data`/`json`).
 - The per-context filesystem walk in `sources()` is cached, so a merge lookup
   across many keys no longer re-globs/re-stats the tree for each key.
+- The merged `lookup_options` mapping is cached per resolved context too. It
+  hash-merges every file in the hierarchy and a default-merge `get()` consults
+  it for every key, so a lookup of N keys previously redid that walk N times.
+- Test and release GitHub Actions workflows (the repo previously had no CI).
+  `test.yml` runs on demand or from a `ci-*` tag across 3.9–3.14; `release.yml`
+  gates a `v*` tag on the suite before building and publishing.
+- `black` is the formatting standard, pinned to the `py39` floor; the `dev`
+  extra now installs it along with `pyhocon`, which was missing and left the
+  HOCON backend tests skipping in a dev install.
+- Unshared `*.local.*` files are excluded from the sdist and the wheel, and
+  ignored by git — previously any such file other than `*.local.md` was
+  packaged into both artifacts.
