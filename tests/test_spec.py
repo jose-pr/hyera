@@ -197,6 +197,31 @@ def test_lookup_options_regex_pattern(tmp_path):
     assert h.get("app::ports") == [80, 443]
 
 
+def test_lookup_options_unanchored_dotted_key_is_literal(tmp_path):
+    # Regression: `db.port` was treated as a regex, so `.` matched any
+    # character and the entry also applied to `dbxport`.
+    _two_level(
+        tmp_path,
+        "dbxport: [80]\nlookup_options: {'db.port': {merge: unique}}\n",
+        "dbxport: [443]\n",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    # No merge should apply -> first match wins.
+    assert h.get("dbxport") == [80]
+
+
+def test_lookup_options_dotted_key_still_matches_its_own_key(tmp_path):
+    # The same entry must still apply to the key it literally names. (A
+    # dotted lookup key resolves nested data, so `db.port` is `db` -> `port`.)
+    _two_level(
+        tmp_path,
+        "db: {port: [80]}\nlookup_options: {'db.port': {merge: unique}}\n",
+        "db: {port: [443]}\n",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"))
+    assert h.get("db.port") == [80, 443]
+
+
 def test_explicit_merge_overrides_lookup_options(tmp_path):
     _two_level(
         tmp_path,

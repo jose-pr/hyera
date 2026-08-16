@@ -101,10 +101,15 @@ classes:
   - base
 lookup_options:
   classes:            { merge: unique }
-  "^app::.*":         { merge: { strategy: deep } }   # regex keys supported
+  "^app::.*":         { merge: { strategy: deep } }   # regex: must start with ^
   port:               { convert_to: Integer }
   db::password:       { convert_to: Sensitive }
 ```
+
+A `lookup_options` key is treated as a regular expression **only when it
+starts with `^`** (Hiera 5's rule); every other key is matched literally, so
+a key containing `.` or other metacharacters cannot shadow unrelated keys.
+An exact key match always wins over a pattern match.
 
 An explicit `merge=` argument overrides `lookup_options`. `convert_to`
 supports `Integer`, `Float`, `String`, `Boolean`, `Array`, and `Sensitive`

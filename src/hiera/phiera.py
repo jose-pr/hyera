@@ -152,8 +152,13 @@ class Sensitive(object):
 
 
 def _is_regex(pattern):
-    """Heuristic: a lookup_options key with regex metacharacters is a pattern."""
-    return isinstance(pattern, str) and bool(re.search(r"[.*+?^${}()|\[\]\\]", pattern))
+    """Hiera 5's rule: a lookup_options key is a regex only when ``^``-anchored.
+
+    The previous metacharacter heuristic made any key containing ``.``/``$``/
+    ``(`` etc. a pattern, so a literal dotted key like ``db.port`` silently
+    regex-matched unrelated keys such as ``dbxport``.
+    """
+    return isinstance(pattern, str) and pattern.startswith("^")
 
 
 def _convert_to(value, spec):

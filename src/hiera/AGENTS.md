@@ -146,6 +146,10 @@ paths work since `__init__` re-exports it too).
 - A missing bare `%{var}` interpolation resolves to `""` (matches Ruby
   Hiera); a missing function-call argument raises `InterpolationError`
   instead — the two failure modes are not symmetric.
+- A `lookup_options` key is a **regex only when it starts with `^`**
+  (Hiera 5's rule); anything else is matched literally, so a key containing
+  `.` cannot shadow-match unrelated keys. An exact key match wins over a
+  pattern; an invalid pattern is skipped rather than raising.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) is
   nested *mapping* access into the context, in hierarchy paths, `data_dir`,
   `mapped_paths` templates, values, `.format()`, and `%{scope('a.b')}`
