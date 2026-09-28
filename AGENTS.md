@@ -70,8 +70,10 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
 - Tests: `<py> -m pytest -q` (pytest config in `pyproject.toml` puts `src/`
   on the path).
 - Editable install: `<py> -m pip install -e ".[dev]"`.
-- Package: built with `hatchling`; `hiera[cli]` pulls in `duho` for the
-  console script, `hiera[hocon]` pulls in `pyhocon` for `HOCONBackend`.
+- Package: built with `hatchling`. The PyPI distribution is `hieralib` (the
+  name `hiera` is not available); the import package and console script stay
+  `hiera`. `hieralib[cli]` pulls in `duho` for the console script,
+  `hieralib[hocon]` pulls in `pyhocon` for `HOCONBackend`.
 
 ## License
 

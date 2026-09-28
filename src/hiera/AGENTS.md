@@ -5,6 +5,9 @@ with its signature, arguments, contract, and gotchas, so this module can be
 consumed without reading its source. Kept current with the public API. For
 the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/hiera>.
 
+Install as `hieralib` (`pip install hieralib`, extras `[cli]`/`[hocon]`);
+import as `hiera`.
+
 ## Engine (`core.py`)
 
 - **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
@@ -95,7 +98,7 @@ the project overview, see the shipped `README.md`, or <https://github.com/jose-p
 - **`JSONBackend`** — `NAMES = ("json_data", "json")`. `json.loads` with
   `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
-  optional `pyhocon` dependency (`pip install hiera[hocon]`); raises
+  optional `pyhocon` dependency (`pip install hieralib[hocon]`); raises
   `BackendError` naming the extra if it's not installed.
 - **`has_hocon() -> bool`** — `True` iff `pyhocon` is importable.
 - Env: none. `SOPS_TIMEOUT` is a module attribute, not an env var — set it

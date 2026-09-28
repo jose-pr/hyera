@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hiera"
+name = "hieralib"
 version = "0.1.0"
 authors = [{ name = "jose-pr" }]
 description = "A Python implementation of Puppet Hiera hierarchical data lookup"

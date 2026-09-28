@@ -22,10 +22,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Sensitive` (a redacting `hiera.Sensitive` wrapper). Unknown/failed casts
   leave the value unchanged (never raise — unattended-safe).
 - `HOCONBackend` (`hocon_data`/`hocon`) via the optional `pyhocon` dependency
-  (`pip install hiera[hocon]`); registered automatically when importable.
+  (`pip install hieralib[hocon]`); registered automatically when importable.
 - CLI merge surface: `--merge first|unique|hash|deep` (with `array`/`set`
   aliases) and `--knockout-prefix`.
-- `src/` package layout, `pyproject.toml`, and PyPI-ready metadata.
+- `src/` package layout, `pyproject.toml`, and PyPI-ready metadata. The
+  distribution is `hieralib` on PyPI; the import name is `hiera`.
 - Glob hierarchy levels (`glob:` / `globs:`), expanded via `pathlib_next` and
   resolved in sorted (deterministic) order.
 - Command-line interface `hiera KEY` (built on `duho`), with

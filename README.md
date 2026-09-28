@@ -10,9 +10,11 @@ hash, and deep-hash merging.
 ## Install
 
 ```sh
-pip install hiera          # library only
-pip install hiera[cli]     # + the `hiera` command-line tool (via duho)
+pip install hieralib          # library only
+pip install hieralib[cli]     # + the `hiera` command-line tool (via duho)
 ```
+
+The distribution is named `hieralib` on PyPI; the import name is `hiera`.
 
 ## Library
 
@@ -74,7 +76,7 @@ Backends (by `data_hash` name):
 | `YAMLBackend`     | `yaml_data`, `yaml`     | parsed with PyYAML `SafeLoader`         |
 | `JSONBackend`     | `json_data`, `json`     |                                         |
 | `SopsYAMLBackend` | `yaml.enc`, `sops`      | decrypts via the `sops` CLI on the fly  |
-| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install hiera[hocon]`     |
+| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install hieralib[hocon]`  |
 
 ### Merging and `lookup_options`
 
