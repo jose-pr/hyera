@@ -15,7 +15,6 @@ The files derived from phiera are:
     src/hiera/core.py        (from phiera/phiera.py)
     src/hiera/backends.py    (from phiera/backends.py)
     src/hiera/util.py        (from phiera/util.py)
-    src/hiera/exceptions.py  (from phiera/exceptions.py)
 
 Each was modified by jose-pr and carries a notice saying so. Modifications
 and all other files in this project are licensed under the MIT License
