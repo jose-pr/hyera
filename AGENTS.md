@@ -15,7 +15,7 @@ array, hash, and deep-hash merging.
 ```
 src/hiera/
 ├── __init__.py    # public re-exports (see src/hiera/AGENTS.md for the header)
-├── phiera.py       # core engine: Hiera, ScopedHiera, HieraLevel, Merge, make_merge
+├── core.py         # core engine: Hiera, ScopedHiera, HieraLevel, Merge, make_merge
 ├── backends.py     # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend
 ├── util.py         # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py   # HieraError -> ConfigError, BackendError, InterpolationError

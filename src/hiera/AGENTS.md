@@ -5,7 +5,7 @@ with its signature, arguments, contract, and gotchas, so this module can be
 consumed without reading its source. Kept current with the public API. For
 the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/hiera>.
 
-## Engine (`phiera.py`)
+## Engine (`core.py`)
 
 - **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
   — the main entry point. `base_config`: a file path, a file-like object, or

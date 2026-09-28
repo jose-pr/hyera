@@ -9,7 +9,7 @@ from .backends import (
     YAMLBackend,
 )
 from .exceptions import ConfigError, HieraError, InterpolationError
-from .phiera import (
+from .core import (
     Hiera,
     HieraLevel,
     Merge,

@@ -15,7 +15,7 @@ import duho
 
 from . import __version__
 from .exceptions import HieraError
-from .phiera import Hiera
+from .core import Hiera
 
 _LOGGER = _logging.getLogger("hiera")
 
