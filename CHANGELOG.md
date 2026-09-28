@@ -121,3 +121,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   previously unversioned, so a resolver could pick any release ever
   published. The upper bounds stop the next pre-1.0 minor, where these
   projects are free to break their API.
+- `duho` pin moved to `>=0.6.0,<0.7` in both the `cli` and `dev` extras. No
+  source change was required: hiera's own duho surface (`Cli`, `LoggingArgs`,
+  `Arg`/`NS`/`Append`/`Choice`, `main()`) is untouched by every documented
+  0.6.0 API change, including the new opt-in MCP launch trigger, which hiera
+  does not enable.
