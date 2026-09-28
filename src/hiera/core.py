@@ -1,3 +1,5 @@
+# Derived from phiera/phiera.py (https://github.com/Nike-Inc/phiera),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
 import logging

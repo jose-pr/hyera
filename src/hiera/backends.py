@@ -1,3 +1,5 @@
+# Derived from phiera/backends.py (https://github.com/Nike-Inc/phiera),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Data backends: load a hiera data file (YAML, JSON, sops-encrypted YAML)."""
 
 import json

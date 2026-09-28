@@ -75,4 +75,7 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
 
 ## License
 
-MIT.
+MIT, for this project's own code. It is derived from
+[phiera](https://github.com/Nike-Inc/phiera), which is Apache-2.0; the files
+taken from it keep that license. See `NOTICE` and
+`LICENSES/phiera-Apache-2.0.txt`.

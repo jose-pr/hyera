@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits
+  [phiera](https://github.com/Nike-Inc/phiera), the Apache-2.0 project this
+  library is derived from. The package license is now `MIT AND Apache-2.0`.
 - Hiera 5 spec compliance: `version: 5` validation (a non-5 version is
   rejected); the `unique`/`hash`/`deep` merge strategies (plus `first`),
   selectable by name, legacy type, or an options hash

@@ -165,4 +165,7 @@ from `HieraError`.
 
 ## License
 
-MIT
+MIT, for this project's own code. It is derived from
+[phiera](https://github.com/Nike-Inc/phiera), which is Apache-2.0; the files
+taken from it keep that license. See `NOTICE` and
+`LICENSES/phiera-Apache-2.0.txt`.

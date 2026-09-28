@@ -1,0 +1,22 @@
+hiera
+Copyright (c) 2026 jose-pr
+
+This project is a derivative of phiera, a Python Hiera parser by Andrei
+Zbikowski and Rob King:
+
+    https://github.com/Nike-Inc/phiera
+    https://pypi.org/project/phiera/
+
+phiera is licensed under the Apache License, Version 2.0. A copy of that
+license is included at LICENSES/phiera-Apache-2.0.txt.
+
+The files derived from phiera are:
+
+    src/hiera/core.py        (from phiera/phiera.py)
+    src/hiera/backends.py    (from phiera/backends.py)
+    src/hiera/util.py        (from phiera/util.py)
+    src/hiera/exceptions.py  (from phiera/exceptions.py)
+
+Each was modified by jose-pr and carries a notice saying so. Modifications
+and all other files in this project are licensed under the MIT License
+(see LICENSE).

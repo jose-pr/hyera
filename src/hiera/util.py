@@ -1,3 +1,5 @@
+# Derived from phiera/util.py (https://github.com/Nike-Inc/phiera),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Small helpers: dotted-path lookup dict and ruby-symbol-aware access."""
 
 from functools import reduce

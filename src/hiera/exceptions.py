@@ -1,3 +1,5 @@
+# Derived from phiera/exceptions.py (https://github.com/Nike-Inc/phiera),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Exception hierarchy for hiera."""
 
 
