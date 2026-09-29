@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "bea1e6ca10a18bb7c19cc190d8b8f9126da38620e92d7740c4f08c6dda282431",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Function Load Error for function 'eyaml_lookup_key': Lookup using eyaml lookup_key function is only supported when the hiera_eyaml library is present"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Function Load Error for function 'eyaml_lookup_key': Lookup using eyaml lookup_key function is only supported when the hiera_eyaml library is present"
+    }
+  }
+}

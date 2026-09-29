@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "60f9847fe5b3051db583e8839e4c2d0f4296f0252db49dad6b4afa6b04d25d2d",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Unable to find 'data_dig' function named 'nosuch_fn' (file: <case>/hiera.yaml)"
+    }
+  }
+}
