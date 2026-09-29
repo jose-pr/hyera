@@ -49,6 +49,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   other forms raise `BackendError`. Previously pyhocon resolved plain and
   `file()` includes against the process working directory and fetched
   `http(s)` URLs named in a data file.
+- duho's `PYERA_MCP` environment trigger, which turned the CLI into an MCP
+  server without reading its arguments, is disabled.
 
 ### Added
 
@@ -172,5 +174,4 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `duho` pin moved to `>=0.6.0,<0.7` in both the `cli` and `dev` extras. No
   source change was required: hiera's own duho surface (`Cli`, `LoggingArgs`,
   `Arg`/`NS`/`Append`/`Choice`, `main()`) is untouched by every documented
-  0.6.0 API change, including the new opt-in MCP launch trigger, which hiera
-  does not enable.
+  0.6.0 API change.

@@ -1,6 +1,8 @@
 """CLI behavior and exit codes (unattended-friendly)."""
 
 import json
+import os
+import sys
 import textwrap
 
 import pytest
@@ -173,6 +175,25 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
 
     assert main(base_args + ["--merge", "unique"]) == 0
     assert json.loads(capsys.readouterr().out) == ["redhat", "base"]
+
+
+def test_mcp_env_trigger_is_disabled(hiera_root, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["pyera"])
+    monkeypatch.setenv("PYERA_MCP", "bogus")
+
+    rc = main(
+        [
+            "app::name",
+            "-c",
+            str(hiera_root / "hiera.yaml"),
+            "-s",
+            "environment=production",
+        ]
+    )
+
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == "myapp"
+    assert os.environ["PYERA_MCP"] == "bogus"
 
 
 def test_lookup_found(hiera_root, capsys):

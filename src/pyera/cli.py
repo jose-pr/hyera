@@ -90,6 +90,7 @@ if duho is not None:
         """Look up a key in a hiera hierarchy and print the resolved value."""
 
         _version_ = __version__
+        _mcp_ = False
 
         key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
         config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")

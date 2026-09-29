@@ -187,6 +187,9 @@ paths work since `__init__` re-exports it too).
   `first` included, always overrides `lookup_options`. Exit codes: `0` key
   found, `1` key missing (and no `--default`), `2` usage/config error (bad
   `--scope`, unreadable/invalid config, or a `HieraError`).
+- Env: `PYERA_MCP` has no effect (duho's MCP server launch trigger is
+  disabled on `Lookup`); a truthy `AGENT_HELP` or `AGENTS_HELP` makes
+  `--help` print duho's JSON agent-help document instead of usage text.
 
 ## Gotchas
 
