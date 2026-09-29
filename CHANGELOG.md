@@ -221,3 +221,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `License-Expression: MIT AND Apache-2.0` and lists `LICENSE`, `NOTICE` and
   `LICENSES/phiera-Apache-2.0.txt` as license files; older hatchling wrote
   only a free-text `License:` field.
+- Releases: a `v*` tag must name the version being built, or the release
+  stops before anything is published. Pre-release tags (`v1.0.0-rc.1`)
+  create a GitHub pre-release and are not uploaded to PyPI, and re-running a
+  release skips files already on PyPI.
