@@ -5,10 +5,11 @@
 import logging
 
 from ._hiera_config import (
-    DEFAULT_DATA_DIR,
     HieraLevel,
     _build_hierarchies,
+    _fill_v5_defaults,
     _read_base_config,
+    _reject_data_dir,
     _select_version,
 )
 from ._interpolation import Interpolation, _format_source, _normalize_source
@@ -163,6 +164,8 @@ class Hiera(Interpolation):
         source, self.base = _read_base_config(self.base_config, base_path)
         self.base_path = source.root
         _select_version(self.base, source)
+        _fill_v5_defaults(self.base)
+        _reject_data_dir(self.base, source)
 
         if not self.backends:
             raise ConfigError("No backends could be loaded")
@@ -182,11 +185,13 @@ class Hiera(Interpolation):
                 path=source.path,
             ) from e
 
-        # Pre-load/cache global (context-free) data.
+        # Pre-load/cache the instance's own default-context data.
         self._prewarm()
 
     def _prewarm(self) -> None:
-        """Load and cache every context-free source file up front.
+        """Load and cache the source files for the instance's default
+        context up front, built from the constructor's ``context``/
+        ``**kwargs`` (``_build_context()``), same as ``sources()`` would.
 
         Mirrors the source-resolution side effects of a ``get(None)`` call
         without going through the public API's key-type check.

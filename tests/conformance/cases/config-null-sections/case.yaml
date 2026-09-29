@@ -3,4 +3,3 @@ description: >-
 queries:
   - key: k
     note: Puppet 8.10 probe
-    divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted

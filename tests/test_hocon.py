@@ -385,7 +385,7 @@ def test_include_in_array_value_position_raises_when_refused(
 
 
 # -- default: a hierarchy-level `hocon_includes: false` reaches the
-# backend the same way `datadir`/`data_dir` already do -----------------------
+# backend the same way `datadir` already does --------------------------------
 
 
 def test_hocon_includes_false_via_hierarchy_conf(

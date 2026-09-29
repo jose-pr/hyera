@@ -18,9 +18,6 @@ from ._interpolation import _normalize_source
 from ._location_resolver import _resolve_level_paths
 from ._yaml_loader import symkeys_to_string
 
-#: Default puppet-style data dir, used when a hierarchy omits ``datadir``.
-DEFAULT_DATA_DIR = "/etc/puppetlabs/code/environments/%{environment}/hieradata"
-
 #: Puppet's built-in default configuration, used when hiera.yaml does not
 #: exist (``hiera_config.rb:728-740``, ``HieraConfigV5::DEFAULT_CONFIG_HASH``).
 #: Every use deep-copies this -- never mutate it in place.
@@ -148,6 +145,36 @@ def _select_version(data: dict, source: "_ConfigSource") -> None:
     raise _config_error(
         source, "This runtime does not support hiera.yaml version {}".format(n)
     )
+
+
+def _fill_v5_defaults(data: dict) -> None:
+    """Puppet's ``defaults ||=``/``hierarchy ||=`` fill
+    (``validate_config``, ``hiera_config.rb:742-745``), run after
+    :func:`_select_version`. ``is``, not ``==``: ``0 == False`` in Python,
+    and Puppet's ``||=`` triggers on Ruby ``nil``/``false`` alike."""
+    if data.get("defaults") is None or data.get("defaults") is False:
+        data["defaults"] = copy.deepcopy(DEFAULT_CONFIG_HASH["defaults"])
+    if data.get("hierarchy") is None or data.get("hierarchy") is False:
+        data["hierarchy"] = copy.deepcopy(DEFAULT_CONFIG_HASH["hierarchy"])
+
+
+def _reject_data_dir(data: dict, source: "_ConfigSource") -> None:
+    """D08: ``data_dir`` is not a Puppet key; only ``datadir`` is.
+
+    A minimal, targeted check -- :func:`_validate_v5`'s closed schema
+    subsumes this and this function goes with it.
+    """
+    defaults = data.get("defaults")
+    if isinstance(defaults, dict) and "data_dir" in defaults:
+        raise _type_error(source, "entry 'defaults' unrecognized key 'data_dir'")
+    hierarchy = data.get("hierarchy")
+    if isinstance(hierarchy, list):
+        for i, entry in enumerate(hierarchy):
+            if isinstance(entry, dict) and "data_dir" in entry:
+                raise _type_error(
+                    source,
+                    "entry 'hierarchy' index {} unrecognized key 'data_dir'".format(i),
+                )
 
 
 class HieraLevel(_ty.NamedTuple):
@@ -292,21 +319,12 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
 def _build_hierarchies(base, backends):
     """Build ``hierarchy`` and ``default_hierarchy`` from base config.
 
-    Returns ``(hierarchy_levels, default_hierarchy_levels)``.
+    Returns ``(hierarchy_levels, default_hierarchy_levels)``. Assumes
+    :func:`_select_version` and :func:`_fill_v5_defaults` already ran, so
+    ``defaults``/``hierarchy`` are present.
     """
-    version = base.get("version")
-    if version is not None and version != 5:
-        raise ConfigError(
-            "Unsupported hiera config version {!r}; this implements "
-            "version 5".format(version)
-        )
-
     hierarchy = base.get("hierarchy")
     defaults = base.get("defaults") or {}
-    if hierarchy is None:
-        raise ConfigError("Invalid base Hiera config: missing 'hierarchy' key")
-
-    defaults.setdefault("data_dir", DEFAULT_DATA_DIR)
 
     backend_levels = _build_levels(hierarchy, defaults, backends)
     default_levels = _build_levels(
@@ -330,6 +348,10 @@ def _build_levels(hierarchy, defaults, backends):
         conf = {**level}
         for k, v in defaults.items():
             conf.setdefault(k, v)
+        # Puppet's datadir fallback (`hiera_config.rb:623,664`): the
+        # entry's own `datadir` wins, else `defaults['datadir']`, else the
+        # literal string `'data'` -- never the old Hiera-3 absolute path.
+        conf["datadir"] = level.get("datadir") or defaults.get("datadir") or "data"
         data_hash = conf.get("data_hash")
         if data_hash is None:
             raise ConfigError(
@@ -350,8 +372,6 @@ def _build_levels(hierarchy, defaults, backends):
                     data_hash, ", ".join(allowed_names)
                 )
             ) from None
-        # Normalize datadir spelling for the backend.
-        conf.setdefault("datadir", conf.get("data_dir"))
         backend = Backend.new(data_hash, conf, kind="function")
         backend.datadir = _normalize_source(backend.datadir)
         levels.append(HieraLevel.new(conf, backend))

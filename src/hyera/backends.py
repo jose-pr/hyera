@@ -99,13 +99,10 @@ class Backend:
 
     def __init__(self, conf: dict = None, *, strict: str = None):
         self.conf = conf or {}
-        # Accept either ``datadir`` or Hiera-5's ``data_dir`` spelling; the
-        # loader normalizes to one of these. Missing/None -> "" (relative).
-        # (`config_loading_and_validation` removes this fallback later.)
-        datadir = self.conf.get("datadir")
-        if datadir is None:
-            datadir = self.conf.get("data_dir")
-        self.datadir: str = datadir or ""
+        # ``datadir`` is Puppet's only spelling (``KEY_DATADIR``,
+        # ``hiera_config.rb:47``); a non-Puppet key here is rejected before
+        # this ever runs. Missing/None -> "" (relative).
+        self.datadir: str = self.conf.get("datadir") or ""
         if strict is not None and strict not in _STRICT_VALUES:
             raise ValueError(
                 "strict must be one of {!r}, not {!r}".format(_STRICT_VALUES, strict)
@@ -1246,7 +1243,7 @@ class HOCONBackend(Backend):
         # No `Hiera(backend_options=...)` plumbing exists
         # yet, so the opt-in reads from the level's own `conf` (its
         # hiera.yaml hierarchy-entry/`defaults` mapping, exactly like
-        # `datadir`/`data_dir` above) when not passed directly.
+        # `datadir` above) when not passed directly.
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
         self.hocon_includes = bool(hocon_includes)

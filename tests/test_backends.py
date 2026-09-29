@@ -77,14 +77,6 @@ def test_non_puppet_data_hash_names_are_rejected(make_tree, name):
         Hiera(str(root / "hiera.yaml"))
 
 
-def test_backend_data_dir_extension():
-    # Non-Puppet extension; this test goes with the feature: accepting the
-    # legacy `data_dir` spelling alongside `datadir`.
-    assert YAMLBackend({"datadir": "d"}).datadir == "d"
-    assert YAMLBackend({"data_dir": "d"}).datadir == "d"
-    assert YAMLBackend({}).datadir == ""
-
-
 def test_sops_missing_binary(monkeypatch, tmp_path):
     monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: None)
     backend = SopsBackend({})
@@ -153,12 +145,16 @@ def test_unknown_backend_raises_config_error(make_tree):
         Hiera(str(root / "hiera.yaml"))
 
 
-def test_missing_hierarchy_raises_config_error(make_tree):
+def test_missing_hierarchy_uses_puppet_default(make_tree):
     # `make_tree` only fills in `defaults`/`version`; it never invents a
-    # `hierarchy` key, so this still exercises the missing-hierarchy path.
-    root = make_tree({"defaults": {"data_hash": "yaml_data"}})
-    with pytest.raises(ConfigError, match="hierarchy"):
-        Hiera(str(root / "hiera.yaml"))
+    # `hierarchy` key, so a missing `hierarchy` gets Puppet's own default
+    # (a single `Common` level at `common.yaml`) instead of raising.
+    root = make_tree(
+        {"defaults": {"data_hash": "yaml_data"}},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.get("k") == "v"
 
 
 @pytest.mark.parametrize(

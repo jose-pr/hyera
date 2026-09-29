@@ -4,4 +4,3 @@ description: >-
 origin: verify-tests/V8_defdd
 queries:
   - key: k
-    divergence: spec-config/default-datadir-is-hiera3-absolute

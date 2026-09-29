@@ -3,4 +3,3 @@ description: 'docs-accuracy: the README documents `data_dir` as the Hiera 5 spel
 origin: docs-accuracy/f_datadir_key
 queries:
 - key: k
-  divergence: spec-config/data-dir-documented-as-hiera5-spelling

@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/readme_example
 queries:
   - key: k
-    divergence: spec-config/data-dir-documented-as-hiera5-spelling

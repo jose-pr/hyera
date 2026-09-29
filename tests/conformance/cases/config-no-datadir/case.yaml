@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/no_datadir
 queries:
   - key: k
-    divergence: spec-config/default-datadir-is-hiera3-absolute

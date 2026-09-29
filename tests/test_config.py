@@ -1,8 +1,9 @@
 """``hiera.yaml`` reading: ``HieraConfig.create`` (``_hiera_config.py``).
 
-Copying and absolutizing the base config, Puppet's version dispatch, and the
-empty/non-mapping-file fallback. Schema validation and per-level function
-kind selection are ``test_config.py``'s own later additions.
+Copying and absolutizing the base config, Puppet's version dispatch, the
+empty/non-mapping-file fallback, and Puppet's `defaults`/`hierarchy`/
+`datadir` fallbacks. Schema validation and per-level function kind
+selection are later additions here, once those phases land.
 """
 
 import copy
@@ -104,3 +105,28 @@ def test_empty_or_non_mapping_config_file_raises(make_tree, text):
 
     with pytest.raises(ConfigError, match="does not contain a valid YAML hash"):
         Hiera(str(root / "hiera.yaml"))
+
+
+@pytest.mark.parametrize(
+    "defaults_yaml, expected_dir",
+    [
+        ("{data_hash: yaml_data}", "data"),
+        ("{data_hash: yaml_data, datadir: other}", "other"),
+    ],
+    ids=["no-datadir-anywhere", "defaults-datadir"],
+)
+def test_entry_datadir_fallback(make_tree, defaults_yaml, expected_dir):
+    # Written as raw YAML, not through `make_tree`'s dict mode -- that mode
+    # always fills in a `datadir`, which would hide the very fallback this
+    # test exists to exercise.
+    root = make_tree(
+        "version: 5\n"
+        "defaults: {}\n"
+        "hierarchy:\n"
+        "  - {{name: common, path: common.yaml}}\n".format(defaults_yaml),
+        files={"{}/common.yaml".format(expected_dir): "k: v\n"},
+    )
+
+    h = Hiera(str(root / "hiera.yaml"))
+
+    assert h.get("k") == "v"

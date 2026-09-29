@@ -3,4 +3,3 @@ description: 'docs-accuracy: with no `defaults:`, Puppet fills in the built-in v
 origin: docs-accuracy/f_nodefaults
 queries:
 - key: k
-  divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted

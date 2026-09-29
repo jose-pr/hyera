@@ -19,7 +19,10 @@ _FUNCTION_RE = re.compile(
 # without this, an unresolved function leftover would be blanked here.
 _INTERP_RE = re.compile(r"""%\{(?:::|)([^(}]*)\}""")
 # A bare ``%{var}`` reference; the captured name becomes a ``{var}`` format
-# field. The character class allows the identifier chars Puppet permits.
+# field. Narrower than Puppet's own ``%{...}`` (``interpolation.rb:51-54``),
+# which takes any text up to the closing ``}`` and strips it verbatim --
+# this class is only what a var/datadir/mapped_paths reference actually
+# needs to spell, not a claim about what Puppet itself permits there.
 _FORMAT_RE = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
 #: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a bare ``%{...}`` whose
 #: (stripped) content is exactly one of these tokens always resolves to the

@@ -226,7 +226,7 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
         "version: 5\n"
         "defaults:\n"
         "  data_hash: sops_data\n"
-        "  data_dir: data\n"
+        "  datadir: data\n"
         "hierarchy:\n"
         "  - name: secret\n"
         "    path: secret.yaml\n",

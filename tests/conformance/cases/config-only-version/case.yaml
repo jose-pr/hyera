@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/only_version
 queries:
   - key: k
-    divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted
