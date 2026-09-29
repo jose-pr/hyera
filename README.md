@@ -75,7 +75,7 @@ from Puppet" below for the one exception):
 
 | Backend        | `data_hash` name | Notes                                          |
 | -------------- | ----------------- | ---------------------------------------------- |
-| `YAMLBackend`  | `yaml_data`       | parsed with PyYAML `SafeLoader`                |
+| `YAMLBackend`  | `yaml_data`       | parses YAML the way Puppet's Psych does (types, symbols, BOM), on libyaml when available |
 | `JSONBackend`  | `json_data`       |                                                 |
 | `HOCONBackend` | `hocon_data`      | requires `pip install pyera[hocon]`            |
 | `SopsBackend`  | `sops_data`       | decrypts via the `sops` CLI on the fly         |

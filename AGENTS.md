@@ -24,6 +24,7 @@ src/pyera/
 ├── _lookup_adapter.py      # lookup_options matching (lookup_adapter.rb)
 ├── _types.py               # Sensitive, convert_to (pops/types)
 ├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
+├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 └── cli.py                  # duho-based `pyera` console script (Lookup command, main())
