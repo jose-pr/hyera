@@ -1,0 +1,18 @@
+---
+version: 5
+defaults:
+  data_hash: yaml_data
+  datadir: data
+hierarchy:
+  - name: per-count
+    path: "counts/%{count}.yaml"
+  - name: flags
+    paths:
+      - "flags/%{flag}.yaml"
+      - "flags/extra.yaml"
+  - name: roles
+    mapped_paths: [facts.roles, role, "roles/%{role}.yaml"]
+  - name: modules
+    glob: "modules/*.yaml"
+  - name: common
+    path: common.yaml

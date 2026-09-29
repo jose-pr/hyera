@@ -1,0 +1,23 @@
+---
+greeting: "hello %{facts.role} from %{lookup('site')}"
+site: common-site
+zero: 0
+ref_zero: "value=%{hiera('zero')}"
+topscope: "%{::role}"
+fact_int: "%{num}"
+empty_interp: "a%{}b"
+literal_pct: "100%{literal('%')} done"
+list: [a, b]
+alias_list: "%{alias('list')}"
+ws: "%{ role }"
+keyed: {"%{role}_key": v}
+quoted: "%{dotted.\"a.b\"}"
+embed_missing: "x%{lookup('nope')}y"
+alias_missing: "%{alias('does::not::exist')}"
+alone_list: "%{lookup('list')}"
+rec: "%{lookup('rec')}"
+unknown_fn: "%{foo('x')}"
+alias_embedded: "x%{alias('list')}"
+absent: "[%{absent}]"
+h: {k: v, n: 1}
+h_interp: "x%{lookup('h')}"

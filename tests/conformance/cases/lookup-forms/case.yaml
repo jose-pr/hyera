@@ -1,0 +1,19 @@
+description: >-
+  Puppet lookup's call forms our API does not expose yet: a name-list key
+  (first found wins), a String default, and a --type assertion.
+origin: tests/conformance/cases/hierarchy
+queries:
+  - key: [nope, common_key]
+    id: nope|common_key
+    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
+  - key: nope
+    id: nope-default
+    default: fallback
+  - key: common_key
+    id: common_key-string
+    type: String
+    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
+  - key: common_key
+    id: common_key-integer
+    type: Integer
+    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults

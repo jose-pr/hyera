@@ -1,0 +1,43 @@
+description: >-
+  Merge strategies across a two-level hierarchy, driven both by explicit
+  --merge flags and by lookup_options in the data.
+origin: tests/conformance/cases/merges
+queries:
+  - key: vals
+    merge: unique
+  - key: db
+    merge: hash
+  - key: conf
+    merge: deep
+  - key: conf
+    id: conf-ordered
+    merge: deep
+    ordered: true
+    divergence: spec-merge/merged-hash-key-order
+  - key: oconf
+    merge: deep
+    divergence: spec-merge/deep-array-merge-order-and-dedupe
+  - key: ko
+    merge: {strategy: deep, knockout_prefix: "--"}
+    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
+  - key: kosort
+    merge: {strategy: deep, knockout_prefix: "--", sort_merged_arrays: true}
+  - key: rows
+    merge: {strategy: deep, merge_hash_arrays: true}
+  - key: mixed
+    merge: {strategy: deep, sort_merged_arrays: true}
+    divergence: spec-merge/sort-merged-arrays-scope-and-errors
+  - key: classes
+  - key: classes
+    id: classes-first
+    merge: first
+  - key: items2
+    divergence: spec-merge/merge-options-not-validated
+  - key: db.port
+    divergence: code-core/dotted-key-root-semantics
+  - key: port
+  - key: port
+    id: port-explicit-first
+    merge: first
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+  - key: secret

@@ -1,0 +1,11 @@
+---
+vals: [b, c]
+db: {host: localhost, port: 5432}
+conf: {b: 2, nested: {y: 2}}
+oconf: {items: [b]}
+ko: {drop: 99, other: 2}
+kosort: {items: [b, d]}
+rows: [{extra: 1}, {v: 2}]
+mixed: {items: [1]}
+classes: [base]
+items2: [b]

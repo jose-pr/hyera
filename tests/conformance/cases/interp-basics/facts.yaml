@@ -1,0 +1,4 @@
+---
+role: web
+num: 42
+dotted: {"a.b": deep}

@@ -1,0 +1,9 @@
+---
+common_key: common
+from_count: common
+from_flag: common
+web_setting: common
+db: {host: localhost, port: 5432}
+nested: {list: ["%{facts.site}", "x-%{site}"], inner: {k: "%{facts.site}"}}
+env_probe: "%{environment}"
+trusted_probe: "[%{trusted.certname}]"

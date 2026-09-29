@@ -1,0 +1,197 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "276e88c1b114fbcddd677578d17dcc287ab7306fbcf438b346a22e51c7fa23d8",
+  "results": {
+    "greeting": {
+      "argv": [
+        "--strict",
+        "warning",
+        "greeting"
+      ],
+      "status": "found",
+      "value": "hello web from common-site"
+    },
+    "ref_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ref_zero"
+      ],
+      "status": "found",
+      "value": "value=0"
+    },
+    "topscope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "topscope"
+      ],
+      "status": "found",
+      "value": "web"
+    },
+    "fact_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fact_int"
+      ],
+      "status": "found",
+      "value": "42"
+    },
+    "empty_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "empty_interp"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "literal_pct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "literal_pct"
+      ],
+      "status": "found",
+      "value": "100% done"
+    },
+    "alias_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_list"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ws"
+      ],
+      "status": "found",
+      "value": "web"
+    },
+    "keyed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "keyed"
+      ],
+      "status": "found",
+      "value": {
+        "web_key": "v"
+      }
+    },
+    "quoted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "quoted"
+      ],
+      "status": "found",
+      "value": "deep"
+    },
+    "embed_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "embed_missing"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "alias_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_missing"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "alone_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alone_list"
+      ],
+      "status": "found",
+      "value": "[\"a\", \"b\"]"
+    },
+    "rec": {
+      "argv": [
+        "--strict",
+        "warning",
+        "rec"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'rec' failed: Lookup of key 'rec' failed: Recursive lookup detected in [rec]"
+    },
+    "unknown_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unknown_fn"
+      ],
+      "status": "error",
+      "message": "Unknown interpolation method 'foo'"
+    },
+    "alias_embedded": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_embedded"
+      ],
+      "status": "error",
+      "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
+    },
+    "absent": {
+      "argv": [
+        "--strict",
+        "warning",
+        "absent"
+      ],
+      "warnings": [
+        "Undefined variable 'absent';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "absent-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "absent"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'absent';"
+    },
+    "nope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nope"
+      ],
+      "status": "not_found"
+    },
+    "h_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_interp"
+      ],
+      "status": "found",
+      "value": "x{\"k\"=>\"v\", \"n\"=>1}",
+      "raw_value": "x{\"k\" => \"v\", \"n\" => 1}"
+    }
+  }
+}

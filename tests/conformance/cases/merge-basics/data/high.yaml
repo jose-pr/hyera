@@ -1,0 +1,20 @@
+---
+vals: [a, b]
+db: {host: db.prod.internal}
+conf: {a: 1, nested: {x: 1}}
+oconf: {items: [c, a]}
+ko: {keep: 1, '--drop': true}
+kosort: {items: [c, a, '--b']}
+rows: [{name: a, v: 1}, {name: b}]
+mixed: {items: [2, 'a']}
+classes: [web]
+items2: [c, a]
+dbx: {port: [80]}
+port: '8080'
+secret: hunter2
+lookup_options:
+  classes: {merge: unique}
+  items2: {merge: {strategy: unique, sort_merged_arrays: true}}
+  'db.port': {merge: unique}
+  port: {convert_to: Integer}
+  secret: {convert_to: Sensitive}

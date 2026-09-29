@@ -1,0 +1,52 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6e0dca35baaa492100893b1493124386f84582ef68e2cfa7070c9c4539c8b1a1",
+  "results": {
+    "nope|common_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nope",
+        "common_key"
+      ],
+      "status": "found",
+      "value": "common"
+    },
+    "nope-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "fallback",
+        "nope"
+      ],
+      "status": "found",
+      "value": "fallback"
+    },
+    "common_key-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "String",
+        "common_key"
+      ],
+      "status": "found",
+      "value": "common"
+    },
+    "common_key-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer",
+        "common_key"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got String"
+    }
+  }
+}

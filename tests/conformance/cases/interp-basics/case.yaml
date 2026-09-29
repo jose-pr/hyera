@@ -1,0 +1,42 @@
+description: >-
+  Interpolation methods (scope/lookup/hiera/alias/literal) and their edge
+  cases, recorded under the library's --strict warning default; one
+  query opts into Puppet 8's --strict error to record the undefined-variable
+  divergence directly.
+origin: tests/conformance/cases/interpolation
+queries:
+  - key: greeting
+  - key: ref_zero
+  - key: topscope
+  - key: fact_int
+  - key: empty_interp
+  - key: literal_pct
+  - key: alias_list
+  - key: ws
+    divergence: spec-interpolation/whitespace-in-expression-ignored
+  - key: keyed
+    divergence: spec-interpolation/hash-keys-not-interpolated
+  - key: quoted
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: embed_missing
+    divergence: spec-interpolation/missing-inline-lookup-raises
+  - key: alias_missing
+    divergence: spec-interpolation/missing-inline-lookup-raises
+  - key: alone_list
+    divergence: spec-interpolation/method-result-type-and-nonscalar
+  - key: rec
+    divergence: spec-interpolation/no-recursion-detection
+  - key: unknown_fn
+    divergence: spec-interpolation/method-call-syntax-validation
+  - key: alias_embedded
+  - key: absent
+  - key: absent
+    id: absent-strict-error
+    puppet_args: ["--strict", "error"]
+    divergence: spec-context-facts/undefined-variable-semantics
+  - key: nope
+  - key: h_interp
+    hash_inspect: true
+    divergence:
+      - spec-interpolation/ruby-to_s-formatting
+      - spec-interpolation/method-result-type-and-nonscalar

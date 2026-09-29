@@ -1,0 +1,350 @@
+"""Record golden results for the conformance cases from real Puppet.
+
+usage: python record.py [--runner local|wsl|wsl:<distro>] [--jobs N]
+                         [--check] [--list-markers] [CASE ...]
+
+Each query in ``cases/<case>/case.yaml`` becomes one ``puppet lookup`` run,
+isolated under a scratch confdir/vardir/etc (never the developer's real
+Puppet install). Results land in ``cases/<case>/golden.json``.
+
+``--check`` re-records into memory and diffs against the committed
+goldens, printing ``DRIFT <case>::<id>`` and exiting 1 on any difference
+or missing golden, without writing anything -- run it after an oracle
+upgrade. ``--list-markers`` needs no Puppet: it prints every divergence id
+with its query count and every deviation's id and reason.
+
+Dev-only: needs Puppet 8.10's ``puppet lookup`` on PATH (``local``) or in
+a WSL distribution (``wsl``/``wsl:<distro>``, default distribution when
+none is named). CI never records -- it only replays the committed goldens.
+"""
+
+import argparse
+import concurrent.futures
+import json
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+from _golden import (
+    CASES,
+    DEFAULT_PUPPET_ARGS,
+    NODE,
+    ORACLE,
+    aio_inspect,
+    case_dirs,
+    input_digest,
+    load_case,
+    lookup_argv,
+    normalize_message,
+    query_id,
+    read_golden,
+    write_golden,
+)
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_NOT_FOUND = re.compile(r"did not find a value for the name")
+_LEAK_HOST_PATTERNS = (
+    re.compile(r"/mnt/"),
+    re.compile(r"/home/"),
+    re.compile(r"/tmp/"),
+    re.compile(r"/Users/"),
+    re.compile(r"[A-Za-z]:\\"),
+)
+_IDENTITY_FACTS = (
+    "networking.fqdn",
+    "networking.hostname",
+    "networking.domain",
+    "networking.ip",
+    "networking.ip6",
+)
+
+
+def _iso_root(runner: str) -> str:
+    return (
+        "/tmp/hiera-golden"
+        if runner.startswith("wsl")
+        else str(Path(tempfile.gettempdir()) / "hiera-golden")
+    )
+
+
+def _iso_args(root: str) -> list:
+    return [
+        "--confdir",
+        root + "/conf",
+        "--codedir",
+        root + "/code",
+        "--vardir",
+        root + "/var",
+        "--logdir",
+        root + "/log",
+        "--rundir",
+        root + "/run",
+        "--environmentpath",
+        "./environments",
+        "--basemodulepath",
+        "./modules",
+    ]
+
+
+def _command(runner: str, case_dir: Path, args: list):
+    if runner == "local":
+        return ["puppet"] + args, case_dir
+    kind, _, distro = runner.partition(":")
+    if kind != "wsl":
+        raise SystemExit(
+            "unknown runner {!r} (want local, wsl or wsl:<distro>)".format(runner)
+        )
+    prefix = ["wsl.exe"]
+    if distro:
+        prefix += ["-d", distro]
+    return prefix + ["--cd", str(case_dir), "--", "puppet"] + args, None
+
+
+def _run(runner: str, case_dir: Path, args: list):
+    cmd, cwd = _command(runner, case_dir, args)
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=120)
+    dec = lambda b: _ANSI.sub("", b.decode("utf-8", "replace"))  # noqa: E731
+    return p.returncode, dec(p.stdout), dec(p.stderr)
+
+
+def _leak_scan(obj, root: str, identities: "tuple") -> list:
+    text = obj if isinstance(obj, str) else json.dumps(obj)
+    hits = [p.pattern for p in _LEAK_HOST_PATTERNS if p.search(text)]
+    for ident in identities:
+        if ident and len(ident) >= 4 and ident in text:
+            hits.append(ident)
+    if root and root in text:
+        hits.append(root)
+    return hits
+
+
+_UNSAFE_PATH_CHARS = re.compile(r"[^A-Za-z0-9_.-]")
+
+
+def _query_root(root: str, case_dir: Path, query: dict) -> str:
+    """A private isolation root per query.
+
+    Puppet's SSL/dir bootstrap on a fresh confdir/vardir is not concurrency
+    safe: two processes racing to create the same directory tree both fail
+    with "File exists @ dir_s_mkdir". Giving every query its own subtree
+    under `root` keeps `--jobs` concurrency without that race.
+    """
+    slug = _UNSAFE_PATH_CHARS.sub("_", query_id(query))
+    return "/".join([root, case_dir.name, slug])
+
+
+def record_query(
+    runner: str, case_dir: Path, case: dict, query: dict, root: str, identities: "tuple"
+) -> dict:
+    root = _query_root(root, case_dir, query)
+    iso = _iso_args(root)
+    tail = lookup_argv(case, query)
+    base = (
+        ["lookup"]
+        + iso
+        + [
+            "--hiera_config",
+            "./hiera.yaml",
+            "--facts",
+            "./facts.yaml",
+            "--node",
+            NODE,
+        ]
+    )
+    rc, out, err = _run(runner, case_dir, base + ["--render-as", "json"] + tail)
+    result = {"argv": tail}
+    warnings = [
+        normalize_message(l, case_dir, root)
+        for l in err.splitlines()
+        if l.startswith("Warning:")
+    ]
+    if warnings:
+        result["warnings"] = warnings
+    if rc == 0 and out.strip():
+        result["status"] = "found"
+        result["value"] = json.loads(out)
+    else:
+        errors = [l for l in err.splitlines() if l.startswith("Error:")]
+        if errors:
+            result["status"] = "error"
+            result["message"] = normalize_message(errors[0], case_dir, root)
+        else:
+            # Exit 1 with no output is ambiguous: a genuine miss AND a
+            # swallowed LookupError (unknown interpolation method, an
+            # embedded alias, default_hierarchy outside a module) look the
+            # same. Only the last line of --explain tells them apart.
+            _, out2, err2 = _run(runner, case_dir, base + ["--explain"] + tail)
+            lines = [l for l in (out2 + "\n" + err2).splitlines() if l.strip()]
+            last = lines[-1] if lines else ""
+            if _NOT_FOUND.search(last):
+                result["status"] = "not_found"
+            else:
+                result["status"] = "error"
+                result["message"] = normalize_message(last, case_dir, root)
+
+    if query.get("hash_inspect") and result.get("status") == "found":
+        normalized = aio_inspect(result["value"])
+        if normalized != result["value"]:
+            result["raw_value"] = result["value"]
+            result["value"] = normalized
+
+    hits = _leak_scan(result, root, identities)
+    if hits:
+        raise SystemExit(
+            "refusing to record a leaking result for {}::{}: {}".format(
+                case_dir.name, query_id(query), hits
+            )
+        )
+    return result
+
+
+def record_case(
+    runner: str,
+    case_dir: Path,
+    jobs: int,
+    versions: dict,
+    root: str,
+    identities: "tuple",
+) -> dict:
+    case = load_case(case_dir)
+    queries = case["queries"]
+    ids = [query_id(q) for q in queries]
+    dupes = {i for i in ids if ids.count(i) > 1}
+    if dupes:
+        raise SystemExit(
+            "{}: duplicate query ids {}".format(case_dir.name, sorted(dupes))
+        )
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        results = list(
+            pool.map(
+                lambda q: record_query(runner, case_dir, case, q, root, identities),
+                queries,
+            )
+        )
+    return {
+        "format": 1,
+        "puppet_version": versions["puppet"],
+        "ruby_version": versions["ruby"],
+        "node": NODE,
+        "inputs_sha256": input_digest(case_dir),
+        "results": dict(zip(ids, results)),
+    }
+
+
+def _versions(runner: str, root: str):
+    """One-time, sequential: puppet --version, and a facts probe that also
+    creates the isolation directories before the query pool starts.
+
+    Returns ``(versions, identities)``: `versions` has `puppet`/`ruby`;
+    `identities` is the tuple of this recording host's fqdn/hostname/
+    domain/ip/ip6 -- never written to a golden, only used to refuse one
+    that accidentally contains them (server_facts carries these too).
+    """
+    _, out, _ = _run(runner, CASES, ["--version"])
+    puppet_version = out.strip()
+    probe_dir = CASES  # any cwd; the facts probe writes only under `root`.
+    _, facts_out, _ = _run(
+        runner,
+        probe_dir,
+        ["facts", "show"]
+        + _iso_args(root)
+        + ["--render-as", "json"]
+        + list(_IDENTITY_FACTS)
+        + ["ruby.version"],
+    )
+    ruby_version = "unknown"
+    identities = ()
+    try:
+        facts = json.loads(facts_out)
+        ruby_version = facts.get("ruby.version", ruby_version)
+        identities = tuple(str(facts[f]) for f in _IDENTITY_FACTS if facts.get(f))
+    except ValueError:
+        pass
+    return {"puppet": puppet_version, "ruby": ruby_version}, identities
+
+
+def list_markers() -> int:
+    divergence_counts = {}
+    deviations = []
+    for case_dir in case_dirs():
+        case = load_case(case_dir)
+        for q in case["queries"]:
+            d = q.get("divergence")
+            if d:
+                ids = d if isinstance(d, list) else [d]
+                for entry in ids:
+                    key = entry["id"] if isinstance(entry, dict) else entry
+                    divergence_counts[key] = divergence_counts.get(key, 0) + 1
+            dev = q.get("deviation")
+            if dev:
+                deviations.append(
+                    (case_dir.name, query_id(q), dev["id"], dev["reason"])
+                )
+    for did in sorted(divergence_counts):
+        print("{}\t{}".format(did, divergence_counts[did]))
+    for case_name, qid, dev_id, reason in deviations:
+        print("deviation\t{}::{}\t{}\t{}".format(case_name, qid, dev_id, reason))
+    return 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--runner", default="local")
+    ap.add_argument("--jobs", type=int, default=6)
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--list-markers", action="store_true")
+    ap.add_argument("cases", nargs="*")
+    opts = ap.parse_args(argv)
+
+    if opts.list_markers:
+        return list_markers()
+
+    root = _iso_root(opts.runner)
+    versions, identities = _versions(opts.runner, root)
+    if not versions["puppet"] or ORACLE["puppet"] not in versions["puppet"]:
+        print(
+            "warning: oracle reports puppet {!r}, this suite expects {}".format(
+                versions["puppet"], ORACLE["puppet"]
+            ),
+            file=sys.stderr,
+        )
+
+    names = opts.cases or sorted(p.name for p in case_dirs())
+    drift = 0
+    for name in names:
+        case_dir = CASES / name
+        golden = record_case(
+            opts.runner, case_dir, opts.jobs, versions, root, identities
+        )
+        if opts.check:
+            try:
+                old = read_golden(case_dir)
+            except FileNotFoundError:
+                print("DRIFT {}: no golden.json recorded yet".format(name))
+                drift += 1
+                continue
+            for qid, res in golden["results"].items():
+                if old["results"].get(qid) != res:
+                    drift += 1
+                    print(
+                        "DRIFT {}::{}\n  old {}\n  new {}".format(
+                            name, qid, old["results"].get(qid), res
+                        )
+                    )
+        else:
+            write_golden(case_dir, golden)
+            counts = {}
+            for res in golden["results"].values():
+                counts[res["status"]] = counts.get(res["status"], 0) + 1
+            print(
+                "recorded {} with puppet {}: {}".format(
+                    name, versions["puppet"], counts
+                )
+            )
+    return 1 if drift else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

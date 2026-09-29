@@ -2,3 +2,8 @@
 # ending; a tool writing LF into a CRLF file leaves it MIXED, which defeats
 # diffs and hides real changes inside whitespace churn.
 * text=auto eol=lf
+
+# Conformance golden fixtures that must keep their exact recorded bytes
+# (BOM, UTF-16, embedded CRLF) are named with a `.raw.` infix and excluded
+# from the LF/text normalization above.
+tests/conformance/cases/**/*.raw.* -text

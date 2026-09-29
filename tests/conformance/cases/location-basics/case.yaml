@@ -1,0 +1,20 @@
+description: >-
+  Hierarchy resolution: falsy facts in path/paths location keys, a
+  mapped_paths dotted collection variable, dotted lookup keys, interpolation
+  inside nested values, and the scope Puppet injects (environment, trusted).
+origin: tests/conformance/cases/hierarchy
+queries:
+  - key: common_key
+  - key: from_count
+    divergence: spec-context-facts/falsy-scope-values-dropped
+  - key: from_flag
+    divergence: spec-context-facts/falsy-scope-values-dropped
+  - key: extra_key
+  - key: web_setting
+    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup
+  - key: mod_key
+  - key: db.port
+    divergence: code-core/dotted-key-root-semantics
+  - key: nested
+  - key: env_probe
+  - key: trusted_probe

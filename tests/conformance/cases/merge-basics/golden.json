@@ -1,0 +1,234 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "8f94c75ac6707c28d8f68bd8a93ca799e2c8f664a4ddc1463f03e2e000aad075",
+  "results": {
+    "vals": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "vals"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "db": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "db"
+      ],
+      "status": "found",
+      "value": {
+        "host": "db.prod.internal",
+        "port": 5432
+      }
+    },
+    "conf": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "conf"
+      ],
+      "status": "found",
+      "value": {
+        "b": 2,
+        "nested": {
+          "y": 2,
+          "x": 1
+        },
+        "a": 1
+      }
+    },
+    "conf-ordered": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "conf"
+      ],
+      "status": "found",
+      "value": {
+        "b": 2,
+        "nested": {
+          "y": 2,
+          "x": 1
+        },
+        "a": 1
+      }
+    },
+    "oconf": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "oconf"
+      ],
+      "status": "found",
+      "value": {
+        "items": [
+          "b",
+          "c",
+          "a"
+        ]
+      }
+    },
+    "ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko"
+      ],
+      "status": "found",
+      "value": {
+        "drop": 99,
+        "other": 2,
+        "keep": 1,
+        "--drop": true
+      }
+    },
+    "kosort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "--sort-merged-arrays",
+        "kosort"
+      ],
+      "status": "found",
+      "value": {
+        "items": [
+          "a",
+          "c",
+          "d"
+        ]
+      }
+    },
+    "rows": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "rows"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "extra": 1,
+          "name": "a",
+          "v": 1
+        },
+        {
+          "v": 2,
+          "name": "b"
+        }
+      ]
+    },
+    "mixed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "mixed"
+      ],
+      "status": "error",
+      "message": "comparison of Integer with String failed"
+    },
+    "classes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "classes"
+      ],
+      "status": "found",
+      "value": [
+        "web",
+        "base"
+      ]
+    },
+    "classes-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "classes"
+      ],
+      "status": "found",
+      "value": [
+        "web"
+      ]
+    },
+    "items2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "items2"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'sort_merged_arrays'"
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "status": "not_found"
+    },
+    "port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "port"
+      ],
+      "status": "found",
+      "value": 8080
+    },
+    "port-explicit-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "port"
+      ],
+      "status": "found",
+      "value": 8080
+    },
+    "secret": {
+      "argv": [
+        "--strict",
+        "warning",
+        "secret"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    }
+  }
+}

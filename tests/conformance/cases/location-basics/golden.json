@@ -1,0 +1,106 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "da26c8cde944c7983b3c57861de9a03bc14f080e9ddb9b7a53f378e77635247f",
+  "results": {
+    "common_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "common_key"
+      ],
+      "status": "found",
+      "value": "common"
+    },
+    "from_count": {
+      "argv": [
+        "--strict",
+        "warning",
+        "from_count"
+      ],
+      "status": "found",
+      "value": "zero-file"
+    },
+    "from_flag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "from_flag"
+      ],
+      "status": "found",
+      "value": "false-file"
+    },
+    "extra_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "extra_key"
+      ],
+      "status": "found",
+      "value": "extra"
+    },
+    "web_setting": {
+      "argv": [
+        "--strict",
+        "warning",
+        "web_setting"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "mod_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mod_key"
+      ],
+      "status": "found",
+      "value": "from-glob"
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "status": "not_found"
+    },
+    "nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested"
+      ],
+      "status": "found",
+      "value": {
+        "list": [
+          "lab",
+          "x-lab"
+        ],
+        "inner": {
+          "k": "lab"
+        }
+      }
+    },
+    "env_probe": {
+      "argv": [
+        "--strict",
+        "warning",
+        "env_probe"
+      ],
+      "status": "found",
+      "value": "production"
+    },
+    "trusted_probe": {
+      "argv": [
+        "--strict",
+        "warning",
+        "trusted_probe"
+      ],
+      "status": "found",
+      "value": "[]"
+    }
+  }
+}
