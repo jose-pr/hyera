@@ -84,6 +84,7 @@ queries:
     divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_int
   - key: s_nested
+    hash_inspect: true
     divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_strq
   - key: s_quote

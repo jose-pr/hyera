@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "23deb7e83039c5d07ae789ff172711079dbe84db61332846235ac7d467011340",
+  "inputs_sha256": "ed77b14a06a3e9c619b2169f6ca62eb2271924464980dae29bc075956c4fd443",
   "results": {
     "i_oct8": {
       "argv": [
@@ -318,7 +318,8 @@
         "s_nested"
       ],
       "status": "found",
-      "value": "{'a' => [1, {'b' => 'c'}], 'd e' => undef}"
+      "value": "{'a'=>[1, {'b'=>'c'}], 'd e'=>undef}",
+      "raw_value": "{'a' => [1, {'b' => 'c'}], 'd e' => undef}"
     },
     "s_strq": {
       "argv": [
