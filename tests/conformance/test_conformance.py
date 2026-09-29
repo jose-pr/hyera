@@ -12,7 +12,14 @@ import sys
 import pytest
 
 import pyera
-from _golden import case_dirs, load_case, query_id, read_golden, lint_case
+from _golden import (
+    RUNTIME_PREDICATES,
+    case_dirs,
+    load_case,
+    query_id,
+    read_golden,
+    lint_case,
+)
 from _ours import AdapterUnsupported, canonical, expected, run_api
 
 
@@ -23,17 +30,25 @@ def _divergence_marks(query):
     entries = d if isinstance(d, list) else [d]
     ids = []
     skip_platforms = set()
+    when_keys = set()
     for entry in entries:
         if isinstance(entry, dict):
             ids.append(entry["id"])
             if "on" in entry:
                 skip_platforms.add(tuple(entry["on"]))
+            if "when" in entry:
+                when_keys.add(entry["when"])
         else:
             ids.append(entry)
 
     condition = True
     if skip_platforms:
         condition = any(sys.platform in platforms for platforms in skip_platforms)
+    if when_keys:
+        # Evaluated fresh every run (never cached), so a dependency
+        # reinstall between CI legs is picked up rather than pinned to
+        # whatever was true at collection time in some other process.
+        condition = condition and all(RUNTIME_PREDICATES[w]() for w in when_keys)
     return [pytest.mark.xfail(condition, strict=True, reason=",".join(ids))]
 
 

@@ -203,25 +203,61 @@ def _leak_hits(text: str) -> list:
     return [p.pattern for p in _LEAK_PATTERNS if p.search(text)]
 
 
+def _pathlib_next_includes_hidden_by_default() -> bool:
+    """Whether the installed pathlib_next's ``Path.glob`` defaults to
+    matching dotfiles.
+
+    ``critic-engineering/glob-semantics-drift-with-pathlib-next-patch``:
+    the declared range ``pathlib_next>=0.9.0,<0.10`` covers two
+    behaviors -- ``include_hidden: bool = False`` through 0.9.2 (and the
+    floor, 0.9.0), ``= True`` from 0.9.11. A glob-over-a-dotfile golden's
+    outcome therefore depends on which patch is actually resolved, not
+    just on our own code, so its divergence marker is gated on this
+    runtime probe rather than applying unconditionally.
+    """
+    import inspect
+
+    from pathlib_next import Path as _PNPath
+
+    default = inspect.signature(_PNPath.glob).parameters["include_hidden"].default
+    return bool(default)
+
+
+#: Named runtime facts a divergence dict's ``when`` key may reference,
+#: alongside (or instead of) the platform guard ``on``. Every predicate is
+#: a zero-argument callable returning a bool, evaluated fresh per test run
+#: (never cached: a re-install between runs must be picked up).
+RUNTIME_PREDICATES = {
+    "pathlib_next-includes-hidden": _pathlib_next_includes_hidden_by_default,
+}
+
+
 def _is_marker_valid(value) -> bool:
     if isinstance(value, str):
         return bool(_DIVERGENCE_ID_RE.match(value))
     if isinstance(value, list):
         return bool(value) and all(_is_marker_valid(v) for v in value)
     if isinstance(value, dict):
-        # A bare `on:` key is read back as the boolean True by PyYAML's
-        # YAML-1.1 resolver (the same "Norway problem" as unquoted
-        # off/on/yes elsewhere in a case.yaml) -- catch it here so a
-        # platform guard silently authored as `on: [...]` instead of
+        # A bare `on:` (or `when:`) key is read back as the boolean True
+        # by PyYAML's YAML-1.1 resolver (the same "Norway problem" as
+        # unquoted off/on/yes elsewhere in a case.yaml) -- catch it here
+        # so a guard silently authored as `on: [...]` instead of
         # `"on": [...]` fails loudly instead of never applying.
-        if set(value) - {"id", "on"}:
+        if set(value) - {"id", "on", "when"}:
             return False
         if not _DIVERGENCE_ID_RE.match(value.get("id", "")):
             return False
         on = value.get("on")
-        return on is None or (
-            isinstance(on, list) and all(o in ("win32", "linux", "darwin") for o in on)
-        )
+        if not (
+            on is None
+            or (
+                isinstance(on, list)
+                and all(o in ("win32", "linux", "darwin") for o in on)
+            )
+        ):
+            return False
+        when = value.get("when")
+        return when is None or when in RUNTIME_PREDICATES
     return False
 
 
