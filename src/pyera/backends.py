@@ -88,6 +88,15 @@ class YAMLBackend(Backend):
             raise BackendError("Failed to parse YAML: {}".format(e)) from e
 
 
+def _refuse_batch_shim(exe: str) -> None:
+    """Raise if *exe* is a ``.bat``/``.cmd`` shim, in any letter case."""
+    if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
+        raise BackendError(
+            "refusing to run sops batch shim {}: cmd.exe re-parses its own "
+            "argument line, which is unsafe for a data-derived path".format(exe)
+        )
+
+
 def _run_sops(path, input_type: str) -> bytes:
     """Run ``sops -d`` on ``path`` and return its decrypted stdout.
 
@@ -104,6 +113,11 @@ def _run_sops(path, input_type: str) -> bytes:
         raise BackendError(
             "sops executable not found on PATH; cannot decrypt {}".format(path)
         )
+    # The batch-shim refusal runs before the relative-path check (it holds
+    # whatever the path looks like, and a Windows-style path is never
+    # absolute on POSIX) and again after abspath, which normalizes forms
+    # such as ``sops.bat.`` into ``.bat``.
+    _refuse_batch_shim(exe)
     if not (os.path.isabs(exe) or exe.startswith(("/", "\\"))):
         # Python's ``shutil.which`` does not consistently honour the
         # Windows implicit-current-directory opt-out (NoDefaultCurrentDirectoryInExePath):
@@ -124,11 +138,7 @@ def _run_sops(path, input_type: str) -> bytes:
             "absolute sops on PATH instead".format(exe)
         )
     exe = os.path.abspath(exe)
-    if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
-        raise BackendError(
-            "refusing to run sops batch shim {}: cmd.exe re-parses its own "
-            "argument line, which is unsafe for a data-derived path".format(exe)
-        )
+    _refuse_batch_shim(exe)
     abs_path = os.path.abspath(os.fspath(path))
     try:
         proc = subprocess.run(
