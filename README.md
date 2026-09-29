@@ -70,14 +70,20 @@ default_hierarchy:            # consulted only when the hierarchy above misses
     path: "module_defaults.yaml"
 ```
 
-Backends (by `data_hash` name):
+Backends (by `data_hash` name — Puppet function names only; see "Differences
+from Puppet" below for the one exception):
 
-| Backend           | `data_hash` names       | Notes                                   |
-| ----------------- | ----------------------- | --------------------------------------- |
-| `YAMLBackend`     | `yaml_data`, `yaml`     | parsed with PyYAML `SafeLoader`         |
-| `JSONBackend`     | `json_data`, `json`     |                                         |
-| `SopsYAMLBackend` | `yaml.enc`, `sops`      | decrypts via the `sops` CLI on the fly  |
-| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install pyera[hocon]`     |
+| Backend        | `data_hash` name | Notes                                          |
+| -------------- | ----------------- | ---------------------------------------------- |
+| `YAMLBackend`  | `yaml_data`       | parsed with PyYAML `SafeLoader`                |
+| `JSONBackend`  | `json_data`       |                                                 |
+| `HOCONBackend` | `hocon_data`      | requires `pip install pyera[hocon]`            |
+| `SopsBackend`  | `sops_data`       | decrypts via the `sops` CLI on the fly         |
+
+A third-party backend registers itself the same way, by subclassing
+`pyera.Backend` and declaring `NAMES`; `Backend.find`/`.get`/`.new`/`.names`
+look a backend up by name, and `Hiera(backends=[...])` restricts a lookup to
+an explicit allow-list of classes.
 
 `HOCONBackend` sanitizes `include` directives before parsing, matching
 Puppet: a plain `include "file"` contributes nothing. `include file(…)`,
@@ -156,9 +162,9 @@ stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
 
 ## sops and unattended runs
 
-`SopsYAMLBackend` shells out to `sops` to decrypt `*.yaml` levels. It is
-hardened so an automated lookup never hangs, dies opaquely, or leaks a
-decrypted secret:
+`SopsBackend` (`data_hash: sops_data`) shells out to `sops` to decrypt a
+YAML level on the fly. It is hardened so an automated lookup never hangs,
+dies opaquely, or leaks a decrypted secret:
 
 - a finite subprocess timeout (`pyera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
@@ -176,7 +182,8 @@ decrypted secret:
 
 Supported: `version: 5` validation · `defaults` · `hierarchy` · `name` ·
 `path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir`/`data_dir` ·
-`default_hierarchy` · `data_hash` backends (yaml/json/hocon/sops) · all five
+`default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
+non-Puppet `sops_data`) · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted
 subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 `deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
@@ -186,6 +193,16 @@ Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
 `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive` ·
 HOCON `include file()` (Puppet reads the file; pyera always raises instead).
+
+## Differences from Puppet
+
+pyera aims to resolve exactly like `puppet lookup`. Every `data_hash`/
+`lookup_key`/`data_dig` name it accepts is a real Puppet function name —
+with one deliberate exception:
+
+- **`sops_data`** — a `data_hash` backend with no Puppet equivalent, for
+  decrypting a [sops](https://github.com/getsops/sops)-encrypted data file
+  on the fly. A hierarchy that uses it does not load under real Puppet.
 
 ## Notes
 

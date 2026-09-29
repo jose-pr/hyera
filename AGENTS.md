@@ -23,7 +23,7 @@ src/pyera/
 ├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
 ├── _lookup_adapter.py      # lookup_options matching (lookup_adapter.rb)
 ├── _types.py               # Sensitive, convert_to (pops/types)
-├── backends.py             # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend, default_backends
+├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 └── cli.py                  # duho-based `pyera` console script (Lookup command, main())
