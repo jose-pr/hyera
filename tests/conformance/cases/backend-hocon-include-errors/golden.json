@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "41c68eaae07ad6d9666a0af0fd82ff246655483f9472540a5d4fd5b3cf6be340",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "undefined method 'include_resources' for an instance of Hocon::Impl::SimpleIncluder"
+    }
+  }
+}

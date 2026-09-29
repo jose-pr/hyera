@@ -1,0 +1,11 @@
+description: >-
+  A value-position `include "..."` (bare, or inside a `[...]` array either
+  alone or after another element) is literal text in Puppet -- never a
+  real include and never an error.
+origin: hocon-data-include-file-and-value-position-includes-raise-pu,hocon-array-value-position-include-raises-vs-puppet-literal
+requires:
+- pyhocon
+queries:
+- key: msg
+- key: lst
+- key: lst2

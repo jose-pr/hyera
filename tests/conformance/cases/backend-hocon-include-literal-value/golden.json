@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "79e59a421597f3e97e1e2a34bc676146da5dc49dbcafe8ca5d639a823b341a25",
+  "results": {
+    "msg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "msg"
+      ],
+      "status": "found",
+      "value": "please include inc.conf"
+    },
+    "lst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst"
+      ],
+      "status": "found",
+      "value": [
+        "include inc.conf"
+      ]
+    },
+    "lst2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst2"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        "include inc.conf"
+      ]
+    }
+  }
+}

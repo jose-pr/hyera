@@ -1,0 +1,11 @@
+description: >-
+  `include classpath(...)` is a directive form Ruby hocon does not
+  implement (`undefined method 'include_resources'`) -- Puppet errors,
+  and hyera's default is never *less* than Puppet, so it errors here too,
+  representative of the whole family (url()/classpath()/required()/
+  package()) Ruby hocon never resolves in any form.
+origin: hocon_include_parity
+requires:
+- pyhocon
+queries:
+- key: plain
