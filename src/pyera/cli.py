@@ -86,10 +86,13 @@ class Lookup(duho.LoggingArgs, duho.Cli):
     ) = None
     """Context variable ``key=value`` (repeatable)."""
     merge: (
-        "duho.Arg[str, duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]"
-    ) = "first"
-    """Merge strategy across the hierarchy (default: first match wins).
-    ``array``/``set`` are legacy aliases for ``unique``."""
+        "duho.Arg[_ty.Optional[str], "
+        "duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]"
+    ) = None
+    """Merge strategy. Omitted: the data's ``lookup_options`` decide,
+    else first found. An explicit value, ``first`` included, overrides
+    ``lookup_options``. ``array``/``set`` are legacy aliases for
+    ``unique``."""
     deep: bool = False
     """Promote ``--merge hash`` to a deep merge (legacy convenience)."""
     knockout_prefix: (
@@ -102,11 +105,11 @@ class Lookup(duho.LoggingArgs, duho.Cli):
     """Value to print when the key is missing (otherwise exit 1)."""
 
     def _merge_spec(self):
+        if self.merge is None:
+            return None
         strategy = _MERGE_ALIASES.get(self.merge, self.merge)
         if strategy == "hash" and self.deep:
             strategy = "deep"
-        if strategy == "first":
-            return None
         if strategy == "deep" and self.knockout_prefix:
             return {"strategy": "deep", "knockout_prefix": self.knockout_prefix}
         return strategy

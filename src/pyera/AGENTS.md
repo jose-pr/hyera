@@ -172,14 +172,16 @@ paths work since `__init__` re-exports it too).
 - **`Lookup`** — the `duho.Cli` command class. Fields: `key` (positional),
   `config` (`--config/-c`, default `"hiera.yaml"`), `scope` (`--scope/-s`,
   repeatable `key=value`), `merge` (`--merge`, choice of
-  `first|unique|hash|deep|array|set`, default `"first"`; `array`/`set` are
+  `first|unique|hash|deep|array|set`, default `None`; `array`/`set` are
   legacy aliases for `unique`), `deep` (`--deep`, promotes `merge=hash` to
   `deep`), `knockout_prefix` (`--knockout-prefix`), `output` (`--output/-o`,
   choice of `raw|json|yaml`, default `"raw"`), `default` (`--default`).
   `-o yaml`/`json` (and raw for a dict/list) redact `Sensitive` values the
-  same way raw text already does. Exit codes: `0` key found, `1` key
-  missing (and no `--default`), `2` usage/config error (bad `--scope`,
-  unreadable/invalid config, or a `HieraError`).
+  same way raw text already does. Omitting `--merge` lets the data's
+  `lookup_options` decide (else first-match-wins); an explicit `--merge`,
+  `first` included, always overrides `lookup_options`. Exit codes: `0` key
+  found, `1` key missing (and no `--default`), `2` usage/config error (bad
+  `--scope`, unreadable/invalid config, or a `HieraError`).
 
 ## Gotchas
 

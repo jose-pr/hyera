@@ -61,6 +61,44 @@ def values_root(tmp_path):
     return tmp_path
 
 
+@pytest.fixture
+def mergefirst_root(tmp_path):
+    """A tree where ``lookup_options`` declares ``unique`` for ``classes``,
+    so an explicit ``--merge first`` overriding it is observable.
+    """
+    _write(
+        tmp_path / "hiera.yaml",
+        """\
+        version: 5
+        defaults:
+          data_hash: yaml_data
+          data_dir: data
+        hierarchy:
+          - name: os
+            path: "os/%{facts.os.family}.yaml"
+          - name: common
+            path: common.yaml
+        """,
+    )
+    _write(
+        tmp_path / "data" / "common.yaml",
+        """\
+        classes:
+          - base
+        lookup_options:
+          classes: { merge: unique }
+        """,
+    )
+    _write(
+        tmp_path / "data" / "os" / "RedHat.yaml",
+        """\
+        classes:
+          - redhat
+        """,
+    )
+    return tmp_path
+
+
 _VALUES_EXPECTED = {
     "str": "hello",
     "int": 42,
@@ -114,6 +152,27 @@ def test_default_in_each_format(fmt, values_root, capsys):
         assert json.loads(out) == "fallback"
     else:
         assert out.strip() == "fallback"
+
+
+def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
+    base_args = [
+        "classes",
+        "-c",
+        str(mergefirst_root / "hiera.yaml"),
+        "-s",
+        "facts.os.family=RedHat",
+        "-o",
+        "json",
+    ]
+
+    assert main(base_args) == 0
+    assert json.loads(capsys.readouterr().out) == ["redhat", "base"]
+
+    assert main(base_args + ["--merge", "first"]) == 0
+    assert json.loads(capsys.readouterr().out) == ["redhat"]
+
+    assert main(base_args + ["--merge", "unique"]) == 0
+    assert json.loads(capsys.readouterr().out) == ["redhat", "base"]
 
 
 def test_lookup_found(hiera_root, capsys):

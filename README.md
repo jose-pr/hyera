@@ -136,7 +136,8 @@ pyera missing::key --default '(none)'
 Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
 first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
 `--knockout-prefix`, `--output/-o raw|json|yaml`, `--default`, plus duho's
-`-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides.
+`-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides;
+an explicit `--merge`, `first` included, overrides it.
 
 The CLI is built for unattended use: no interactive prompts, deterministic
 output, and meaningful exit codes — `0` found, `1` key missing, `2`

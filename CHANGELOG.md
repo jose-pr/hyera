@@ -28,6 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one directly raises `BackendError`.
 - CLI `--output yaml` now renders hashes and redacted `Sensitive` values
   instead of crashing with `RepresenterError` and exit 1.
+- An explicit `--merge first` on the CLI now overrides a `lookup_options`
+  merge, as `puppet lookup --merge first` does (omitting `--merge` still
+  lets `lookup_options` decide).
 
 ### Security
 
