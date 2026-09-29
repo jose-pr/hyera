@@ -1,0 +1,15 @@
+s: "str"
+n: 5
+big: 11
+neg: -3
+f: 1.5
+b: true
+nilk: ~
+mixed: [a, 1]
+strs: [a, b]
+ints2: [1, 2]
+empty_a: []
+hsi: {a: 1, b: 2}
+hmix: {a: 1, b: x}
+nested: {a: [1, "x"]}
+deep: {a: {b: [1, {c: "x"}]}}

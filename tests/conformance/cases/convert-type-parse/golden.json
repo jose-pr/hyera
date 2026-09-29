@@ -1,0 +1,398 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "635b812a1846f34c7c01e04ccfa2f2614599de36d9e1299f18f8f78c2748e27a",
+  "results": {
+    "p00": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p00"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p00' could not parse 'NoSuch[', error: 'Syntax error at end of input"
+    },
+    "p01": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p01"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p01' could not parse 'Integer[1,', error: 'Syntax error at end of input"
+    },
+    "p02": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p02"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "p03": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p03"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p03' could not parse 'Integer]', error: 'Syntax error at ']' (line: 1, column: 8)"
+    },
+    "p04": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p04"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p04' could not parse 'Array[String', error: 'Syntax error at end of input"
+    },
+    "p05": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p05"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p05' could not parse 'Hash[String => Integer]', error: 'Invalid number of type parameters specified: Hash requires 2 to 4, 1 provided"
+    },
+    "p06": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p06"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p06' could not parse '\"String\"', error: 'The expression <\"String\"> is not a valid type specification."
+    },
+    "p07": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p07"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p07' could not parse '5', error: 'The expression <5> is not a valid type specification."
+    },
+    "p08": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p08"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p08' could not parse 'Integer[a]', error: 'The expression <Integer[a]> is not a valid type specification."
+    },
+    "p09": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p09"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p09' could not parse 'Integer['1']', error: 'The expression <Integer['1']> is not a valid type specification."
+    },
+    "p10": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p10"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p10' could not parse 'Enum[]', error: 'Syntax error at ']' (line: 1, column: 6)"
+    },
+    "p11": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p11"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p11' could not parse 'Integer[1,2,3]', error: 'Invalid number of type parameters specified: Integer requires 1 or 2, 3 provided"
+    },
+    "p12": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p12"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "p13": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p13"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p13' could not parse 'Tuple[]', error: 'Syntax error at ']' (line: 1, column: 7)"
+    },
+    "p14": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p14"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p14' raised error: odd number of arguments for Hash"
+    },
+    "p15": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p15"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p15' could not parse 'integer', error: 'The expression <integer> is not a valid type specification."
+    },
+    "p16": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p16"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p16' raised error: Converted value from Optional['integer'].new() has wrong type, expects a value of type Undef or String, got String"
+    },
+    "p17": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p17"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p17' could not parse 'Integer[10,0]', error: ''from' must be less or equal to 'to'. Got (10, 0"
+    },
+    "p18": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p18"
+      ],
+      "status": "found",
+      "value": [
+        "5"
+      ]
+    },
+    "p19": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p19"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p19' could not parse 'Variant[]', error: 'Syntax error at ']' (line: 1, column: 9)"
+    },
+    "p20": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p20"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p20' raised error: Creation of new instance of type 'Pattern[/^a/]' is not supported"
+    },
+    "p21": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p21"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p21' raised error: Creation of new instance of type 'Enum['a', 'b', true]' is not supported"
+    },
+    "p22": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p22"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p22' raised error: Converted value from Sensitive[Integer].new() has wrong type, expects a Sensitive[Integer] value, got Sensitive[String]"
+    },
+    "p23": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p23"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "p24": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p24"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p24' raised error: Converted value from Float[1.0, 2.0].new() has wrong type, expects a Float[1.0, 2.0] value, got Float[5.0, 5.0]"
+    },
+    "p25": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p25"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "p26": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p26"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p26' could not parse 'Hash[String]', error: 'Invalid number of type parameters specified: Hash requires 2 to 4, 1 provided"
+    },
+    "p27": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p27"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p27' raised error: odd number of arguments for Hash"
+    },
+    "p28": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p28"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p28' could not parse 'Undef[Integer]', error: 'Not a parameterized type <Undef>"
+    },
+    "p29": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p29"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p29' could not parse 'Integer[1.5]', error: 'The expression <Integer[1.5]> is not a valid type specification."
+    },
+    "p30": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p30"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p30' could not parse 'Boolean[yes]', error: 'Boolean parameter must be true or false"
+    },
+    "p31": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p31"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p31' raised error: Creation of new instance of type 'TypeReference['Frob[Integer]']' is not supported"
+    },
+    "p32": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p32"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p32' raised error: Converted value from Tuple[Integer, 1, 2].new() has wrong type, index 0 expects an Integer value, got String"
+    },
+    "p33": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p33"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p33' could not parse 'Array[Integer, 2, 1]', error: ''from' must be less or equal to 'to'. Got (2, 1"
+    },
+    "p34": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p34"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p34' could not parse 'Any[1]', error: 'Not a parameterized type <Any>"
+    },
+    "p35": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p35"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p35' raised error: Converted value from Regexp[/a/].new() has wrong type, expects a Regexp[/a/] value, got Regexp[/5/]"
+    },
+    "p36": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p36"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p36' raised error: Converted value from Regexp[/a/].new() has wrong type, expects a Regexp[/a/] value, got Regexp[/5/]"
+    },
+    "p37": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p37"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p37' could not parse 'Integer [1]', error: 'The expression <Integer [1]> is not a valid type specification."
+    },
+    "p38": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p38"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "p39": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p39"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p39' could not parse 'Integer,', error: 'Syntax error at end of input"
+    },
+    "p40": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p40"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'p40' raised error: Creation of new instance of type 'TypeReference['Stdlib::Port[1]']' is not supported"
+    },
+    "p41": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p41"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "p42": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p42"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'p42' could not parse 'integer::foo', error: 'The expression <integer::foo> is not a valid type specification."
+    }
+  }
+}

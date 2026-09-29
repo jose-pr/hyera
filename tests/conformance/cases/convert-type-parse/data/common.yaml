@@ -1,0 +1,87 @@
+lookup_options:
+  p00: {convert_to: 'NoSuch['}
+  p01: {convert_to: 'Integer[1,'}
+  p02: {convert_to: 'Integer[1,]'}
+  p03: {convert_to: 'Integer]'}
+  p04: {convert_to: 'Array[String'}
+  p05: {convert_to: 'Hash[String => Integer]'}
+  p06: {convert_to: '"String"'}
+  p07: {convert_to: '5'}
+  p08: {convert_to: 'Integer[a]'}
+  p09: {convert_to: "Integer['1']"}
+  p10: {convert_to: 'Enum[]'}
+  p11: {convert_to: 'Integer[1,2,3]'}
+  p12: {convert_to: 'String[-1]'}
+  p13: {convert_to: 'Tuple[]'}
+  p14: {convert_to: 'Struct[{a => Foo}]'}
+  p15: {convert_to: integer}
+  p16: {convert_to: 'Optional[integer]'}
+  p17: {convert_to: 'Integer[10,0]'}
+  p18: {convert_to: 'Array[1]'}
+  p19: {convert_to: 'Variant[]'}
+  p20: {convert_to: "Pattern['^a']"}
+  p21: {convert_to: 'Enum[a, b, true]'}
+  p22: {convert_to: 'Sensitive[Integer[0,5]]'}
+  p23: {convert_to: 'Integer[default]'}
+  p24: {convert_to: 'Float[1, 2]'}
+  p25: {convert_to: 'String[default, 3]'}
+  p26: {convert_to: 'Hash[String]'}
+  p27: {convert_to: 'Struct[{Optional[a] => Integer}]'}
+  p28: {convert_to: 'Undef[Integer]'}
+  p29: {convert_to: 'Integer[1.5]'}
+  p30: {convert_to: 'Boolean[yes]'}
+  p31: {convert_to: 'Frob[Integer]'}
+  p32: {convert_to: 'Tuple[Integer, 1, 2]'}
+  p33: {convert_to: 'Array[Integer, 2, 1]'}
+  p34: {convert_to: 'Any[1]'}
+  p35: {convert_to: 'Regexp[/a/]'}
+  p36: {convert_to: "Regexp['a']"}
+  p37: {convert_to: 'Integer [1]'}
+  p38: {convert_to: ' Integer'}
+  p39: {convert_to: 'Integer,'}
+  p40: {convert_to: 'Stdlib::Port[1]'}
+  p41: {convert_to: '::Integer'}
+  p42: {convert_to: 'integer::foo'}
+p00: "5"
+p01: "5"
+p02: "5"
+p03: "5"
+p04: "5"
+p05: "5"
+p06: "5"
+p07: "5"
+p08: "5"
+p09: "5"
+p10: "5"
+p11: "5"
+p12: "5"
+p13: "5"
+p14: "5"
+p15: "5"
+p16: "5"
+p17: "5"
+p18: "5"
+p19: "5"
+p20: "5"
+p21: "5"
+p22: "5"
+p23: "5"
+p24: "5"
+p25: "5"
+p26: "5"
+p27: "5"
+p28: "5"
+p29: "5"
+p30: "5"
+p31: "5"
+p32: "5"
+p33: "5"
+p34: "5"
+p35: "5"
+p36: "5"
+p37: "5"
+p38: "5"
+p39: "5"
+p40: "5"
+p41: "5"
+p42: "5"
