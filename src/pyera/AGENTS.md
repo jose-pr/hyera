@@ -53,10 +53,11 @@ Install and import as `pyera` (`pip install pyera`, extras
     given context.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
-    what it read at construction). It survives `copy.deepcopy` and `pickle`
-    (a spawn-start process pool can receive one; a relative config path
-    stays relative to the receiving process's working directory), which
-    copies the parsed-data cache too, sops-decrypted values included.
+    what it read at construction). `Hiera` and `ScopedHiera` survive
+    `copy.deepcopy` and `pickle` (a spawn-start process pool can receive
+    one; a relative config path stays relative to the receiving process's
+    working directory), which copies the parsed-data cache too,
+    sops-decrypted values included.
     Concurrent `.get()` calls on one instance from multiple threads are safe
     on GIL builds, where they only mutate that instance's own caches
     (untested on free-threaded builds).
@@ -64,7 +65,8 @@ Install and import as `pyera` (`pip install pyera`, extras
   context; `.get(key, ..., context=None, **kwargs)` and
   `.has(key, context=None, **kwargs)` merge the bound context *under*
   per-call overrides, so a per-call value always wins. Unknown attributes
-  proxy to the wrapped `Hiera`.
+  proxy to the wrapped `Hiera` (dunder names and `hiera` itself excepted);
+  instances survive `copy`, `copy.deepcopy` and `pickle`.
 - **`make_merge(spec) -> Merge | None`** — normalize a `merge=` spec (name,
   legacy type, or options dict) into a `Merge` accumulator, or `None` for
   first-match. Raises `ValueError` on an unrecognized strategy/type.

@@ -34,6 +34,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `pyera` console script and `python -m pyera` now print `pip install
   'pyera[cli]'` and exit 2 when the `cli` extra is missing, instead of
   crashing with a `ModuleNotFoundError` traceback.
+- `ScopedHiera` can be copied, deep-copied and pickled; each previously
+  raised `RecursionError`.
 
 ### Security
 

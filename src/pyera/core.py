@@ -427,9 +427,14 @@ class ScopedHiera(object):
         return self.hiera.get(key, default, merge, merge_deep, throw, new_context)
 
     def __getattr__(self, name):
-        if hasattr(self.hiera, name):
-            return getattr(self.hiera, name)
-        raise AttributeError(name)
+        # Copying/pickling rebuilds the instance without __init__ and then
+        # probes it for state/dunder methods; without this guard that probe
+        # reaches ``self.hiera`` -- itself an attribute lookup on the same
+        # not-yet-initialized instance -- recursing until the stack
+        # overflows. ``hiera`` and any dunder name are never proxied.
+        if name == "hiera" or name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(self.hiera, name)
 
 
 class HieraLevel(_ty.NamedTuple):
