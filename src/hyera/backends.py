@@ -1244,8 +1244,8 @@ class HOCONBackend(Backend):
         super().__init__(conf, strict=strict)
         # No `Hiera(backend_options=...)` plumbing exists
         # yet, so the opt-in reads from the level's own `conf` (its
-        # hiera.yaml hierarchy-entry/`defaults` mapping, exactly like
-        # `datadir` above) when not passed directly.
+        # hiera.yaml hierarchy-entry/`defaults` mapping) when not passed
+        # directly.
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
         self.hocon_includes = bool(hocon_includes)
