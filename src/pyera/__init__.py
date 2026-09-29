@@ -9,7 +9,14 @@ from .backends import (
     YAMLBackend,
     default_backends,
 )
-from .exceptions import ConfigError, HieraError, InterpolationError
+from .exceptions import (
+    ConfigError,
+    HieraError,
+    HieraLookupError,
+    InterpolationError,
+    KeyNotFoundError,
+    MergeError,
+)
 from .core import (
     Hiera,
     ScopedHiera,
@@ -39,6 +46,9 @@ __all__ = [
     "HieraError",
     "ConfigError",
     "BackendError",
+    "HieraLookupError",
     "InterpolationError",
+    "MergeError",
+    "KeyNotFoundError",
     "__version__",
 ]

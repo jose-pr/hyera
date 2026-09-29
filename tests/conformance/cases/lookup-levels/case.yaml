@@ -48,7 +48,6 @@ queries:
   merge: first
   divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
 - key: badmerge
-  divergence: spec-merge/bad-merge-strategy-uncaught-valueerror
 - key: typo_opt
   divergence: spec-merge/merge-options-not-validated
 - key: mha

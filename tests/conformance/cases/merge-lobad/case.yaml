@@ -13,7 +13,6 @@ queries:
   - key: "b_unconstrained"
     divergence: spec-merge/strategy-aliases-missing
   - key: "b_bad_name"
-    divergence: spec-merge/bad-merge-strategy-uncaught-valueerror
   - key: "b_empty_ko"
     divergence: spec-merge/merge-options-not-validated
   - key: "b_hash_opts"

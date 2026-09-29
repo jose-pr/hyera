@@ -27,20 +27,21 @@ private engine internals with no stability contract.
   any invalid/missing configuration (bad `version`, missing `hierarchy`,
   unknown `data_hash`, unparsable base file).
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
-    — resolve `key`. `merge`: a strategy name (`"first"`/`"unique"`/
-    `"hash"`/`"deep"`), a legacy type (`list`/`set`/`dict`), or a dict
-    `{"strategy": "deep", "knockout_prefix": ..., "sort_merged_arrays": ...,
-    "merge_hash_arrays": ...}`. Omitted → the data's `lookup_options` key
-    decides, else first-match-wins. `merge_deep`: legacy flag, promotes a
-    `dict`/`"hash"` merge to `"deep"`. `throw=True` raises `KeyError` instead
-    of returning `default` on a miss. Falls back to `default_hierarchy` when
-    the main hierarchy misses. `context`/`kwargs` layer over the instance's
-    default context for this call only.
+    — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
+    `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`), a
+    legacy type (`list`/`set`/`dict`), or a dict `{"strategy": "deep",
+    "knockout_prefix": ..., "sort_merged_arrays": ..., "merge_hash_arrays":
+    ...}`. Omitted → the data's `lookup_options` key decides, else
+    first-match-wins. `merge_deep`: legacy flag, promotes a `dict`/`"hash"`
+    merge to `"deep"`. `throw=True` raises `KeyNotFoundError` (a `KeyError`)
+    instead of returning `default` on a miss. Falls back to
+    `default_hierarchy` when the main hierarchy misses. `context`/`kwargs`
+    layer over the instance's default context for this call only.
   - **`.has(key, context=None, **kwargs) -> bool`** — `True` iff
     `.get(key, throw=True, context=context, **kwargs)` would not raise
-    `KeyError`. `context`/`kwargs` layer over the instance context exactly
-    as in `.get`, and reach hierarchy path resolution as well as
-    interpolation.
+    `KeyNotFoundError`. `context`/`kwargs` layer over the instance context
+    exactly as in `.get`, and reach hierarchy path resolution as well as
+    interpolation. A non-`str` `key` still raises `TypeError`.
   - **`.scoped(context=None, **kwargs) -> ScopedHiera`** — bind context
     variables once for reuse.
   - **`.sources(context=None, **kwargs) -> list`** — resolve+load the
@@ -71,7 +72,7 @@ private engine internals with no stability contract.
   instances survive `copy`, `copy.deepcopy` and `pickle`.
 - **`make_merge(spec) -> Merge | None`** — normalize a `merge=` spec (name,
   legacy type, or options dict) into a `Merge` accumulator, or `None` for
-  first-match. Raises `ValueError` on an unrecognized strategy/type.
+  first-match. Raises `MergeError` on an unrecognized strategy/type.
 - **`Merge(strategy, knockout_prefix=None, sort_merged_arrays=False, merge_hash_arrays=False)`**
   — accumulates matches across the hierarchy. `"unique"`: flatten
   scalars+arrays, dedupe, first-seen order (+ optional sort). `"hash"`:
@@ -166,12 +167,27 @@ private engine internals with no stability contract.
 
 ## Exceptions (`exceptions.py`)
 
-`HieraError` (base) → **`ConfigError`** (invalid/missing base config),
-**`BackendError`** (a backend failed to load/decode a file), and
-**`InterpolationError`** (a `%{...}` interpolation or function call could
-not be resolved). All are also re-exported from `pyera.__init__` (except
-`BackendError`, which lives on `pyera.backends`/`pyera.BackendError` — both
-paths work since `__init__` re-exports it too).
+`HieraError(*args, path=None)` (base; `.path` names the file concerned, or
+`None`) →
+
+- **`ConfigError`** — anything about `hiera.yaml`: missing, unreadable,
+  unparsable, non-mapping, or wrong shape.
+- **`BackendError`** — a data file could not be read or parsed. `.path`
+  names it. Can be raised from `Hiera(...)` itself (context-free levels are
+  loaded by the constructor) as well as from a lookup.
+- **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
+  a key. →
+  - **`InterpolationError`** — a `%{...}` interpolation or function call
+    could not be resolved.
+  - **`MergeError`** — an unknown or invalid merge strategy.
+  - **`KeyNotFoundError`** (also a `KeyError`) — `.get(..., throw=True)`'s
+    miss, with Puppet's message ("Function lookup() did not find a value
+    for the name '<key>'", or the "any of the names [...]" plural form).
+    `.name` holds the key(s) tried.
+
+Every class above is importable directly from `pyera` (e.g. `pyera.BackendError
+is pyera.backends.BackendError`, both paths work since `pyera.__init__`
+re-exports it too).
 
 ## CLI (`cli.py`)
 

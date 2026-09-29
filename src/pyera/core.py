@@ -132,7 +132,18 @@ class Hiera(Interpolation):
         )
 
         # Pre-load/cache global (context-free) data.
-        self.get(None)
+        self._prewarm()
+
+    def _prewarm(self) -> None:
+        """Load and cache every context-free source file up front.
+
+        Mirrors the source-resolution side effects of a ``get(None)`` call
+        without going through the public API's key-type check.
+        """
+        ctx = self._build_context()
+        self.sources(ctx)
+        if self.default_hierarchy:
+            self._default_files(ctx)
 
     def _load_file(self, path, backend):
         """Load ``path`` via ``backend``, caching the parsed result."""
@@ -189,7 +200,7 @@ class Hiera(Interpolation):
         try:
             self.get(key, throw=True, context=context, **kwargs)
             return True
-        except KeyError:
+        except KeyNotFoundError:
             return False
 
     def sources(self, context=None, **kwargs):
@@ -299,6 +310,10 @@ class Hiera(Interpolation):
         :param context: per-call context variables.
         :param kwargs: override context variables.
         """
+        if not isinstance(key, str):
+            raise TypeError(
+                "lookup key must be a str, not {}".format(type(key).__name__)
+            )
         new_context = self._build_context(context, **kwargs)
         # Resolve sources against the *built* context: per-call **kwargs are
         # documented context overrides, so they must reach hierarchy path
@@ -333,10 +348,10 @@ class Hiera(Interpolation):
                     )
                 except KeyError:
                     if throw:
-                        raise
+                        raise KeyNotFoundError(key) from None
                     return default
             elif throw:
-                raise
+                raise KeyNotFoundError(key) from None
             else:
                 return default
 
@@ -345,5 +360,5 @@ class Hiera(Interpolation):
         return value
 
 
-# Import ConfigError after defining Hiera to avoid circular import
-from .exceptions import ConfigError  # noqa: E402
+# Import after defining Hiera to avoid circular import
+from .exceptions import ConfigError, KeyNotFoundError  # noqa: E402

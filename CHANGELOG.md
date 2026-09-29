@@ -118,8 +118,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--output raw|json|yaml`, and `--default`. Exit codes: `0` found, `1`
   missing, `2` usage/config error. Installed as the `pyera` console script and
   runnable via `python -m pyera`.
-- Typed exception hierarchy: `HieraError` → `ConfigError`, `BackendError`,
-  `InterpolationError`.
+- Typed exception hierarchy: `HieraError` (base, `.path` names the file
+  concerned) → `ConfigError` (invalid/missing `hiera.yaml`), `BackendError`
+  (a data file could not be read or parsed, `.path` names it), and
+  `HieraLookupError` (a failure while resolving a key) → `InterpolationError`,
+  `MergeError`, and `KeyNotFoundError` (also a `KeyError`; `.get(...,
+  throw=True)`'s miss). All exported from `pyera`.
 - Test suite (pytest) covering lookup, interpolation, merge, glob, backends,
   and the CLI; green on Python 3.9 and 3.14.
 
@@ -237,3 +241,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   longer takes `_load`; the module globals `function`, `interpolate`,
   `rformat` and `LOGGER` are gone.
 - `Merge.deep` and `Merge.typ` are removed; read `Merge.strategy`.
+- `get(..., throw=True)` raises `KeyNotFoundError`, still a `KeyError`; a
+  non-string key raises `TypeError`; an unknown merge strategy raises
+  `MergeError` instead of `ValueError` — catch `MergeError` or `HieraError`.

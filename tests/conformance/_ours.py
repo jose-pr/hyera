@@ -12,7 +12,7 @@ import json
 
 import yaml
 
-from pyera import Hiera, HieraError, Sensitive
+from pyera import Hiera, HieraError, KeyNotFoundError, Sensitive
 from pyera.cli import main as _cli_main
 
 import _golden
@@ -174,7 +174,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
             value = hiera.get(key, default=query["default"], merge=merge)
         else:
             value = hiera.get(key, merge=merge, throw=True)
-    except KeyError:
+    except KeyNotFoundError:
         return {"status": "not_found"}
     except HieraError as e:
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}

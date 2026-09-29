@@ -15,7 +15,6 @@ queries:
   - key: m_nostrat
     divergence: spec-merge/merge-options-not-validated
   - key: m_unknown
-    divergence: spec-lookup-options-types/merge-errors-escape-as-valueerror
     error_match: "Unknown merge strategy"
   - key: m_hashform
     divergence: spec-merge/deep-array-merge-order-and-dedupe
@@ -28,5 +27,4 @@ queries:
     error_match: "unrecognized key"
   - key: m_null
   - key: m_empty
-    divergence: spec-lookup-options-types/merge-errors-escape-as-valueerror
     error_match: "Unknown merge strategy"

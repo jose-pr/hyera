@@ -84,7 +84,7 @@ class Interpolation:
             except KeyError:
                 raise InterpolationError(
                     "Alias lookup failed: key '{}' does not exist".format(calls[0][1])
-                )
+                ) from None
 
         for call, arg in calls:
             replace = None

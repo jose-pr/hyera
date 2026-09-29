@@ -144,7 +144,7 @@ def _build_levels(hierarchy, defaults, backends):
                 "Unknown backend {!r}; known: {}".format(
                     data_hash, ", ".join(sorted(backends))
                 )
-            )
+            ) from None
         # Normalize datadir spelling for the backend.
         conf.setdefault("datadir", conf.get("data_dir"))
         backend = backend_cls(conf)

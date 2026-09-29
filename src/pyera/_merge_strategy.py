@@ -8,6 +8,7 @@ Ports Puppet's ``pops/merge_strategy.rb`` and ``deep_merge_core``.
 from copy import deepcopy
 
 from ._navigation import _MISSING
+from .exceptions import MergeError
 from .util import LookupDict
 
 #: Strategy names that build a Merge; also mapped from the legacy type API.
@@ -34,13 +35,13 @@ def make_merge(spec):
     elif isinstance(spec, type):
         strategy = _TYPE_TO_STRATEGY.get(spec)
         if strategy is None:
-            raise ValueError("Unsupported merge type: {!r}".format(spec))
+            raise MergeError("Unsupported merge type: {!r}".format(spec))
     else:
         strategy = spec
     if strategy in (None, "first"):
         return None
-    if strategy not in _MERGE_STRATEGIES:
-        raise ValueError("Unknown merge strategy: {!r}".format(strategy))
+    if not isinstance(strategy, str) or strategy not in _MERGE_STRATEGIES:
+        raise MergeError("Unknown merge strategy: {!r}".format(strategy))
     return Merge(strategy, **options)
 
 
