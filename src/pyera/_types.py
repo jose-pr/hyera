@@ -155,7 +155,7 @@ class PNotUndefType(PAnyType):
         return (_key_of(self.contained),)
 
     def __str__(self):
-        return _render_container("NotUndef", self.contained)
+        return _render_container("NotUndef", self.contained, show_literal=True)
 
 
 class POptionalType(PAnyType):
@@ -182,7 +182,7 @@ class POptionalType(PAnyType):
         return (_key_of(self.contained),)
 
     def __str__(self):
-        return _render_container("Optional", self.contained)
+        return _render_container("Optional", self.contained, show_literal=True)
 
 
 class PScalarType(PAnyType):
@@ -365,11 +365,32 @@ class PStringType(PAnyType):
 class PBooleanType(PAnyType):
     TYPE_NAME = "Boolean"
 
+    def __init__(self, value=None):
+        #: ``None`` = unconstrained; ``True``/``False`` = exactly that value
+        #: (``PBooleanType.new(true)``/``new(false)``, what ``infer()``
+        #: gives a literal ``bool``).
+        self.value = value
+
     def instance(self, value):
-        return isinstance(value, bool)
+        if not isinstance(value, bool):
+            return False
+        return self.value is None or value == self.value
 
     def assignable(self, other):
-        return isinstance(other, PBooleanType)
+        if not isinstance(other, PBooleanType):
+            return False
+        return self.value is None or other.value == self.value
+
+    def generalize(self):
+        return BOOLEAN
+
+    def _key(self):
+        return (self.value,)
+
+    def __str__(self):
+        if self.value is None:
+            return "Boolean"
+        return "Boolean[{}]".format("true" if self.value else "false")
 
 
 class PRegexpType(PAnyType):
@@ -869,19 +890,27 @@ COLLECTION = PCollectionType()
 REGEXP = PRegexpType()
 
 
-def _render_container(name, contained):
+def _render_container(name, contained, show_literal=False):
     """Optional/NotUndef/Sensitive's own formatter (``type_formatter.rb``
     ``string_POptionalType``/``string_PNotUndefType``/``string_PSensitiveType``):
-    a literal ``PStringType`` child prints its quoted literal value directly;
-    any other contained type renders by its bare ``.name`` only, never with
-    its own parameters (confirmed against the ``Sensitive[Integer]`` and
-    ``Optional['integer']`` oracle goldens -- these four wrapper types are
-    the ones ``short_name`` also keeps one bare parameter level for)."""
+    any contained type renders by its bare ``.name`` only, never with its
+    own parameters (confirmed against the ``Sensitive[Integer]`` oracle
+    golden -- these three wrapper types are the ones ``short_name`` also
+    keeps one bare parameter level for). ``show_literal`` is Optional/
+    NotUndef's own extra special case (``string_POptionalType``/
+    ``string_PNotUndefType`` only, NOT Sensitive): a literal ``PStringType``
+    child prints its quoted literal value directly instead of recursing
+    into the child's own (bare) renderer -- confirmed against the
+    ``Optional['integer']`` oracle golden."""
     if contained is None or (
         isinstance(contained, PAnyType) and type(contained) is PAnyType
     ):
         return name
-    if isinstance(contained, PStringType) and contained.literal is not None:
+    if (
+        show_literal
+        and isinstance(contained, PStringType)
+        and contained.literal is not None
+    ):
         return "{}[{}]".format(name, _puppet_quote(contained.literal))
     if isinstance(contained, str):
         return "{}[{}]".format(name, _puppet_quote(contained))
@@ -916,7 +945,7 @@ def infer(value):
     if value is None:
         return UNDEF
     if isinstance(value, bool):
-        return BOOLEAN
+        return PBooleanType(value)
     if isinstance(value, str):
         return PStringType(literal=value)
     if isinstance(value, int):

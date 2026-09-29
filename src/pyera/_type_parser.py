@@ -496,7 +496,7 @@ def _build_boolean(args):
         )
     node = args[0]
     if node[0] == "bool":
-        return PBooleanType()
+        return PBooleanType(node[1])
     raise HieraLookupError("Boolean parameter must be true or false")
 
 
@@ -724,6 +724,10 @@ def parse_type(text):
     """
     global node_text
     try:
+        if not text.strip():
+            # An empty program is zero statements, not a syntax error --
+            # it just isn't type-shaped either.
+            raise _NotAValidTypeSpec()
         parser = _Parser(text)
         node_text = lambda s, e: text[s:e]  # noqa: E731
         try:

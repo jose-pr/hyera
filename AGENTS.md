@@ -25,6 +25,8 @@ src/pyera/
 ├── _types.py               # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
 ├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)
 ├── _type_mismatch.py       # describe_mismatch, assert_instance_of (type_mismatch_describer.rb, type_asserter.rb)
+├── _string_converter.py    # convert, puppet_quote: value-to-string formatting (string_converter.rb)
+├── _new_function.py        # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
 ├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
 ├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup

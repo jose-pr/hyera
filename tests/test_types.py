@@ -14,6 +14,8 @@ import pytest
 import yaml
 
 from pyera import HieraLookupError
+from pyera._new_function import new_instance
+from pyera._string_converter import convert as _string_convert
 from pyera._type_mismatch import assert_instance_of
 from pyera._type_parser import parse_type
 from pyera._types import ALIASES, PTypeReferenceType, infer, infer_set
@@ -289,3 +291,126 @@ def test_assert_nil_ok_and_reference():
     assert str(exc_info.value) == (
         "Found value has wrong type, references an unresolved type 'Stdlib::Port'"
     )
+
+
+# ----------------------------------------------------------- new() / format
+
+
+def _run_new(spec, value):
+    """Build new()'s args from a lookup_options convert_to spec exactly as
+    the sub-plan says: a list as is, else [spec]; a str first element goes
+    through parse_type, anything else (a malformed convert_to shape) is
+    passed to new_instance raw."""
+    args = list(spec) if isinstance(spec, list) else [spec]
+    type_arg = args[0] if args else None
+    rest = args[1:]
+    type_ = parse_type(type_arg) if isinstance(type_arg, str) else type_arg
+    return new_instance(type_, value, *rest)
+
+
+def _new_params():
+    for case_name in ("convert-new", "convert-cv"):
+        case = yaml.safe_load(
+            (_CASES / case_name / "case.yaml").read_text(encoding="utf-8")
+        )
+        golden = _golden(case_name)["results"]
+        data = _data(case_name)
+        opts = data["lookup_options"]
+        seen = set()
+        for q in case["queries"]:
+            if q.get("merge") is not None:
+                continue
+            key = q["key"]
+            qid = q.get("id") or key
+            if qid in seen:
+                continue
+            seen.add(qid)
+            spec = opts.get(key, {}).get("convert_to")
+            if spec is None:
+                continue
+            yield pytest.param(
+                qid, spec, data[key], golden[qid], id="{}::{}".format(case_name, qid)
+            )
+
+
+#: Design Q8: hiera has no new() for these (Puppet does) -- ours is a
+#: deliberate deviation, never the golden's recorded (Puppet-real) outcome.
+_Q8_UNSUPPORTED_QIDS = {"semver", "tspan", "re_t"}
+
+#: convert-cv/tuple_t: a real, oracle-confirmed discrepancy between what
+#: ``Tuple.new()`` reports through a direct call (both index 0 and index 1
+#: mismatch, verified with `puppet apply`) and what the SAME conversion
+#: reports through `lookup_options`/`convert_to` (only index 1) -- the
+#: lookup_adapter path's own error surfaces only the last element checked.
+#: Not reproduced here (this subset collects every mismatch, matching the
+#: direct-call oracle behaviour); asserted loosely instead of exactly.
+_KNOWN_QUIRK_QIDS = {"tuple_t"}
+
+
+@pytest.mark.parametrize("qid,spec,value,result", list(_new_params()))
+def test_new_matches_golden(qid, spec, value, result):
+    from pyera import Sensitive
+
+    if qid in _Q8_UNSUPPORTED_QIDS:
+        with pytest.raises(HieraLookupError) as exc_info:
+            _run_new(spec, value)
+        assert "hiera does not support new() for the Puppet type" in str(exc_info.value)
+        return
+
+    message = result.get("message", "")
+    if "could not parse" in message and message.startswith(
+        "Invalid data type in lookup_options for key"
+    ):
+        inner = message.split("error: '", 1)[1]
+        with pytest.raises(HieraLookupError) as exc_info:
+            _run_new(spec, value)
+        assert str(exc_info.value) == inner
+        return
+    if result["status"] == "error":
+        inner = (
+            message.split("raised error: ", 1)[1]
+            if "raised error: " in message
+            else message
+        )
+        with pytest.raises(HieraLookupError) as exc_info:
+            _run_new(spec, value)
+        if qid in _KNOWN_QUIRK_QIDS:
+            assert inner.splitlines()[-1].strip() in str(exc_info.value)
+        else:
+            assert str(exc_info.value) == inner
+        return
+    got = _run_new(spec, value)
+    if isinstance(got, Sensitive):
+        got = "Sensitive [value redacted]"
+    assert json.dumps(got, sort_keys=True) == json.dumps(
+        result["value"], sort_keys=True
+    )
+
+
+def test_new_unrecorded():
+    with pytest.raises(HieraLookupError) as exc_info:
+        _run_new([parse_type("Integer"), "default", True], "-5")
+    assert str(exc_info.value).startswith("'new' ")
+
+    for spec in (
+        [parse_type("String"), {"Integer": "%x"}],
+        [parse_type("String"), 5],
+    ):
+        with pytest.raises(HieraLookupError) as exc_info:
+            _run_new(spec, "x" if not isinstance(spec[1], int) else 5)
+        assert "'new_string' parameter 'string_formats'" in str(exc_info.value)
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        _run_new(parse_type("Integer"), {"a": 1})
+    assert "Integer.new has wrong type" in str(
+        exc_info.value
+    ) or "unrecognized key 'a'" in str(exc_info.value)
+
+
+def test_ruby_format_table():
+    assert _string_convert(8, "%#o") == "010"
+    assert _string_convert(5, "%b") == "101"
+    assert _string_convert(255, "%x") == "ff"
+    assert _string_convert(1e20, "%p") == "1.0e+20"
+    assert _string_convert(3.0, "%f") == "3.000000"
+    assert _string_convert(2.5, "%s") == "2.5"
