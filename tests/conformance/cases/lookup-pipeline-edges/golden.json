@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3023308fff2835b564c38c8110e9715ede986a75eda0f5c6f381ea2bd96c550f",
+  "results": {
+    "rk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "rk"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "ref_lo": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ref_lo"
+      ],
+      "status": "found",
+      "value": "v="
+    },
+    "ref_lox": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ref_lox"
+      ],
+      "status": "found",
+      "value": "v="
+    },
+    "cvk-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "cvk"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'cvk' raised error: 'new' Value of type Array[String] cannot be converted to Integer"
+    },
+    "cvk-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "cvk"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "cvk-deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "cvk"
+      ],
+      "status": "found",
+      "value": 42
+    }
+  }
+}

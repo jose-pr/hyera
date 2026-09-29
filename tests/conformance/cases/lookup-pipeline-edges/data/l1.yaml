@@ -1,0 +1,9 @@
+---
+lookup_options:
+  rk: {merge: "%{lookup('rk_strategy')}"}
+  cvk: {convert_to: Integer}
+rk: [a]
+rk_strategy: unique
+ref_lo: "v=%{lookup('lookup_options')}"
+ref_lox: "v=%{lookup('lookup_options.cvk')}"
+cvk: "42"

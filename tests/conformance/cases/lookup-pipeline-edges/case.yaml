@@ -1,0 +1,23 @@
+description: >-
+  Root-key lookup pipeline edges: a lookup_options merge spec interpolated
+  through a nested lookup, %{lookup('lookup_options...')} always missing,
+  and convert_to applying regardless of an explicit merge= -- including
+  when convert_to itself raises under a merge that produces a non-scalar.
+queries:
+  - key: rk
+  - key: ref_lo
+  - key: ref_lox
+  - id: cvk-unique
+    key: cvk
+    merge: unique
+    error_class: HieraLookupError
+    error_match: "The convert_to lookup_option for key 'cvk' raised error: "
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+  - id: cvk-first
+    key: cvk
+    merge: first
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+  - id: cvk-deep
+    key: cvk
+    merge: deep
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to

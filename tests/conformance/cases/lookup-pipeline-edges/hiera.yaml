@@ -1,0 +1,10 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: l1
+    path: l1.yaml
+  - name: l2
+    path: l2.yaml
