@@ -3,4 +3,3 @@ description: >-
 origin: spec-layers-backends/opt_reserved
 queries:
   - key: k
-    divergence: spec-layers-backends/hierarchy-options-not-passed

@@ -1,9 +1,9 @@
 """``hiera.yaml`` reading: ``HieraConfig.create`` (``_hiera_config.py``).
 
 Copying and absolutizing the base config, Puppet's version dispatch, the
-empty/non-mapping-file fallback, and Puppet's `defaults`/`hierarchy`/
-`datadir` fallbacks. Schema validation and per-level function kind
-selection are later additions here, once those phases land.
+empty/non-mapping-file fallback, Puppet's `defaults`/`hierarchy`/`datadir`
+fallbacks, and Puppet's version 5 schema validation. Per-level function
+kind selection is a later addition here, once that phase lands.
 """
 
 import copy
@@ -130,3 +130,175 @@ def test_entry_datadir_fallback(make_tree, defaults_yaml, expected_dir):
     h = Hiera(str(root / "hiera.yaml"))
 
     assert h.get("k") == "v"
+
+
+_BASE_V5 = {
+    "version": 5,
+    "defaults": {"datadir": "data", "data_hash": "yaml_data"},
+}
+
+
+@pytest.mark.parametrize(
+    "cfg, expected",
+    [
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {
+                        "name": "one",
+                        "data_hash": "yaml_data",
+                        "mapped_paths": ["a", "b"],
+                    }
+                ],
+            },
+            "expects size to be 3, got 2",
+        ),
+        (
+            {**_BASE_V5, "hierarchy": {"a": 1}},
+            "expects an Array value, got Struct",
+        ),
+        (
+            {**_BASE_V5, "hierarchy": ["oops"]},
+            "index 0 expects a Struct value, got String",
+        ),
+        (
+            {
+                "version": 5,
+                "defaults": ["a"],
+                "hierarchy": [
+                    {"name": "one", "path": "one.yaml", "data_hash": "yaml_data"}
+                ],
+            },
+            "expects a Struct value, got Tuple",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {"name": "one", "path": "one.yaml", "data_hash": ["yaml_data"]}
+                ],
+            },
+            "entry 'data_hash' expects a String value, got Tuple",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {"name": "one", "paths": "one.yaml", "data_hash": "yaml_data"}
+                ],
+            },
+            "expects an Array value, got String",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [{"path": "one.yaml", "data_hash": "yaml_data"}],
+            },
+            "expects a value for key 'name'",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [{"name": "one", "paths": [], "data_hash": "yaml_data"}],
+            },
+            "at least 1, got 0",
+        ),
+    ],
+    ids=[
+        "mapped-paths-2-tuple",
+        "hierarchy-dict",
+        "hierarchy-string-entry",
+        "defaults-list",
+        "data-hash-list",
+        "paths-string",
+        "missing-name",
+        "paths-empty",
+    ],
+)
+def test_malformed_config_raises_config_error(cfg, expected):
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert expected in str(exc.value)
+
+
+def test_config_error_names_file_and_line(tmp_path):
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: yaml_data}\n"
+        b"hierarchy:\n"
+        b"  - {name: common, pathz: common.yaml}\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert str(exc.value.path).endswith("hiera.yaml")
+    assert exc.value.line == 4
+    assert "(line: 4)" in str(exc.value)
+
+
+def test_dict_config_error_has_no_line():
+    cfg = {**_BASE_V5, "hierarchy": {"a": 1}}
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert exc.value.path is None
+    assert exc.value.line is None
+    assert "<dict>" in str(exc.value)
+
+
+def test_default_hierarchy_entries_are_validated():
+    cfg = {
+        **_BASE_V5,
+        "hierarchy": [{"name": "common", "path": "common.yaml"}],
+        "default_hierarchy": [{"path": "defaults.yaml"}],
+    }
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert "entry 'default_hierarchy' index 0 expects a value for key 'name'" in str(
+        exc.value
+    )
+
+
+def test_duplicate_names_report_both_lines(tmp_path):
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: yaml_data}\n"
+        b"hierarchy:\n"
+        b"  - name: same\n"
+        b"    path: first.yaml\n"
+        b"  - name: other\n"
+        b"    path: common.yaml\n"
+        b"  - name: same\n"
+        b"    path: common.yaml\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "First defined at (line: 4)" in str(exc.value)
+    assert exc.value.line == 8
+
+
+def test_hiera3_backend_replaced_by_data_hash():
+    cfg = {
+        "version": 5,
+        "defaults": {"datadir": "data"},
+        "hierarchy": [
+            {"name": "common", "path": "common.yaml", "hiera3_backend": "json"}
+        ],
+    }
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert 'Use "data_hash: json_data" instead of "hiera3_backend: json"' in str(
+        exc.value
+    )

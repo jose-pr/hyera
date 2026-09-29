@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/defaults_extra_key
 queries:
   - key: k
-    divergence: spec-config/schema-validation-missing

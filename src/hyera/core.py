@@ -9,8 +9,8 @@ from ._hiera_config import (
     _build_hierarchies,
     _fill_v5_defaults,
     _read_base_config,
-    _reject_data_dir,
     _select_version,
+    _validate_v5,
 )
 from ._interpolation import Interpolation, _format_source, _normalize_source
 from ._location_resolver import _resolve_level_paths
@@ -165,7 +165,7 @@ class Hiera(Interpolation):
         self.base_path = source.root
         _select_version(self.base, source)
         _fill_v5_defaults(self.base)
-        _reject_data_dir(self.base, source)
+        _validate_v5(self.base, source)
 
         if not self.backends:
             raise ConfigError("No backends could be loaded")

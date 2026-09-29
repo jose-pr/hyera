@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/missing_name
 queries:
   - key: k
-    divergence: spec-config/schema-validation-missing
