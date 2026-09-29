@@ -128,9 +128,9 @@ queries:
   divergence: spec-interpolation/method-call-syntax-validation
 - key: s_fn_empty_arg
 - key: s_scope_tmpl
-  divergence: new/fact-substitution-value-not-rescanned
+  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_scope_tmpl_top
-  divergence: new/fact-substitution-value-not-rescanned
+  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_lookup_reinterp
 - key: s_chain
 - key: s_recursive_a

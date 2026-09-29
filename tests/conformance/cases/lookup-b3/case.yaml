@@ -13,7 +13,7 @@ queries:
 - key: m_interp_list
 - key: chain_b
 - key: chain_a
-  divergence: new/fact-substitution-value-not-rescanned
+  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: dm
   id: dm_deep
   merge: deep

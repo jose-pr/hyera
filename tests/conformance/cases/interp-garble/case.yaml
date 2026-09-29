@@ -3,8 +3,8 @@ description: 'Chained interpolation forms: a var holding another %{} template, a
 origin: spec-interpolation/garble
 queries:
 - key: g1
-  divergence: new/fact-substitution-value-not-rescanned
+  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: g2
-  divergence: new/fact-substitution-value-not-rescanned
+  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: g3
   divergence: spec-interpolation/literal-escape-reinterpolated
