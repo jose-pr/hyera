@@ -4,18 +4,25 @@ Pure Python-level tests: no Puppet oracle, no I/O. Every rule cites the
 Ruby source line it mirrors in ``_merge_strategy.py`` itself.
 """
 
+import re
+
 import pytest
 
 from hyera import HieraError, MergeError
 from hyera._merge_strategy import (
     _MISSING,
+    DeepMergeStrategy,
     DefaultMergeStrategy,
     FirstFoundStrategy,
     HashMergeStrategy,
     MergeStrategy,
     UniqueMergeStrategy,
+    _deep_clone,
     _eql_key,
+    _ruby_delete,
+    _ruby_delete_if,
     _ruby_or,
+    deep_merge,
 )
 
 
@@ -184,3 +191,206 @@ def test_value_type_messages():
         "The second element of the merge has wrong type, "
         "expects a value of type Scalar or Array, got Undef"
     )
+
+
+def test_deep_merge_union_lower_first():
+    result = deep_merge({"a": {"x": 1, "l": [1, 2]}}, {"a": {"y": 2, "l": [2, 3]}}, {})
+    assert result == {"a": {"x": 1, "y": 2, "l": [2, 3, 1]}}
+
+    assert deep_merge(["a", "b"], ["c", "a"], {}) == ["c", "a", "b"]
+    assert deep_merge({"l": ["a", "a"]}, {"l": ["b"]}, {}) == {"l": ["b", "a"]}
+    assert deep_merge({"l": ["b"]}, {"l": ["a", "a"]}, {}) == {"l": ["a", "b"]}
+    assert deep_merge({"l": [1]}, {"l": [True, 1.0]}, {}) == {"l": [True, 1.0, 1]}
+
+
+def test_deep_merge_type_table():
+    assert deep_merge({"k": [1]}, {"k": {"a": 1}}, {}) == {"k": [1]}
+    assert deep_merge({"k": [1]}, {"k": 5}, {}) == {"k": [1]}
+    assert deep_merge({"k": [1]}, {"k": None}, {}) == {"k": [1]}
+    assert deep_merge({"k": ["a"]}, {"k": False}, {}) == {"k": ["a"]}
+    assert deep_merge({"k": None}, {"k": 1}, {}) == {"k": 1}
+
+    # Whole-value type mismatches (not nested under a key): a non-empty Hash
+    # source always overwrites; an EMPTY Hash source leaves dest untouched
+    # (Ruby's `source.each` never enters its "overwrite dest" branch at all
+    # for an empty source -- deep_merge_core.rb:111-138).
+    assert deep_merge({"a": 1, "b": 2}, ["x"], {}) == {"a": 1, "b": 2}
+    assert deep_merge({}, "s", {}) == "s"
+
+
+def test_knockout_semantics():
+    options = {"knockout_prefix": "--"}
+
+    # Hash-KEY level: "--drop" is just a literal key, never a knockout
+    # marker -- knockout only ever acts on scalar/Array VALUES.
+    result = deep_merge({"--drop": "x", "keep": 1}, {"drop": 2, "other": 3}, options)
+    assert result == {"drop": 2, "other": 3, "--drop": "x", "keep": 1}
+
+    # A scalar string source starting with the prefix blanks the value,
+    # regardless of dest's own type.
+    assert deep_merge({"k": "--"}, {"k": [1]}, options) == {"k": ""}
+    assert deep_merge({"k": "--foo"}, {"k": [1]}, options) == {"k": ""}
+    assert deep_merge({"k": "--"}, {"k": {"a": 1}}, options) == {"k": ""}
+    assert deep_merge("--", [1], options) == ""
+
+    # An Array source vs a non-Array dest: the pruned source wins outright.
+    assert deep_merge({"k": ["--a", "b"]}, {"k": 5}, options) == {"k": ["b"]}
+
+    # A naked prefix element (an array member EQUAL to the bare prefix)
+    # clears dest entirely.
+    assert deep_merge({"l": ["--"]}, {"l": ["a"]}, options) == {"l": []}
+
+    # Dest's own "--a" is plain data here -- only SOURCE elements are
+    # knockout instructions.
+    result = deep_merge({"l": ["a"]}, {"l": ["--a", "c"]}, options)
+    assert result == {"l": ["--a", "c", "a"]}
+
+    # Three levels, folded highest to lowest the way the base reduce does.
+    memo = deep_merge(["--a"], _deep_clone(["b"]), options)
+    memo = deep_merge(memo, _deep_clone(["a", "c"]), options)
+    assert memo == ["a", "c", "b"]
+
+    # A key only present in the higher level: the dup of the containing
+    # dict shares the SAME nested list with source (a shallow dup only
+    # copies the dict, not its values) -- this aliasing is what makes the
+    # 2-element case knock itself out entirely; see _ruby_delete_if.
+    result = deep_merge({"k": {"l": ["--a", "b"]}}, {"other": 1}, options)
+    assert result == {"other": 1, "k": {"l": []}}
+
+    result = deep_merge({"k": {"l": ["--a", "b", "c"]}}, {"other": 1}, options)
+    assert result == {"other": 1, "k": {"l": ["c"]}}
+
+    # Same shape, one level shallower: the dup here is of the LIST itself,
+    # a genuinely separate object -- no aliasing, so "b" survives.
+    result = deep_merge({"l": ["--a", "b"]}, {"other": 1}, options)
+    assert result == {"other": 1, "l": ["b"]}
+
+    assert deep_merge({"k": 1}, {"k": 2}, {}) == {"k": 1}
+
+
+def test_knockout_regex_prefixes():
+    # A prefix is spliced unescaped into the pattern -- it can BE a regex.
+    result = deep_merge(
+        {"l": [".a", "xb"]}, {"l": ["a", "b", "xb", "c"]}, {"knockout_prefix": "."}
+    )
+    assert result == {"l": ["c"]}
+
+    result = deep_merge(
+        {"l": ["x+a"]}, {"l": ["a", "x+a", "xxa"]}, {"knockout_prefix": "x+"}
+    )
+    assert result == {"l": ["a", "xxa"]}
+
+
+def test_ruby_delete_if_live_length():
+    """``_ruby_delete_if`` in isolation, with the exact knockout callback
+    shape, against a SHARED array (source is dest, same object) -- the
+    scenario ``test_knockout_semantics`` exercises through the full
+    ``deep_merge`` pipeline. Confirms the read/write/truncate walk, not
+    just its end-to-end effect.
+    """
+    shared = ["--a", "b", "c"]
+    pattern = re.compile("^--")
+
+    def knockout(ko_item):
+        item = pattern.sub("", ko_item) if isinstance(ko_item, str) else ko_item
+        if item != ko_item:
+            _ruby_delete(shared, item)
+            _ruby_delete(shared, ko_item)
+            return True
+        return False
+
+    _ruby_delete_if(shared, knockout)
+    assert shared == ["c"]
+
+
+def test_merge_hash_arrays_any_length():
+    result = deep_merge([{"a": 1}, {"b": 2}], [{"c": 3}], {"merge_hash_arrays": True})
+    assert result == [{"c": 3, "a": 1}, {"b": 2}]
+
+    result = deep_merge([{"a": 1}], [{"c": 3}, {"d": 4}], {"merge_hash_arrays": True})
+    assert result == [{"c": 3, "a": 1}, {"d": 4}]
+
+    # A mixed list (not every element is a Hash) falls back to the union.
+    result = deep_merge([1, {"a": 1}], [{"c": 3}], {"merge_hash_arrays": True})
+    assert result == [{"c": 3}, 1, {"a": 1}]
+
+
+def test_sort_merged_arrays_and_errors():
+    # An array only in the higher level of a merged hash is still sorted.
+    result = deep_merge(
+        {"a": {"l": [2, 1]}}, {"other": 1}, {"sort_merged_arrays": True}
+    )
+    assert result == {"other": 1, "a": {"l": [1, 2]}}
+
+    result = deep_merge([[2, 1]], [[1, 2]], {"sort_merged_arrays": True})
+    assert result == [[1, 2], [2, 1]]
+
+    def sort_error(source, dest):
+        with pytest.raises(MergeError) as excinfo:
+            deep_merge(source, dest, {"sort_merged_arrays": True})
+        return str(excinfo.value)
+
+    assert sort_error({"l": [2, "a"]}, {"l": [1]}) == (
+        "comparison of Integer with String failed"
+    )
+    assert sort_error({"l": [{"x": 1}]}, {"l": [{"y": 2}]}) == (
+        "comparison of Hash with Hash failed"
+    )
+    assert sort_error([True], [False]) == "comparison of FalseClass with true failed"
+    assert sort_error([None], [1]) == "comparison of Integer with nil failed"
+    assert sort_error([1.5], ["a"]) == "comparison of String with 1.5 failed"
+    assert sort_error([1.0, "b"], [1]) == "comparison of Float with String failed"
+
+
+def test_deep_options_validation():
+    with pytest.raises(MergeError) as excinfo:
+        DeepMergeStrategy({"strategy": "deep", "bogus": 1})
+    assert str(excinfo.value) == (
+        "The merge options has wrong type, unrecognized key 'bogus'"
+    )
+
+    with pytest.raises(MergeError) as excinfo:
+        DeepMergeStrategy({"strategy": "deep", "sort_merged_arrays": "yes"})
+    assert str(excinfo.value) == (
+        "The merge options has wrong type, entry 'sort_merged_arrays' "
+        "expects a value of type Undef or Boolean, got String"
+    )
+
+    with pytest.raises(MergeError) as excinfo:
+        DeepMergeStrategy({"strategy": "deep", "knockout_prefix": 5})
+    assert str(excinfo.value) == (
+        "The merge options has wrong type, entry 'knockout_prefix' "
+        "expects a value of type Undef or String, got Integer"
+    )
+
+    # knockout_prefix: ~ (None) is accepted -- only a non-None non-str value
+    # is a type problem.
+    DeepMergeStrategy({"strategy": "deep", "knockout_prefix": None})
+
+
+def test_empty_prefix_raises_only_when_merging():
+    strategy = DeepMergeStrategy({"strategy": "deep", "knockout_prefix": ""})
+
+    # A single found value never reaches deep_merge at all (merge_single is
+    # the base class's identity), so the empty prefix never gets checked.
+    assert strategy.lookup([["a"]], lambda v: v) == ["a"]
+
+    with pytest.raises(MergeError) as excinfo:
+        strategy.merge(["a"], ["b"])
+    assert str(excinfo.value) == (
+        "knockout_prefix cannot be an empty string in deep_merge!"
+    )
+
+
+def test_knockout_prefix_not_python_regex():
+    with pytest.raises(MergeError) as excinfo:
+        deep_merge({"l": ["a"]}, {"l": ["b"]}, {"knockout_prefix": "**"})
+    assert "not a valid regular expression" in str(excinfo.value)
+
+
+def test_deep_merge_mutates_only_owned_values():
+    e1 = {"a": 1}
+    e2 = {"b": {"c": [1, 2]}}
+    original_e2 = {"b": {"c": [1, 2]}}
+    DeepMergeStrategy.INSTANCE.merge(e1, e2)
+    assert e2 == original_e2

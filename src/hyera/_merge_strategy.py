@@ -5,7 +5,9 @@
 Ports Puppet's ``pops/merge_strategy.rb`` and ``deep_merge_core``.
 """
 
+import functools
 import json
+import re
 from copy import deepcopy
 
 from ._navigation import _MISSING
@@ -547,3 +549,366 @@ class UniqueMergeStrategy(MergeStrategy):
         return "expects a value of type Scalar or Array, got {}".format(
             _puppet_type_name(value)
         )
+
+
+# ---------------------------------------------------------------------------
+# deep_merge! port (rubygem-deep_merge 1.2.2, ``deep_merge_core.rb``).
+# ---------------------------------------------------------------------------
+
+#: Compiled knockout-prefix pattern, cached per prefix string.
+_KO_PATTERN_CACHE: dict = {}
+
+
+def _ruby_class_name(value):
+    """The Ruby class name shown in a ``<=>`` comparison-failure message."""
+    if value is None:
+        return "NilClass"
+    if isinstance(value, bool):
+        return "TrueClass" if value else "FalseClass"
+    if isinstance(value, int):
+        return "Integer"
+    if isinstance(value, float):
+        return "Float"
+    if isinstance(value, str):
+        return "String"
+    if isinstance(value, list):
+        return "Array"
+    if isinstance(value, dict):
+        return "Hash"
+    return type(value).__name__
+
+
+def _ruby_eq(a, b):
+    """Ruby ``==``: numbers compare across int/float, but a Boolean never
+    equals a number (``1 == true`` is false; ``1 == 1.0`` is true)."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return a == b
+    if a is None or b is None:
+        return a is b
+    if isinstance(a, str) and isinstance(b, str):
+        return a == b
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_ruby_eq(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        if set(a.keys()) != set(b.keys()):
+            return False
+        return all(_ruby_eq(a[k], b[k]) for k in a)
+    return False
+
+
+def _ruby_dup(value):
+    """Ruby ``dup`` -- shallow; a scalar (or anything not a dict/list) is
+    returned as-is, since Ruby's own ``dup`` is a no-op for those here."""
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, list):
+        return list(value)
+    return value
+
+
+def _deep_clone(value):
+    """merge_strategy.rb:379-390 -- recursively clone dicts/lists; share
+    everything else (scalars are immutable, so sharing them is safe)."""
+    if isinstance(value, dict):
+        return {k: _deep_clone(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_deep_clone(item) for item in value]
+    return value
+
+
+def _clear_or_nil(obj):
+    """deep_merge_core.rb:238-245 -- ``clear_or_nil``."""
+    if isinstance(obj, (list, dict)):
+        obj.clear()
+        return obj
+    if isinstance(obj, str):
+        return ""
+    return None
+
+
+def _ruby_index(lst, obj):
+    """``Array#index`` -- the first index where an element is ``==`` obj,
+    else ``None`` (index ``0`` is a hit: callers must test ``is not None``)."""
+    for i, item in enumerate(lst):
+        if _ruby_eq(item, obj):
+            return i
+    return None
+
+
+def _ruby_delete(lst, obj):
+    """``Array#delete`` -- removes every ``==``-equal element, in place."""
+    write = 0
+    length = len(lst)
+    for read in range(length):
+        item = lst[read]
+        if not _ruby_eq(item, obj):
+            lst[write] = item
+            write += 1
+    del lst[write:]
+    return lst
+
+
+def _ruby_delete_if(lst, pred):
+    """``Array#delete_if`` -- in place, walking the **live** length with a
+    read index and a write index, then truncating to the kept items.
+
+    ``pred`` may itself mutate ``lst`` (the knockout callback below does,
+    when source and dest alias through a shallow ``dup``): each read of
+    ``lst[i]`` and of ``len(lst)`` happens fresh, so a mutation mid-walk can
+    make the walk see fewer elements than it started with, and skip some --
+    deliberately reproduced (Ruby's own ``ary_reject_bang``), not a bug.
+    """
+    i = 0
+    j = 0
+    while i < len(lst):
+        v = lst[i]
+        if pred(v):
+            i += 1
+        else:
+            if i != j:
+                lst[j] = lst[i]
+            j += 1
+            i += 1
+    del lst[j:]
+    return lst
+
+
+def _ko_pattern(prefix):
+    """``%r{^#{prefix}}`` -- the prefix is spliced UNESCAPED into the regex
+    (Puppet lets a prefix double as a regex, e.g. ``.`` or ``x+``); ``^``
+    with Ruby's default (always-multiline) semantics anchors every line."""
+    cached = _KO_PATTERN_CACHE.get(prefix)
+    if cached is not None:
+        return cached
+    try:
+        compiled = re.compile("^" + prefix, re.MULTILINE)
+    except re.error as exc:
+        raise MergeError(
+            "knockout_prefix '{}' is not a valid regular expression".format(prefix)
+        ) from exc
+    _KO_PATTERN_CACHE[prefix] = compiled
+    return compiled
+
+
+def _overwrite_unmergeables(source, knockout_prefix):
+    """deep_merge_core.rb:212-236 -- ``overwrite_unmergeables``, called with
+    ``overwrite_unmergeable`` always true (``preserve_unmergeables`` is never
+    set in this subset, so ``dest`` itself is never read: it always loses)."""
+    if knockout_prefix is None:
+        return source
+    if isinstance(source, str):
+        pattern = _ko_pattern(knockout_prefix)
+        stripped = pattern.sub("", source)
+        return stripped if stripped == source else ""
+    if isinstance(source, list):
+        pattern = _ko_pattern(knockout_prefix)
+        _ruby_delete_if(
+            source,
+            lambda item: isinstance(item, str) and pattern.match(item) is not None,
+        )
+        return source
+    return source
+
+
+def _ruby_cmp(a, b):
+    """Ruby ``<=>`` -- ``-1``/``0``/``1``, or ``None`` when incomparable."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return 0 if _ruby_eq(a, b) else None
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return (a > b) - (a < b)
+    if isinstance(a, str) and isinstance(b, str):
+        return (a > b) - (a < b)
+    if isinstance(a, list) and isinstance(b, list):
+        for x, y in zip(a, b):
+            c = _ruby_cmp(x, y)
+            if c is None:
+                return None
+            if c != 0:
+                return c
+        return (len(a) > len(b)) - (len(a) < len(b))
+    return 0 if _ruby_eq(a, b) else None
+
+
+def _ruby_cmperr(x, y):
+    """The ``ArgumentError`` text Ruby's ``Array#sort!`` raises for an
+    incomparable pair (``x``, then the class or literal of ``y``)."""
+    if (
+        y is None
+        or isinstance(y, (bool, float))
+        or (isinstance(y, int) and -(2**62) <= y < 2**62)
+    ):
+        y_repr = _ruby_inspect(y)
+    else:
+        y_repr = _ruby_class_name(y)
+    return "comparison of {} with {} failed".format(_ruby_class_name(x), y_repr)
+
+
+def _ruby_sort(lst):
+    """``Array#sort!`` via ``<=>``; the first incomparable pair raises,
+    named in their ORIGINAL index order (not whatever order
+    ``cmp_to_key`` happens to probe them in)."""
+
+    def compare(a, b):
+        cmp = _ruby_cmp(a[1], b[1])
+        if cmp is None:
+            if a[0] < b[0]:
+                raise MergeError(_ruby_cmperr(a[1], b[1]))
+            raise MergeError(_ruby_cmperr(b[1], a[1]))
+        return cmp
+
+    indexed = list(enumerate(lst))
+    indexed.sort(key=functools.cmp_to_key(compare))
+    return [item for _, item in indexed]
+
+
+def deep_merge(source, dest, options):
+    """``deep_merge!`` -- deep_merge_core.rb:78-209.
+
+    ``source`` (higher priority) is merged onto ``dest`` (lower); ``dest`` is
+    mutated in place when it is a dict or list. Reproduces Ruby's aliasing
+    deliberately: a nested list can be the SAME object as both ``source``
+    and ``dest`` in a recursive call (via ``_ruby_dup``'s shallow copy), and
+    the knockout-prefix step below relies on that when it happens.
+
+    Reads only what Puppet's ``deep`` merge can pass: ``knockout_prefix``,
+    ``sort_merged_arrays``, ``merge_hash_arrays``, ``merge_debug`` (read,
+    prints nothing). ``preserve_unmergeables`` is always false here, so
+    "overwrite unmergeables" is always on.
+    """
+    raw_prefix = options.get("knockout_prefix")
+    knockout_prefix = raw_prefix if _rb_truthy(raw_prefix) else None
+    if knockout_prefix == "":
+        # deep_merge_core.rb:83.
+        raise MergeError("knockout_prefix cannot be an empty string in deep_merge!")
+    sort_merged_arrays = _rb_truthy(options.get("sort_merged_arrays"))
+    merge_hash_arrays = _rb_truthy(options.get("merge_hash_arrays"))
+
+    # deep_merge_core.rb:102.
+    if source is None:
+        return dest
+    # deep_merge_core.rb:104-106 (overwrite_unmergeable is always true here).
+    if not _rb_truthy(dest):
+        return source
+
+    if isinstance(source, dict):
+        # deep_merge_core.rb:109-140.
+        for src_key, src_value in list(source.items()):
+            if not isinstance(dest, dict):
+                # :134-138 -- dest isn't a Hash: the entire value is
+                # overwritten by source (not just this one key). Real Ruby
+                # re-checks this every iteration; since a Hash source with
+                # no knockout prefix always "wins as is", one overwrite
+                # already reaches that fixed point, so this stops here.
+                dest = _overwrite_unmergeables(source, knockout_prefix)
+                break
+            dest_value = dest.get(src_key)
+            if _rb_truthy(dest_value):
+                # :114-116.
+                dest[src_key] = deep_merge(src_value, dest_value, options)
+            else:
+                # :117-130 -- dest doesn't have this key (or it's falsy):
+                # merge src_value with its own shallow dup. A nested
+                # container can end up aliased between source and dest one
+                # level down because of this.
+                dest[src_key] = deep_merge(src_value, _ruby_dup(src_value), options)
+        return dest
+
+    if isinstance(source, list):
+        # deep_merge_core.rb:141-198.
+        if (
+            knockout_prefix is not None
+            and _ruby_index(source, knockout_prefix) is not None
+        ):
+            # :156-158 -- a naked prefix element truncates dest outright.
+            dest = _clear_or_nil(dest)
+            _ruby_delete(source, knockout_prefix)
+        if isinstance(dest, list):
+            if knockout_prefix is not None:
+                # :159-175 -- for each prefixed source item, strip the
+                # prefix and remove BOTH the stripped and the original
+                # (still-prefixed) form from dest; the prefixed item itself
+                # is then dropped from source. Iterating and mutating
+                # through the SAME live array (when source and dest alias)
+                # is what produces the "shares nested objects" quirk.
+                pattern = _ko_pattern(knockout_prefix)
+
+                def _knockout(ko_item, _dest=dest, _pattern=pattern):
+                    item = (
+                        _pattern.sub("", ko_item)
+                        if isinstance(ko_item, str)
+                        else ko_item
+                    )
+                    if not _ruby_eq(item, ko_item):
+                        _ruby_delete(_dest, item)
+                        _ruby_delete(_dest, ko_item)
+                        return True
+                    return False
+
+                _ruby_delete_if(source, _knockout)
+            source_all_hashes = all(isinstance(i, dict) for i in source)
+            dest_all_hashes = all(isinstance(i, dict) for i in dest)
+            if merge_hash_arrays and source_all_hashes and dest_all_hashes:
+                # :177-187.
+                merged = []
+                for i in range(len(dest)):
+                    s = source[i] if i < len(source) else {}
+                    merged.append(deep_merge(s, dest[i], options))
+                if len(source) > len(dest):
+                    merged.extend(source[len(dest) :])
+                dest = merged
+            else:
+                # :190-191 -- ``dest | source``: dest's elements come
+                # first, source's new ones are appended.
+                dest = _ruby_or(dest, source)
+            if sort_merged_arrays:
+                # :193.
+                dest = _ruby_sort(dest)
+            return dest
+        # :194-197.
+        return _overwrite_unmergeables(source, knockout_prefix)
+
+    # :199-206 -- any other (scalar) source.
+    return _overwrite_unmergeables(source, knockout_prefix)
+
+
+class DeepMergeStrategy(MergeStrategy):
+    """merge_strategy.rb:350-412 -- recursive merge via ``deep_merge!``."""
+
+    KEY = "deep"
+
+    def checked_merge(self, e1, e2):
+        """merge_strategy.rb:372-377 -- ``deep_merge!(e1, deep_clone(e2))``."""
+        options = {k: v for k, v in self.options.items() if k != "strategy"}
+        merge_options = dict(options)
+        merge_options["preserve_unmergeables"] = False
+        return deep_merge(e1, _deep_clone(e2), merge_options)
+
+    def _value_problem(self, value):
+        """merge_strategy.rb:410-412 -- ``Any``: never a problem."""
+        return None
+
+    @classmethod
+    def _options_problems(cls, options):
+        """merge_strategy.rb:399-407."""
+        problems = []
+        bool_keys = ("merge_debug", "merge_hash_arrays", "sort_merged_arrays")
+        for key, value in options.items():
+            if key == "strategy":
+                continue
+            if key == "knockout_prefix":
+                if value is not None and not isinstance(value, str):
+                    problems.append(
+                        "entry 'knockout_prefix' expects a value of type "
+                        "Undef or String, got {}".format(_puppet_type_name(value))
+                    )
+            elif key in bool_keys:
+                if value is not None and not isinstance(value, bool):
+                    problems.append(
+                        "entry '{}' expects a value of type Undef or Boolean, "
+                        "got {}".format(key, _puppet_type_name(value))
+                    )
+            else:
+                problems.append("unrecognized key '{}'".format(key))
+        return problems
