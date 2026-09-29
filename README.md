@@ -163,8 +163,12 @@ stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
 ## sops and unattended runs
 
 `SopsBackend` (`data_hash: sops_data`) shells out to `sops` to decrypt a
-YAML level on the fly. It is hardened so an automated lookup never hangs,
-dies opaquely, or leaks a decrypted secret:
+level on the fly. The format (YAML, JSON, INI or dotenv) is inferred from
+the file's extension the same way the `sops` CLI itself picks it
+(`.yaml`/`.yml`/`.json`/`.env`/`.ini`, case-sensitive); any other
+extension is a clear error, since `sops` would read that file as binary.
+It is hardened so an automated lookup never hangs, dies opaquely, or
+leaks a decrypted secret:
 
 - a finite subprocess timeout (`pyera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
