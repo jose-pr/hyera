@@ -141,13 +141,21 @@ def _check_common(case_dir, case, query):
 
 
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
-    """Resolve one query through :class:`pyera.Hiera`, projected like Puppet."""
+    """Resolve one query through :class:`pyera.Hiera`, projected like Puppet.
+
+    A config-schema divergence (most of the ``config`` area) raises during
+    construction, not during ``.get()`` -- ``Hiera(...)`` is inside the same
+    try/except as the lookup call so a ``ConfigError`` there is reported as
+    ``{"status": "error", ...}`` exactly like one raised during the lookup,
+    instead of escaping as a raw pytest error on a case that otherwise
+    matches Puppet (both sides error).
+    """
     key, env = _check_common(case_dir, case, query)
     facts = _load_facts(case_dir)
     scope = puppet_scope(facts, env, golden["puppet_version"])
-    hiera = Hiera(str(case_dir / "hiera.yaml"), context=scope)
     merge = query.get("merge")
     try:
+        hiera = Hiera(str(case_dir / "hiera.yaml"), context=scope)
         if query.get("default") is not None:
             value = hiera.get(key, default=query["default"], merge=merge)
         else:
