@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6094815391360eb91ee8e21bb05548cd0d0a4053495afb11efc38646340d3dc0",
+  "results": {
+    "good": {
+      "argv": [
+        "--strict",
+        "warning",
+        "good"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/other.yaml): did not find expected ',' or ']' while parsing a flow sequence at line 1 column 4"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c4bd9b724fac50f6a4ffb19af4bcfaf4e203b813d84f529f4449b5af3cb7f29c",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: <case>/hiera.yaml): did not find expected ',' or '}' while parsing a flow mapping at line 2 column 11"
+    }
+  }
+}

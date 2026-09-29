@@ -1,0 +1,8 @@
+description: >-
+  A data file with a malformed flow sequence fails to parse; the error names
+  the file, line and column, on one line.
+origin: critic-engineering/err_yaml
+queries:
+  - key: good
+    error_class: BackendError
+    error_match: '.*Unable to parse .*other\.yaml\): .*while parsing a flow sequence at line 1 column 4'

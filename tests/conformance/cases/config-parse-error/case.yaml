@@ -1,0 +1,8 @@
+description: >-
+  hiera.yaml with a malformed flow mapping fails to parse; the error names
+  the file, line and column, on one line.
+origin: critic-engineering/err_cfg
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: '.*hiera\.yaml\): .*while parsing a flow mapping at line 2 column 11'
