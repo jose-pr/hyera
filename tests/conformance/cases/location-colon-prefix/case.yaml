@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy path interpolation using the explicit top-scope prefix
+  (%{::facts.os.family}) must resolve the same as the unprefixed form.
+origin: spec-config/cases/colon_prefix
+queries:
+  - key: k
