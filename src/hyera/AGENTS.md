@@ -29,18 +29,26 @@ private engine internals with no stability contract.
   resolve against (defaults to the config file's directory, or `os.getcwd()`
   for a `dict`/file-like/`None` config); also made absolute at construction.
   `context`/`kwargs`: default format variables merged into every call's
-  context. Raises `ConfigError` for anything about `hiera.yaml` — missing,
-  unreadable, a directory, unparsable, non-mapping (naming the Hiera 3
-  fallback this runtime does not support yet), or an unsupported `version`
-  (only a literal Integer `5` is accepted; a missing `version` or an
-  explicit `3` reads as "hiera.yaml version 3 is not supported yet"; `4`
-  reads as "cannot be used in the global layer"; anything else as "This
-  runtime does not support hiera.yaml version N") — plus wrong-shape
-  problems (missing `hierarchy`, unknown `data_hash`, a malformed hierarchy
-  level), and `BackendError` (`.path` names it) for a data file that cannot
-  be read or parsed. Context-free hierarchy levels are loaded by the
-  constructor, so a `BackendError` can come from `Hiera(...)` itself, not
-  only from a lookup.
+  context. A missing or `null`/`false` `defaults`/`hierarchy` is filled
+  with Puppet's own defaults (`{datadir: data, data_hash: yaml_data}` /
+  `[{name: Common, path: common.yaml}]`) rather than raising; a hierarchy
+  entry's own `datadir` wins, else `defaults.datadir`, else the literal
+  `data`, always resolved next to hiera.yaml (or under `base_path`) — never
+  the Hiera 3 absolute `/etc/puppetlabs/...` path. Raises `ConfigError` for
+  anything about `hiera.yaml` — missing, unreadable, a directory,
+  unparsable, non-mapping (naming the Hiera 3 fallback this runtime does
+  not support yet), an unsupported `version` (only a literal Integer `5` is
+  accepted; a missing `version` or an explicit `3` reads as "hiera.yaml
+  version 3 is not supported yet"; `4` reads as "cannot be used in the
+  global layer"; anything else as "This runtime does not support
+  hiera.yaml version N"), an unrecognized key in `defaults` or a hierarchy
+  entry (only Puppet's own key set is accepted; the underscored spelling
+  some Hiera 5 docs use for the data directory is not one of them) — plus
+  wrong-shape problems (unknown `data_hash`, a malformed hierarchy level),
+  and `BackendError` (`.path` names it) for a data file
+  that cannot be read or parsed. Context-free hierarchy levels are loaded
+  by the constructor, so a `BackendError` can come from `Hiera(...)`
+  itself, not only from a lookup.
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
     — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
     A dotted `key` follows Puppet's sub-key grammar (see the dotted
@@ -141,8 +149,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   **`Backend.EXTENSIONS: tuple`** — file extensions (with the dot) this
   format answers to, used by `.for_path`.
 - **`Backend(conf=None, *, strict=None)`** — `.conf`; `.datadir` reads
-  `conf["datadir"]` or `conf["data_dir"]` (Hiera-5 spelling), default `""`
-  (`config_loading_and_validation` removes this fallback later). `.strict`
+  `conf["datadir"]` only (Puppet's only spelling; a config with a
+  non-Puppet key is rejected before a level's conf ever reaches a
+  backend), default `""`. `.strict`
   (read-only property) is the constructor's `strict=` when given, else the
   call-time default (`"warning"` until `interpolation_engine` points
   it at a `Scope.strict`-backed `ContextVar`) — read at call time, never
@@ -272,7 +281,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `hocon_includes` (hyera's own extension, not Puppet vocabulary):
   `None` (the default) reads `conf.get("hocon_includes", True)`, so a
   hierarchy entry/`defaults` key of the same name reaches it the same way
-  `datadir`/`data_dir` already do; an explicit `True`/`False` overrides
+  `datadir` already does; an explicit `True`/`False` overrides
   `conf`. `self.hocon_includes` (bool) selects which of two scanners
   `.loads` runs before pyhocon ever parses the text:
 
@@ -480,7 +489,7 @@ re-exports it too).
   pattern; an invalid pattern is skipped rather than raising.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
   **dotted lookup key** (`h.get("a.b.0")`) both follow Puppet's own
-  `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `data_dir`,
+  `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `datadir`,
   `mapped_paths` templates, values, `.format()`, `%{scope('a.b')}` and
   `.get()` alike: a segment may be single- or double-quoted (quotes keep any
   embedded `.` literal and are trimmed off; whitespace around an unquoted
@@ -500,8 +509,8 @@ re-exports it too).
   through `.has()`: only a genuine miss (an absent key, a `None` value
   walked no further, or an out-of-range/nonexistent segment) is silent.
   In a hierarchy path specifically, a *malformed* reference still just
-  skips the level rather than raising (`hierarchy_location_resolution`'s
-  scope, not yet ported here) — but a well-formed one that hits a type
+  skips the level rather than raising (hierarchy paths do not follow
+  Puppet's location rules yet) — but a well-formed one that hits a type
   mismatch raises there too, same as in a value.
 - `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
   by default (2026-09-29 — see the API section above): `include

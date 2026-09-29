@@ -50,7 +50,7 @@ and a source (`path`, `paths`, `glob`, `globs`, or `mapped_paths`):
 version: 5
 defaults:
   data_hash: yaml_data
-  data_dir: data
+  datadir: data
 
 hierarchy:
   - name: "Per-node"
@@ -204,7 +204,8 @@ leaks a decrypted secret:
 ## Hiera 5 spec coverage
 
 Supported: `version: 5` validation · `defaults` · `hierarchy` · `name` ·
-`path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir`/`data_dir` ·
+`path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir` (default `data`,
+next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted

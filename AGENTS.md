@@ -69,7 +69,7 @@ export with its signature, arguments, and gotchas.
 ## Hiera 5 spec coverage
 
 Supported: `version: 5` validation, `defaults`, `hierarchy`/`default_hierarchy`,
-`name`, `path`/`paths`/`glob`/`globs`/`mapped_paths`, `datadir`/`data_dir`,
+`name`, `path`/`paths`/`glob`/`globs`/`mapped_paths`, `datadir`,
 `data_hash` backends (yaml/json/hocon/sops), all five interpolation methods
 (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted subkeys, merges
 `first`/`unique`/`hash`/`deep` (with `knockout_prefix`/`sort_merged_arrays`/

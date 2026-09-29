@@ -242,8 +242,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of passing the dict as a single positional argument.
 - Mutable default arguments (`context={}`) replaced with `None` sentinels,
   fixing cross-call context contamination in `scoped()` and others.
-- `Backend.__init__` reads the data dir from either `datadir` or `data_dir`
-  instead of raising `KeyError` on the Hiera-5 spelling.
 - Unknown/missing `data_hash` backends now raise a clear `ConfigError` naming
   the known backends, rather than an opaque `KeyError`.
 - `LookupDict` is no longer (unsafely) hashable.
@@ -406,6 +404,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A relative config path, and a relative `base_path`, are made absolute at
   construction instead of resolving against the current working directory
   on every read.
+- A hierarchy entry without `datadir` reads from `data/` next to
+  hiera.yaml (or under `base_path`); it used to read from
+  `/etc/puppetlabs/code/environments/%{environment}/hieradata`.
+- A missing `defaults` becomes `{datadir: data, data_hash: yaml_data}`, and
+  a missing `hierarchy` becomes `[{name: Common, path: common.yaml}]` (also
+  when either is present but empty/`null`), matching Puppet's own built-in
+  default configuration; both used to raise `ConfigError`.
 
 ### Removed
 
@@ -419,6 +424,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   method. Migration: `LookupDict(...).lookup("a.b.0")` is now
   `Hiera.get("a.b.0")`. Ruby-symbol keys (`:key`) are normalized to `key`
   when data loads, so `sym_lookup` has no replacement — nothing needs one.
+- The `data_dir` spelling, which Puppet does not accept — only `datadir`
+  is a real Puppet key. A hierarchy or `defaults` entry using `data_dir`
+  now raises `ConfigError` ("unrecognized key 'data_dir'"); rename it to
+  `datadir`. `Backend` no longer falls back to reading `conf["data_dir"]`.
 
 ### Added
 
