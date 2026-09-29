@@ -3,6 +3,7 @@
 """Data backends: load a hiera data file (YAML, JSON, sops-encrypted YAML)."""
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -12,6 +13,8 @@ import yaml
 
 from .exceptions import BackendError
 from .util import LookupDict
+
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     "Backend",
@@ -360,6 +363,11 @@ class HOCONBackend(Backend):
                 "hocon_data backend requires the 'pyhocon' package "
                 "(pip install pyera[hocon])"
             ) from e
+        except Exception as e:
+            raise BackendError(
+                "hocon_data backend could not import 'pyhocon' ({}: {}); "
+                "pip install 'pyera[hocon]'".format(type(e).__name__, e)
+            ) from e
         try:
             if isinstance(data, bytes):
                 data = data.decode("utf-8")
@@ -385,10 +393,17 @@ def _as_lookupdict(obj):
 
 
 def has_hocon() -> bool:
-    """True if the optional ``pyhocon`` dependency is importable."""
+    """True iff the optional ``pyhocon`` dependency imports without error.
+
+    Any import-time exception (not just ``ImportError`` -- an installed but
+    broken ``pyhocon`` can raise something else entirely, e.g.
+    ``AttributeError`` against a too-new stdlib) is caught and logged at
+    debug, so a broken optional dependency never breaks every ``Hiera()``.
+    """
     try:
         import pyhocon  # noqa: F401
 
         return True
-    except ImportError:
+    except Exception as e:
+        _LOGGER.debug("pyhocon is not usable: %s: %s", type(e).__name__, e)
         return False

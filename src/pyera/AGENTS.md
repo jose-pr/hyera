@@ -122,19 +122,24 @@ Install and import as `pyera` (`pip install pyera`, extras
   `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
   optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
-  `BackendError` naming the extra if it's not installed. Invalid UTF-8
-  raises `BackendError` rather than a raw `UnicodeDecodeError`. `include`
-  directives are sanitized before pyhocon ever parses the text, so
-  pyhocon's own include machinery (file reads relative to the process cwd,
-  `http(s)`/`file` URL fetches) never runs: a plain `include "..."`
-  contributes nothing, matching Puppet; every other form — `file(...)`,
-  `url(...)`, `classpath(...)`, `required(...)`, `package(...)`, any other
-  `name(...)`, a case-mismatched keyword (`INCLUDE ...`), a bare `include`
-  with nothing valid after it, or an `include` directive in value position
-  — raises `BackendError` instead (two of these, `file()` and value
-  position, differ from what Puppet itself does; see the gotcha below).
-  `${VAR}` substitutions fall back to environment variables, as in Puppet.
-- **`has_hocon() -> bool`** — `True` iff `pyhocon` is importable.
+  `BackendError` naming the extra if it's not installed, or if an installed
+  `pyhocon` fails to import for any other reason (e.g. against a too-new
+  stdlib). Invalid UTF-8 raises `BackendError` rather than a raw
+  `UnicodeDecodeError`. `include` directives are sanitized before pyhocon
+  ever parses the text, so pyhocon's own include machinery (file reads
+  relative to the process cwd, `http(s)`/`file` URL fetches) never runs: a
+  plain `include "..."` contributes nothing, matching Puppet; every other
+  form — `file(...)`, `url(...)`, `classpath(...)`, `required(...)`,
+  `package(...)`, any other `name(...)`, a case-mismatched keyword
+  (`INCLUDE ...`), a bare `include` with nothing valid after it, or an
+  `include` directive in value position — raises `BackendError` instead
+  (two of these, `file()` and value position, differ from what Puppet
+  itself does; see the gotcha below). `${VAR}` substitutions fall back to
+  environment variables, as in Puppet.
+- **`has_hocon() -> bool`** — `True` iff `pyhocon` imports without error; any
+  import-time exception (not just `ImportError`) is caught, logged at
+  debug, and returns `False` — an installed but broken `pyhocon` leaves
+  `HOCONBackend` unregistered instead of breaking every `Hiera()`.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change

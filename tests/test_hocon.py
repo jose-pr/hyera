@@ -1,4 +1,5 @@
-"""HOCON ``include`` directives never read a file or fetch a URL.
+"""HOCON ``include`` directives never read a file or fetch a URL, and an
+installed-but-broken ``pyhocon`` never breaks every ``Hiera()``.
 
 A plain quoted ``include "..."`` contributes nothing (matching Puppet);
 every other include form (``file()``, ``url()``, ``classpath()``,
@@ -10,13 +11,15 @@ value position, or a bare ``include`` with nothing valid after it) raises
 an ``http_server`` proves no network request is ever made.
 """
 
+import importlib
 import http.server
+import sys
 import threading
 
 import pytest
 
-from pyera import BackendError
-from pyera.backends import HOCONBackend
+from pyera import BackendError, Hiera, default_backends
+from pyera.backends import HOCONBackend, has_hocon
 
 
 @pytest.fixture
@@ -157,3 +160,33 @@ def test_invalid_utf8_is_backend_error():
     pytest.importorskip("pyhocon")
     with pytest.raises(BackendError):
         HOCONBackend().load(b"k = \xff\n")
+
+
+def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch):
+    fake_pkg = tmp_path / "fake" / "pyhocon"
+    fake_pkg.mkdir(parents=True)
+    (fake_pkg / "__init__.py").write_text(
+        "raise AttributeError(\"module 'collections' has no attribute "
+        "'MutableMapping'\")\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path / "fake"))
+    for name in list(sys.modules):
+        if name == "pyhocon" or name.startswith("pyhocon."):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+    importlib.invalidate_caches()
+
+    assert has_hocon() is False
+    assert HOCONBackend not in default_backends()
+
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.yaml").write_text("k: v\n")
+    config = {
+        "version": 5,
+        "defaults": {"data_hash": "yaml_data", "data_dir": "data"},
+        "hierarchy": [{"name": "c", "path": "common.yaml"}],
+    }
+    h = Hiera(config, base_path=str(tmp_path))
+    assert h.get("k") == "v"
+
+    with pytest.raises(BackendError, match="pyhocon"):
+        HOCONBackend().load(b"k = v")

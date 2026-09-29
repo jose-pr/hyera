@@ -22,6 +22,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   directory crashed lookups for any node without one.
 - A HOCON file that is not valid UTF-8 now raises `BackendError` instead of
   a raw `UnicodeDecodeError`.
+- An installed but broken `pyhocon` (an import-time exception other than
+  `ImportError`, e.g. against a too-new stdlib) no longer breaks every
+  `Hiera()`; `HOCONBackend` is simply left unregistered, and constructing
+  one directly raises `BackendError`.
 
 ### Security
 
