@@ -209,3 +209,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   source change was required: hiera's own duho surface (`Cli`, `LoggingArgs`,
   `Arg`/`NS`/`Append`/`Choice`, `main()`) is untouched by every documented
   0.6.0 API change.
+- `pyyaml` is now required as `>=6.0,<7` and the `hocon` extra as
+  `pyhocon>=0.3.29,<0.4`; both were unversioned. pyhocon 0.3.0-0.3.28 pin
+  pyparsing 2.0.3-2.1.1, which fails to import on Python 3.10 and later.
