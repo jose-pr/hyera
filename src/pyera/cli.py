@@ -28,8 +28,12 @@ _LOGGER = _logging.getLogger("pyera")
 _MERGE_ALIASES = {"array": "unique", "set": "unique"}
 
 #: Printed (to stderr) when the ``cli`` extra (duho) is not installed.
+# Double-quoted, not single-quoted: `pip install 'pyera[cli]'` fails when
+# pasted into cmd.exe, where single quotes are literal (pip then sees the
+# argv "'pyera[cli]'" verbatim and rejects it); double quotes work in
+# cmd.exe, PowerShell and POSIX shells alike.
 _NO_CLI_EXTRA_HINT = (
-    "pyera: the command-line interface needs the cli extra: " "pip install 'pyera[cli]'"
+    "pyera: the command-line interface needs the cli extra: " 'pip install "pyera[cli]"'
 )
 
 

@@ -589,12 +589,12 @@ class HOCONBackend(Backend):
         except ImportError as e:
             raise BackendError(
                 "hocon_data backend requires the 'pyhocon' package "
-                "(pip install pyera[hocon])"
+                '(pip install "pyera[hocon]")'
             ) from e
         except Exception as e:
             raise BackendError(
                 "hocon_data backend could not import 'pyhocon' ({}: {}); "
-                "pip install 'pyera[hocon]'".format(type(e).__name__, e)
+                'pip install "pyera[hocon]"'.format(type(e).__name__, e)
             ) from e
         _install_hocon_include_guard()
         try:

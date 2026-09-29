@@ -32,7 +32,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   merge, as `puppet lookup --merge first` does (omitting `--merge` still
   lets `lookup_options` decide).
 - The `pyera` console script and `python -m pyera` now print `pip install
-  'pyera[cli]'` and exit 2 when the `cli` extra is missing, instead of
+  "pyera[cli]"` and exit 2 when the `cli` extra is missing, instead of
   crashing with a `ModuleNotFoundError` traceback.
 - `ScopedHiera` can be copied, deep-copied and pickled; each previously
   raised `RecursionError`.
@@ -42,6 +42,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   differently-named script previously changed which environment variable
   launched the MCP server, silently breaking the documented `PYERA_MCP`
   contract.
+- The missing-extra install hints (`pip install "pyera[cli]"` and `pip
+  install "pyera[hocon]"`) are now double-quoted throughout; the old
+  single-quoted form fails when pasted into `cmd.exe`, where single quotes
+  are literal.
 
 ### Security
 

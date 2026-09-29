@@ -178,7 +178,7 @@ paths work since `__init__` re-exports it too).
   up `-v/-q/--loglevel` logging and returns the process exit code. When the
   `cli` extra (`duho`) is not installed, `main` always exists but prints
   `pyera: the command-line interface needs the cli extra: pip install
-  'pyera[cli]'` to stderr and returns 2, instead of raising
+  "pyera[cli]"` to stderr and returns 2, instead of raising
   `ModuleNotFoundError`; `Lookup` itself is not defined in that case.
 - **`Lookup`** — the `duho.Cli` command class (only defined when `duho` is
   installed). Fields: `key` (positional),

@@ -35,7 +35,7 @@ def test_console_script_without_cli_extra():
     )
     result = _run(code)
     assert result.returncode == 2
-    assert "pip install 'pyera[cli]'" in result.stderr
+    assert 'pip install "pyera[cli]"' in result.stderr
     assert "Traceback" not in result.stderr
     assert "Traceback" not in result.stdout
 
@@ -50,6 +50,6 @@ def test_module_entrypoint_without_cli_extra():
     )
     result = _run(code)
     assert result.returncode == 2
-    assert "pip install 'pyera[cli]'" in result.stderr
+    assert 'pip install "pyera[cli]"' in result.stderr
     assert "Traceback" not in result.stderr
     assert "Traceback" not in result.stdout
