@@ -1,0 +1,114 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "77b26e6b4881de8eeb310cc2367ddbaccb3b9abd292c761643691f86efe8869b",
+  "results": {
+    "scalar-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's.x'"
+    },
+    "nil-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n.x"
+      ],
+      "status": "not_found"
+    },
+    "nil-value": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "list-nonint-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'lst.x'"
+    },
+    "list-negative-index": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.-1"
+      ],
+      "status": "not_found"
+    },
+    "list-out-of-range": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.9"
+      ],
+      "status": "not_found"
+    },
+    "hash-int-key-as-string-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h.0"
+      ],
+      "status": "found",
+      "value": "zero"
+    },
+    "int-scalar-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i.x"
+      ],
+      "status": "error",
+      "message": "undefined method 'include?' for an instance of Integer"
+    },
+    "single-quoted-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "'a.b'.c"
+      ],
+      "status": "found",
+      "value": "nested"
+    },
+    "double-quoted-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "\"a.b\".c"
+      ],
+      "status": "found",
+      "value": "dotted"
+    },
+    "nested-dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.b.c"
+      ],
+      "status": "found",
+      "value": "nested"
+    },
+    "spaced-dots": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a . b . c"
+      ],
+      "status": "found",
+      "value": "nested"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+description: >-
+  Dotted lookup-key sub-navigation: scalar/nil/list/hash segments, negative
+  and out-of-range list indices, integer vs string hash keys, quoted key
+  segments, and whitespace around dots.
+origin: code-io-security/subkeys
+queries:
+  - key: s.x
+    id: scalar-segment
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: n.x
+    id: nil-segment
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: n
+    id: nil-value
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: lst.x
+    id: list-nonint-segment
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: lst.-1
+    id: list-negative-index
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: lst.9
+    id: list-out-of-range
+  - key: h.0
+    id: hash-int-key-as-string-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: i.x
+    id: int-scalar-segment
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: "'a.b'.c"
+    id: single-quoted-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: '"a.b".c'
+    id: double-quoted-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: a.b.c
+    id: nested-dotted
+  - key: "a . b . c"
+    id: spaced-dots
+    divergence: code-io-security/subkey-segment-parsing-diverges

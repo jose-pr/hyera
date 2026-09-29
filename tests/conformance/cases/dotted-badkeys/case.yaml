@@ -1,0 +1,30 @@
+description: >-
+  Malformed dotted-key syntax: a doubled dot, a trailing dot, a leading dot,
+  and a key that is itself quoted with a trailing dot. The source fixture's
+  key list also has two queries built from a single unbalanced quote
+  character (`a.'b`, `'a`); they are never harvested here because passing
+  such a token through `wsl.exe`'s own Win32->Linux argv translation
+  corrupts it into a broken `/bin/bash -c` invocation before Puppet ever
+  runs -- a tooling limitation of this harness, not a Puppet behavior.
+origin: critic-puppet-coverage/badkeys
+queries:
+  - key: a.b
+    id: ab
+  - key: "a..b"
+    id: doubled-dot
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+    error_match: "Syntax error in key"
+  - key: "a."
+    id: trailing-dot
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+    error_match: "Syntax error in key"
+  - key: ".a"
+    id: leading-dot
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+    error_match: "Syntax error in key"
+  - key: 'a."b"'
+    id: double-quoted-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: '"a."'
+    id: quoted-whole-key
+    divergence: code-io-security/subkey-segment-parsing-diverges

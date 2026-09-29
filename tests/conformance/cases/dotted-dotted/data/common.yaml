@@ -1,0 +1,2 @@
+db: {host: localhost}
+classes: [a, b]

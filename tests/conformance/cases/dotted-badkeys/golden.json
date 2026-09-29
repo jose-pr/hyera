@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4ac6c57effee3718b123e6c2c1eccfa228eae783e3bceeab7f3e4df2fc9baf8c",
+  "results": {
+    "ab": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.b"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "doubled-dot": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a..b"
+      ],
+      "status": "error",
+      "message": "Syntax error in key: 'a..b'"
+    },
+    "trailing-dot": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a."
+      ],
+      "status": "error",
+      "message": "Syntax error in key: 'a.'"
+    },
+    "leading-dot": {
+      "argv": [
+        "--strict",
+        "warning",
+        ".a"
+      ],
+      "status": "error",
+      "message": "Syntax error in key: '.a'"
+    },
+    "double-quoted-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.\"b\""
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "quoted-whole-key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "\"a.\""
+      ],
+      "status": "found",
+      "value": "dotkey"
+    }
+  }
+}

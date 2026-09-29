@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "ee996e4bf866c0b878d1141a1acb5c9a0081ee3f68b18317c1bf0650d4f70fda",
+  "results": {
+    "dig-past-scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.host.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'db.host.x'"
+    },
+    "list-nonint-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "classes.foo"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'foo' from key 'classes.foo'"
+    },
+    "nested-dig": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.host"
+      ],
+      "status": "found",
+      "value": "localhost"
+    }
+  }
+}
