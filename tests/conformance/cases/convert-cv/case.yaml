@@ -1,0 +1,89 @@
+description: >-
+  Every convert_to target the review probed: Integer (plain/hex/octal/radix/
+  bad/float/bool), Float, Boolean, String, Array, Hash, Numeric, Optional,
+  Variant, an unparsable and an unknown type, a lowercase type name, a
+  Sensitive wrap, SemVer, Timespan, Enum, Tuple, and a String format arg.
+origin: spec-lookup-options-types/cv
+queries:
+  - key: int_plain
+  - key: int_hex
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: int_oct
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: int_bad
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "cannot be converted to Integer"
+  - key: int_float
+  - key: int_radix
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "cannot be converted to Integer"
+  - key: int_bool
+  - key: flt
+  - key: flt_bad
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "cannot be converted to Float"
+  - key: bool_yes
+  - key: bool_bad
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "cannot be converted to Boolean"
+  - key: bool_0
+  - key: bool_str0
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "cannot be converted to Boolean"
+  - key: str_bool
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: str_float
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: str_hash
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    hash_inspect: true
+  - key: str_arr
+  - key: str_nil
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: arr_str
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: arr_hash
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: arr_wrap
+  - key: arr_scalar
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: hash_arr
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: num
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: num_int
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: opt_int
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: var_int
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "is not supported"
+  - key: badtype
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "could not parse"
+  - key: unktype
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "is not supported"
+  - key: sens
+  - key: sens_arr
+  - key: semver
+  - key: tspan
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: enum_t
+  - key: lower_t
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "not a valid type specification"
+  - key: tuple_t
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    error_match: "wrong type"
+  - key: str_fmt
+    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+  - key: int_plain
+    id: int_plain-explicit-first
+    merge: first
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+  - key: int_plain
+    id: int_plain-explicit-unique
+    merge: unique
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+    error_match: "cannot be converted to Integer"

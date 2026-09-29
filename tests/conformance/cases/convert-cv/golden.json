@@ -1,0 +1,385 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c80e9d5fb53654d49c4a9eb1e56b4e6d9996040061a1f8deb6b0410d58e466f6",
+  "results": {
+    "int_plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_plain"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "int_hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_hex"
+      ],
+      "status": "found",
+      "value": 31
+    },
+    "int_oct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_oct"
+      ],
+      "status": "found",
+      "value": 34
+    },
+    "int_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'int_bad' raised error: 'new' The string 'abc' cannot be converted to Integer"
+    },
+    "int_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_float"
+      ],
+      "status": "found",
+      "value": 3
+    },
+    "int_radix": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_radix"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'int_radix' raised error: 'new' The string 'ff' cannot be converted to Integer"
+    },
+    "int_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int_bool"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "flt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "flt"
+      ],
+      "status": "found",
+      "value": 3.5
+    },
+    "flt_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "flt_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'flt_bad' raised error: 'new_float' The string 'x' cannot be converted to Float"
+    },
+    "bool_yes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bool_yes"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "bool_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bool_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'bool_bad' raised error: 'new_boolean' The string 'maybe' cannot be converted to Boolean"
+    },
+    "bool_0": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bool_0"
+      ],
+      "status": "found",
+      "value": false
+    },
+    "bool_str0": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bool_str0"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'bool_str0' raised error: 'new_boolean' The string '0' cannot be converted to Boolean"
+    },
+    "str_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_bool"
+      ],
+      "status": "found",
+      "value": "true"
+    },
+    "str_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_float"
+      ],
+      "status": "found",
+      "value": "3.000000"
+    },
+    "str_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_hash"
+      ],
+      "status": "found",
+      "value": "{'a'=>1}",
+      "raw_value": "{'a' => 1}"
+    },
+    "str_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_arr"
+      ],
+      "status": "found",
+      "value": "[1, 'b']"
+    },
+    "str_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_nil"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "arr_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_str"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "arr_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_hash"
+      ],
+      "status": "found",
+      "value": [
+        [
+          "a",
+          1
+        ]
+      ]
+    },
+    "arr_wrap": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_wrap"
+      ],
+      "status": "found",
+      "value": [
+        "abc"
+      ]
+    },
+    "arr_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_scalar"
+      ],
+      "status": "found",
+      "value": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "hash_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hash_arr"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "num"
+      ],
+      "status": "found",
+      "value": 3.5
+    },
+    "num_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "num_int"
+      ],
+      "status": "found",
+      "value": 7
+    },
+    "opt_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "opt_int"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "var_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "var_int"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'var_int' raised error: Creation of new instance of type 'Variant[Integer, Float]' is not supported"
+    },
+    "badtype": {
+      "argv": [
+        "--strict",
+        "warning",
+        "badtype"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'badtype' could not parse 'NoSuch[', error: 'Syntax error at end of input"
+    },
+    "unktype": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unktype"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'unktype' raised error: Creation of new instance of type 'TypeReference['Frobnicate']' is not supported"
+    },
+    "sens": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sens"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "sens_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sens_arr"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "semver": {
+      "argv": [
+        "--strict",
+        "warning",
+        "semver"
+      ],
+      "status": "found",
+      "value": "1.2.3"
+    },
+    "tspan": {
+      "argv": [
+        "--strict",
+        "warning",
+        "tspan"
+      ],
+      "status": "found",
+      "value": "1-00:00:00.0"
+    },
+    "enum_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "enum_t"
+      ],
+      "status": "found",
+      "value": "a"
+    },
+    "lower_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lower_t"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'lower_t' could not parse 'integer', error: 'The expression <integer> is not a valid type specification."
+    },
+    "tuple_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "tuple_t"
+      ],
+      "status": "error",
+      "message": "Converted value from Tuple[Integer, String].new() has wrong type, index 1 expects a String value, got Integer"
+    },
+    "str_fmt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_fmt"
+      ],
+      "status": "found",
+      "value": "ff"
+    },
+    "int_plain-explicit-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "int_plain"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "int_plain-explicit-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "int_plain"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'int_plain' raised error: 'new' Value of type Array[String] cannot be converted to Integer"
+    }
+  }
+}

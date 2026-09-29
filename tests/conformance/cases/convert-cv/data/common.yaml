@@ -1,0 +1,75 @@
+lookup_options:
+  int_plain: {convert_to: Integer}
+  int_hex: {convert_to: Integer}
+  int_oct: {convert_to: Integer}
+  int_bad: {convert_to: Integer}
+  int_float: {convert_to: Integer}
+  int_radix: {convert_to: [Integer, 16]}
+  int_bool: {convert_to: Integer}
+  flt: {convert_to: Float}
+  flt_bad: {convert_to: Float}
+  bool_yes: {convert_to: Boolean}
+  bool_bad: {convert_to: Boolean}
+  bool_0: {convert_to: Boolean}
+  bool_str0: {convert_to: Boolean}
+  str_bool: {convert_to: String}
+  str_float: {convert_to: String}
+  str_hash: {convert_to: String}
+  str_arr: {convert_to: String}
+  str_nil: {convert_to: String}
+  arr_str: {convert_to: Array}
+  arr_hash: {convert_to: Array}
+  arr_wrap: {convert_to: [Array, true]}
+  arr_scalar: {convert_to: Array}
+  hash_arr: {convert_to: Hash}
+  num: {convert_to: Numeric}
+  num_int: {convert_to: Numeric}
+  opt_int: {convert_to: 'Optional[Integer]'}
+  var_int: {convert_to: 'Variant[Integer,Float]'}
+  badtype: {convert_to: 'NoSuch['}
+  unktype: {convert_to: 'Frobnicate'}
+  sens: {convert_to: Sensitive}
+  sens_arr: {convert_to: [Sensitive]}
+  semver: {convert_to: SemVer}
+  tspan: {convert_to: Timespan}
+  enum_t: {convert_to: 'Enum[a,b]'}
+  lower_t: {convert_to: integer}
+  tuple_t: {convert_to: 'Tuple[Integer,String]'}
+  str_fmt: {convert_to: [String, '%x']}
+int_plain: "42"
+int_hex: "0x1F"
+int_oct: "042"
+int_bad: "abc"
+int_float: 3.7
+int_radix: "ff"
+int_bool: true
+flt: "3.5"
+flt_bad: "x"
+bool_yes: "yes"
+bool_bad: "maybe"
+bool_0: 0
+bool_str0: "0"
+str_bool: true
+str_float: 3.0
+str_hash: {a: 1}
+str_arr: [1, "b"]
+str_nil: ~
+arr_str: "abc"
+arr_hash: {a: 1}
+arr_wrap: "abc"
+arr_scalar: 5
+hash_arr: [[a, 1], [b, 2]]
+num: "3.5"
+num_int: "7"
+opt_int: "5"
+var_int: "5"
+badtype: "x"
+unktype: "x"
+sens: "s3cret"
+sens_arr: "s3cret"
+semver: "1.2.3"
+tspan: "1-00:00:00"
+enum_t: "a"
+lower_t: "5"
+tuple_t: ["1", 2]
+str_fmt: 255
