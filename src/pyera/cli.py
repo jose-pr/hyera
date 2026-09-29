@@ -11,7 +11,12 @@ import logging as _logging
 import sys as _sys
 import typing as _ty
 
-import duho
+try:
+    import duho
+except ModuleNotFoundError as _e:
+    if _e.name != "duho":
+        raise
+    duho = None
 
 from . import __version__
 from .exceptions import HieraError
@@ -21,6 +26,11 @@ _LOGGER = _logging.getLogger("pyera")
 
 #: CLI merge choice -> spec strategy name (array/set are legacy aliases).
 _MERGE_ALIASES = {"array": "unique", "set": "unique"}
+
+#: Printed (to stderr) when the ``cli`` extra (duho) is not installed.
+_NO_CLI_EXTRA_HINT = (
+    "pyera: the command-line interface needs the cli extra: " "pip install 'pyera[cli]'"
+)
 
 
 class _ScopeError(ValueError):
@@ -74,81 +84,86 @@ def _dump(value, fmt: str) -> str:
     return str(value)
 
 
-class Lookup(duho.LoggingArgs, duho.Cli):
-    """Look up a key in a hiera hierarchy and print the resolved value."""
+if duho is not None:
 
-    _version_ = __version__
+    class Lookup(duho.LoggingArgs, duho.Cli):
+        """Look up a key in a hiera hierarchy and print the resolved value."""
 
-    key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
-    config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")
-    scope: (
-        "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]"
-    ) = None
-    """Context variable ``key=value`` (repeatable)."""
-    merge: (
-        "duho.Arg[_ty.Optional[str], "
-        "duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]"
-    ) = None
-    """Merge strategy. Omitted: the data's ``lookup_options`` decide,
-    else first found. An explicit value, ``first`` included, overrides
-    ``lookup_options``. ``array``/``set`` are legacy aliases for
-    ``unique``."""
-    deep: bool = False
-    """Promote ``--merge hash`` to a deep merge (legacy convenience)."""
-    knockout_prefix: (
-        "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]"
-    ) = None
-    """Deep-merge knockout prefix (marks keys/values to remove)."""
-    output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = ("raw")
-    """Output format for the resolved value."""
-    default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
-    """Value to print when the key is missing (otherwise exit 1)."""
+        _version_ = __version__
 
-    def _merge_spec(self):
-        if self.merge is None:
-            return None
-        strategy = _MERGE_ALIASES.get(self.merge, self.merge)
-        if strategy == "hash" and self.deep:
-            strategy = "deep"
-        if strategy == "deep" and self.knockout_prefix:
-            return {"strategy": "deep", "knockout_prefix": self.knockout_prefix}
-        return strategy
+        key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
+        config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")
+        scope: (
+            "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]"
+        ) = None
+        """Context variable ``key=value`` (repeatable)."""
+        merge: (
+            "duho.Arg[_ty.Optional[str], "
+            "duho.Choice('first', 'unique', 'hash', 'deep', 'array', 'set')]"
+        ) = None
+        """Merge strategy. Omitted: the data's ``lookup_options`` decide,
+        else first found. An explicit value, ``first`` included, overrides
+        ``lookup_options``. ``array``/``set`` are legacy aliases for
+        ``unique``."""
+        deep: bool = False
+        """Promote ``--merge hash`` to a deep merge (legacy convenience)."""
+        knockout_prefix: (
+            "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]"
+        ) = None
+        """Deep-merge knockout prefix (marks keys/values to remove)."""
+        output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = ("raw")
+        """Output format for the resolved value."""
+        default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
+        """Value to print when the key is missing (otherwise exit 1)."""
 
-    def __call__(self) -> int:
-        try:
-            context = _parse_scope(self.scope)
-        except _ScopeError as e:
-            _LOGGER.error("%s", e)
-            return 2
-        try:
-            hiera = Hiera(self.config, context=context)
-        except HieraError as e:
-            _LOGGER.error("%s", e)
-            return 2
-        except OSError as e:
-            _LOGGER.error("could not open config %s: %s", self.config, e)
-            return 2
+        def _merge_spec(self):
+            if self.merge is None:
+                return None
+            strategy = _MERGE_ALIASES.get(self.merge, self.merge)
+            if strategy == "hash" and self.deep:
+                strategy = "deep"
+            if strategy == "deep" and self.knockout_prefix:
+                return {"strategy": "deep", "knockout_prefix": self.knockout_prefix}
+            return strategy
 
-        merge = self._merge_spec()
-        try:
-            value = hiera.get(self.key, merge=merge, throw=True)
-        except KeyError:
-            if self.default is not None:
-                print(_dump(self.default, self.output))
-                return 0
-            _LOGGER.error("key not found: %s", self.key)
-            return 1
-        except HieraError as e:
-            _LOGGER.error("%s", e)
-            return 2
+        def __call__(self) -> int:
+            try:
+                context = _parse_scope(self.scope)
+            except _ScopeError as e:
+                _LOGGER.error("%s", e)
+                return 2
+            try:
+                hiera = Hiera(self.config, context=context)
+            except HieraError as e:
+                _LOGGER.error("%s", e)
+                return 2
+            except OSError as e:
+                _LOGGER.error("could not open config %s: %s", self.config, e)
+                return 2
 
-        print(_dump(value, self.output))
-        return 0
+            merge = self._merge_spec()
+            try:
+                value = hiera.get(self.key, merge=merge, throw=True)
+            except KeyError:
+                if self.default is not None:
+                    print(_dump(self.default, self.output))
+                    return 0
+                _LOGGER.error("key not found: %s", self.key)
+                return 1
+            except HieraError as e:
+                _LOGGER.error("%s", e)
+                return 2
+
+            print(_dump(value, self.output))
+            return 0
 
 
 def main(argv=None) -> int:
     # duho.main sets up stderr logging (honoring -v/-q/--loglevel) and
     # dispatches to Lookup.__call__, whose int return becomes the exit code.
+    if duho is None:
+        print(_NO_CLI_EXTRA_HINT, file=_sys.stderr)
+        return 2
     return duho.main(Lookup, argv)
 
 

@@ -168,8 +168,13 @@ paths work since `__init__` re-exports it too).
 
 - **`main(argv=None) -> int`** — the `pyera` console-script entry point;
   builds and dispatches the `Lookup` duho command (`duho.main`), which sets
-  up `-v/-q/--loglevel` logging and returns the process exit code.
-- **`Lookup`** — the `duho.Cli` command class. Fields: `key` (positional),
+  up `-v/-q/--loglevel` logging and returns the process exit code. When the
+  `cli` extra (`duho`) is not installed, `main` always exists but prints
+  `pyera: the command-line interface needs the cli extra: pip install
+  'pyera[cli]'` to stderr and returns 2, instead of raising
+  `ModuleNotFoundError`; `Lookup` itself is not defined in that case.
+- **`Lookup`** — the `duho.Cli` command class (only defined when `duho` is
+  installed). Fields: `key` (positional),
   `config` (`--config/-c`, default `"hiera.yaml"`), `scope` (`--scope/-s`,
   repeatable `key=value`), `merge` (`--merge`, choice of
   `first|unique|hash|deep|array|set`, default `None`; `array`/`set` are

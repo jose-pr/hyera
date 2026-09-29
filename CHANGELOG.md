@@ -31,6 +31,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An explicit `--merge first` on the CLI now overrides a `lookup_options`
   merge, as `puppet lookup --merge first` does (omitting `--merge` still
   lets `lookup_options` decide).
+- The `pyera` console script and `python -m pyera` now print `pip install
+  'pyera[cli]'` and exit 2 when the `cli` extra is missing, instead of
+  crashing with a `ModuleNotFoundError` traceback.
 
 ### Security
 

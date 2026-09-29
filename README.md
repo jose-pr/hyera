@@ -139,6 +139,9 @@ first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
 `-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides;
 an explicit `--merge`, `first` included, overrides it.
 
+The CLI needs the `cli` extra (`pip install 'pyera[cli]'`); without it the
+command prints that hint and exits 2.
+
 The CLI is built for unattended use: no interactive prompts, deterministic
 output, and meaningful exit codes — `0` found, `1` key missing, `2`
 usage/config error.
