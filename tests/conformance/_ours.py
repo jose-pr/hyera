@@ -149,6 +149,20 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     ``{"status": "error", ...}`` exactly like one raised during the lookup,
     instead of escaping as a raw pytest error on a case that otherwise
     matches Puppet (both sides error).
+
+    ``as_puppet_json`` is deliberately in its OWN try/except, not folded into
+    the one above: several divergences (``code-io-security/dotted-subkey-raw-
+    exceptions``, ``spec-lookup-options-types/merge-errors-escape-as-
+    valueerror``, ``spec-merge/bad-merge-strategy-uncaught-valueerror``) are
+    *exactly* "pyera raises a raw, unwrapped exception (often ValueError)
+    where Puppet also errors" -- catching every ``ValueError`` from
+    ``hiera.get()`` itself would silently launder that divergence into a
+    clean status match (found as an XPASS(strict) regression the first time
+    this was tried: it turned three existing raw-exception divergences into
+    accidental passes). Only ``as_puppet_json``'s own ``ValueError`` (a
+    NaN/Infinity value, which fails Puppet's own ``--render-as json`` the
+    same way ``allow_nan=False`` does here) is a harness-projection concern,
+    not a pyera-behavior one, so only that call is guarded.
     """
     key, env = _check_common(case_dir, case, query)
     facts = _load_facts(case_dir)
@@ -164,7 +178,11 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
         return {"status": "not_found"}
     except HieraError as e:
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
-    return {"status": "found", "value": as_puppet_json(value)}
+    try:
+        rendered = as_puppet_json(value)
+    except ValueError as e:
+        return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
+    return {"status": "found", "value": rendered}
 
 
 def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
