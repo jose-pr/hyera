@@ -18,7 +18,7 @@ from pathlib_next import Path
 
 from .backends import Backend, YAMLBackend, has_hocon
 from .exceptions import BackendError, ConfigError
-from ._location_resolver import _normalize_source, _resolve_level_paths
+from ._location_resolver import resolve_locations
 from ._yaml_loader import symkeys_to_string
 
 #: Puppet's built-in default configuration, used when hiera.yaml does not
@@ -539,48 +539,44 @@ def _validate_v5(data: dict, source: "_ConfigSource") -> None:
 
 
 class HieraLevel(_ty.NamedTuple):
+    """One hierarchy entry, stored exactly as written in hiera.yaml --
+    ``locations`` are never interpolated or normalized here; that happens
+    per lookup, against a bound :class:`~hyera.Scope`
+    (:func:`~hyera._location_resolver.resolve_locations`)."""
+
+    name: str
     backend: Backend
-    sources: "list[str]"
-    #: True when sources are glob patterns rather than literal relative paths.
-    glob: bool = False
-    #: ``(collection_var, item_var, template)`` for a mapped_paths level, else None.
-    mapped: "tuple" = None
+    datadir: str
+    #: The one location key this entry declared (``"path"``, ``"paths"``,
+    #: ``"glob"``, ``"globs"``, ``"uri"``, ``"uris"`` or ``"mapped_paths"``),
+    #: or ``None`` for a location-less entry.
+    location_key: "_ty.Optional[str]"
+    #: The raw declared value(s): one string for a singular key, the tuple
+    #: as written for a plural one, and ``(collection_var, item_var,
+    #: template)`` for ``mapped_paths``.
+    locations: "_ty.Tuple[str, ...]"
 
     @classmethod
     def new(cls, conf: dict, backend: Backend) -> "HieraLevel":
-        sources: "list[str]" = []
-        is_glob = False
-        mapped = None
-        path = conf.get("path")
-        paths = conf.get("paths")
-        glob = conf.get("glob")
-        globs = conf.get("globs")
-        mapped_paths = conf.get("mapped_paths")
-        if path:
-            sources = [path]
-        elif paths:
-            sources = list(paths)
-        elif glob:
-            sources = [glob]
-            is_glob = True
-        elif globs:
-            sources = list(globs)
-            is_glob = True
-        elif mapped_paths:
-            # [collection_var, item_var, template]
-            collection_var, item_var, template = mapped_paths
-            mapped = (collection_var, item_var, _normalize_source(template))
-
+        location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
+        if location_key is None:
+            locations: "_ty.Tuple[str, ...]" = ()
+        elif location_key in ("paths", "globs", "uris", "mapped_paths"):
+            locations = tuple(conf[location_key])
+        else:
+            locations = (conf[location_key],)
         return cls(
-            backend,
-            [_normalize_source(source) for source in sources if source],
-            is_glob,
-            mapped,
+            name=conf["name"],
+            backend=backend,
+            datadir=conf["datadir"],
+            location_key=location_key,
+            locations=locations,
         )
 
-    def paths(self, base_path: Path, context: dict):
-        """Yield the candidate source paths for this level in a given context."""
-        return _resolve_level_paths(self, base_path, context)
+    def paths(self, base_path: Path, scope) -> "list":
+        """The candidate source paths for this level in a bound
+        :class:`~hyera.Scope`."""
+        return [loc.location for loc in resolve_locations(self, base_path, scope)]
 
 
 def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":
@@ -789,6 +785,5 @@ def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
                 source, "Hierarchy level {!r} is missing a function key".format(name)
             )
 
-        backend.datadir = _normalize_source(backend.datadir)
         levels.append(HieraLevel.new(conf, backend))
     return levels

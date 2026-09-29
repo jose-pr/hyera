@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
 from ._types import Sensitive
-from .exceptions import HieraLookupError, InterpolationError
+from .exceptions import ConfigError, HieraLookupError, InterpolationError
 
 #: One ``%{...}`` occurrence (``interpolation.rb:51``'s
 #: ``/%\{([^}]*)\}/``). Takes any text up to the first ``}``, stripped
@@ -170,47 +170,6 @@ def _float_to_s(f: float) -> str:
     )
 
 
-def _scope_ref(scope, ref: str, subject: str = None):
-    """Resolve a dotted ``%{...}``/``scope()`` reference against a bound
-    :class:`~hyera.Scope` (``interpolation.rb:87-121``, without ``strict``
-    -- that side effect belongs to whichever caller wires it in).
-
-    Returns :data:`_MISSING` on an ordinary miss (an unbound root, or a
-    :func:`~hyera._navigation.sub_lookup` miss navigating further). A
-    defined-nil root with no further segments returns ``None`` itself, same
-    as any other bound value. Raises :class:`~hyera.HieraLookupError` on a
-    malformed ``ref``, :class:`~hyera.InterpolationError` for a non-``str``
-    root name (Puppet crashes on this; ``parser/scope.rb``'s own message
-    for that case), or :class:`~hyera.HieraLookupError` for a navigation
-    type mismatch -- ``subject`` is what an error quotes as "in string:
-    <subject>", defaulting to ``%{<ref>}`` (the plain interpolation form).
-
-    Used only by the ``str.format``-style location/datadir/format helpers in
-    :mod:`hyera._location_resolver`, which have no strict routing of their
-    own; the engine below (:func:`interpolate`) resolves a bare ``%{var}``
-    through :meth:`~hyera.Scope.lookupvar` instead, via :func:`_scope_lookup`.
-    """
-    if subject is None:
-        subject = "%{" + ref + "}"
-    segments = split_key(
-        ref, lambda p: HieraLookupError("{} in string: {}".format(p, subject))
-    )
-    root, rest = segments[0], segments[1:]
-    if not isinstance(root, str):
-        raise InterpolationError(
-            "Scope variable name {} is a {}, not a string".format(
-                root, _ruby_class(root)
-            )
-        )
-    value = scope.lookup(root)
-    if value is _MISSING:
-        return _MISSING
-    if not rest:
-        return value
-    result = sub_lookup(ref, rest, value)
-    return _MISSING if result is _MISSING else result
-
-
 def interpolate(value, invocation, allow_methods=True):
     """Fully resolve every ``%{...}`` in ``value`` (``interpolation.rb:19-32``).
 
@@ -349,7 +308,10 @@ def _get_method_and_data(expr, allow_methods):
     m = _METHOD_RE.search(expr)
     if m:
         if not allow_methods:
-            raise InterpolationError(
+            # A hiera.yaml problem (a location/datadir/options template),
+            # not a lookup-time failure -- ConfigError, not
+            # InterpolationError (hierarchy_location_resolution Design Q3).
+            raise ConfigError(
                 "Interpolation using method syntax is not allowed in this context"
             )
         return m.group(1), m.group(2) if m.group(2) is not None else m.group(3)

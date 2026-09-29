@@ -1,0 +1,399 @@
+"""Hierarchy location resolution: the Puppet interpolation engine, `datadir`
+strictness, mapped_paths scope semantics, and directory locations.
+"""
+
+import os
+
+import pytest
+
+from hyera import BackendError, ConfigError, Hiera, InterpolationError, Scope
+from hyera._hiera_config import HieraLevel
+from hyera._location_resolver import _pathname_plus
+
+# --- _pathname_plus (Ruby Pathname#+) ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "base, rel, expected",
+    [
+        ("/r/data", "x.yaml", "/r/data/x.yaml"),
+        ("/r/data", "./x.yaml", "/r/data/x.yaml"),
+        ("/r/data", "../x.yaml", "/r/x.yaml"),
+        ("/r/data", "../../../x.yaml", "/x.yaml"),
+        ("/r/data", "/abs/x.yaml", "/abs/x.yaml"),
+        ("data", "../../x", "../x"),
+        ("/r/data/.", "x", "/r/data/x"),
+        ("/r/data", "a/../b.yaml", "/r/data/a/../b.yaml"),
+    ],
+)
+def test_pathname_plus(base, rel, expected):
+    assert _pathname_plus(base, rel) == expected
+
+
+def test_pathname_plus_keeps_platform_anchor():
+    anchor = "C:/" if os.name == "nt" else "/"
+    assert _pathname_plus(anchor + "r", "../../x") == anchor + "x"
+
+
+# --- HieraLevel.new ------------------------------------------------------
+
+
+def _level(conf):
+    from hyera.backends import Backend
+
+    class _StubBackend(Backend):
+        def data_hash(self, path, options):
+            return {}
+
+    return HieraLevel.new(
+        dict(conf, name=conf.get("name", "lvl"), datadir="data"),
+        _StubBackend(),
+    )
+
+
+def test_hiera_level_new_path():
+    lvl = _level({"path": "nodes/%{trusted.certname}.yaml"})
+    assert lvl.location_key == "path"
+    assert lvl.locations == ("nodes/%{trusted.certname}.yaml",)
+
+
+def test_hiera_level_new_paths():
+    lvl = _level({"paths": ["a.yaml", "b.yaml"]})
+    assert lvl.location_key == "paths"
+    assert lvl.locations == ("a.yaml", "b.yaml")
+
+
+def test_hiera_level_new_glob():
+    lvl = _level({"glob": "*.yaml"})
+    assert lvl.location_key == "glob"
+    assert lvl.locations == ("*.yaml",)
+
+
+def test_hiera_level_new_globs():
+    lvl = _level({"globs": ["a/*.yaml", "b/*.yaml"]})
+    assert lvl.location_key == "globs"
+    assert lvl.locations == ("a/*.yaml", "b/*.yaml")
+
+
+def test_hiera_level_new_mapped_paths():
+    lvl = _level({"mapped_paths": ["roles", "role", "roles/%{role}.yaml"]})
+    assert lvl.location_key == "mapped_paths"
+    assert lvl.locations == ("roles", "role", "roles/%{role}.yaml")
+
+
+def test_hiera_level_new_uri():
+    lvl = _level({"uri": "http://example.com/x"})
+    assert lvl.location_key == "uri"
+    assert lvl.locations == ("http://example.com/x",)
+
+
+def test_hiera_level_new_no_location():
+    lvl = _level({})
+    assert lvl.location_key is None
+    assert lvl.locations == ()
+
+
+# --- path/paths extension (used by hiera_v3_v4_configs) ------------------
+
+
+def test_resolve_paths_extension(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "p", "path": "x"}]},
+        files={"data/x.yaml": "k: found\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    from hyera._location_resolver import _resolve_paths
+    from hyera._invocation import Invocation
+
+    inv = Invocation(Scope(), lambda k, i: None, lenient=True)
+    (loc,) = _resolve_paths(str(root / "data"), ["x"], inv, extension=".yaml")
+    assert str(loc.location).endswith("x.yaml")
+    (loc2,) = _resolve_paths(str(root / "data"), ["x.yaml"], inv, extension=".yaml")
+    assert str(loc2.location).endswith("x.yaml")
+    assert not str(loc2.location).endswith("x.yaml.yaml")
+
+
+# --- undefined variable in a location: never skipped, always probed ------
+
+
+@pytest.mark.parametrize("strict", ["warning", "error", "off"])
+def test_undefined_variable_in_location_is_probed(make_tree, caplog, strict):
+    root = make_tree(
+        {"hierarchy": [{"name": "n", "path": "nodes/%{nosuch}.yaml"}]},
+        files={"data/nodes/.yaml": "k: empty\n"},
+    )
+    with caplog.at_level("WARNING"):
+        h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict=strict))
+        assert h.get("k") == "empty"
+    messages = [r.message for r in caplog.records]
+    if strict == "warning":
+        assert any("Undefined variable 'nosuch'" in m for m in messages)
+    elif strict == "error":
+        assert any(
+            "Interpolation failed with 'nosuch', but compilation continuing" in m
+            for m in messages
+        )
+    else:
+        assert not messages
+
+
+# --- undefined variable in datadir: follows strict ------------------------
+
+
+def test_undefined_variable_in_datadir_warning_and_off(make_tree):
+    for strict in ("warning", "off"):
+        root = make_tree(
+            {
+                "hierarchy": [
+                    {"name": "dd", "path": "common.yaml", "datadir": "data/%{nosuch}"}
+                ]
+            },
+            files={"data/common.yaml": "k: common\n"},
+        )
+        h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict=strict))
+        assert h.get("k") == "common"
+
+
+def test_undefined_variable_in_datadir_error_raises(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "dd", "path": "common.yaml", "datadir": "data/%{nosuch}"}
+            ]
+        },
+        files={"data/common.yaml": "k: common\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict="error"))
+    with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
+        h.get("k")
+
+
+def test_nested_miss_in_datadir_under_strict_error(make_tree):
+    # A nested (dotted) navigation miss is silent, even under strict=error --
+    # only a genuinely undefined *root* variable raises there.
+    root = make_tree(
+        {
+            "hierarchy": [
+                {
+                    "name": "dd",
+                    "path": "common.yaml",
+                    "datadir": "data/%{facts.nosuch}",
+                }
+            ]
+        },
+        files={"data/common.yaml": "k: common\n"},
+    )
+    h = Hiera(
+        str(root / "hiera.yaml"),
+        scope=Scope(facts={"os": "linux"}, strict="error"),
+    )
+    assert h.get("k") == "common"
+
+
+# --- method syntax is rejected in every location context ------------------
+
+
+@pytest.mark.parametrize(
+    "hierarchy",
+    [
+        [{"name": "p", "path": "%{lookup('x')}.yaml"}],
+        [{"name": "p", "paths": ["common.yaml", "%{alias('x')}.yaml"]}],
+        [{"name": "g", "glob": "%{hiera('x')}/*.yaml"}],
+        [{"name": "m", "mapped_paths": ["roles", "r", "r/%{scope('r')}.yaml"]}],
+    ],
+)
+def test_method_syntax_in_locations_raises(make_tree, hierarchy):
+    root = make_tree(
+        {"hierarchy": hierarchy},
+        files={"data/common.yaml": "k: common\n"},
+    )
+    # Method syntax is a hiera.yaml problem: it surfaces from the
+    # constructor's own pre-warm, not only from a later .get().
+    with pytest.raises(ConfigError, match="method syntax is not allowed"):
+        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
+
+
+def test_method_syntax_in_datadir_raises(make_tree):
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "yaml_data"},
+            "hierarchy": [
+                {"name": "p", "path": "common.yaml", "datadir": "%{literal('data')}"}
+            ],
+        },
+        files={"data/common.yaml": "k: common\n"},
+    )
+    with pytest.raises(ConfigError, match="method syntax is not allowed"):
+        Hiera(str(root / "hiera.yaml"))
+
+
+# --- mapped_paths collection semantics ------------------------------------
+
+
+def test_mapped_paths_collection_array(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "roles/%{role}.yaml"]}
+            ]
+        },
+        files={"data/roles/web.yaml": "k: web\n", "data/roles/db.yaml": "k: db\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web", "db"]}))
+    assert h.get("k") == "web"
+
+
+def test_mapped_paths_collection_colon_prefix(make_tree):
+    # "::roles" must be quoted in the YAML text: unquoted, PyYAML emits a
+    # plain scalar that this project's Psych-emulating loader reads as a
+    # Ruby Symbol (a real hiera.yaml quotes it the same way).
+    root = make_tree(
+        """\
+        version: 5
+        defaults: {datadir: data, data_hash: yaml_data}
+        hierarchy:
+          - {name: m, mapped_paths: ["::roles", role, "roles/%{role}.yaml"]}
+        """,
+        files={"data/roles/web.yaml": "k: web\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
+    assert h.get("k") == "web"
+
+
+def test_mapped_paths_collection_string(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "roles/%{role}.yaml"]}
+            ]
+        },
+        files={"data/roles/web.yaml": "k: web\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": "web"}))
+    assert h.get("k") == "web"
+
+
+def test_mapped_paths_collection_hash(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {
+                    "name": "m",
+                    "mapped_paths": ["roles", "item", "roles/%{item.1}.yaml"],
+                },
+                {"name": "common", "path": "common.yaml"},
+            ]
+        },
+        files={"data/roles/web.yaml": "k: web\n", "data/common.yaml": "k: common\n"},
+    )
+    h = Hiera(
+        str(root / "hiera.yaml"), scope=Scope(facts={"roles": {"primary": "web"}})
+    )
+    assert h.get("k") == "web"
+
+
+@pytest.mark.parametrize("collection", [None, "", []])
+def test_mapped_paths_collection_empty_forms_no_paths(make_tree, collection):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "roles/%{role}.yaml"]},
+                {"name": "common", "path": "common.yaml"},
+            ]
+        },
+        files={"data/common.yaml": "k: common\n"},
+    )
+    facts = {} if collection is None else {"roles": collection}
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts=facts))
+    assert h.get("k") == "common"
+
+
+@pytest.mark.parametrize(
+    "collection, match",
+    [
+        (True, "Boolean true"),
+        (False, "Boolean false"),
+        (5, "Integer 5"),
+        (1.5, "Float"),
+    ],
+)
+def test_mapped_paths_scalar_collection_raises(make_tree, collection, match):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "roles/%{role}.yaml"]}
+            ]
+        },
+    )
+    with pytest.raises(ConfigError, match=match):
+        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": collection}))
+
+
+def test_mapped_item_is_a_local_variable_top_scope_still_reachable(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "r/%{role}.yaml"]}
+            ]
+        },
+        files={"data/r/toplevel.yaml": "k: toplevel\n", "data/r/web.yaml": "k: web\n"},
+    )
+    h = Hiera(
+        str(root / "hiera.yaml"),
+        scope=Scope(facts={"roles": ["web"], "role": "toplevel"}),
+    )
+    # Unqualified %{role} reads the mapped item ("web"), shadowing the
+    # top-scope fact of the same name.
+    assert h.get("k") == "web"
+
+
+def test_mapped_item_explicit_top_scope_bypasses_local_layer(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "m", "mapped_paths": ["roles", "role", "r/%{::role}.yaml"]}
+            ]
+        },
+        files={"data/r/toplevel.yaml": "k: toplevel\n", "data/r/web.yaml": "k: web\n"},
+    )
+    h = Hiera(
+        str(root / "hiera.yaml"),
+        scope=Scope(facts={"roles": ["web"], "role": "toplevel"}),
+    )
+    # %{::role} is explicitly top-scope: it must reach the fact, not the
+    # mapped item variable of the same name.
+    assert h.get("k") == "toplevel"
+
+
+# --- a directory location raises, never silently loads its files ---------
+
+
+def test_path_directory_location_raises(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "d", "path": "confd"}]},
+        files={"data/confd/a.yaml": "k: a\n"},
+    )
+    # A directory location is a data-file problem: it surfaces from the
+    # constructor's own pre-warm (BackendError is not swallowed there).
+    with pytest.raises(BackendError, match="Is a directory"):
+        Hiera(str(root / "hiera.yaml"))
+
+
+def test_mapped_paths_directory_location_raises(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "m", "mapped_paths": ["roles", "role", "r/%{role}"]}]},
+        files={"data/r/web/in.yaml": "k: in\n"},
+    )
+    with pytest.raises(BackendError, match="Is a directory"):
+        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
+
+
+def test_glob_over_a_directory_drops_it(make_tree):
+    # Unlike path/paths/mapped_paths, a glob match that is a directory is
+    # dropped outright rather than raised.
+    root = make_tree(
+        {"hierarchy": [{"name": "g", "glob": "*"}]},
+        files={"data/sub/in.yaml": "k: nope\n", "data/z.yaml": "k: z\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.get("k") == "z"

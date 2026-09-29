@@ -17,7 +17,7 @@ src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
 ├── core.py                 # Hiera, ScopedHiera: entry point and top-level lookup (lookup.rb + lookup_adapter.rb)
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
-├── _location_resolver.py   # hierarchy level path resolution (location_resolver.rb)
+├── _location_resolver.py   # hierarchy level path resolution: Puppet interpolation rules, mapped_paths scope semantics (location_resolver.rb, hiera_config.rb)
 ├── _interpolation.py       # the %{...} engine: resolving functions and variable references (interpolation.rb)
 ├── _invocation.py          # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
 ├── _merge_strategy.py      # MergeStrategy: merge strategies (merge_strategy.rb, deep_merge gem's core.rb)

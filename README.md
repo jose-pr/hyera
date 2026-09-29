@@ -243,7 +243,10 @@ Supported: `version: 5` validation · Puppet's version 5 schema validation
 (closed key sets, a required unique `name`, at most one function/location
 key, non-empty strings, the `options` name pattern, and the rest) ·
 `defaults` · `hierarchy` · `name` ·
-`path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir` (default `data`,
+`path`/`paths`/`glob`/`globs`/`mapped_paths`, resolved through Puppet's own
+interpolation rules (an undefined variable in a location becomes `''` plus
+a warning and is still probed, never a skipped level; `mapped_paths` binds
+each collection item as a local scope variable) · `datadir` (default `data`,
 next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
@@ -296,6 +299,8 @@ with one deliberate exception:
   `%{var}`/`%{scope('var')}` interpolates as `""` and logs a warning);
   Puppet 8 defaults to `strict="error"`. Pass `Scope(strict="error")` (or
   `.scoped(strict="error")`) to match Puppet's own default.
+- **The directory holding hiera.yaml is used literally.** Puppet
+  interpolates `%{...}` inside that absolute path too; hyera does not.
 
 ## Notes
 

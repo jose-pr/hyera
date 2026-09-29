@@ -6,6 +6,7 @@
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
 import logging
+import os
 from typing import Any
 
 from ._hiera_config import (
@@ -18,7 +19,7 @@ from ._hiera_config import (
 )
 from ._interpolation import interpolate
 from ._invocation import _STRICT, Invocation
-from ._location_resolver import _resolve_level_paths
+from ._location_resolver import resolve_locations
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
@@ -306,6 +307,17 @@ class Hiera:
         """
         cache_key = (path, backend.strict)
         if cache_key not in self.cache:
+            if os.path.isdir(path):
+                # An explicit check, identical on every OS: a bare open()
+                # of a directory raises PermissionError on Windows and
+                # IsADirectoryError on POSIX, and Puppet's own message here
+                # is "Is a directory" regardless (data_hash_function_
+                # provider.rb's `read` -> `cached_file_data` -> Ruby's
+                # `io_fread`).
+                raise BackendError(
+                    "Unable to read ({}): Is a directory".format(path),
+                    path=str(path),
+                )
             try:
                 data = backend.data_hash(path, dict(backend.conf.get("options") or {}))
             except BackendError as e:
@@ -489,13 +501,14 @@ class Hiera:
         (unloaded/non-existent) candidate path itself -- a "missing"
         location, still a location Puppet's own strategy reduce sees (see
         ``at_location`` in :meth:`_lookup_levels`, which maps anything not
-        in ``self.cache`` to a miss). A directory location expands to its
-        file children (non-file children are dropped outright, never
-        represented at all, matching the old flattened-files behavior); a
-        glob location's matches always exist.
+        in ``self.cache`` to a miss). A ``path``/``paths``/mapped location
+        that names a directory still reaches :meth:`_load_file`, which
+        raises :class:`~hyera.BackendError`; a glob's matches never include
+        a directory (:func:`~hyera._location_resolver.resolve_locations`
+        drops them) and always exist.
 
-        Cached per scope value (the filesystem walk -- glob/iterdir/stat --
-        is what's expensive, not the reduce over the result), sharing
+        Cached per scope value (the filesystem walk -- glob/stat -- is
+        what's expensive, not the reduce over the result), sharing
         ``_source_cache``/the same instance-lifetime staleness contract as
         the old flattened list. A Scope value always hashes (it is
         immutable by construction), so there is no "unhashable context
@@ -509,15 +522,11 @@ class Hiera:
         levels = []
         for level in hierarchy:
             locations = []
-            for path in _resolve_level_paths(level, self.base_path, scope):
-                if path.is_dir():
-                    for child in path.iterdir():
-                        if child.exists() and child.is_file():
-                            locations.append(self._load_file(child, level.backend))
-                elif path.exists() and path.is_file():
-                    locations.append(self._load_file(path, level.backend))
+            for loc in resolve_locations(level, self.base_path, scope):
+                if loc.exist:
+                    locations.append(self._load_file(loc.location, level.backend))
                 else:
-                    locations.append(path)
+                    locations.append(loc.location)
             levels.append(tuple(locations))
         levels = tuple(levels)
         self._source_cache[cache_key] = levels

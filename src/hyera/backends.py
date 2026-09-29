@@ -105,10 +105,6 @@ class Backend:
 
     def __init__(self, conf: dict = None, *, strict: str = None):
         self.conf = conf or {}
-        # ``datadir`` is Puppet's only spelling (``KEY_DATADIR``,
-        # ``hiera_config.rb:47``); a non-Puppet key here is rejected before
-        # this ever runs. Missing/None -> "" (relative).
-        self.datadir: str = self.conf.get("datadir") or ""
         if strict is not None and strict not in _STRICT_VALUES:
             raise ValueError(
                 "strict must be one of {!r}, not {!r}".format(_STRICT_VALUES, strict)

@@ -55,6 +55,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   merge hash without `strategy`, an unknown or mistyped option, a `hash`
   merge of a non-hash, a `unique` merge of a hash, and an array
   `sort_merged_arrays` cannot order.
+- Hierarchy locations use Puppet's `%{...}` rules: whitespace, quoted
+  segments, empty `%{}`, literal braces, and re-interpolated values.
+- An undefined variable in a `path`, `paths`, `glob`, `globs` or
+  `mapped_paths` location becomes `''` and logs a warning. Under
+  `strict="off"` it logs nothing. The location is probed, not skipped.
+- An undefined variable in `datadir` follows `strict` and raises under
+  `"error"`.
+- Method syntax (`%{lookup(...)}` etc.) in a location or `datadir` raises
+  `ConfigError`.
+- The `mapped_paths` collection is a scope reference (dotted, `::`). A Hash
+  yields `["key", "value"]` pairs. `true`, `false`, numbers raise
+  `ConfigError`, and the item is a local variable (`%{::x}` reads the top
+  scope). Configs relying on the old Hash-values iteration must list the
+  values.
+- A `path`/`paths`/mapped location that is a directory raises
+  `BackendError` ("Is a directory") instead of loading every file inside
+  it, and a glob drops directory matches. List the files, or use a glob.
+- `HieraLevel`'s fields are now `name, backend, datadir, location_key,
+  locations`, and `.paths(base_path, scope)` returns a list.
 
 ### Removed
 
@@ -64,6 +83,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `merge_deep=` argument of `get()`: pass `merge="deep"`.
 - `sort_merged_arrays` with `unique`, `merge` as an alias of `strategy` in a
   merge hash, and lenient sorting of arrays that cannot be ordered.
+- `Backend.datadir`: the entry's `datadir` is `HieraLevel.datadir`.
 
 ### Fixed
 

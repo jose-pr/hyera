@@ -418,15 +418,25 @@ class Scope:
     def lookup(self, name: str):
         """``self[name]``, without strict side effects (Puppet's
         ``catch(:undefined_variable)`` form): the bound value (even
-        ``None``), or :data:`Scope.UNDEFINED`."""
+        ``None``), or :data:`Scope.UNDEFINED`.
+
+        An explicit ``::`` prefix (``%{::x}``, never just a bare ``%{x}``)
+        means the literal top-scope variable and skips every local layer a
+        :meth:`with_local_scope` child added -- Puppet's own qualified-name
+        rule, and how a ``mapped_paths`` template's ``%{::item}`` still
+        reaches a top-scope fact of the same name as the mapped item
+        variable rather than shadowing it.
+        """
         if not isinstance(name, str):
             raise TypeError(
                 "scope variable name must be a str, not {}".format(type(name).__name__)
             )
+        explicit_top = name.startswith("::")
         qualified, unqualified = _strip_qualifier(name)
-        for layer in self._locals:
-            if unqualified in layer:
-                return layer[unqualified]
+        if not explicit_top:
+            for layer in self._locals:
+                if unqualified in layer:
+                    return layer[unqualified]
         if unqualified in self._table:
             return self._table[unqualified]
         if not qualified:
@@ -442,6 +452,7 @@ class Scope:
             raise TypeError(
                 "scope variable name must be a str, not {}".format(type(name).__name__)
             )
+        explicit_top = name.startswith("::")
         qualified, unqualified = _strip_qualifier(name)
         if qualified:
             return False
@@ -449,9 +460,10 @@ class Scope:
             return False
         if unqualified == "caller_module_name":
             return True
-        for layer in self._locals:
-            if unqualified in layer:
-                return True
+        if not explicit_top:
+            for layer in self._locals:
+                if unqualified in layer:
+                    return True
         return unqualified in self._table
 
     def lookupvar(self, name: str, *, lenient: bool = False):

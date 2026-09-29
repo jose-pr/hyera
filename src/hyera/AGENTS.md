@@ -135,13 +135,33 @@ private engine internals with no stability contract.
   instance's own scope. Unknown attributes proxy to the wrapped `Hiera`
   (dunder names, `hiera` and `scope` themselves excepted); instances survive
   `copy`, `copy.deepcopy` and `pickle`.
-- **`HieraLevel`** (`NamedTuple`: `backend`, `sources`, `glob`, `mapped`) —
-  one hierarchy entry. `.new(conf, backend)` builds one from a hierarchy
-  dict (`path`/`paths`/`glob`/`globs`/`mapped_paths`). `.paths(base_path,
-  scope)` yields candidate source paths for a bound `Scope`; a source
-  referencing an unbound/undefined variable is silently skipped. A glob whose
+- **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
+  `location_key`, `locations`) — one hierarchy entry, stored exactly as
+  written in hiera.yaml (`locations` is never interpolated or normalized
+  here). `.new(conf, backend)` builds one from a hierarchy dict
+  (`location_key` is the first of `path`/`paths`/`glob`/`globs`/`uri`/
+  `uris`/`mapped_paths` present, or `None`; `locations` is that key's raw
+  value(s) — one string for a singular key, the declared tuple for a plural
+  one, or `(collection_var, item_var, template)` for `mapped_paths`).
+  `.paths(base_path, scope) -> list[Path]` resolves candidate source paths
+  for a bound `Scope`, through the same `%{...}` engine as data values
+  (`allow_methods=False`): an undefined variable interpolates as `''` plus
+  the scope's `strict`-mode warning and the resulting path is still probed,
+  **never** a skipped level; `datadir` interpolates separately, under the
+  scope's `strict` (raises under `"error"`, unlike a location itself, which
+  is always lenient); method-call syntax (`%{lookup(...)}` etc.) raises
+  `ConfigError` in any of these positions. A `mapped_paths` collection is a
+  scope reference (dotted, `::`-qualified) — `None`/`""`/an empty
+  Array/Hash contributes no paths, a `String` becomes a one-element list, an
+  Array is used as-is, a Hash contributes its `[key, value]` pairs; a
+  Boolean/Integer/Float collection raises `ConfigError`. Each item binds as
+  one local-scope variable layer (`%{item}` reads it; `%{::item}` still
+  reaches a top-scope variable of the same name, bypassing the local
+  layer). A `path`/`paths`/mapped location that names a directory raises
+  `BackendError` ("Is a directory") when loaded, instead of reading its
+  files; a glob match that is a directory is dropped instead. A glob whose
   directory does not exist yields nothing (matches Puppet), instead of
-  raising from the underlying filesystem glob.
+  raising from the underlying filesystem walk.
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
   Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
   `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`
@@ -317,10 +337,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   become constructor keywords (used by the `sops_<format>` pattern).
   **`Backend.EXTENSIONS: tuple`** — file extensions (with the dot) this
   format answers to, used by `.for_path`.
-- **`Backend(conf=None, *, strict=None)`** — `.conf`; `.datadir` reads
-  `conf["datadir"]` only (Puppet's only spelling; a config with a
-  non-Puppet key is rejected before a level's conf ever reaches a
-  backend), default `""`. `.strict`
+- **`Backend(conf=None, *, strict=None)`** — `.conf`. `.strict`
   (read-only property) is the constructor's `strict=` when given, else the
   call-time default (`"warning"` until the lookup scope's `strict`
   setting is threaded through to backends) — read at call time, never
