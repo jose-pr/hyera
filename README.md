@@ -247,8 +247,10 @@ key, non-empty strings, the `options` name pattern, and the rest) ·
 next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
-interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted
-subkeys and alias native-type preservation · merges `first`/`default`/`unique`/
+interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with
+Puppet's parsing and rendering rules, hash-key interpolation, and recursion
+detection; `%{alias()}` as the whole value keeps the value's type · merges
+`first`/`default`/`unique`/
 `hash`/`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`,
 plus the Hiera-3-era `reverse_deep`/`unconstrained_deep` ·
 `lookup_options` (per-key/regex merge strategy + `convert_to`).
@@ -290,6 +292,10 @@ with one deliberate exception:
   raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
   about a redundant nested repeat operator) and uses it as a regex; Python
   refuses to compile it at all.
+- **Undefined variables default to `strict="warning"`** (an undefined
+  `%{var}`/`%{scope('var')}` interpolates as `""` and logs a warning);
+  Puppet 8 defaults to `strict="error"`. Pass `Scope(strict="error")` (or
+  `.scoped(strict="error")`) to match Puppet's own default.
 
 ## Notes
 
@@ -302,9 +308,11 @@ concerned, where there is one):
 - `BackendError` — a data file could not be read or parsed; `.path` names
   it.
 - `HieraLookupError` — a failure while resolving a key, with subclasses
-  `InterpolationError` (a `%{...}` call or reference could not be
-  resolved), `MergeError` (an unknown or invalid merge strategy), and
-  `KeyNotFoundError` (also a `KeyError`) — `.get(..., throw=True)`'s miss.
+  `InterpolationError` (an unknown interpolation method, a misplaced
+  `%{alias(...)}`, a recursive lookup, or an undefined variable under
+  `strict="error"`), `MergeError` (an unknown or invalid merge strategy),
+  and `KeyNotFoundError` (also a `KeyError`) — `.get(..., throw=True)`'s
+  miss.
 
 ## License
 

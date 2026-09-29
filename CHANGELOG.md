@@ -27,6 +27,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scope's `strict`; an unknown method or a malformed method call is an
   error. Data that used a stand-alone `%{lookup('k')}` to copy a list or
   hash must use `%{alias('k')}`.
+- `Hiera.format(text)` interpolates exactly as data values are interpolated:
+  all five methods are supported, whitespace inside `%{ }` is ignored, other
+  braces are left alone, a missing variable follows the scope's `strict`
+  instead of raising `KeyError`, and a non-string argument raises
+  `TypeError`. A text that is exactly one `%{alias('k')}` returns `k`'s
+  value.
 - Each YAML-anchored node in a value is interpolated once, and the returned
   value shares it wherever the file reuses the anchor; mutating one
   occurrence in place changes every occurrence. A value a merge actually

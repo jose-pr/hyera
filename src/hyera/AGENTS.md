@@ -101,14 +101,20 @@ private engine internals with no stability contract.
   - **`.sources() -> list`** — resolve+load the ordered candidate source
     paths for the bound scope (cached per scope value; a fresh `Hiera`
     instance if the on-disk tree may have changed).
-  - **`.format(text) -> str`** — resolve `%{var}` references in an
-    arbitrary string against the bound scope. A dotted reference follows
-    the same grammar and can raise the same way.
+  - **`.format(text) -> Any`** — interpolates `text` exactly as a data
+    value is interpolated (Puppet's `Context#interpolate`): all five
+    methods, whitespace inside `%{ }` ignored, literal braces untouched,
+    undefined variables per the scope's `strict`. Returns a `str`, except
+    that a `text` that is exactly one `%{alias('k')}` returns `k`'s value.
+    Raises `TypeError` for a non-`str` `text`.
   - Gotcha: a single `Hiera` instance caches parsed file contents
-    (`.cache`), resolved source-path lists (`._source_cache`) and the merged
-    `lookup_options` mapping (`._lookup_options_cache`), all keyed per
-    `Scope` value — it does not notice on-disk changes after first load for
-    a given scope.
+    (`.cache`, keyed by file path and the `strict` value that loaded it —
+    a YAML file's own non-hash validation is `strict`-sensitive, so the
+    same file can be cached independently under two different `strict`
+    values), resolved source-path lists (`._source_cache`) and the merged
+    `lookup_options` mapping (`._lookup_options_cache`), the latter two
+    keyed per `Scope` value — it does not notice on-disk changes after
+    first load for a given scope.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
     what it read at construction). `Hiera` and `ScopedHiera` survive
