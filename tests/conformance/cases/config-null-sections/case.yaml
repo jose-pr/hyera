@@ -1,0 +1,6 @@
+description: >-
+  `defaults:` and `hierarchy:` present but null (empty) both fall back to Puppet's built-in defaults, same as omitting them.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted
