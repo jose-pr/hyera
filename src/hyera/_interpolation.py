@@ -229,25 +229,69 @@ def interpolate(value, invocation, allow_methods=True):
     plain ``%{var}``/``%{scope('var')}`` reference; only an explicit method
     call (``%{lookup(...)}``, ``%{hiera(...)}``, ``%{alias(...)}``,
     ``%{literal(...)}``) raises.
+
+    A ``list``/``dict`` node visited more than once in this call (a YAML
+    anchor reused elsewhere in the same file) is interpolated only once; the
+    result is shared at every position the file itself shares the node,
+    exactly as the parsed document does -- guarded by a memo local to this
+    call, keyed on node identity (never on a ``str``, which is never
+    memoized). A method's own result is re-interpolated through a *fresh*
+    call to :func:`interpolate` (its own memo), since it is a new value with
+    no relation to this call's document.
     """
+    return _interpolate(value, invocation, allow_methods, {})
+
+
+def _interpolate(value, invocation, allow_methods, memo):
     if isinstance(value, str):
         if "%{" not in value:
             return value
         return _interpolate_string(value, invocation, allow_methods)
     if isinstance(value, list):
-        return [interpolate(v, invocation, allow_methods) for v in value]
+        cached = memo.get(id(value))
+        if cached is not None:
+            return cached[1]
+        result = [_interpolate(v, invocation, allow_methods, memo) for v in value]
+        memo[id(value)] = (value, result)
+        return result
     if isinstance(value, dict):
-        out = {}
+        cached = memo.get(id(value))
+        if cached is not None:
+            return cached[1]
+        result = {}
         for k, v in value.items():
-            new_key = interpolate(k, invocation, allow_methods)
+            new_key = _interpolate(k, invocation, allow_methods, memo)
             try:
                 hash(new_key)
             except TypeError:
                 raise InterpolationError(
                     "Interpolated hash key {!r} is not hashable".format(new_key)
                 ) from None
-            out[new_key] = interpolate(v, invocation, allow_methods)
-        return out
+            result[new_key] = _interpolate(v, invocation, allow_methods, memo)
+        memo[id(value)] = (value, result)
+        return result
+    return value
+
+
+def unshare(value):
+    """A per-position copy of ``value``, with no identity map -- Ruby's own
+    ``deep_clone`` (``merge_strategy.rb:379-390``), the shape a merge
+    strategy needs before it may mutate a position in place.
+
+    :func:`interpolate` can return a value where two positions are the
+    *same* object (a YAML anchor reused elsewhere in the source file, kept
+    shared on purpose so a first-found result matches the parsed document
+    exactly). A merge strategy's own in-place semantics (``deep``/``hash``
+    mutate their higher-priority accumulator directly) must never see that
+    sharing, or merging one position corrupts every other position that
+    happens to share its node. ``dict``/``list`` recurse into a new
+    container; anything else (already immutable, or not something a merge
+    strategy mutates in place) is returned as-is.
+    """
+    if isinstance(value, dict):
+        return {k: unshare(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [unshare(v) for v in value]
     return value
 
 

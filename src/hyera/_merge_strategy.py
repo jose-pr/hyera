@@ -14,6 +14,7 @@ import functools
 import json
 import re
 
+from ._interpolation import unshare
 from ._navigation import _MISSING
 from .exceptions import MergeError
 
@@ -208,7 +209,19 @@ class MergeStrategy:
         return ["unrecognized key '{}'".format(k) for k in options if k != "strategy"]
 
     def lookup(self, variants, fn):
-        """merge_strategy.rb:126-151."""
+        """merge_strategy.rb:126-151.
+
+        A value that actually enters a merge (two or more contributing
+        variants) is passed through :func:`~hyera._interpolation.unshare`
+        first -- :func:`~hyera._interpolation.interpolate` may return a
+        value where two positions are the *same* object (a reused YAML
+        anchor), and this strategy's own ``merge``/``convert_value`` mutate
+        their higher-priority accumulator in place; unsharing first is what
+        keeps that in-place mutation from corrupting an unrelated position
+        that happens to share the same node. A lone (never-merged) value is
+        returned exactly as found, sharing included -- nothing here ever
+        mutates it.
+        """
         variants = list(variants)
         if not variants:
             return _MISSING
@@ -222,6 +235,7 @@ class MergeStrategy:
             value = fn(variant)
             if value is _MISSING:
                 continue
+            value = unshare(value)
             if memo is _MISSING:
                 memo = self.convert_value(value)
             else:

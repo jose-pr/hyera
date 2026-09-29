@@ -51,14 +51,39 @@ def symkeys_to_string(obj):
     names (``hiera_config.rb``'s ``symkeys_to_string``, applied to a parsed
     hiera.yaml and, via v3/v4 config reading, to older configs too).
     Everything else -- including a ``RubySymbol`` *value* -- is unchanged.
+
+    Memoized per call, keyed on node identity (a ``dict``/``list`` only,
+    never a scalar): a YAML anchor reused elsewhere in the same document
+    parses to one shared object (PyYAML's own behavior, matching Puppet),
+    and rebuilding it independently at each occurrence -- the naive
+    recursive-comprehension form this used to be -- would silently turn
+    that one shared node into an equal but distinct copy per position,
+    before interpolation ever gets a chance to preserve or reason about the
+    sharing.
     """
+    return _symkeys_to_string(obj, {})
+
+
+def _symkeys_to_string(obj, memo):
     if isinstance(obj, dict):
-        return {
-            (key.name if isinstance(key, RubySymbol) else key): symkeys_to_string(value)
+        cached = memo.get(id(obj))
+        if cached is not None:
+            return cached[1]
+        result = {
+            (key.name if isinstance(key, RubySymbol) else key): _symkeys_to_string(
+                value, memo
+            )
             for key, value in obj.items()
         }
+        memo[id(obj)] = (obj, result)
+        return result
     if isinstance(obj, list):
-        return [symkeys_to_string(item) for item in obj]
+        cached = memo.get(id(obj))
+        if cached is not None:
+            return cached[1]
+        result = [_symkeys_to_string(item, memo) for item in obj]
+        memo[id(obj)] = (obj, result)
+        return result
     return obj
 
 

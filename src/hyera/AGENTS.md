@@ -639,6 +639,12 @@ re-exports it too).
   raises `InterpolationError` "Recursive lookup detected in [a, b]" (the
   keys/scope-references visited, in the order first reached) instead of
   Python's own `RecursionError`.
+- A value that reuses a YAML anchor (`&x`/`*x`) shares that node wherever it
+  appears in one lookup's returned value, exactly as the parsed file does:
+  mutating one occurrence in place changes every occurrence that shares it.
+  A value that a merge actually combines with another is always copied per
+  position first, so the merge's own in-place semantics never reach a
+  shared node and corrupt an unrelated position.
 - Interpolation is a single left-to-right pass over each `%{...}` occurrence
   in the original text: text inserted in its place is never re-scanned, only
   a method's own resolved result is interpolated again (so a variable whose

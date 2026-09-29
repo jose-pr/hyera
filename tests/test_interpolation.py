@@ -5,7 +5,13 @@ import logging
 import pytest
 
 from hyera import Hiera, InterpolationError, Scope, Sensitive
-from hyera._interpolation import _float_to_s, _ruby_inspect, _to_puppet_str, interpolate
+from hyera._interpolation import (
+    _float_to_s,
+    _ruby_inspect,
+    _to_puppet_str,
+    interpolate,
+    unshare,
+)
 from hyera._invocation import Invocation
 from hyera._navigation import _MISSING
 from hyera.cli import main as _cli_main
@@ -173,3 +179,26 @@ def test_cli_recursion_exits_2(make_tree, caplog):
     assert (
         "Recursive lookup detected in [rec]" in _error_records(caplog)[-1].getMessage()
     )
+
+
+def test_anchor_interpolated_once_and_shared(make_tree):
+    h = _hiera(
+        make_tree,
+        'lst: &l ["a", "%{k}"]\nb: [*l, *l]\n',
+        k="v",
+    )
+    v = h.get("b")
+    assert v == [["a", "v"], ["a", "v"]]
+    assert v[0] is v[1]
+
+    v[0].append("z")
+    v2 = h.get("b")
+    assert v2 == [["a", "v"], ["a", "v"]]
+
+
+def test_unshare_copies_every_position():
+    x = [1]
+    u = unshare({"p": x, "q": x})
+    assert u == {"p": [1], "q": [1]}
+    assert u["p"] is not u["q"]
+    assert u["p"] is not x

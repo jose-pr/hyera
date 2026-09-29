@@ -27,6 +27,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scope's `strict`; an unknown method or a malformed method call is an
   error. Data that used a stand-alone `%{lookup('k')}` to copy a list or
   hash must use `%{alias('k')}`.
+- Each YAML-anchored node in a value is interpolated once, and the returned
+  value shares it wherever the file reuses the anchor; mutating one
+  occurrence in place changes every occurrence. A value a merge actually
+  combines with another is always copied per position first, so the merge's
+  in-place semantics never corrupt a position that happens to share a node
+  with it.
 - Non-string values interpolated into strings, hierarchy paths and
   `format()` render as Puppet renders them: floats in Ruby's form
   (`1.0e+20`), arrays as `["a", "b"]`, hashes as `{"k"=>"v"}`, and
