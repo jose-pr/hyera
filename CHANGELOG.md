@@ -6,147 +6,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-
-- `hiera.yaml` is read as UTF-8 bytes (a BOM or UTF-16 is detected) instead
-  of the locale encoding, and closed right after reading. On Windows a
-  non-ASCII config was silently misread (a `datadir` with an accent found
-  nothing), a UTF-8 BOM config failed to parse, and the previously-open
-  handle stopped the file from being replaced and the instance from being
-  pickled or deep-copied. `Hiera.base_config` now keeps the exact path it
-  was given.
-- A `glob`/`globs` hierarchy level whose directory does not exist now
-  contributes no files instead of raising `FileNotFoundError` from
-  `Hiera()` or `.get()`. The documented example config crashed at
-  construction when `data/modules` was absent, and a per-node glob
-  directory crashed lookups for any node without one.
-- A HOCON file that is not valid UTF-8 now raises `BackendError` instead of
-  a raw `UnicodeDecodeError`.
-- An installed but broken `pyhocon` (an import-time exception other than
-  `ImportError`, e.g. against a too-new stdlib) no longer breaks every
-  `Hiera()`; `HOCONBackend` is simply left unregistered, and constructing
-  one directly raises `BackendError`.
-- CLI `--output yaml` now renders hashes and redacted `Sensitive` values
-  instead of crashing with `RepresenterError` and exit 1.
-- An explicit `--merge first` on the CLI now overrides a `lookup_options`
-  merge, as `puppet lookup --merge first` does (omitting `--merge` still
-  lets `lookup_options` decide).
-- The `hyera` console script and `python -m hyera` now print `pip install
-  "hyera[cli]"` and exit 2 when the `cli` extra is missing, instead of
-  crashing with a `ModuleNotFoundError` traceback.
-- `ScopedHiera` can be copied, deep-copied and pickled; each previously
-  raised `RecursionError`.
-- The `HYERA_MCP` trigger env var name (and the served tool's name) no
-  longer depends on `sys.argv[0]`. Running the CLI as `python -m
-  hyera.cli` (trigger var `CLI_MCP`) or embedding `Lookup` in a
-  differently-named script previously changed which environment variable
-  launched the MCP server, silently breaking the documented `HYERA_MCP`
-  contract.
-- The missing-extra install hints (`pip install "hyera[cli]"` and `pip
-  install "hyera[hocon]"`) are now double-quoted throughout; the old
-  single-quoted form fails when pasted into `cmd.exe`, where single quotes
-  are literal.
-- A real `include file(...)`/`include url(...)` resolution (now the
-  default -- see the HOCON `include` entry under Security) no longer
-  crashes on Python 3.14+: pyhocon 0.3.63 itself still calls the
-  deprecated `codecs.open()` and `Logger.warn()`, which raise
-  `DeprecationWarning` there, turned into a fatal error by this project's
-  own `filterwarnings = ["error"]`. Both calls are shimmed in hyera's
-  already-private `pyhocon.config_parser` module copy; the shared
-  `pyhocon` module, and every other caller of it, are unaffected.
-- `Hiera(dict_config)` no longer modifies the caller's dict; the config is
-  deep-copied at construction.
-- A malformed hiera.yaml shape (a 2-element `mapped_paths`, a `hierarchy`
-  that is a Hash or a list of strings, a non-Hash `defaults`, a non-Array
-  `data_hash`, a `null` entry, and the like) now raises `ConfigError` with
-  Puppet's own message, instead of a raw `ValueError`, `TypeError` or
-  `AttributeError`. A string `paths`/`globs`/`uris` value is rejected
-  outright instead of being silently split into one source per character.
-- A hierarchy entry with `lookup_key`, `data_dig`, `hiera3_backend` or
-  `v4_data_hash` no longer falls back to `defaults.data_hash` and reads
-  its file as plain YAML; eyaml ciphertext used to be returned as the
-  value. An unknown function name now raises Puppet's own "Unable to
-  find '<kind>' function named '<name>'"; a known `lookup_key`/`data_dig`
-  function raises `ConfigError` ("not supported yet") instead.
-
-### Security
-
-- An INI file decrypted by `sops_data` is now parsed from sops's own
-  `--output-type=json` view, never ini text: sops's own INI writer emits
-  a value containing `"""` plus a newline ambiguously, so a decrypted
-  value could be read back as a different key or as an injected section
-  (reproduced against real sops 3.13.3: a `db.password` value replaced by
-  a later, attacker-supplied one). `sops_ini`/extension-inferred `ini`
-  both still tell sops to *read* the file as ini; only the output/parse
-  side changed.
-- Three more `_yaml_loader` messages a decrypted YAML file can shape
-  itself into (`invalid value for Float()`/`Integer()`, and `Tried to
-  load unspecified class:` for a `!ruby/object`/`!ruby/hash` tag) no
-  longer quote the offending scalar or class name on the `sops_data`
-  decrypt path; `yaml_data` (no sops involved) is unchanged. A handful of
-  fixed names hyera itself raises for a known YAML shape (`Time`, `Date`,
-  an unnamed `!ruby/object`, `!!set`) still show, since none of them ever
-  echo text from the document.
-- A `sops` decrypt timeout no longer leaves the underlying
-  `subprocess.TimeoutExpired` (and its captured partial stdout) reachable
-  via the raised `BackendError`'s `__context__`; only `__cause__` was
-  addressed by the previous `from None` fix.
-- A `UnicodeDecodeError` from a non-UTF-8 decrypted file now reports only
-  the byte offset, not the offending byte value or the stock codec
-  message's surrounding text.
-- Decrypted `sops` plaintext no longer appears in error messages or logs
-  when a decrypted file fails to parse.
-- The data file passed to `sops` is always an absolute path after a
-  literal `--`, so a name starting with `-` can never become a `sops`
-  option; the `sops` found on `PATH` is executed by its full resolved
-  path, and a `sops.bat`/`sops.cmd` shim is refused.
-- HOCON `include` directives resolve exactly as Puppet's own `hocon_data`
-  does by default (hyera never does *less* than Puppet by default,
-  only as an explicit opt-in): a plain `include "file"` contributes
-  nothing, as in Puppet; `include file(...)` really reads the file
-  (relative to the process working directory, or absolute), as Puppet's
-  `hocon_data` does; a directive in value position (including inside a
-  `[...]` array) is kept as literal text, as Puppet keeps it; and
-  `url(...)`, `classpath(...)`, `required(...)`, `package(...)`, a
-  case-mismatched keyword, or a bare `include` with nothing valid after
-  it all raise `BackendError`, matching Puppet's own parse/method errors
-  for those forms (Ruby hocon implements none of them). The pre-fidelity
-  refusal -- every form other than a plain quoted include raises,
-  `include file(...)` included -- is kept as an opt-in:
-  `HOCONBackend(hocon_includes=False)`, or a `hocon_includes: false` key
-  on the hierarchy entry/`defaults` (hyera's own extension, not Puppet
-  vocabulary). One accepted divergence: Puppet's `include file("*.conf")`
-  never globs; pyhocon's own resolution does and includes every match.
-- `sops` is refused when it resolves to a relative path (e.g. from the
-  current directory or a relative `PATH` entry), closing a gap where
-  Python 3.9's `shutil.which` could still return such a path even with the
-  Windows implicit-current-directory opt-out set.
-- Three sops-decrypted YAML parse errors (an undefined alias, an unknown
-  tag, a duplicate anchor) no longer quote the offending value verbatim in
-  the raised error, the log, or the CLI's output. A sops timeout also no
-  longer chains the underlying `TimeoutExpired` (which carries any partial
-  decrypted stdout).
-- Closed several remaining gaps in the HOCON `include` text scanner: a
-  caselessly-matched keyword using a non-ASCII look-alike character (e.g. a
-  dotless "ı"), a triple-quoted string ending in extra quote characters, a
-  backslash-escaped `"`/`#`/`${` in unquoted text, and a `//` that is part
-  of ordinary unquoted text (as in a URL-shaped value) rather than a
-  comment could each let a real `include file(...)`/`url(...)` reach
-  pyhocon's own include machinery. `include` inside a `[...]` array is now
-  also treated as value position (kept as literal text by default, raised
-  under the `hocon_includes=False` opt-in) rather than being blanked into
-  a shorter array. As a fail-closed backstop, pyhocon's own
-  include-resolving methods raise for the duration of a HOCON parse for
-  every form the active mode does not intend to resolve for real, so even
-  an undiscovered scanner gap cannot read a file or reach the network;
-  they behave normally for any other use of pyhocon in the same process.
-  This backstop now also wraps hyera's own private `pyhocon.config_parser`
-  module copy (added by `json_hocon_loaders` for Ruby-hocon-compatible
-  duration parsing) -- previously it wrapped only the shared `pyhocon`
-  module, which `HOCONBackend` never actually parses through, leaving the
-  backstop installed but inert for every real `HOCONBackend` call; found
-  and fixed while widening the default's own capability, which makes the
-  backstop's guarantee matter more, not less.
+## [0.0.0a0] - 2026-09-29
 
 ### Added
 
@@ -199,84 +59,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to point at.
 - `ConfigError.path` and `ConfigError.line` name the file (and, where
   known, the line) a configuration problem was found at.
-
-### Fixed
-
-- Per-call context now reaches hierarchy path resolution. `Hiera.get()` built
-  its context from `context=` plus `**kwargs` but resolved sources from the
-  raw `context` argument, so `get(key, environment="production")` silently
-  skipped the `environments/%{environment}.yaml` level and fell through to
-  `common.yaml`. `has()` funnels all context through `**kwargs` and so was
-  affected wholesale; it now takes an explicit `context=`.
-- `ScopedHiera.has()` no longer lets its bound context override per-call
-  arguments. It layered the bound context *over* `**kwargs`, the inverse of
-  `ScopedHiera.get()` and of the documented contract, so `.has()` and `.get()`
-  could disagree about the same lookup.
-- Dotted context references (`%{trusted.certname}`) resolve as nested lookups
-  instead of raising. They became `str.format` attribute access, which raises
-  `AttributeError` on the dict contexts hiera actually uses — and
-  `HieraLevel.paths()` caught only `KeyError`, so the error escaped and
-  crashed `get()`. The documented example config, which leads with
-  `nodes/%{trusted.certname}.yaml`, failed at construction time. Paths,
-  `data_dir`, `mapped_paths` templates, values, `format()` and
-  `%{scope('a.b')}` now share one nested-lookup rule; numeric segments index
-  lists, a flat context key containing dots still wins, and an unresolvable
-  reference skips the level or yields `""` rather than raising.
-- Dotted lookup keys and `%{...}` context references now follow Puppet's own
-  `split_key`/`sub_lookup` sub-key grammar exactly, instead of a naive
-  `str.split(".")`: a segment may be single- or double-quoted (so
-  `get("'a.b'.c")`-style keys reach a key that literally contains a dot),
-  a negative or out-of-range list index (`lst.-1`) is not found rather
-  than wrapping to the last item, an integer segment matches only an integer
-  hash key (`h.0` finds `{0: x}`, never `{"0": x}`), and walking further into
-  a `null` value (`n.x` where `n` is `~`) is not found rather than raising a
-  raw `TypeError`. A genuine type mismatch (`s.x`/`lst.x`/`f.x` walking into
-  a scalar, array or float) now raises `HieraLookupError` with Puppet's
-  "Data Provider type mismatch" message instead of a raw `TypeError`/
-  `ValueError`, and a malformed key (`a..b`, `a.`, `.a`, an unbalanced or
-  empty quoted segment) raises `HieraLookupError` with Puppet's "Syntax
-  error in key/string" text instead of silently returning the default. Both
-  kinds of error are raised **even with a `default=` given**, and through
-  `.has()` — only a genuine miss is silent, matching Puppet's own
-  `lookup()`, which raises both even with `default_value` set.
-- `sort_merged_arrays` now applies to `deep` merges, where Puppet defines it.
-  It was honoured only on the `unique` branch and silently swallowed on
-  `deep`, which both the README and the API header advertised as supported.
-  Sorting runs after knockout and reaches lists nested anywhere in the
-  result; a list with no total order is left in merge order.
-- A `lookup_options` key is treated as a regular expression only when it
-  starts with `^`, per Hiera 5. Any key containing a regex metacharacter was
-  compiled as a pattern, so an entry for `db.port` also matched `dbxport`.
-- Interpolation no longer treats resolved values as `re.sub` replacement
-  templates — backslashes and `\g<...>` sequences in data now pass through
-  literally instead of raising or being mangled.
-- `Hiera.format()` now formats with the context mapping (`format_map`) instead
-  of passing the dict as a single positional argument.
-- Mutable default arguments (`context={}`) replaced with `None` sentinels,
-  fixing cross-call context contamination in `scoped()` and others.
-- Unknown/missing `data_hash` backends now raise a clear `ConfigError` naming
-  the known backends, rather than an opaque `KeyError`.
-- `LookupDict` is no longer (unsafely) hashable.
-- Function calls resolving to a falsy value (`0`, `""`, `False`) no longer
-  raise `InterpolationError` — only a genuinely absent value is rejected. A
-  `%{hiera(...)}` whose key is missing now degrades to that rejection instead
-  of propagating a `KeyError`.
-- The bare-`%{var}` interpolation regex no longer also matches function-style
-  `%{hiera(...)}` tokens, so an unresolved function leftover is not blanked.
-- Invalid `--scope` values are reported through the logger and exit `2`, in
-  line with the CLI's exit-code contract (previously a raw `SystemExit`).
-- Deep hash merge now respects hiera precedence: a scalar provided by an
-  earlier (higher-priority) hierarchy level is no longer clobbered by a later
-  level. Previously the last level won for scalars, inverting precedence.
-- Non-string scalar values (ints, floats, booleans) resolved by a
-  `%{hiera(...)}`/`%{lookup(...)}` call embedded in a larger string are now
-  stringified instead of raising; a single stand-alone call still preserves
-  the resolved value's native type.
-- The CLI exits `2` with a one-line `Lookup of key 'K' failed: …` message
-  for every failure other than a missing key; several failures used to
-  print a traceback and exit `1`, the missing-key code (a plain `KeyError`
-  from a custom `.get()` override, for example, could be mistaken for a
-  miss). `-v` or `DUHO_TRACEBACK=1` adds the traceback.
+- `sops_data` decrypts YAML, JSON, INI and dotenv files, choosing the
+  format from the file extension the same way the `sops` CLI itself does
+  (`.yaml`/`.yml`/`.json`/`.env`/`.ini`, case-sensitive; any other
+  extension is a clear error naming the file instead of a raw or
+  misleading failure). `DotenvBackend` parses sops's own dotenv output
+  shape; it has no Puppet `data_hash` equivalent, so it is reachable only
+  through `sops_data`. An INI file is decrypted through sops's own JSON
+  view instead of a dedicated ini parser (see Security). `sops` is
+  another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
+  `sops_dotenv` force that format regardless of the file's own extension.
+- `Scope`: Puppet's top scope for lookups. `variables` are node parameters;
+  facts become top-scope variables without overriding them, and `$facts`;
+  `server_facts` merge under both; `$environment` defaults to `production`;
+  `$trusted` defaults to Puppet's local hash (certname from the `clientcert`
+  variable or fact); `strict` is `off`, `warning` (default) or `error`.
+- `LICENSES/puppet-Apache-2.0.txt` and `LICENSES/psych-MIT.txt`: credit
+  [Puppet](https://github.com/puppetlabs/puppet) and
+  [Psych](https://github.com/ruby/psych), the Apache-2.0 and MIT projects
+  several modules port translated code from, alongside phiera; `NOTICE` lists
+  each ported file.
+- `load_facts(path)` reads a facts file with `puppet lookup --facts` rules
+  (JSON for `.json`, YAML for `.yaml`/`.yml`, otherwise JSON then YAML; the
+  result must be a mapping; YAML dates, times and `:symbols` are rejected;
+  `hostname`/`domain`/`fqdn`/`clientcert` all or none). `facts_from_facter(timeout=30)`
+  runs `facter -j` and returns its facts. Both raise `BackendError`.
 
 ### Changed
 
@@ -471,31 +278,219 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now raises `ConfigError` ("unrecognized key 'data_dir'"); rename it to
   `datadir`. `Backend` no longer falls back to reading `conf["data_dir"]`.
 
-### Added
+### Fixed
 
-- `sops_data` decrypts YAML, JSON, INI and dotenv files, choosing the
-  format from the file extension the same way the `sops` CLI itself does
-  (`.yaml`/`.yml`/`.json`/`.env`/`.ini`, case-sensitive; any other
-  extension is a clear error naming the file instead of a raw or
-  misleading failure). `DotenvBackend` parses sops's own dotenv output
-  shape; it has no Puppet `data_hash` equivalent, so it is reachable only
-  through `sops_data`. An INI file is decrypted through sops's own JSON
-  view instead of a dedicated ini parser (see Security). `sops` is
-  another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
-  `sops_dotenv` force that format regardless of the file's own extension.
-- `Scope`: Puppet's top scope for lookups. `variables` are node parameters;
-  facts become top-scope variables without overriding them, and `$facts`;
-  `server_facts` merge under both; `$environment` defaults to `production`;
-  `$trusted` defaults to Puppet's local hash (certname from the `clientcert`
-  variable or fact); `strict` is `off`, `warning` (default) or `error`.
-- `LICENSES/puppet-Apache-2.0.txt` and `LICENSES/psych-MIT.txt`: credit
-  [Puppet](https://github.com/puppetlabs/puppet) and
-  [Psych](https://github.com/ruby/psych), the Apache-2.0 and MIT projects
-  several modules port translated code from, alongside phiera; `NOTICE` lists
-  each ported file.
-- `load_facts(path)` reads a facts file with `puppet lookup --facts` rules
-  (JSON for `.json`, YAML for `.yaml`/`.yml`, otherwise JSON then YAML; the
-  result must be a mapping; YAML dates, times and `:symbols` are rejected;
-  `hostname`/`domain`/`fqdn`/`clientcert` all or none). `facts_from_facter(timeout=30)`
-  runs `facter -j` and returns its facts. Both raise `BackendError`.
+- `hiera.yaml` is read as UTF-8 bytes (a BOM or UTF-16 is detected) instead
+  of the locale encoding, and closed right after reading. On Windows a
+  non-ASCII config was silently misread (a `datadir` with an accent found
+  nothing), a UTF-8 BOM config failed to parse, and the previously-open
+  handle stopped the file from being replaced and the instance from being
+  pickled or deep-copied. `Hiera.base_config` now keeps the exact path it
+  was given.
+- A `glob`/`globs` hierarchy level whose directory does not exist now
+  contributes no files instead of raising `FileNotFoundError` from
+  `Hiera()` or `.get()`. The documented example config crashed at
+  construction when `data/modules` was absent, and a per-node glob
+  directory crashed lookups for any node without one.
+- A HOCON file that is not valid UTF-8 now raises `BackendError` instead of
+  a raw `UnicodeDecodeError`.
+- An installed but broken `pyhocon` (an import-time exception other than
+  `ImportError`, e.g. against a too-new stdlib) no longer breaks every
+  `Hiera()`; `HOCONBackend` is simply left unregistered, and constructing
+  one directly raises `BackendError`.
+- CLI `--output yaml` now renders hashes and redacted `Sensitive` values
+  instead of crashing with `RepresenterError` and exit 1.
+- An explicit `--merge first` on the CLI now overrides a `lookup_options`
+  merge, as `puppet lookup --merge first` does (omitting `--merge` still
+  lets `lookup_options` decide).
+- The `hyera` console script and `python -m hyera` now print `pip install
+  "hyera[cli]"` and exit 2 when the `cli` extra is missing, instead of
+  crashing with a `ModuleNotFoundError` traceback.
+- `ScopedHiera` can be copied, deep-copied and pickled; each previously
+  raised `RecursionError`.
+- The `HYERA_MCP` trigger env var name (and the served tool's name) no
+  longer depends on `sys.argv[0]`. Running the CLI as `python -m
+  hyera.cli` (trigger var `CLI_MCP`) or embedding `Lookup` in a
+  differently-named script previously changed which environment variable
+  launched the MCP server, silently breaking the documented `HYERA_MCP`
+  contract.
+- The missing-extra install hints (`pip install "hyera[cli]"` and `pip
+  install "hyera[hocon]"`) are now double-quoted throughout; the old
+  single-quoted form fails when pasted into `cmd.exe`, where single quotes
+  are literal.
+- A real `include file(...)`/`include url(...)` resolution (now the
+  default -- see the HOCON `include` entry under Security) no longer
+  crashes on Python 3.14+: pyhocon 0.3.63 itself still calls the
+  deprecated `codecs.open()` and `Logger.warn()`, which raise
+  `DeprecationWarning` there, turned into a fatal error by this project's
+  own `filterwarnings = ["error"]`. Both calls are shimmed in hyera's
+  already-private `pyhocon.config_parser` module copy; the shared
+  `pyhocon` module, and every other caller of it, are unaffected.
+- `Hiera(dict_config)` no longer modifies the caller's dict; the config is
+  deep-copied at construction.
+- A malformed hiera.yaml shape (a 2-element `mapped_paths`, a `hierarchy`
+  that is a Hash or a list of strings, a non-Hash `defaults`, a non-Array
+  `data_hash`, a `null` entry, and the like) now raises `ConfigError` with
+  Puppet's own message, instead of a raw `ValueError`, `TypeError` or
+  `AttributeError`. A string `paths`/`globs`/`uris` value is rejected
+  outright instead of being silently split into one source per character.
+- A hierarchy entry with `lookup_key`, `data_dig`, `hiera3_backend` or
+  `v4_data_hash` no longer falls back to `defaults.data_hash` and reads
+  its file as plain YAML; eyaml ciphertext used to be returned as the
+  value. An unknown function name now raises Puppet's own "Unable to
+  find '<kind>' function named '<name>'"; a known `lookup_key`/`data_dig`
+  function raises `ConfigError` ("not supported yet") instead.
+- Per-call context now reaches hierarchy path resolution. `Hiera.get()` built
+  its context from `context=` plus `**kwargs` but resolved sources from the
+  raw `context` argument, so `get(key, environment="production")` silently
+  skipped the `environments/%{environment}.yaml` level and fell through to
+  `common.yaml`. `has()` funnels all context through `**kwargs` and so was
+  affected wholesale; it now takes an explicit `context=`.
+- `ScopedHiera.has()` no longer lets its bound context override per-call
+  arguments. It layered the bound context *over* `**kwargs`, the inverse of
+  `ScopedHiera.get()` and of the documented contract, so `.has()` and `.get()`
+  could disagree about the same lookup.
+- Dotted context references (`%{trusted.certname}`) resolve as nested lookups
+  instead of raising. They became `str.format` attribute access, which raises
+  `AttributeError` on the dict contexts hiera actually uses — and
+  `HieraLevel.paths()` caught only `KeyError`, so the error escaped and
+  crashed `get()`. The documented example config, which leads with
+  `nodes/%{trusted.certname}.yaml`, failed at construction time. Paths,
+  `data_dir`, `mapped_paths` templates, values, `format()` and
+  `%{scope('a.b')}` now share one nested-lookup rule; numeric segments index
+  lists, a flat context key containing dots still wins, and an unresolvable
+  reference skips the level or yields `""` rather than raising.
+- Dotted lookup keys and `%{...}` context references now follow Puppet's own
+  `split_key`/`sub_lookup` sub-key grammar exactly, instead of a naive
+  `str.split(".")`: a segment may be single- or double-quoted (so
+  `get("'a.b'.c")`-style keys reach a key that literally contains a dot),
+  a negative or out-of-range list index (`lst.-1`) is not found rather
+  than wrapping to the last item, an integer segment matches only an integer
+  hash key (`h.0` finds `{0: x}`, never `{"0": x}`), and walking further into
+  a `null` value (`n.x` where `n` is `~`) is not found rather than raising a
+  raw `TypeError`. A genuine type mismatch (`s.x`/`lst.x`/`f.x` walking into
+  a scalar, array or float) now raises `HieraLookupError` with Puppet's
+  "Data Provider type mismatch" message instead of a raw `TypeError`/
+  `ValueError`, and a malformed key (`a..b`, `a.`, `.a`, an unbalanced or
+  empty quoted segment) raises `HieraLookupError` with Puppet's "Syntax
+  error in key/string" text instead of silently returning the default. Both
+  kinds of error are raised **even with a `default=` given**, and through
+  `.has()` — only a genuine miss is silent, matching Puppet's own
+  `lookup()`, which raises both even with `default_value` set.
+- `sort_merged_arrays` now applies to `deep` merges, where Puppet defines it.
+  It was honoured only on the `unique` branch and silently swallowed on
+  `deep`, which both the README and the API header advertised as supported.
+  Sorting runs after knockout and reaches lists nested anywhere in the
+  result; a list with no total order is left in merge order.
+- A `lookup_options` key is treated as a regular expression only when it
+  starts with `^`, per Hiera 5. Any key containing a regex metacharacter was
+  compiled as a pattern, so an entry for `db.port` also matched `dbxport`.
+- Interpolation no longer treats resolved values as `re.sub` replacement
+  templates — backslashes and `\g<...>` sequences in data now pass through
+  literally instead of raising or being mangled.
+- `Hiera.format()` now formats with the context mapping (`format_map`) instead
+  of passing the dict as a single positional argument.
+- Mutable default arguments (`context={}`) replaced with `None` sentinels,
+  fixing cross-call context contamination in `scoped()` and others.
+- Unknown/missing `data_hash` backends now raise a clear `ConfigError` naming
+  the known backends, rather than an opaque `KeyError`.
+- `LookupDict` is no longer (unsafely) hashable.
+- Function calls resolving to a falsy value (`0`, `""`, `False`) no longer
+  raise `InterpolationError` — only a genuinely absent value is rejected. A
+  `%{hiera(...)}` whose key is missing now degrades to that rejection instead
+  of propagating a `KeyError`.
+- The bare-`%{var}` interpolation regex no longer also matches function-style
+  `%{hiera(...)}` tokens, so an unresolved function leftover is not blanked.
+- Invalid `--scope` values are reported through the logger and exit `2`, in
+  line with the CLI's exit-code contract (previously a raw `SystemExit`).
+- Deep hash merge now respects hiera precedence: a scalar provided by an
+  earlier (higher-priority) hierarchy level is no longer clobbered by a later
+  level. Previously the last level won for scalars, inverting precedence.
+- Non-string scalar values (ints, floats, booleans) resolved by a
+  `%{hiera(...)}`/`%{lookup(...)}` call embedded in a larger string are now
+  stringified instead of raising; a single stand-alone call still preserves
+  the resolved value's native type.
+- The CLI exits `2` with a one-line `Lookup of key 'K' failed: …` message
+  for every failure other than a missing key; several failures used to
+  print a traceback and exit `1`, the missing-key code (a plain `KeyError`
+  from a custom `.get()` override, for example, could be mistaken for a
+  miss). `-v` or `DUHO_TRACEBACK=1` adds the traceback.
 
+### Security
+
+- An INI file decrypted by `sops_data` is now parsed from sops's own
+  `--output-type=json` view, never ini text: sops's own INI writer emits
+  a value containing `"""` plus a newline ambiguously, so a decrypted
+  value could be read back as a different key or as an injected section
+  (reproduced against real sops 3.13.3: a `db.password` value replaced by
+  a later, attacker-supplied one). `sops_ini`/extension-inferred `ini`
+  both still tell sops to *read* the file as ini; only the output/parse
+  side changed.
+- Three more `_yaml_loader` messages a decrypted YAML file can shape
+  itself into (`invalid value for Float()`/`Integer()`, and `Tried to
+  load unspecified class:` for a `!ruby/object`/`!ruby/hash` tag) no
+  longer quote the offending scalar or class name on the `sops_data`
+  decrypt path; `yaml_data` (no sops involved) is unchanged. A handful of
+  fixed names hyera itself raises for a known YAML shape (`Time`, `Date`,
+  an unnamed `!ruby/object`, `!!set`) still show, since none of them ever
+  echo text from the document.
+- A `sops` decrypt timeout no longer leaves the underlying
+  `subprocess.TimeoutExpired` (and its captured partial stdout) reachable
+  via the raised `BackendError`'s `__context__`; only `__cause__` was
+  addressed by the previous `from None` fix.
+- A `UnicodeDecodeError` from a non-UTF-8 decrypted file now reports only
+  the byte offset, not the offending byte value or the stock codec
+  message's surrounding text.
+- Decrypted `sops` plaintext no longer appears in error messages or logs
+  when a decrypted file fails to parse.
+- The data file passed to `sops` is always an absolute path after a
+  literal `--`, so a name starting with `-` can never become a `sops`
+  option; the `sops` found on `PATH` is executed by its full resolved
+  path, and a `sops.bat`/`sops.cmd` shim is refused.
+- HOCON `include` directives resolve exactly as Puppet's own `hocon_data`
+  does by default (hyera never does *less* than Puppet by default,
+  only as an explicit opt-in): a plain `include "file"` contributes
+  nothing, as in Puppet; `include file(...)` really reads the file
+  (relative to the process working directory, or absolute), as Puppet's
+  `hocon_data` does; a directive in value position (including inside a
+  `[...]` array) is kept as literal text, as Puppet keeps it; and
+  `url(...)`, `classpath(...)`, `required(...)`, `package(...)`, a
+  case-mismatched keyword, or a bare `include` with nothing valid after
+  it all raise `BackendError`, matching Puppet's own parse/method errors
+  for those forms (Ruby hocon implements none of them). The pre-fidelity
+  refusal -- every form other than a plain quoted include raises,
+  `include file(...)` included -- is kept as an opt-in:
+  `HOCONBackend(hocon_includes=False)`, or a `hocon_includes: false` key
+  on the hierarchy entry/`defaults` (hyera's own extension, not Puppet
+  vocabulary). One accepted divergence: Puppet's `include file("*.conf")`
+  never globs; pyhocon's own resolution does and includes every match.
+- `sops` is refused when it resolves to a relative path (e.g. from the
+  current directory or a relative `PATH` entry), closing a gap where
+  Python 3.9's `shutil.which` could still return such a path even with the
+  Windows implicit-current-directory opt-out set.
+- Three sops-decrypted YAML parse errors (an undefined alias, an unknown
+  tag, a duplicate anchor) no longer quote the offending value verbatim in
+  the raised error, the log, or the CLI's output. A sops timeout also no
+  longer chains the underlying `TimeoutExpired` (which carries any partial
+  decrypted stdout).
+- Closed several remaining gaps in the HOCON `include` text scanner: a
+  caselessly-matched keyword using a non-ASCII look-alike character (e.g. a
+  dotless "ı"), a triple-quoted string ending in extra quote characters, a
+  backslash-escaped `"`/`#`/`${` in unquoted text, and a `//` that is part
+  of ordinary unquoted text (as in a URL-shaped value) rather than a
+  comment could each let a real `include file(...)`/`url(...)` reach
+  pyhocon's own include machinery. `include` inside a `[...]` array is now
+  also treated as value position (kept as literal text by default, raised
+  under the `hocon_includes=False` opt-in) rather than being blanked into
+  a shorter array. As a fail-closed backstop, pyhocon's own
+  include-resolving methods raise for the duration of a HOCON parse for
+  every form the active mode does not intend to resolve for real, so even
+  an undiscovered scanner gap cannot read a file or reach the network;
+  they behave normally for any other use of pyhocon in the same process.
+  This backstop now also wraps hyera's own private `pyhocon.config_parser`
+  module copy (added by `json_hocon_loaders` for Ruby-hocon-compatible
+  duration parsing) -- previously it wrapped only the shared `pyhocon`
+  module, which `HOCONBackend` never actually parses through, leaving the
+  backstop installed but inert for every real `HOCONBackend` call; found
+  and fixed while widening the default's own capability, which makes the
+  backstop's guarantee matter more, not less.
