@@ -1,0 +1,825 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "23deb7e83039c5d07ae789ff172711079dbe84db61332846235ac7d467011340",
+  "results": {
+    "i_oct8": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_oct8"
+      ],
+      "status": "found",
+      "value": 15
+    },
+    "i_bin2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_bin2"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "i_hex16": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_hex16"
+      ],
+      "status": "found",
+      "value": 255
+    },
+    "i_badradix": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_badradix"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_badradix' raised error: Illegal radix: 7, expected 2, 8, 10, 16, or default"
+    },
+    "i_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_ws"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_ws' raised error: 'new' The string ' 42 ' cannot be converted to Integer"
+    },
+    "i_signws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_signws"
+      ],
+      "status": "found",
+      "value": -42
+    },
+    "i_neg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_neg"
+      ],
+      "status": "found",
+      "value": -16
+    },
+    "i_fstr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_fstr"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_fstr' raised error: 'new' The string '3.7' cannot be converted to Integer"
+    },
+    "i_09": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_09"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_09' raised error: invalid value for Integer(): \"09\""
+    },
+    "i_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_arr"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_arr' raised error: 'new' Value of type Array[Integer] cannot be converted to Integer"
+    },
+    "i_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_nil"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_nil' raised error: 'new' Value of type Undef cannot be converted to Integer"
+    },
+    "i_range": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_range"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'i_range' raised error: Converted value from Integer[0, 10].new() has wrong type, expects an Integer[0, 10] value, got Integer[42, 42]"
+    },
+    "i_already": {
+      "argv": [
+        "--strict",
+        "warning",
+        "i_already"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "q_int_bigneg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_int_bigneg"
+      ],
+      "status": "found",
+      "value": -12345678901234567890
+    },
+    "q_int_plus": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_int_plus"
+      ],
+      "status": "found",
+      "value": 7
+    },
+    "q_int_octbad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_int_octbad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_int_octbad' raised error: invalid value for Integer(): \"08\""
+    },
+    "f_exp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_exp"
+      ],
+      "status": "found",
+      "value": 1000.0
+    },
+    "f_bin": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_bin"
+      ],
+      "status": "found",
+      "value": 5.0
+    },
+    "f_hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_hex"
+      ],
+      "status": "found",
+      "value": 16.0
+    },
+    "f_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_int"
+      ],
+      "status": "found",
+      "value": 3.0
+    },
+    "f_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_bool"
+      ],
+      "status": "found",
+      "value": 0.0
+    },
+    "q_float_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_float_ws"
+      ],
+      "status": "found",
+      "value": 1.5
+    },
+    "n_hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n_hex"
+      ],
+      "status": "found",
+      "value": 31
+    },
+    "n_oct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n_oct"
+      ],
+      "status": "found",
+      "value": 34
+    },
+    "n_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'n_bad' raised error: 'new_numeric' The string '1.2.3' cannot be converted to Numeric"
+    },
+    "n_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n_bool"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "q_num_space": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_num_space"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "b_Y": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_Y"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "b_TRUE": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_TRUE"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "b_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_float"
+      ],
+      "status": "found",
+      "value": false
+    },
+    "b_str1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_str1"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'b_str1' raised error: 'new_boolean' The string '1' cannot be converted to Boolean"
+    },
+    "b_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_arr"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'b_arr' raised error: 'new_boolean' Value of type Array[Boolean] cannot be converted to Boolean"
+    },
+    "s_pi": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_pi"
+      ],
+      "status": "found",
+      "value": "3.140000"
+    },
+    "s_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_int"
+      ],
+      "status": "found",
+      "value": "42"
+    },
+    "s_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_nested"
+      ],
+      "status": "found",
+      "value": "{'a' => [1, {'b' => 'c'}], 'd e' => undef}"
+    },
+    "s_strq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_strq"
+      ],
+      "status": "found",
+      "value": "it's"
+    },
+    "s_quote": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_quote"
+      ],
+      "status": "found",
+      "value": "plain"
+    },
+    "s_arr_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_arr_nested"
+      ],
+      "status": "found",
+      "value": "[[1, 2], 'x', 1.5, true, undef]"
+    },
+    "s_nilarr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_nilarr"
+      ],
+      "status": "found",
+      "value": "[undef]"
+    },
+    "s_bool_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_bool_arr"
+      ],
+      "status": "found",
+      "value": "[false]"
+    },
+    "q_str_neg0": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_str_neg0"
+      ],
+      "status": "found",
+      "value": "-0.000000"
+    },
+    "q_str_big": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_str_big"
+      ],
+      "status": "found",
+      "value": "1.0e20"
+    },
+    "q_str_unicode": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_str_unicode"
+      ],
+      "status": "found",
+      "value": "['é', 'a\"b']"
+    },
+    "q_str_float_e": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_str_float_e"
+      ],
+      "status": "found",
+      "value": "0.000000"
+    },
+    "q_str_esc": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_str_esc"
+      ],
+      "status": "found",
+      "value": "[\"tab\\there\", \"nl\\nx\", 'q\\'uote']"
+    },
+    "s_fmt_d": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fmt_d"
+      ],
+      "status": "found",
+      "value": "12"
+    },
+    "s_fmt_p": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fmt_p"
+      ],
+      "status": "found",
+      "value": "'x'"
+    },
+    "s_fmt_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fmt_bool"
+      ],
+      "status": "found",
+      "value": "yes"
+    },
+    "s_fmt_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fmt_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 's_fmt_bad' raised error: Illegal format 'Q' specified for value of Integer type - expected one of the characters 'dxXobBeEfgGaAspc'"
+    },
+    "s_float_s": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_float_s"
+      ],
+      "status": "found",
+      "value": "2.5"
+    },
+    "s_undef_fmt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_undef_fmt"
+      ],
+      "status": "found",
+      "value": "undef"
+    },
+    "a_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_float"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'a_float' raised error: 'new_array' Value of type Float cannot be converted to Array"
+    },
+    "a_true": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_true"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'a_true' raised error: 'new_array' Value of type Boolean cannot be converted to Array"
+    },
+    "a_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_nil"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'a_nil' raised error: 'new_array' Value of type Undef cannot be converted to Array"
+    },
+    "a_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_zero"
+      ],
+      "status": "found",
+      "value": []
+    },
+    "a_neg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_neg"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'a_neg' raised error: 'new_array' Value of type Integer cannot be converted to Array"
+    },
+    "a_wrap_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_wrap_arr"
+      ],
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "a_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a_false"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "arr_already": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_already"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "h_flat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_flat"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "h_odd": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_odd"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'h_odd' raised error: odd number of arguments for Hash"
+    },
+    "h_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_str"
+      ],
+      "status": "found",
+      "value": {
+        "a": "b"
+      }
+    },
+    "h_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_empty"
+      ],
+      "status": "found",
+      "value": {}
+    },
+    "h_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h_int"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'h_int' raised error: odd number of arguments for Hash"
+    },
+    "o_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_int"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "nu_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nu_int"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "se_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "se_str"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "se_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "se_int"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'se_int' raised error: Converted value from Sensitive[Integer].new() has wrong type, expects a Sensitive[Integer] value, got Sensitive[String]"
+    },
+    "q_sens_sens": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_sens_sens"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "en_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "en_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'en_bad' raised error: Creation of new instance of type 'Enum['a', 'b']' is not supported"
+    },
+    "tu_ok": {
+      "argv": [
+        "--strict",
+        "warning",
+        "tu_ok"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        1
+      ]
+    },
+    "st_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "st_hash"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'st_hash' raised error: Converted value from Struct[{'a' => Integer}].new() has wrong type, entry 'a' expects an Integer value, got String"
+    },
+    "str_range": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_range"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'str_range' raised error: Converted value from String[1, 2].new() has wrong type, expects a String[1, 2] value, got String"
+    },
+    "ali_data": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ali_data"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "ali_std": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ali_std"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'ali_std' raised error: Creation of new instance of type 'TypeReference['Stdlib::Port']' is not supported"
+    },
+    "sc_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sc_t"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'sc_t' raised error: Creation of new instance of type 'Scalar' is not supported"
+    },
+    "any_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "any_t"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "undef_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "undef_t"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'undef_t' raised error: Creation of new instance of type 'Undef' is not supported"
+    },
+    "bool_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bool_t"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'bool_t' raised error: Converted value from Boolean[true].new() has wrong type, expects a Boolean[true] value, got Boolean[false]"
+    },
+    "pat_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "pat_t"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'pat_t' raised error: Creation of new instance of type 'Pattern[/^x/]' is not supported"
+    },
+    "re_t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "re_t"
+      ],
+      "status": "found",
+      "value": "(?-mix:^a)"
+    },
+    "q_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_int"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_int' raised error: 'new' parameter 'type' expects a Type value, got Integer"
+    },
+    "q_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_empty"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_empty' raised error: 'new' parameter 'type' expects a Type value, got Undef"
+    },
+    "q_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_hash"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_hash' raised error: 'new' parameter 'type' expects a Type value, got Struct"
+    },
+    "q_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_nil"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "q_estr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_estr"
+      ],
+      "status": "error",
+      "message": "Invalid data type in lookup_options for key 'q_estr' could not parse '', error: 'The expression <> is not a valid type specification."
+    },
+    "q_extra": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_extra"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_extra' raised error: 'new' expects between 1 and 3 arguments, got 4"
+    },
+    "q_boolarg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_boolarg"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_boolarg' raised error: 'new_boolean' expects 1 argument, got 2"
+    },
+    "q_arr_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "q_arr_nested"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'q_arr_nested' raised error: 'new' parameter 'type' expects a Type value, got Tuple"
+    }
+  }
+}

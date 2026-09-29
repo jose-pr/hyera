@@ -1,0 +1,179 @@
+lookup_options:
+  i_oct8: {convert_to: [Integer, 8]}
+  i_bin2: {convert_to: [Integer, 2]}
+  i_hex16: {convert_to: [Integer, 16]}
+  i_badradix: {convert_to: [Integer, 7]}
+  i_ws: {convert_to: Integer}
+  i_signws: {convert_to: Integer}
+  i_neg: {convert_to: Integer}
+  i_fstr: {convert_to: Integer}
+  i_09: {convert_to: Integer}
+  i_arr: {convert_to: Integer}
+  i_nil: {convert_to: Integer}
+  i_range: {convert_to: 'Integer[0,10]'}
+  i_already: {convert_to: Integer}
+  q_int_bigneg: {convert_to: Integer}
+  q_int_plus: {convert_to: Integer}
+  q_int_octbad: {convert_to: Integer}
+  f_exp: {convert_to: Float}
+  f_bin: {convert_to: Float}
+  f_hex: {convert_to: Float}
+  f_int: {convert_to: Float}
+  f_bool: {convert_to: Float}
+  q_float_ws: {convert_to: Float}
+  n_hex: {convert_to: Numeric}
+  n_oct: {convert_to: Numeric}
+  n_bad: {convert_to: Numeric}
+  n_bool: {convert_to: Numeric}
+  q_num_space: {convert_to: Numeric}
+  b_Y: {convert_to: Boolean}
+  b_TRUE: {convert_to: Boolean}
+  b_float: {convert_to: Boolean}
+  b_str1: {convert_to: Boolean}
+  b_arr: {convert_to: Boolean}
+  s_pi: {convert_to: String}
+  s_int: {convert_to: String}
+  s_nested: {convert_to: String}
+  s_strq: {convert_to: String}
+  s_quote: {convert_to: String}
+  s_arr_nested: {convert_to: String}
+  s_nilarr: {convert_to: String}
+  s_bool_arr: {convert_to: String}
+  q_str_neg0: {convert_to: String}
+  q_str_big: {convert_to: String}
+  q_str_unicode: {convert_to: String}
+  q_str_float_e: {convert_to: String}
+  q_str_esc: {convert_to: String}
+  s_fmt_d: {convert_to: [String, '%d']}
+  s_fmt_p: {convert_to: [String, '%p']}
+  s_fmt_bool: {convert_to: [String, '%y']}
+  s_fmt_bad: {convert_to: [String, '%Q']}
+  s_float_s: {convert_to: [String, '%s']}
+  s_undef_fmt: {convert_to: [String, '%p']}
+  a_float: {convert_to: Array}
+  a_true: {convert_to: Array}
+  a_nil: {convert_to: Array}
+  a_zero: {convert_to: Array}
+  a_neg: {convert_to: Array}
+  a_wrap_arr: {convert_to: [Array, true]}
+  a_false: {convert_to: [Array, false]}
+  arr_already: {convert_to: 'Array[String]'}
+  h_flat: {convert_to: Hash}
+  h_odd: {convert_to: Hash}
+  h_str: {convert_to: Hash}
+  h_empty: {convert_to: Hash}
+  h_int: {convert_to: Hash}
+  o_int: {convert_to: 'Optional[Integer]'}
+  nu_int: {convert_to: 'NotUndef[Integer]'}
+  se_str: {convert_to: 'Sensitive[String]'}
+  se_int: {convert_to: 'Sensitive[Integer]'}
+  q_sens_sens: {convert_to: Sensitive}
+  en_bad: {convert_to: 'Enum[a,b]'}
+  tu_ok: {convert_to: 'Tuple[String,Integer]'}
+  st_hash: {convert_to: 'Struct[{a => Integer}]'}
+  str_range: {convert_to: 'String[1,2]'}
+  ali_data: {convert_to: Data}
+  ali_std: {convert_to: 'Stdlib::Port'}
+  sc_t: {convert_to: Scalar}
+  any_t: {convert_to: Any}
+  undef_t: {convert_to: Undef}
+  bool_t: {convert_to: 'Boolean[true]'}
+  pat_t: {convert_to: 'Pattern[/^x/]'}
+  re_t: {convert_to: Regexp}
+  q_int: {convert_to: 5}
+  q_empty: {convert_to: []}
+  q_hash: {convert_to: {a: 1}}
+  q_nil: {convert_to: ~}
+  q_estr: {convert_to: ''}
+  q_extra: {convert_to: [Integer, 16, true, 1]}
+  q_boolarg: {convert_to: [Boolean, 1]}
+  q_arr_nested: {convert_to: [[Integer]]}
+i_oct8: "17"
+i_bin2: "101"
+i_hex16: "0xff"
+i_badradix: "12"
+i_ws: " 42 "
+i_signws: "- 42"
+i_neg: "-0x10"
+i_fstr: "3.7"
+i_09: "09"
+i_arr: [1]
+i_nil: ~
+i_range: "42"
+i_already: 5
+q_int_bigneg: "-12345678901234567890"
+q_int_plus: "+7"
+q_int_octbad: "08"
+f_exp: "1e3"
+f_bin: "0b101"
+f_hex: "0x10"
+f_int: 3
+f_bool: false
+q_float_ws: "+ 1.5"
+n_hex: "0x1F"
+n_oct: "042"
+n_bad: "1.2.3"
+n_bool: true
+q_num_space: " 5"
+b_Y: "Y"
+b_TRUE: "TRUE"
+b_float: 0.0
+b_str1: "1"
+b_arr: [true]
+s_pi: 3.14
+s_int: 42
+s_nested: {a: [1, {b: "c"}], "d e": ~}
+s_strq: "it's"
+s_quote: "plain"
+s_arr_nested: [[1, 2], "x", 1.5, true, ~]
+s_nilarr: [~]
+s_bool_arr: [false]
+q_str_neg0: -0.0
+q_str_big: "1.0e20"
+q_str_unicode: ["é", "a\"b"]
+q_str_float_e: 1.5e-7
+q_str_esc: ["tab\there", "nl\nx", "q'uote"]
+s_fmt_d: "12"
+s_fmt_p: "x"
+s_fmt_bool: true
+s_fmt_bad: 5
+s_float_s: 2.5
+s_undef_fmt: ~
+a_float: 1.5
+a_true: true
+a_nil: ~
+a_zero: 0
+a_neg: -2
+a_wrap_arr: [1]
+a_false: "ab"
+arr_already: [a]
+h_flat: [a, 1, b, 2]
+h_odd: [a, 1, b]
+h_str: "ab"
+h_empty: []
+h_int: 3
+o_int: "5"
+nu_int: "5"
+se_str: "x"
+se_int: "5"
+q_sens_sens: "x"
+en_bad: "c"
+tu_ok: ["a", 1]
+st_hash: {a: "1"}
+str_range: "abc"
+ali_data: "x"
+ali_std: "80"
+sc_t: [1]
+any_t: "x"
+undef_t: "x"
+bool_t: false
+pat_t: "abc"
+re_t: "^a"
+q_int: "5"
+q_empty: "5"
+q_hash: "5"
+q_nil: "5"
+q_estr: "5"
+q_extra: "ff"
+q_boolarg: "yes"
+q_arr_nested: "5"
