@@ -31,8 +31,8 @@ _LOGGER = logging.getLogger(__name__)
 
 #: Puppet's provider stack (``lookup_adapter.rb:296``): a key is looked up
 #: through each layer in turn, merged the same way as levels/locations
-#: within a layer. Only ``"global"`` is populated until
-#: ``config_layers_global_env_module`` fills ``environment``/``module``.
+#: within a layer. Only ``"global"`` is populated; the ``environment``
+#: and ``module`` layers are not implemented yet.
 _LAYERS = ("global", "environment", "module")
 
 
@@ -299,8 +299,7 @@ class Hiera:
         file's own non-hash rule (``YAMLBackend._as_data_hash``'s
         ``strict``-sensitive raise-or-warn) must run again for a call whose
         effective ``strict`` differs from a previous one, never reuse a
-        result computed under a different strictness
-        (``puppet_fidelity_program`` Design Q4). ``self._loaded_paths``
+        result computed under a different strictness. ``self._loaded_paths``
         separately tracks which plain paths were ever read successfully, for
         :meth:`_files_for`'s "was this location loaded" check, independent
         of which ``strict`` variant did the loading.
