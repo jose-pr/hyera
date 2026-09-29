@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "8eb050bee45d7f032b0a4fbaf09920da99807cfa5791158a070c88e709bad4ef",
+  "results": {
+    "v1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v1"
+      ],
+      "status": "error",
+      "message": "(./facts.yaml): Tried to load unspecified class: Date"
+    }
+  }
+}
