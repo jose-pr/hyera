@@ -1,0 +1,12 @@
+description: >-
+  A single one-location level: the fixed 3-layer provider stack always takes
+  the multi-variant reduce path (flatten via convert_value), even though
+  only one level and one location ever contribute a value.
+origin: new/merge-port-one-level
+queries:
+  - key: "u"
+    id: "u"
+    merge: unique
+  - key: "k"
+    id: "k"
+    merge: unique

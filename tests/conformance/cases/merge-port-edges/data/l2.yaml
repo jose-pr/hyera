@@ -1,0 +1,34 @@
+ko_alias: {other: 1}
+ka3: {other: 1}
+ka_top_only: {other: 1}
+ko_arr_over_scalar: {k: 5}
+ko_arr_over_scalar_top: 5
+ko_int_key_hash: {k: 2}
+ks_hash_over_arr: [x]
+ks_empty_hash_over_str: "s"
+h_empty_arr: {a: 1}
+h_int_key: {b: 1}
+h_nested_int: {b: 1}
+h_empty_hash_vs_str: "s"
+h_float: {a: 1}
+h_bool: {a: 1}
+u_empty_hash: [a]
+u_hash_lower: {}
+u_nil_lower: ~
+u_nondata_elem: [{1: x}]
+sort_nil: {l: [1]}
+sort_float: {l: ["a"]}
+sort_arr: {l: [[1, 2]]}
+sort_eq: {l: [1]}
+o_int: [b]
+o_list: [b]
+o_strat_list: [b]
+o_sort_str: [b]
+o_ko_int: [b]
+o_two_unknown: [b]
+o_first_extra: [b]
+o_strat_nil: [b]
+o_deep_ko_nil: {l: [b]}
+ko_double_star: {l: [a, xy]}
+lookup_options:
+  ko_single_empty: {merge: {strategy: deep, knockout_prefix: ''}}

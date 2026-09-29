@@ -1,0 +1,43 @@
+ko_alias: {k: {l: ["--a", "b"]}}
+ka3: {k: {l: ["--a", "b", "c"]}}
+ka_top_only: {l: ["--a", "b"]}
+ko_arr_over_scalar: {k: ["--a", "b"]}
+ko_arr_over_scalar_top: ["--a", "b"]
+ko_int_key_hash: {k: 1}
+ks_hash_over_arr: {a: 1, b: 2}
+ks_empty_hash_over_str: {}
+h_empty_arr: []
+h_int_key: {1: x}
+h_nested_int: {a: {1: x}}
+h_empty_hash_vs_str: {}
+h_float: 1.5
+h_bool: true
+u_empty_hash: {}
+u_hash_lower: [a]
+u_nil_lower: 5
+u_nondata_elem: [a]
+sort_nil: {l: [~]}
+sort_float: {l: [1.5]}
+sort_arr: {l: [[2, 1]]}
+sort_eq: {l: [1.0, "b"]}
+ko_single_empty: [a]
+o_int: [a]
+o_list: [a]
+o_strat_list: [a]
+o_sort_str: [a]
+o_ko_int: [a]
+o_two_unknown: [a]
+o_first_extra: [a]
+o_strat_nil: [a]
+o_deep_ko_nil: {l: [a]}
+ko_double_star: {l: [x]}
+lookup_options:
+  o_int: {merge: 5}
+  o_list: {merge: [deep]}
+  o_strat_list: {merge: {strategy: [deep]}}
+  o_sort_str: {merge: {strategy: deep, sort_merged_arrays: 'yes'}}
+  o_ko_int: {merge: {strategy: deep, knockout_prefix: 5}}
+  o_two_unknown: {merge: {strategy: deep, aa: 1, bb: 2}}
+  o_first_extra: {merge: {strategy: first, knockout_prefix: '--'}}
+  o_strat_nil: {merge: {strategy: ~, knockout_prefix: '--'}}
+  o_deep_ko_nil: {merge: {strategy: deep, knockout_prefix: ~}}

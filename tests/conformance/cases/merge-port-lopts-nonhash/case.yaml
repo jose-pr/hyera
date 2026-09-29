@@ -1,0 +1,10 @@
+description: >-
+  lookup_options is gathered with the hash strategy before any data lookup
+  happens; a non-hash lookup_options value at one level, merged against a
+  hash one at another, fails every lookup through that level stack -- even
+  for a key neither level actually defines.
+origin: new/merge-port-lopts-nonhash
+queries:
+  - key: "a"
+    id: "a"
+    error_match: "The first element of the merge has wrong type, expects a Hash value, got Tuple"

@@ -1,0 +1,123 @@
+description: >-
+  Merge strategy edge cases exercised through the nested engine wiring: deep
+  knockout sharing objects across levels, hash/unique type-mismatch errors,
+  sort_merged_arrays comparison errors, and lookup_options merge-option
+  validation (bad strategy names/shapes, mistyped options).
+origin: new/merge-port-edges
+queries:
+  - key: "ko_alias"
+    id: "ko_alias"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ka3"
+    id: "ka3"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ka_top_only"
+    id: "ka_top_only"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ko_arr_over_scalar"
+    id: "ko_arr_over_scalar"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ko_arr_over_scalar_top"
+    id: "ko_arr_over_scalar_top"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ko_int_key_hash"
+    id: "ko_int_key_hash"
+    merge: {strategy: deep, knockout_prefix: "--"}
+  - key: "ks_hash_over_arr"
+    id: "ks_hash_over_arr"
+    merge: deep
+  - key: "ks_empty_hash_over_str"
+    id: "ks_empty_hash_over_str"
+    merge: deep
+  - key: "h_empty_arr"
+    id: "h_empty_arr"
+    merge: hash
+    error_match: "expects a Hash value, got Array"
+  - key: "h_int_key"
+    id: "h_int_key"
+    merge: hash
+    error_match: "expects a Hash\\[String, Data\\] value"
+  - key: "h_nested_int"
+    id: "h_nested_int"
+    merge: hash
+    error_match: "entry 'a' expects a Data value, got Hash"
+  - key: "h_empty_hash_vs_str"
+    id: "h_empty_hash_vs_str"
+    merge: hash
+    error_match: "second element of the merge has wrong type, expects a Hash value, got String"
+  - key: "h_float"
+    id: "h_float"
+    merge: hash
+    error_match: "expects a Hash value, got Float"
+  - key: "h_bool"
+    id: "h_bool"
+    merge: hash
+    error_match: "expects a Hash value, got Boolean"
+  - key: "u_empty_hash"
+    id: "u_empty_hash"
+    merge: unique
+  - key: "u_hash_lower"
+    id: "u_hash_lower"
+    merge: unique
+    error_match: "second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"
+  - key: "u_nil_lower"
+    id: "u_nil_lower"
+    merge: unique
+    divergence: code-core/null-value-treated-as-missing
+  - key: "u_nondata_elem"
+    id: "u_nondata_elem"
+    merge: unique
+  - key: "sort_nil"
+    id: "sort_nil"
+    merge: {strategy: deep, sort_merged_arrays: true}
+    error_match: "comparison of Integer with nil failed"
+  - key: "sort_float"
+    id: "sort_float"
+    merge: {strategy: deep, sort_merged_arrays: true}
+    error_match: "comparison of String with 1\\.5 failed"
+  - key: "sort_arr"
+    id: "sort_arr"
+    merge: {strategy: deep, sort_merged_arrays: true}
+  - key: "sort_eq"
+    id: "sort_eq"
+    merge: {strategy: deep, sort_merged_arrays: true}
+    error_match: "comparison of Float with String failed"
+  - key: "ko_single_empty"
+    id: "ko_single_empty"
+  - key: "o_int"
+    id: "o_int"
+    error_match: "Unknown merge strategy: '5'"
+  - key: "o_list"
+    id: "o_list"
+    error_match: "Unknown merge strategy: '\\[\"deep\"\\]'"
+  - key: "o_strat_list"
+    id: "o_strat_list"
+    error_match: "Unknown merge strategy: '\\[\"deep\"\\]'"
+  - key: "o_sort_str"
+    id: "o_sort_str"
+    error_match: "entry 'sort_merged_arrays' expects a value of type Undef or Boolean, got String"
+  - key: "o_ko_int"
+    id: "o_ko_int"
+    error_match: "entry 'knockout_prefix' expects a value of type Undef or String, got Integer"
+  - key: "o_two_unknown"
+    id: "o_two_unknown"
+  - key: "o_first_extra"
+    id: "o_first_extra"
+    error_match: "unrecognized key 'knockout_prefix'"
+  - key: "o_strat_nil"
+    id: "o_strat_nil"
+    error_match: "must contain the name of a strategy in string form for the key 'strategy'"
+  - key: "o_deep_ko_nil"
+    id: "o_deep_ko_nil"
+  - key: "ko_double_star"
+    id: "ko_double_star"
+    merge: {strategy: deep, knockout_prefix: "**"}
+    deviation:
+      id: knockout-prefix-not-python-regex
+      reason: >-
+        A knockout_prefix that Python's re module cannot compile raises an
+        error; Ruby accepts it with a warning ("regular expression has
+        redundant nested repeat operator").
+      expect:
+        status: error
+        message: "knockout_prefix '**' is not a valid regular expression"

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7b8cc1b199cb2300ac515d2608c1a9ad99e63f5fbf7578c165b8fa269b5dfa83",
+  "results": {
+    "a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: The first element of the merge has wrong type, expects a Hash value, got Tuple"
+    }
+  }
+}

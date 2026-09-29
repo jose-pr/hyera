@@ -1,0 +1,425 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "f091d47b4108d54cd4e0d30597fcb8c073b44d2c716fd15a747dda7bae3a641f",
+  "results": {
+    "ko_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_alias"
+      ],
+      "status": "found",
+      "value": {
+        "other": 1,
+        "k": {
+          "l": []
+        }
+      }
+    },
+    "ka3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ka3"
+      ],
+      "status": "found",
+      "value": {
+        "other": 1,
+        "k": {
+          "l": [
+            "c"
+          ]
+        }
+      }
+    },
+    "ka_top_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ka_top_only"
+      ],
+      "status": "found",
+      "value": {
+        "other": 1,
+        "l": [
+          "b"
+        ]
+      }
+    },
+    "ko_arr_over_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_arr_over_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "k": [
+          "b"
+        ]
+      }
+    },
+    "ko_arr_over_scalar_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_arr_over_scalar_top"
+      ],
+      "status": "found",
+      "value": [
+        "b"
+      ]
+    },
+    "ko_int_key_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_int_key_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": 1
+      }
+    },
+    "ks_hash_over_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "ks_hash_over_arr"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "ks_empty_hash_over_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "ks_empty_hash_over_str"
+      ],
+      "status": "found",
+      "value": "s"
+    },
+    "h_empty_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_empty_arr"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_empty_arr' failed: The first element of the merge has wrong type, expects a Hash value, got Array"
+    },
+    "h_int_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_int_key"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_int_key' failed: The first element of the merge has wrong type, expects a Hash[String, Data] value, got Hash[Integer[1, 1], String]"
+    },
+    "h_nested_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_nested_int"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_nested_int' failed: The first element of the merge has wrong type, entry 'a' expects a Data value, got Hash"
+    },
+    "h_empty_hash_vs_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_empty_hash_vs_str"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_empty_hash_vs_str' failed: The second element of the merge has wrong type, expects a Hash value, got String"
+    },
+    "h_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_float"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_float' failed: The first element of the merge has wrong type, expects a Hash value, got Float"
+    },
+    "h_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_bool"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_bool' failed: The first element of the merge has wrong type, expects a Hash value, got Boolean"
+    },
+    "u_empty_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_empty_hash"
+      ],
+      "status": "found",
+      "value": [
+        {},
+        "a"
+      ]
+    },
+    "u_hash_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_hash_lower"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'u_hash_lower' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"
+    },
+    "u_nil_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_nil_lower"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'u_nil_lower' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Undef"
+    },
+    "u_nondata_elem": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_nondata_elem"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'u_nondata_elem' failed:  The second element of the merge has wrong type, variant 0 expects a Scalar value, got Tuple"
+    },
+    "sort_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "sort_nil"
+      ],
+      "status": "error",
+      "message": "comparison of Integer with nil failed"
+    },
+    "sort_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "sort_float"
+      ],
+      "status": "error",
+      "message": "comparison of String with 1.5 failed"
+    },
+    "sort_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "sort_arr"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      }
+    },
+    "sort_eq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "sort_eq"
+      ],
+      "status": "error",
+      "message": "comparison of Float with String failed"
+    },
+    "ko_single_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ko_single_empty"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "o_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_int"
+      ],
+      "status": "error",
+      "message": "Unknown merge strategy: '5'"
+    },
+    "o_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_list"
+      ],
+      "status": "error",
+      "message": "Unknown merge strategy: '[\"deep\"]'"
+    },
+    "o_strat_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_strat_list"
+      ],
+      "status": "error",
+      "message": "Unknown merge strategy: '[\"deep\"]'"
+    },
+    "o_sort_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_sort_str"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, entry 'sort_merged_arrays' expects a value of type Undef or Boolean, got String"
+    },
+    "o_ko_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_ko_int"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, entry 'knockout_prefix' expects a value of type Undef or String, got Integer"
+    },
+    "o_two_unknown": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_two_unknown"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'aa'"
+    },
+    "o_first_extra": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_first_extra"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
+    },
+    "o_strat_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_strat_nil"
+      ],
+      "status": "error",
+      "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
+    },
+    "o_deep_ko_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "o_deep_ko_nil"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "b",
+          "a"
+        ]
+      }
+    },
+    "ko_double_star": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "**",
+        "ko_double_star"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "xy",
+          "x"
+        ]
+      }
+    }
+  }
+}
