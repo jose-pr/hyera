@@ -4,7 +4,8 @@ name: Release
 # push/PR events on branches -- this is a release gate, not general CI.
 #
 # Test gate, build (checking that the tag names the version built), a strict
-# docs build gate, the GitHub Release, then -- for final (non pre-release) tags
+# docs build gate, the GitHub Release (flagged as a pre-release when PEP 440
+# says the version is one), the PyPI upload, then -- for final tags only --
 # only -- the PyPI upload and a dispatch of docs.yml at this tag.
 #
 # NOTE: publish-pypi uses PyPI Trusted Publishing (OIDC, no stored token): a
@@ -41,6 +42,8 @@ jobs:
     name: Build distribution
     needs: test
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -53,6 +56,7 @@ jobs:
       # A tag on the wrong commit would otherwise publish a release named for
       # one version that carries another version's artifacts.
       - name: The tag names the version that was built
+        id: version
         shell: python
         env:
           TAG: ${{ github.ref_name }}
@@ -72,6 +76,10 @@ jobs:
           if built != {str(want)}:
               sys.exit("tag %s is version %s, but dist/ holds %s" % (tag, want, sorted(built)))
           print("tag %s matches the built version %s" % (tag, want))
+          # PEP 440 decides what is a pre-release (1.0.0a1, 1.0.0rc1, and the
+          # 1.0.0-rc.1 spelling alike), not the tag's punctuation.
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("prerelease=%s\n" % str(want.is_prerelease).lower())
       - name: Check distribution metadata
         run: python -m twine check dist/*
       - name: Upload build artifacts
@@ -153,15 +161,15 @@ jobs:
           # generate_release_notes still runs and appends its own
           # "Full Changelog: <compare link>" line after body_path's content.
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
           body_path: release_notes.md
 
-  # After the GitHub release, and only for a final tag: a PyPI upload is
-  # irreversible (a version can never be reused), a GitHub release is not.
+  # After the GitHub release: a PyPI upload is irreversible (a version can
+  # never be reused), a GitHub release is not. Pre-releases are uploaded too;
+  # pip installs them only when asked (--pre or an explicit version).
   publish-pypi:
     name: Publish to PyPI
     needs: [build, github-release]
-    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -190,8 +198,8 @@ jobs:
   # docs problem never blocks a package that passed its tests.
   docs-deploy:
     name: Deploy the docs for this release
-    needs: github-release
-    if: ${{ !contains(github.ref_name, '-') }}
+    needs: [build, github-release]
+    if: ${{ needs.build.outputs.prerelease != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
