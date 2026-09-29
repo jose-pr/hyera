@@ -7,9 +7,9 @@ name: Release
 # docs build gate, the GitHub Release, then -- for final (non pre-release) tags
 # only -- the PyPI upload and a dispatch of docs.yml at this tag.
 #
-# NOTE: publish-pypi uses PyPI Trusted Publishing (OIDC, no stored token).
-# Registering this repo/workflow as a trusted publisher on PyPI is one-time,
-# owner-only setup and has NOT been done yet -- that job will fail until it is.
+# NOTE: publish-pypi uses PyPI Trusted Publishing (OIDC, no stored token): a
+# PyPI trusted publisher is registered for this repository, this workflow
+# (release.yml) and the `pypi` environment, which only admits `v*` tags.
 on:
   push:
     tags:
