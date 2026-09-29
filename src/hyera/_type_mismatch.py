@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/types/type_mismatch_describer.rb,
+# type_asserter.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Puppet's type mismatch messages and instance assertion.
 
 Ports the subset of ``type_mismatch_describer.rb`` and ``type_asserter.rb``

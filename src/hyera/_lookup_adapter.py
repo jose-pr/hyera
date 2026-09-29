@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Lookup adapters for matching lookup_options against keys.
 
 Ports Puppet's ``lookup_adapter.rb``.

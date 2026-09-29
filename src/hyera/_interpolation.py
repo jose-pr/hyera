@@ -1,5 +1,8 @@
 # Derived from phiera/phiera.py (https://github.com/Nike-Inc/phiera),
 # Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/interpolation.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Interpolation engine: resolving functions and variable references.
 
 Ports Puppet's ``interpolation.rb``.

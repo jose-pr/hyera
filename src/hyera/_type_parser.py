@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/types/type_parser.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Puppet type-expression parser: ``parse_type``.
 
 Ports the subset of ``type_parser.rb`` (``:37-46`` ``parse``, ``:101-640``

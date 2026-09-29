@@ -1,3 +1,8 @@
+# Ported from Psych lib/psych/scalar_scanner.rb, lib/psych/visitors/to_ruby.rb
+# (https://github.com/ruby/psych), MIT. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/util/yaml.rb, lib/puppet/pops/lookup/hiera_config.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Ports Psych ``safe_load`` + ``ScalarScanner`` as ``Puppet::Util::Yaml`` uses
 them, on top of PyYAML (``CSafeLoader`` when libyaml is available, else the
 pure-Python ``SafeLoader``).

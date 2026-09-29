@@ -1,3 +1,7 @@
+# Ported from Puppet 8 lib/puppet/pops/types/types.rb, type_calculator.rb,
+# type_formatter.rb, p_sensitive_type.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Puppet type system: the type model, Sensitive, convert_to.
 
 Ports Puppet's ``pops/types`` (``types.rb``, ``type_calculator.rb``,

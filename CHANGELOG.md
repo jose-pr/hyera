@@ -488,4 +488,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `server_facts` merge under both; `$environment` defaults to `production`;
   `$trusted` defaults to Puppet's local hash (certname from the `clientcert`
   variable or fact); `strict` is `off`, `warning` (default) or `error`.
+- `LICENSES/puppet-Apache-2.0.txt` and `LICENSES/psych-MIT.txt`: credit
+  [Puppet](https://github.com/puppetlabs/puppet) and
+  [Psych](https://github.com/ruby/psych), the Apache-2.0 and MIT projects
+  several modules port translated code from, alongside phiera; `NOTICE` lists
+  each ported file.
 

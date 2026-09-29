@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/types/string_converter.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Puppet's value-to-string conversion: ``String.new()``'s engine.
 
 Ports the ``string_converter.rb`` subset hiera's data can reach: the

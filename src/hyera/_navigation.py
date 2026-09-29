@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/sub_lookup.rb, lookup_key.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Navigation: dotted-key sub-navigation.
 
 Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and

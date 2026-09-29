@@ -1,3 +1,7 @@
+# Ported from Puppet 8 lib/puppet/parser/compiler.rb, parser/scope.rb,
+# node.rb, context/trusted_information.rb, node/facts.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Scope: Puppet's top scope, as a value object.
 
 Ports the node-parameter/fact/trusted-data build Puppet's compiler runs

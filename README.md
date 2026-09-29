@@ -294,5 +294,7 @@ concerned, where there is one):
 
 MIT, for this project's own code. It is derived from
 [phiera](https://github.com/Nike-Inc/phiera), which is Apache-2.0; the files
-taken from it keep that license. See `NOTICE` and
-`LICENSES/phiera-Apache-2.0.txt`.
+taken from it keep that license. Several modules also port code translated
+from [Puppet](https://github.com/puppetlabs/puppet) (Apache-2.0) and from
+[Psych](https://github.com/ruby/psych) (MIT), Ruby's YAML library; those
+files carry their own notice. See `NOTICE` and `LICENSES/`.

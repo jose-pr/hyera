@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/functions/yaml_data.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Data backends: a self-registering ``Backend`` registry.
 
 Every format or provider is a :class:`Backend` subclass. Registration is by

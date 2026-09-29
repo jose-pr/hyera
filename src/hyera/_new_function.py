@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/functions/new.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# See NOTICE.
 """Puppet's ``new()``: ``functions/new.rb`` plus each type's own
 ``new_function`` this subset ports.
 
