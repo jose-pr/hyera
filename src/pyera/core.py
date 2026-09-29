@@ -512,7 +512,36 @@ class HieraLevel(_ty.NamedTuple):
             except (KeyError, IndexError, TypeError, AttributeError):
                 continue
             if self.glob:
-                for match in sorted(root.glob(rel)):
+                # A glob over a directory that doesn't exist matches nothing
+                # (Puppet's expand_globs behavior), rather than raising from
+                # the underlying Path.glob. Only check the literal prefix --
+                # the /-separated segments before the first one containing a
+                # glob metacharacter, and never the last segment (a
+                # wildcard-free pattern names a file, not a directory).
+                segments = rel.split("/")
+                prefix = segments[:-1]
+                for i, segment in enumerate(prefix):
+                    if any(c in segment for c in "*?["):
+                        prefix = segments[:i]
+                        break
+                if not root.joinpath(*prefix).is_dir():
+                    LOGGER.debug(
+                        "Skipping glob %r under %s: %s is not a directory",
+                        rel,
+                        root,
+                        root.joinpath(*prefix),
+                    )
+                    continue
+                try:
+                    matches = sorted(root.glob(rel))
+                except (FileNotFoundError, NotADirectoryError):
+                    LOGGER.debug(
+                        "Glob %r under %s matched nothing (directory vanished)",
+                        rel,
+                        root,
+                    )
+                    matches = []
+                for match in matches:
                     yield match
             else:
                 yield root / rel

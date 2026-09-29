@@ -83,7 +83,9 @@ Install and import as `pyera` (`pip install pyera`, extras
   one hierarchy entry. `.new(conf, backend)` builds one from a hierarchy
   dict (`path`/`paths`/`glob`/`globs`/`mapped_paths`). `.paths(base_path,
   context)` yields candidate source paths for a context; a source
-  referencing an absent context var is silently skipped.
+  referencing an absent context var is silently skipped. A glob whose
+  directory does not exist yields nothing (matches Puppet), instead of
+  raising from the underlying filesystem glob.
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
   Sensitive`. `str()`/`repr()` show `Sensitive(<redacted>)`; `.unwrap()`
   returns the real value.

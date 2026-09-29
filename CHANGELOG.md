@@ -15,6 +15,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   handle stopped the file from being replaced and the instance from being
   pickled or deep-copied. `Hiera.base_config` now keeps the exact path it
   was given.
+- A `glob`/`globs` hierarchy level whose directory does not exist now
+  contributes no files instead of raising `FileNotFoundError` from
+  `Hiera()` or `.get()`. The documented example config crashed at
+  construction when `data/modules` was absent, and a per-node glob
+  directory crashed lookups for any node without one.
 
 ### Added
 
