@@ -1,0 +1,41 @@
+? [a, b]
+: 1
+plain: p
+oct: 0755
+hex: 0x1F
+under: 1_000
+comma: 1,000
+plusnum: +12
+negoct: -0x1F
+fdot: 1.
+fdotlead: .5
+fexp: 1.0e+3
+funder: 1_0.5
+plusinf: .inf
+minusinf: -.Inf
+notanumber: .NaN
+sexa: 1:30
+symv: :foo
+symq: :"foo bar"
+untag1: !foo bar
+untag2: !foo 12
+strtag: !!str 12
+inttag: !!int '12'
+floattag: !!float '1'
+booltag: !!bool 'yes'
+nulltag: !!null ''
+valuetag: !!value x
+binary: !!binary aGVsbG8=
+omap: !!omap
+  - x: 1
+  - y: 2
+pairs: !!pairs
+  - x: 1
+  - x: 2
+rubystring: !ruby/string foo
+boolyes: yes
+booloff: Off
+nullval: ~
+lookalikeoct: 0o17
+lookalikefloat: 1e3
+strbool: "true"

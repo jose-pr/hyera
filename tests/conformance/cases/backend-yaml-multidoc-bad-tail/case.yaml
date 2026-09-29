@@ -1,0 +1,6 @@
+description: >-
+  Only the first YAML document is read; a syntax error in the second
+  document (after a `---` separator) is never seen.
+origin: critic-puppet-coverage/multidoc
+queries:
+  - key: plain

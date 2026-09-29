@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c59efd616183743bd897149bac74d7af0a098fd5c20aca3e51f3131799f29506",
+  "results": {
+    "s": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's' failed: Value for key 's', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "p"
+    }
+  }
+}

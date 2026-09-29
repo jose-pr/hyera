@@ -1,0 +1,334 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "e8720cdc14a38b96c7c8d0611f848c99574a11eac2be6d1f0caa2e307772daf6",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "p"
+    },
+    "oct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "oct"
+      ],
+      "status": "found",
+      "value": 493
+    },
+    "hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hex"
+      ],
+      "status": "found",
+      "value": 31
+    },
+    "under": {
+      "argv": [
+        "--strict",
+        "warning",
+        "under"
+      ],
+      "status": "found",
+      "value": 1000
+    },
+    "comma": {
+      "argv": [
+        "--strict",
+        "warning",
+        "comma"
+      ],
+      "status": "found",
+      "value": 1000
+    },
+    "plusnum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plusnum"
+      ],
+      "status": "found",
+      "value": 12
+    },
+    "negoct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "negoct"
+      ],
+      "status": "found",
+      "value": -31
+    },
+    "fdot": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fdot"
+      ],
+      "status": "found",
+      "value": 1.0
+    },
+    "fdotlead": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fdotlead"
+      ],
+      "status": "found",
+      "value": 0.5
+    },
+    "fexp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fexp"
+      ],
+      "status": "found",
+      "value": 1000.0
+    },
+    "funder": {
+      "argv": [
+        "--strict",
+        "warning",
+        "funder"
+      ],
+      "status": "found",
+      "value": 10.5
+    },
+    "plusinf": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plusinf"
+      ],
+      "status": "error",
+      "message": "Infinity not allowed in JSON"
+    },
+    "minusinf": {
+      "argv": [
+        "--strict",
+        "warning",
+        "minusinf"
+      ],
+      "status": "error",
+      "message": "-Infinity not allowed in JSON"
+    },
+    "notanumber": {
+      "argv": [
+        "--strict",
+        "warning",
+        "notanumber"
+      ],
+      "status": "error",
+      "message": "NaN not allowed in JSON"
+    },
+    "sexa": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sexa"
+      ],
+      "status": "found",
+      "value": 5400
+    },
+    "symv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symv"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'symv' failed: Value for key 'symv', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
+    },
+    "symq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symq"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'symq' failed: Value for key 'symq', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
+    },
+    "untag1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "untag1"
+      ],
+      "status": "found",
+      "value": "bar"
+    },
+    "untag2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "untag2"
+      ],
+      "status": "found",
+      "value": 12
+    },
+    "strtag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "strtag"
+      ],
+      "status": "found",
+      "value": "12"
+    },
+    "inttag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "inttag"
+      ],
+      "status": "found",
+      "value": 12
+    },
+    "floattag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "floattag"
+      ],
+      "status": "found",
+      "value": 1.0
+    },
+    "booltag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "booltag"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "nulltag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nulltag"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "valuetag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "valuetag"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "binary": {
+      "argv": [
+        "--strict",
+        "warning",
+        "binary"
+      ],
+      "status": "found",
+      "value": "hello"
+    },
+    "omap": {
+      "argv": [
+        "--strict",
+        "warning",
+        "omap"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1,
+        "y": 2
+      }
+    },
+    "pairs": {
+      "argv": [
+        "--strict",
+        "warning",
+        "pairs"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "x": 1
+        },
+        {
+          "x": 2
+        }
+      ]
+    },
+    "rubystring": {
+      "argv": [
+        "--strict",
+        "warning",
+        "rubystring"
+      ],
+      "status": "found",
+      "value": "foo"
+    },
+    "boolyes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "boolyes"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "booloff": {
+      "argv": [
+        "--strict",
+        "warning",
+        "booloff"
+      ],
+      "status": "found",
+      "value": false
+    },
+    "nullval": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nullval"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "lookalikeoct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookalikeoct"
+      ],
+      "status": "found",
+      "value": "0o17"
+    },
+    "lookalikefloat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookalikefloat"
+      ],
+      "status": "found",
+      "value": "1e3"
+    },
+    "strbool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "strbool"
+      ],
+      "status": "found",
+      "value": "true"
+    }
+  }
+}

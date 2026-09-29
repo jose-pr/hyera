@@ -1,0 +1,2 @@
+s: !ruby/symbol foo
+plain: p

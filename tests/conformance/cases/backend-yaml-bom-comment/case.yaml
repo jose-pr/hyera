@@ -1,0 +1,6 @@
+description: >-
+  A UTF-8 BOM followed by a comment line, then a `---` document marker,
+  loads (unlike a `---` directly after the BOM with no comment first).
+origin: critic-engineering/bomy1
+queries:
+  - key: k
