@@ -3,7 +3,9 @@
 ``pyera KEY --config hiera.yaml --scope environment=production``
 
 Designed for unattended use: no interactive prompts, deterministic output,
-and meaningful exit codes (0 found, 1 missing, 2 usage/config error).
+and meaningful exit codes: ``0`` found (or ``--default`` printed), ``1``
+key not found, ``2`` any other error (one stderr line; ``-v`` or
+``DUHO_TRACEBACK=1`` adds the traceback).
 """
 
 import json as _json
@@ -13,13 +15,14 @@ import typing as _ty
 
 try:
     import duho
+    import duho.logging as _duho_logging
 except ModuleNotFoundError as _e:
     if _e.name != "duho":
         raise
     duho = None
 
 from . import __version__
-from .exceptions import HieraError
+from .exceptions import HieraError, KeyNotFoundError, _one_line
 from .core import Hiera
 from ._types import Sensitive
 
@@ -73,6 +76,13 @@ def _plain(value):
     if isinstance(value, (list, tuple)):
         return [_plain(v) for v in value]
     return value
+
+
+def _describe(e) -> str:
+    """One-line description of an exception for the CLI's failure log."""
+    if isinstance(e, (HieraError, OSError)):
+        return _one_line(e)
+    return "{}: {}".format(type(e).__name__, _one_line(e))
 
 
 def _dump(value, fmt: str) -> str:
@@ -133,35 +143,49 @@ if duho is not None:
                 return {"strategy": "deep", "knockout_prefix": self.knockout_prefix}
             return strategy
 
+        def _fail(self, text) -> int:
+            """Log one ERROR-level line and return exit code 2.
+
+            The traceback is attached only when explicitly asked for
+            (``-v`` or ``DUHO_TRACEBACK=1``); an unattended caller gets a
+            single line, not a stack.
+            """
+            kw = {}
+            if self.verbose > 0 or _duho_logging.traceback_enabled():
+                kw = {"exc_info": True}
+            _LOGGER.error("%s", text, **kw)
+            return 2
+
         def __call__(self) -> int:
             try:
                 context = _parse_scope(self.scope)
             except _ScopeError as e:
                 _LOGGER.error("%s", e)
                 return 2
-            try:
-                hiera = Hiera(self.config, context=context)
-            except HieraError as e:
-                _LOGGER.error("%s", e)
-                return 2
-            except OSError as e:
-                _LOGGER.error("could not open config %s: %s", self.config, e)
-                return 2
 
             merge = self._merge_spec()
             try:
+                hiera = Hiera(self.config, context=context)
                 value = hiera.get(self.key, merge=merge, throw=True)
-            except KeyError:
+            except KeyNotFoundError:
                 if self.default is not None:
-                    print(_dump(self.default, self.output))
-                    return 0
-                _LOGGER.error("key not found: %s", self.key)
-                return 1
-            except HieraError as e:
-                _LOGGER.error("%s", e)
-                return 2
+                    value = self.default
+                else:
+                    _LOGGER.error("key not found: %s", self.key)
+                    return 1
+            except Exception as e:  # HieraError, OSError, anything unexpected
+                return self._fail(
+                    "Lookup of key '{}' failed: {}".format(self.key, _describe(e))
+                )
 
-            print(_dump(value, self.output))
+            try:
+                print(_dump(value, self.output))
+            except Exception as e:
+                return self._fail(
+                    "Cannot render the value of key '{}': {}".format(
+                        self.key, _describe(e)
+                    )
+                )
             return 0
 
 

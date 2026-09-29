@@ -223,9 +223,13 @@ re-exports it too).
   `-o yaml`/`json` (and raw for a dict/list) redact `Sensitive` values the
   same way raw text already does. Omitting `--merge` lets the data's
   `lookup_options` decide (else first-match-wins); an explicit `--merge`,
-  `first` included, always overrides `lookup_options`. Exit codes: `0` key
-  found, `1` key missing (and no `--default`), `2` usage/config error (bad
-  `--scope`, unreadable/invalid config, or a `HieraError`).
+  `first` included, always overrides `lookup_options`. Exit codes: `0`
+  found (or `--default` printed), `1` the key was not found (a
+  `KeyNotFoundError` and nothing else), `2` any other error. A `2` logs
+  exactly one `pyera`-logger ERROR line: `Lookup of key 'K' failed: …` for
+  a lookup failure (construction included), `Cannot render the value of
+  key 'K': …` if printing the found/default value itself fails. The
+  traceback is omitted unless `-v` or `DUHO_TRACEBACK=1` is set.
 - Env: `PYERA_MCP=stdio` runs the command as an MCP server over
   stdin/stdout (duho), exposing one tool, `pyera` (`Lookup`'s
   `_parsername_`, not its class name), whose arguments are the CLI fields

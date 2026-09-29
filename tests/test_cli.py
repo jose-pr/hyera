@@ -1,6 +1,7 @@
 """CLI behavior and exit codes (unattended-friendly)."""
 
 import json
+import logging
 import os
 import runpy
 import subprocess
@@ -11,7 +12,14 @@ import yaml
 
 duho = pytest.importorskip("duho")
 
+import pyera  # noqa: E402
 from pyera.cli import main  # noqa: E402
+
+
+def _error_records(caplog):
+    return [
+        r for r in caplog.records if r.name == "pyera" and r.levelno == logging.ERROR
+    ]
 
 
 @pytest.fixture
@@ -302,3 +310,154 @@ def test_module_entrypoint_smoke(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         runpy.run_module("pyera", run_name="__main__")
     assert exc.value.code == 0  # --help exits 0
+
+
+def test_config_error_exit_2_one_line(make_tree, monkeypatch, caplog):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+    root = make_tree(
+        "version: 5\n"
+        "defaults: {datadir: data, data_hash: yaml_data\n"
+        "hierarchy:\n"
+        "  - {name: c, path: common.yaml}\n",
+        raw=True,
+    )
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(["k", "-c", str(root / "hiera.yaml")])
+
+    assert rc == 2
+    records = _error_records(caplog)
+    assert len(records) == 1
+    message = records[0].getMessage()
+    assert message.startswith("Lookup of key 'k' failed: (")
+    assert "hiera.yaml" in message
+    assert "\n" not in message
+    assert records[0].exc_info is None
+
+
+def test_data_parse_error_exit_2_names_key_and_file(make_tree, monkeypatch, caplog):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "c", "path": "common.yaml"},
+                {"name": "o", "path": "other.yaml"},
+            ],
+        },
+        files={
+            "data/common.yaml": "good: yes\n",
+            "data/other.yaml": "k: [unclosed\nz: 2\n",
+        },
+    )
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(["good", "-c", str(root / "hiera.yaml")])
+
+    assert rc == 2
+    message = _error_records(caplog)[-1].getMessage()
+    assert "Lookup of key 'good' failed: Unable to parse (" in message
+    assert "other.yaml" in message
+
+
+def test_directory_config_exit_2(make_tree, monkeypatch, caplog):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+    root = make_tree(
+        {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
+        files={"data/one.yaml": "k: v\n"},
+    )
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(["k", "-c", str(root / "data")])
+
+    assert rc == 2
+    assert "Is a directory" in _error_records(caplog)[-1].getMessage()
+
+
+@pytest.mark.parametrize(
+    "exc_type", [RecursionError, TypeError, ValueError, AttributeError]
+)
+def test_unexpected_exception_exit_2(hiera_root, monkeypatch, caplog, exc_type):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+
+    def _raise(self, *a, **kw):
+        raise exc_type("boom")
+
+    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
+
+    assert rc == 2
+    records = _error_records(caplog)
+    assert len(records) == 1
+    assert records[0].getMessage() == "Lookup of key 'k' failed: {}: boom".format(
+        exc_type.__name__
+    )
+    assert records[0].exc_info is None
+
+
+def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+
+    def _raise(self, *a, **kw):
+        raise RecursionError("boom")
+
+    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(["k", "-c", str(hiera_root / "hiera.yaml"), "-v"])
+
+    assert rc == 2
+    assert _error_records(caplog)[-1].exc_info is not None
+
+
+def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+
+    def _raise_type_error(value, fmt):
+        raise TypeError("x")
+
+    monkeypatch.setattr("pyera.cli._dump", _raise_type_error)
+
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            [
+                "app::name",
+                "-c",
+                str(hiera_root / "hiera.yaml"),
+                "-s",
+                "environment=production",
+            ]
+        )
+
+    assert rc == 2
+    assert "Cannot render the value of key" in _error_records(caplog)[-1].getMessage()
+
+
+def test_plain_keyerror_is_not_a_miss(hiera_root, monkeypatch):
+    def _raise(self, *a, **kw):
+        raise KeyError("x")
+
+    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+
+    rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
+
+    assert rc == 2
+
+
+def test_recursive_data_exits_2_without_traceback(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
+        files={"data/one.yaml": "a: \"%{hiera('b')}\"\nb: \"%{hiera('a')}\"\n"},
+    )
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "pyera", "a", "-c", str(root / "hiera.yaml")],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert proc.returncode == 2
+    assert "Traceback" not in proc.stderr
+    assert len(proc.stderr.strip().splitlines()) == 1

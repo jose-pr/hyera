@@ -115,9 +115,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   resolved in sorted (deterministic) order.
 - Command-line interface `pyera KEY` (built on `duho`), with
   `--config`, repeatable `--scope key=value`, `--merge`, `--deep`,
-  `--output raw|json|yaml`, and `--default`. Exit codes: `0` found, `1`
-  missing, `2` usage/config error. Installed as the `pyera` console script and
-  runnable via `python -m pyera`.
+  `--output raw|json|yaml`, and `--default`. Exit codes: `0` found (or
+  `--default` printed), `1` missing, `2` any other error. Installed as the
+  `pyera` console script and runnable via `python -m pyera`.
 - Typed exception hierarchy: `HieraError` (base, `.path` names the file
   concerned) → `ConfigError` (invalid/missing `hiera.yaml`), `BackendError`
   (a data file could not be read or parsed, `.path` names it), and
@@ -184,6 +184,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `%{hiera(...)}`/`%{lookup(...)}` call embedded in a larger string are now
   stringified instead of raising; a single stand-alone call still preserves
   the resolved value's native type.
+- The CLI exits `2` with a one-line `Lookup of key 'K' failed: …` message
+  for every failure other than a missing key; several failures used to
+  print a traceback and exit `1`, the missing-key code (a plain `KeyError`
+  from a custom `.get()` override, for example, could be mistaken for a
+  miss). `-v` or `DUHO_TRACEBACK=1` adds the traceback.
 
 ### Changed
 
