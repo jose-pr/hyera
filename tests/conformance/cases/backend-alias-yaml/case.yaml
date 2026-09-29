@@ -1,0 +1,6 @@
+description: 'data_hash: yaml (the short alias) is not a Puppet function name; only
+  yaml_data is.'
+origin: spec-layers-backends/alias_yaml
+queries:
+- key: k
+  divergence: spec-layers-backends/non-puppet-data-hash-names

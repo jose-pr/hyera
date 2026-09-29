@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "ae7d9a4f3d7370f0c77b9909fee607424c59a824cb5d9123b40abae97a131b07",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Unable to find 'data_hash' function named 'yaml' (file: <case>/hiera.yaml)"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+description: >-
+  A hierarchy path with a non-ASCII (accented) directory component.
+origin: code-core/utf8
+queries:
+  - key: 'k'

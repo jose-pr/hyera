@@ -1,0 +1,6 @@
+description: >-
+  A higher-priority level's JSON data file is completely empty; the lower-priority level should still resolve.
+origin: spec-layers-backends/json_empty
+queries:
+  - key: 'k'
+  - key: 'n'

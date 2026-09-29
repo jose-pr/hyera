@@ -1,0 +1,8 @@
+description: A higher-priority level's JSON data file is a top-level array; the lower-priority
+  level should still resolve.
+origin: spec-layers-backends/json_array
+queries:
+- key: k
+  divergence: code-io-security/non-mapping-data-file-crashes
+- key: n
+  divergence: code-io-security/non-mapping-data-file-crashes

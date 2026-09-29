@@ -1,0 +1,6 @@
+description: A higher-priority level's data file is a bare YAML scalar, not a hash;
+  the lower-priority level should still resolve.
+origin: spec-layers-backends/nonhash_scalar
+queries:
+- key: k
+  divergence: code-io-security/non-mapping-data-file-crashes

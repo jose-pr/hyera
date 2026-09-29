@@ -1,0 +1,6 @@
+description: The only hierarchy level's data file is a bare YAML scalar, not a hash
+  (no fallback level exists).
+origin: code-core/scalarfile
+queries:
+- key: x
+  divergence: code-io-security/non-mapping-data-file-crashes

@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a652f33cf2840fc5be5da72698adf9080179cc4f1a53b836cc895469ea857d9b",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/data/bad.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": "fromcommon"
+    }
+  }
+}

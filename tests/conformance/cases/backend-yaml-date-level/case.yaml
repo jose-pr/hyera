@@ -1,0 +1,10 @@
+description: A higher-priority level's YAML data file has a bare date scalar alongside
+  an ordinary key.
+origin: spec-layers-backends/yamldate
+queries:
+- key: d
+  divergence: code-io-security/yaml-type-construction-diverges
+- key: plain
+  divergence: code-io-security/yaml-type-construction-diverges
+- key: other
+  divergence: code-io-security/yaml-type-construction-diverges
