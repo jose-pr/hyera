@@ -1,7 +1,11 @@
 description: >-
-  A HOCON substitution referencing an environment variable. Only `plain` is
-  harvested: `home` resolves to the recording host's real $HOME path, which
-  record.py's leak guard refuses to write into a golden.
+  A sibling key alongside a HOCON environment-variable substitution. The
+  substitution itself (`home = ${HOME}`) is not harvested at all -- not
+  just the query dropped, the line removed from the data file too -- for
+  two reasons: it resolves to the recording host's real $HOME path (which
+  record.py's leak guard refuses to write into a golden), and $HOME is not
+  reliably set on every CI runner (a Windows leg failed to parse the whole
+  file when it wasn't, even for this unrelated `plain` key).
 origin: code-io-security/othercases/hocon_env
 requires: [pyhocon]
 queries:

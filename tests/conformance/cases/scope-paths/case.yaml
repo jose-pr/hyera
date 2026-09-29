@@ -9,6 +9,10 @@ queries:
 - key: k_virt_top
   divergence: spec-context-facts/path-missing-var-skips-level
 - key: k_virtual
+  divergence:
+    id: spec-interpolation/ruby-to_s-formatting
+    'on':
+    - linux
 - key: k_count
 - key: k_role_web
   divergence: spec-context-facts/path-missing-var-skips-level
