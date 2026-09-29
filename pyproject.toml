@@ -64,6 +64,7 @@ exclude = ["/.*", "*.local.*"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+filterwarnings = ["error"]
 
 # Pinned to the project's minimum supported Python so black never emits
 # syntax the floor cannot parse.
