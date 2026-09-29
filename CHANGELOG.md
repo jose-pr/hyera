@@ -85,6 +85,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Documentation site at <https://jose-pr.github.io/pyera/>: a getting-started
+  page, an API reference generated from the docstrings of `pyera`,
+  `pyera.backends` and `pyera.cli`, and this changelog. The package metadata
+  links it as `Documentation`; the `docs` extra installs its build tools.
 - `PYERA_MCP=stdio pyera` serves the command over MCP (stdio): one tool,
   `pyera`, taking the command-line fields as arguments and returning what
   the command prints. Any other `PYERA_MCP` value exits `2`.
