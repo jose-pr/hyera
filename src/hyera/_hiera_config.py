@@ -675,63 +675,118 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     return source, base
 
 
-def _build_hierarchies(base, backends):
+def _function_of(entry: dict, defaults: dict):
+    """Puppet's function-kind resolution (``hiera_config.rb:656-662``):
+    returns ``(kind, name)``. The entry's own function key wins; ``defaults``
+    is consulted only when the entry has none, and then only for
+    ``_FUNCTION_KEYS`` (``defaults`` never carries ``v4_data_hash``).
+    Unreachable with a ``None`` result once :func:`_validate_v5` has run
+    (it guarantees exactly one function key, on the entry or in
+    ``defaults``); kept total rather than assuming that here too.
+    """
+    for key in _ALL_FUNCTION_KEYS:
+        if key in entry:
+            return key, entry[key]
+    for key in _FUNCTION_KEYS:
+        if key in defaults:
+            return key, defaults[key]
+    return None, None
+
+
+def _build_hierarchies(base, backends, source: "_ConfigSource"):
     """Build ``hierarchy`` and ``default_hierarchy`` from base config.
 
     Returns ``(hierarchy_levels, default_hierarchy_levels)``. Assumes
-    :func:`_select_version` and :func:`_fill_v5_defaults` already ran, so
-    ``defaults``/``hierarchy`` are present.
+    :func:`_select_version`, :func:`_fill_v5_defaults` and
+    :func:`_validate_v5` already ran, so ``defaults``/``hierarchy`` are
+    present and every entry has exactly one function key (its own, or one
+    from ``defaults``), at most one location key, and well-typed values.
     """
     hierarchy = base.get("hierarchy")
     defaults = base.get("defaults") or {}
 
-    backend_levels = _build_levels(hierarchy, defaults, backends)
+    backend_levels = _build_levels(hierarchy, defaults, backends, source)
     default_levels = _build_levels(
-        base.get("default_hierarchy") or [], defaults, backends
+        base.get("default_hierarchy") or [], defaults, backends, source
     )
 
     return backend_levels, default_levels
 
 
-def _build_levels(hierarchy, defaults, backends):
+def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
     """Build HieraLevel instances from hierarchy configuration.
 
+    Each entry's conf is built explicitly -- ``name``, its one location
+    key (if any), ``datadir``, ``options`` (the entry's own, else
+    ``defaults``'s, never merged -- ``hiera_config.rb:690``, Design Q19)
+    and, for a ``data_hash`` level, ``data_hash: <name>`` -- rather than
+    merging every ``defaults`` key in wholesale.
+
     ``backends`` is an allow-list of :class:`~hyera.backends.Backend`
-    subclasses: ``data_hash`` names are resolved against the
-    process-global registry (:meth:`Backend.find`), then checked against
-    this allow-list, so a name registered by a third party but not passed
-    to ``Hiera(backends=...)`` is refused exactly like an unknown one.
+    subclasses: a ``data_hash``/``lookup_key``/``data_dig`` name is
+    resolved against the process-global registry (:meth:`Backend.find`,
+    the one namespace all three share), then checked against this
+    allow-list, so a name registered by a third party but not passed to
+    ``Hiera(backends=...)`` is refused exactly like an unknown one.
     """
     levels: "list[HieraLevel]" = []
     for level in hierarchy:
-        conf = {**level}
-        for k, v in defaults.items():
-            conf.setdefault(k, v)
-        # Puppet's datadir fallback (`hiera_config.rb:623,664`): the
-        # entry's own `datadir` wins, else `defaults['datadir']`, else the
-        # literal string `'data'` -- never the old Hiera-3 absolute path.
-        conf["datadir"] = level.get("datadir") or defaults.get("datadir") or "data"
-        data_hash = conf.get("data_hash")
-        if data_hash is None:
-            raise ConfigError(
-                "Hierarchy level {!r} is missing a 'data_hash' backend "
-                "(only file-based data_hash backends are supported)".format(
-                    conf.get("name", conf)
-                )
+        name = level.get("name")
+        kind, func_name = _function_of(level, defaults)
+        datadir = level.get("datadir") or defaults.get("datadir") or "data"
+        options = level.get("options", defaults.get("options"))
+
+        conf = {"name": name, "datadir": datadir}
+        for loc_key in _LOCATION_KEYS:
+            if loc_key in level:
+                conf[loc_key] = level[loc_key]
+        if options is not None:
+            conf["options"] = options
+
+        if kind == "data_hash":
+            backend_cls = Backend.find(func_name, kind="function")
+            if backend_cls is None or backend_cls not in backends:
+                allowed_names = [
+                    n
+                    for n in Backend.names("function")
+                    if Backend.find(n, "function") in backends
+                ]
+                raise _config_error(
+                    source,
+                    "Unable to find 'data_hash' function named '{}'; known: "
+                    "{}".format(func_name, ", ".join(allowed_names)),
+                ) from None
+            conf["data_hash"] = func_name
+            backend = Backend.new(func_name, conf, kind="function")
+        elif kind in ("lookup_key", "data_dig"):
+            backend_cls = Backend.find(func_name, kind="function")
+            if backend_cls is None or backend_cls not in backends:
+                raise _config_error(
+                    source,
+                    "Unable to find '{}' function named '{}'".format(kind, func_name),
+                ) from None
+            raise _config_error(
+                source,
+                "'{}' hierarchy entries are not supported yet (hierarchy "
+                "'{}', function '{}')".format(kind, name, func_name),
             )
-        backend_cls = Backend.find(data_hash, kind="function")
-        if backend_cls is None or backend_cls not in backends:
-            allowed_names = [
-                name
-                for name in Backend.names("function")
-                if Backend.find(name, "function") in backends
-            ]
-            raise ConfigError(
-                "Unable to find 'data_hash' function named '{}'; known: {}".format(
-                    data_hash, ", ".join(allowed_names)
-                )
+        elif kind == "hiera3_backend":
+            raise _config_error(
+                source,
+                "'hiera3_backend' hierarchy entries are not supported "
+                "(hierarchy '{}', backend '{}')".format(name, func_name),
+            )
+        elif kind == "v4_data_hash":
+            raise _config_error(
+                source,
+                "Unable to find 'v4_data_hash' function named '{}'".format(func_name),
             ) from None
-        backend = Backend.new(data_hash, conf, kind="function")
+        else:
+            # Unreachable: _validate_v5 guarantees a function key exists.
+            raise _config_error(
+                source, "Hierarchy level {!r} is missing a function key".format(name)
+            )
+
         backend.datadir = _normalize_source(backend.datadir)
         levels.append(HieraLevel.new(conf, backend))
     return levels

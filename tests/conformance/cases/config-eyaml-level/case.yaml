@@ -7,8 +7,6 @@ queries:
   - key: k
     error_class: ConfigError
     error_match: 'eyaml_lookup_key'
-    divergence: spec-layers-backends/lookup-key-level-read-as-data-hash
   - key: plain
     error_class: ConfigError
     error_match: 'eyaml_lookup_key'
-    divergence: spec-layers-backends/lookup-key-level-read-as-data-hash

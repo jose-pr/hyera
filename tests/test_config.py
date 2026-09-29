@@ -302,3 +302,56 @@ def test_hiera3_backend_replaced_by_data_hash():
     assert 'Use "data_hash: json_data" instead of "hiera3_backend: json"' in str(
         exc.value
     )
+
+
+def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
+    # A `lookup_key` entry must never fall back to `defaults`' `data_hash`
+    # and read its file as plain YAML -- with real eyaml data that would
+    # return ciphertext as the value.
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "yaml_data"},
+            "hierarchy": [
+                {
+                    "name": "secret",
+                    "lookup_key": "eyaml_lookup_key",
+                    "path": "secret.yaml",
+                }
+            ],
+        },
+        files={"data/secret.yaml": "plain: fromsecrets\n"},
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="Unable to find 'lookup_key' function named 'eyaml_lookup_key'",
+    ):
+        Hiera(str(root / "hiera.yaml"))
+
+
+@pytest.mark.parametrize(
+    "entry, expected",
+    [
+        (
+            {"lookup_key": "yaml_data"},
+            "'lookup_key' hierarchy entries are not supported yet",
+        ),
+        (
+            {"hiera3_backend": "foo"},
+            "'hiera3_backend' hierarchy entries are not supported",
+        ),
+        ({"v4_data_hash": "x"}, "Unable to find 'v4_data_hash' function named 'x'"),
+    ],
+    ids=["lookup-key-registered", "hiera3-backend-unmapped", "v4-data-hash"],
+)
+def test_function_kind_errors(entry, expected):
+    cfg = {
+        "version": 5,
+        "defaults": {"datadir": "data"},
+        "hierarchy": [{"name": "one", "path": "one.yaml", **entry}],
+    }
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert expected in str(exc.value)

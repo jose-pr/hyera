@@ -172,7 +172,7 @@ class Hiera(Interpolation):
 
         try:
             self.hierarchy, self.default_hierarchy = _build_hierarchies(
-                self.base, self.backends
+                self.base, self.backends, source
             )
         except HieraError as e:  # keep the class and text, add the file
             e.path = e.path or source.path

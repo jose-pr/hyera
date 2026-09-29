@@ -6,4 +6,3 @@ queries:
     note: Puppet 8.10 probe
     error_class: ConfigError
     error_match: "Unable to find 'data_dig' function named 'nosuch_fn'"
-    divergence: spec-layers-backends/lookup-key-level-read-as-data-hash
