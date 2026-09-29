@@ -101,65 +101,123 @@ private engine internals with no stability contract.
 
 ## Backends (`backends.py`)
 
-- **`default_backends() -> list[type[Backend]]`** — `[YAMLBackend,
-  SopsYAMLBackend, JSONBackend]`, plus `HOCONBackend` if `pyhocon` is
-  importable.
-- **`Backend(conf=None)`** — base class; subclasses implement `.load(data)`
-  (and optionally override `.read_file(path) -> bytes`). `NAMES: tuple[str,
-  ...]` — the `data_hash` value(s) it answers to. `.datadir` reads `conf["datadir"]`
-  or `conf["data_dir"]` (Hiera-5 spelling), default `""`.
-- **`YAMLBackend`** — `NAMES = ("yaml_data", "yaml")`. Parses with
-  `yaml.SafeLoader` (data is untrusted config) into `LookupDict` mappings.
-  `.load_ordered(stream, Loader=yaml.SafeLoader, object_pairs_hook=LookupDict)`
-  (staticmethod) does the actual parse; raises `BackendError` on a YAML
-  error, one line, Psych's shape (`<problem> <context> at line L column C`,
-  1-based; either part may be absent) — never a source snippet or the
-  underlying value, and with no exception chain (`__cause__`/`__context__`
-  both `None`).
-- **`SopsYAMLBackend(YAMLBackend)`** — `NAMES = ("yaml.enc", "sops")`.
-  Shells out to the `sops` CLI to decrypt before YAML-parsing. Hardened for
-  unattended use: `SOPS_TIMEOUT` (module-level, default `30` seconds) bounds
-  the subprocess; a missing `sops` binary or non-zero exit raises
-  `BackendError` with captured stderr rather than hanging or raising a raw
-  `OSError`. The resolved `sops` is invoked as
-  `[<abs sops path>, "--input-type=<fmt>", "--output-type=<fmt>", "-d",
-  "--", <abs data path>]` — the data path is always absolute and after a
-  literal `--`, so a path or scope value starting with `-` can never be
-  parsed as a `sops` option; a `sops.bat`/`sops.cmd` shim is refused
-  (`cmd.exe` re-parses a batch file's own argument line). `.load` is
-  inherited from `YAMLBackend`: a decrypted file that fails to parse raises
-  the same one-line, chain-free `BackendError` — never the decrypted
-  plaintext.
-- **`JSONBackend`** — `NAMES = ("json_data", "json")`. `json.loads` with
-  `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure,
-  one line: `<msg> at line L column C` (`json.JSONDecodeError`'s own
-  fields), or `str(e)` for a `UnicodeDecodeError`. Both chain `from e`.
-- **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
-  optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
-  `BackendError` naming the extra if it's not installed, or if an installed
-  `pyhocon` fails to import for any other reason (e.g. against a too-new
-  stdlib). Invalid UTF-8, and any pyhocon parse failure, raise `BackendError`
-  with a one-line message (`str(e)`, whitespace-collapsed) chained `from e`,
-  rather than a raw `UnicodeDecodeError` or pyhocon exception. `include` directives are sanitized before pyhocon
-  ever parses the text, so pyhocon's own include machinery (file reads
-  relative to the process cwd, `http(s)`/`file` URL fetches) never runs: a
-  plain `include "..."` contributes nothing, matching Puppet; every other
-  form — `file(...)`, `url(...)`, `classpath(...)`, `required(...)`,
-  `package(...)`, any other `name(...)`, a case-mismatched keyword
-  (`INCLUDE ...`), a bare `include` with nothing valid after it, or an
-  `include` directive in value position — raises `BackendError` instead
-  (two of these, `file()` and value position, differ from what Puppet
-  itself does; see the gotcha below). `${VAR}` substitutions fall back to
-  environment variables, as in Puppet. As a fail-closed backstop, pyhocon's
-  own include-resolving methods (`parse_file`/`parse_URL`/
-  `resolve_package_path`) also raise for the duration of `.load()`, so an
-  undiscovered gap in the text scanner still cannot read a file or reach
-  the network; they behave normally for any other pyhocon use in the same
-  process, before or after.
-- **`has_hocon() -> bool`** — `True` iff `pyhocon` imports without error; any
-  import-time exception (not just `ImportError`) is caught, logged at
-  debug, and returns `False` — an installed but broken `pyhocon` leaves
-  `HOCONBackend` unregistered instead of breaking every `Hiera()`.
+A self-registering registry: every format or provider
+is a `Backend` subclass, found by name rather than passed around directly.
+
+- **`Backend.KINDS = ("function", "v3", "format", "render")`** — four
+  separate name namespaces. `function` is the Hiera 5 `data_hash`/
+  `lookup_key`/`data_dig` value in a hierarchy level (Puppet function
+  names only); `v3` is empty for the built-ins (the v3/v4 config
+  reader maps its own names); `format` is a plain serialization name;
+  `render` is a CLI/MCP output-format name.
+- **`Backend.NAMES: dict`** — `{kind: (name | NamePattern, ...)}`, declared
+  on the defining class only (never inherited/merged); read once at
+  subclass-definition time. **`NamePattern(display, regex)`** registers by
+  regex instead of an exact string; `regex.fullmatch(name)`'s named groups
+  become constructor keywords (used by the `sops_<format>` pattern).
+  **`Backend.EXTENSIONS: tuple`** — file extensions (with the dot) this
+  format answers to, used by `.for_path`.
+- **`Backend(conf=None, *, strict=None)`** — `.conf`; `.datadir` reads
+  `conf["datadir"]` or `conf["data_dir"]` (Hiera-5 spelling), default `""`
+  (`config_loading_and_validation` removes this fallback later). `.strict`
+  (read-only property) is the constructor's `strict=` when given, else the
+  call-time default (`"warning"` until `interpolation_engine` points
+  it at a `Scope.strict`-backed `ContextVar`) — read at call time, never
+  cached, since one backend instance is shared across scopes. `.name`
+  defaults to the class's first registered name; `Backend.new` sets it to
+  whatever name was actually asked for.
+- **Lookup** — `Backend.find(name, kind="function") -> type | None` (exact
+  names win, then patterns in registration order); `.get(name, kind) ->
+  type` (raises `BackendError` for an unknown name, and via
+  `.check_available()` for a registered-but-unusable one, e.g. missing
+  `pyhocon`); `.new(name, conf=None, *, kind="function", strict=None) ->
+  Backend` (instantiates, passing any `NamePattern` captures as keywords);
+  `.names(kind="function") -> list[str]` (exact names, then pattern
+  displays); `.for_path(path) -> type | None` (`format`-kind class with the
+  longest case-sensitive `EXTENSIONS` suffix match); `.implements(op) ->
+  bool` (derived from method overrides, never declared twice).
+- **Serialization (json-module shaped)** — `.loads(text)`/`.dumps(obj,
+  **kw)` (subclasses implement; base raises `NotImplementedError`);
+  `.load(source)` (path-like or a file object: reads the bytes, decodes
+  strict UTF-8 — `context.rb:53` — then calls `.loads`; a decode error or a
+  `.loads` `BackendError` becomes `BackendError("Unable to parse (<path>):
+  <problem>", path=...)`, raised outside the `except` block so no
+  `__cause__`/`__context__` holds the original); `.dump(obj, fp, **kw)`
+  writes `.dumps(...)`.
+- **Hiera 5 provider hooks** — `.data_hash(path, options)` (base:
+  `._as_data_hash(self.load(path), path)`); `._as_data_hash(parsed, path)`
+  adapts a parsed document into hiera data (base: identity; `YAMLBackend`
+  overrides it for the non-Hash rule). `.lookup_key(key, options, context)`
+  / `.data_dig(key_segments, options, context)` raise `NotImplementedError`
+  in the base (no built-in implements them yet;
+  `function_providers_and_eyaml` adds one).
+- **`default_backends() -> list[type[Backend]]`** — the distinct classes
+  registered in the `function` namespace, in definition order:
+  `[YAMLBackend, JSONBackend, HOCONBackend, SopsBackend]`.
+  `Hiera(backends=...)` takes this same kind of list as an allow-list; a
+  `data_hash` name whose registered class is not in it is refused exactly
+  like an unknown name.
+- **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
+  ("yaml",), "render": ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`.
+  `.loads` parses with `yaml.SafeLoader` (data is untrusted config) into a
+  plain `dict`/`list` (no `LookupDict` here; the engine adapts);
+  raises `BackendError` on a YAML error, one line, Psych's shape
+  (`<problem> <context> at line L column C`, 1-based; either part may be
+  absent) — never a source snippet or the underlying value, with no
+  exception chain. `._as_data_hash` ports `yaml_data.rb:27-35`: a `dict`
+  passes through; `None`/`False` always warn-and-empty (`{}`, even under
+  `strict="error"`); any other non-dict value raises `BackendError` under
+  `strict="error"`, else warns-and-empties. `.dumps` is
+  `yaml.safe_dump(sort_keys=False, allow_unicode=True,
+  default_flow_style=False)`.
+- **`JSONBackend`** — `NAMES = {"function": ("json_data",), "format":
+  ("json",), "render": ("json",)}`, `EXTENSIONS = (".json",)`. `.loads` is
+  `json.loads`; raises `BackendError` on decode failure, one line: `<msg>
+  at line L column C` (`json.JSONDecodeError`'s own fields), no exception
+  chain. `.dumps` is `json.dumps(ensure_ascii=False)`.
+- **`HOCONBackend`** — `NAMES = {"function": ("hocon_data",), "format":
+  ("hocon",)}`, `EXTENSIONS = (".conf",)`. Always registered (Design Q5 of
+  `backend_registry_and_data_loading/registry`): a missing/broken `pyhocon`
+  fails at `.check_available()` (backend/level construction, so a
+  `hocon_data` hierarchy level fails to build) *and* in `.loads`, both
+  naming the `pyera[hocon]` extra, rather than silently vanishing from
+  `default_backends()`. `has_hocon() -> bool` — `True` iff `pyhocon`
+  imports without error; any import-time exception (not just
+  `ImportError`) is caught and logged at debug. `.loads` returns plain
+  `dict`/`list` (`ConfigTree`/`ConfigList` converted recursively).
+  Invalid UTF-8 (handled by the base `.load`), and any pyhocon parse
+  failure, raise `BackendError` with a one-line message (`str(e)`,
+  whitespace-collapsed), no exception chain. `include` directives are
+  sanitized before pyhocon ever parses the text, so pyhocon's own include
+  machinery (file reads relative to the process cwd, `http(s)`/`file` URL
+  fetches) never runs: a plain `include "..."` contributes nothing,
+  matching Puppet; every other form — `file(...)`, `url(...)`,
+  `classpath(...)`, `required(...)`, `package(...)`, any other `name(...)`,
+  a case-mismatched keyword (`INCLUDE ...`), a bare `include` with nothing
+  valid after it, or an `include` directive in value position — raises
+  `BackendError` instead (two of these, `file()` and value position,
+  differ from what Puppet itself does; see the gotcha below). `${VAR}`
+  substitutions fall back to environment variables, as in Puppet. As a
+  fail-closed backstop, pyhocon's own include-resolving methods
+  (`parse_file`/`parse_URL`/`resolve_package_path`) also raise for the
+  duration of `.loads()`, so an undiscovered gap in the text scanner still
+  cannot read a file or reach the network; they behave normally for any
+  other pyhocon use in the same process, before or after.
+- **`SopsBackend`** — `NAMES = {"function": ("sops_data",)}`. Not a
+  `YAMLBackend` subclass. `.data_hash` shells out to the `sops` CLI to
+  decrypt, then parses the result as YAML (`sops_formats` generalizes this
+  to JSON/INI/dotenv and the `sops`/`sops_<format>` names).
+  Hardened for unattended use: `SOPS_TIMEOUT` (module-level, default `30`
+  seconds) bounds the subprocess; a missing `sops` binary or non-zero exit
+  raises `BackendError` with captured stderr rather than hanging or raising
+  a raw `OSError`. The resolved `sops` is invoked as `[<abs sops path>,
+  "--input-type=<fmt>", "--output-type=<fmt>", "-d", "--", <abs data
+  path>]` — the data path is always absolute and after a literal `--`, so a
+  path or scope value starting with `-` can never be parsed as a `sops`
+  option; a `sops.bat`/`sops.cmd` shim is refused (`cmd.exe` re-parses a
+  batch file's own argument line). A decrypted file that fails to parse
+  raises a one-line, chain-free `BackendError("Unable to parse (<path>):
+  <problem>", path=...)` — never the decrypted plaintext.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change

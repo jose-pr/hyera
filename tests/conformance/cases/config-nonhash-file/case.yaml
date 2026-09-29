@@ -1,6 +1,5 @@
-description: >-
-  A data file that parses to a YAML list (not a hash) is a Puppet config error at lookup time; ours raises a raw AttributeError.
+description: A data file that parses to a YAML list (not a hash) is a Puppet config
+  error at lookup time; ours raises a raw AttributeError.
 origin: spec-config/cases/nonhash_file
 queries:
-  - key: k
-    divergence: code-core/config-validation-raw-errors
+- key: k

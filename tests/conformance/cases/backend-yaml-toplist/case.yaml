@@ -2,6 +2,4 @@ description: A data file whose top-level YAML value is a list, not a hash.
 origin: code-io-security/yamlcases/toplist
 queries:
 - key: plain
-  divergence: code-io-security/non-mapping-data-file-crashes
 - key: fromfirst
-  divergence: code-io-security/non-mapping-data-file-crashes

@@ -2,6 +2,4 @@ description: A JSON data file whose top-level value is null.
 origin: code-io-security/othercases/json_topnull
 queries:
 - key: plain
-  divergence: code-io-security/non-mapping-data-file-crashes
 - key: fromfirst
-  divergence: code-io-security/non-mapping-data-file-crashes

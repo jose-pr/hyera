@@ -3,4 +3,3 @@ description: A higher-priority level's data file is a YAML list, not a hash; the
 origin: spec-layers-backends/nonhash_list
 queries:
 - key: k
-  divergence: code-io-security/non-mapping-data-file-crashes

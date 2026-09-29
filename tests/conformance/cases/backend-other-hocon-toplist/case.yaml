@@ -4,6 +4,4 @@ requires:
 - pyhocon
 queries:
 - key: plain
-  divergence: code-io-security/non-mapping-data-file-crashes
 - key: fromfirst
-  divergence: code-io-security/non-mapping-data-file-crashes

@@ -1,4 +1,4 @@
-"""``SopsYAMLBackend`` argv safety and plaintext-free parse errors.
+"""``SopsBackend`` argv safety and plaintext-free parse errors.
 
 ``tests/test_backends.py`` keeps the pre-existing failure-path tests
 (missing binary, non-zero exit, timeout); this file covers the success
@@ -13,8 +13,8 @@ import subprocess
 
 import pytest
 
-from pyera import Hiera
-from pyera.backends import SOPS_TIMEOUT, BackendError, SopsYAMLBackend
+from pyera import ConfigError, Hiera
+from pyera.backends import SOPS_TIMEOUT, BackendError, SopsBackend
 
 
 def _install_recorder(
@@ -35,12 +35,22 @@ def _install_recorder(
     return calls, which_path
 
 
+def test_data_hash_sops_not_registered(make_tree):
+    # A later change adds the `sops` name; until
+    # then it is simply unknown, exactly like any other unregistered name.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "secret.yaml", "data_hash": "sops"}]},
+    )
+    with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
+        Hiera(str(root / "hiera.yaml"))
+
+
 def test_sops_success_argv_and_value(monkeypatch, tmp_path):
     calls, which_path = _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
-    backend = SopsYAMLBackend({})
+    backend = SopsBackend({})
     secret = tmp_path / "secret.yaml"
 
-    data = backend.read_file(secret)
+    result = backend.data_hash(secret, {})
 
     assert len(calls) == 1
     args, kwargs = calls[0]
@@ -54,7 +64,7 @@ def test_sops_success_argv_and_value(monkeypatch, tmp_path):
     ]
     assert kwargs["timeout"] == SOPS_TIMEOUT
     assert not kwargs.get("shell")
-    assert backend.load(data) == {"k": "v"}
+    assert result == {"k": "v"}
 
 
 def test_sops_end_to_end_lookup(monkeypatch, tmp_path, make_tree):
@@ -63,7 +73,7 @@ def test_sops_end_to_end_lookup(monkeypatch, tmp_path, make_tree):
     # mocked -- but the level's file must exist for it to be considered.
     root = make_tree(
         {
-            "defaults": {"data_hash": "sops"},
+            "defaults": {"data_hash": "sops_data"},
             "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
         },
         files={"data/secret.yaml": b""},
@@ -77,7 +87,7 @@ def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     calls, _which_path = _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
     make_tree(
         {
-            "defaults": {"data_hash": "sops"},
+            "defaults": {"data_hash": "sops_data"},
             "hierarchy": [{"name": "node", "path": "%{node}.yaml"}],
         },
         files={"data/--output=pwned.yaml": b""},
@@ -107,7 +117,7 @@ def test_sops_refuses_relative_which_result(monkeypatch, tmp_path):
     )
 
     with pytest.raises(BackendError, match="relative"):
-        SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
     assert not called
 
@@ -120,7 +130,7 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     )
 
     with pytest.raises(BackendError, match="batch"):
-        SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
     assert not called
 
@@ -134,15 +144,16 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     ],
     ids=["undefined-alias", "unknown-tag", "duplicate-anchor"],
 )
-def test_sops_parse_error_strips_quoted_tokens(bad):
+def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     # These three PyYAML error shapes quote the offending scalar verbatim in
     # ``context``/``problem`` (an undefined alias name, an unknown tag, or a
     # duplicate anchor name) -- exactly the token an attacker-controlled or
     # merely malformed decrypted value could carry.
-    backend = SopsYAMLBackend({})
+    _install_recorder(monkeypatch, tmp_path, stdout=bad)
+    backend = SopsBackend({})
 
     with pytest.raises(BackendError) as excinfo:
-        backend.load(bad)
+        backend.data_hash(tmp_path / "secret.yaml", {})
 
     e = excinfo.value
     assert "HUNTER2" not in str(e)
@@ -170,7 +181,7 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
     config.write_text(
         "version: 5\n"
         "defaults:\n"
-        "  data_hash: sops\n"
+        "  data_hash: sops_data\n"
         "  data_dir: data\n"
         "hierarchy:\n"
         "  - name: secret\n"
@@ -207,26 +218,28 @@ def test_sops_timeout_chain_free(monkeypatch, tmp_path):
     monkeypatch.setattr("pyera.backends.subprocess.run", _timeout)
 
     with pytest.raises(BackendError) as excinfo:
-        SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__suppress_context__ is True
 
 
-def test_sops_parse_error_has_no_plaintext():
-    backend = SopsYAMLBackend({})
+def test_sops_parse_error_has_no_plaintext(monkeypatch, tmp_path):
     bad = b'db_user: admin\ndb_password: "hunter2-SECRET\n'
+    _install_recorder(monkeypatch, tmp_path, stdout=bad)
+    backend = SopsBackend({})
 
     with pytest.raises(BackendError) as excinfo:
-        backend.load(bad)
+        backend.data_hash(tmp_path / "secret.yaml", {})
 
     e = excinfo.value
     assert "hunter2-SECRET" not in str(e)
     assert "hunter2-SECRET" not in repr(e)
     assert e.__cause__ is None
     assert e.__context__ is None
-    assert (
-        str(e) == "found unexpected end of stream while scanning a quoted scalar "
+    assert str(e).startswith("Unable to parse (")
+    assert str(e).endswith(
+        "found unexpected end of stream while scanning a quoted scalar "
         "at line 2 column 14"
     )
 
@@ -238,7 +251,7 @@ def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
     root = make_tree(
         {
-            "defaults": {"data_hash": "sops"},
+            "defaults": {"data_hash": "sops_data"},
             "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
         },
         files={"data/secret.yaml": b""},
@@ -268,7 +281,7 @@ def test_sops_parse_error_plaintext_absent_from_cli(
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
     root = make_tree(
         {
-            "defaults": {"data_hash": "sops"},
+            "defaults": {"data_hash": "sops_data"},
             "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
         },
         files={"data/secret.yaml": b""},

@@ -2,4 +2,3 @@ description: A UTF-8 BOM before JSON content.
 origin: code-io-security/othercases/json_bom
 queries:
 - key: plain
-  divergence: critic-puppet-coverage/data-file-encoding-lenient

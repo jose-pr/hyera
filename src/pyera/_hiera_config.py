@@ -121,13 +121,13 @@ def _read_base_config(base_config, base_path):
                 path=path,
             ) from e
         try:
-            base = YAMLBackend.load_ordered(raw)
+            base = YAMLBackend().loads(raw)
         except BackendError as e:
             raise ConfigError("({}): {}".format(origin, e), path=path) from e
     else:
         base_path = Path(os.getcwd() if base_path is None else base_path)
         try:
-            base = YAMLBackend.load_ordered(base_config)
+            base = YAMLBackend().loads(base_config)
         except BackendError as e:
             raise ConfigError("({}): {}".format(origin, e), path=path) from e
 
@@ -171,7 +171,14 @@ def _build_hierarchies(base, backends):
 
 
 def _build_levels(hierarchy, defaults, backends):
-    """Build HieraLevel instances from hierarchy configuration."""
+    """Build HieraLevel instances from hierarchy configuration.
+
+    ``backends`` is an allow-list of :class:`~pyera.backends.Backend`
+    subclasses: ``data_hash`` names are resolved against the
+    process-global registry (:meth:`Backend.find`), then checked against
+    this allow-list, so a name registered by a third party but not passed
+    to ``Hiera(backends=...)`` is refused exactly like an unknown one.
+    """
     levels: "list[HieraLevel]" = []
     for level in hierarchy:
         conf = {**level}
@@ -185,17 +192,21 @@ def _build_levels(hierarchy, defaults, backends):
                     conf.get("name", conf)
                 )
             )
-        try:
-            backend_cls = backends[data_hash]
-        except KeyError:
+        backend_cls = Backend.find(data_hash, kind="function")
+        if backend_cls is None or backend_cls not in backends:
+            allowed_names = [
+                name
+                for name in Backend.names("function")
+                if Backend.find(name, "function") in backends
+            ]
             raise ConfigError(
-                "Unknown backend {!r}; known: {}".format(
-                    data_hash, ", ".join(sorted(backends))
+                "Unable to find 'data_hash' function named '{}'; known: {}".format(
+                    data_hash, ", ".join(allowed_names)
                 )
             ) from None
         # Normalize datadir spelling for the backend.
         conf.setdefault("datadir", conf.get("data_dir"))
-        backend = backend_cls(conf)
+        backend = Backend.new(data_hash, conf, kind="function")
         backend.datadir = _normalize_source(backend.datadir)
         levels.append(HieraLevel.new(conf, backend))
     return levels

@@ -259,3 +259,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Unable to parse (<path>): <problem> at line L column C` for data files
   and `(<path>): <problem> at line L column C` for `hiera.yaml`, never a
   multi-line snippet or the underlying value.
+- Backends register by subclassing `Backend` and declaring `NAMES` (a
+  mapping of namespace — `function`/`v3`/`format`/`render` — to the names
+  it answers to in that namespace), and are found by
+  name: `Backend.find`/`.get`/`.new`/`.names`/`.for_path`. `load(bytes)`,
+  `.read_file` and `YAMLBackend.load_ordered` are gone — use
+  `.loads(text)`/`.load(path_or_file)`, which now decode data files as
+  strict UTF-8 (as Puppet does) instead of relying on PyYAML's/`json`'s own
+  detection. `SopsYAMLBackend` is renamed `SopsBackend` (`sops_data`).
+  `default_backends()` always lists `HOCONBackend`; without `pyhocon` a
+  `hocon_data` level now fails at construction (and at parse time) naming
+  the `pyera[hocon]` extra, instead of `HOCONBackend` silently vanishing
+  from the default list. A data file whose top-level value is not a Hash
+  now follows Puppet instead of crashing: YAML warns and falls through
+  (raising only under `--strict error`); JSON/HOCON/a third-party backend's
+  non-Hash result is a `BackendError` naming the backend, the file and the
+  value's Puppet type.
+
+### Removed
+
+- The non-Puppet `data_hash` names `yaml`, `json`, `hocon` and `yaml.enc`
+  (strict Puppet only). Use `yaml_data`, `json_data` and `hocon_data`;
+  `sops_data` (see Changed) is the one intentionally kept non-Puppet name.

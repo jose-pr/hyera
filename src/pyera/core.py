@@ -25,6 +25,54 @@ __all__ = ["Hiera", "ScopedHiera"]
 _LOGGER = logging.getLogger(__name__)
 
 
+def _puppet_type_label(value) -> str:
+    """The Puppet type name ``data_provider.rb``'s Hash check would report
+    for a non-Hash ``data_hash`` result (measured against Puppet 8.10.0,
+    ``--strict warning``, on JSON's seven possible top-level shapes; the
+    same labels apply to any backend's non-dict result)."""
+    if isinstance(value, bool):  # bool before int: bool is an int subclass.
+        return "Boolean"
+    if value is None:
+        return "Undef"
+    if isinstance(value, str):
+        return "String"
+    if isinstance(value, int):
+        return "Integer"
+    if isinstance(value, float):
+        return "Float"
+    if isinstance(value, list):
+        return "Tuple" if value else "Array"
+    return type(value).__name__
+
+
+def _validate_data_hash(data, name, path) -> None:
+    """Puppet's Hash check on a ``data_hash`` result
+    (``data_hash_function_provider.rb:56-76`` + ``data_provider.rb:76-91``),
+    applied here so every backend -- third-party ones included -- gets it
+    (Design Q9 of ``backend_registry_and_data_loading/registry``)."""
+    if isinstance(data, dict):
+        return
+    raise BackendError(
+        "Value returned from data_hash function '{}', when using location "
+        "'{}', has wrong type, expects a Hash value, got {}".format(
+            name, path, _puppet_type_label(data)
+        ),
+        path=str(path),
+    )
+
+
+def _as_lookupdict(obj):
+    """Recursively adapt a backend's plain ``dict``/``list`` result
+    into :class:`~pyera.util.LookupDict` for dotted-key lookup. Backends
+    themselves return plain data; only the engine's cache needs the dotted
+    lookup. ``navigation_sub_lookup`` removes both sides of this adapter."""
+    if isinstance(obj, dict):
+        return LookupDict((k, _as_lookupdict(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return [_as_lookupdict(v) for v in obj]
+    return obj
+
+
 class ScopedHiera:
     def __init__(self, hiera, context=None):
         self.hiera = hiera
@@ -75,9 +123,10 @@ class Hiera(Interpolation):
 
     :param base_config: hiera base configuration: file path, file-like object,
         or a pre-parsed ``dict``.
-    :param backends: backend classes to use for loading; defaults to
-        :func:`default_backends` — ``[YAMLBackend, SopsYAMLBackend,
-        JSONBackend]``, plus ``HOCONBackend`` when ``pyhocon`` is importable.
+    :param backends: an allow-list of :class:`~pyera.backends.Backend`
+        classes; defaults to :func:`default_backends` — every backend
+        registered in the ``function`` namespace (``YAMLBackend``,
+        ``JSONBackend``, ``HOCONBackend``, ``SopsBackend``).
     :param base_path: root that relative data dirs/paths resolve against.
     :param context: default format/context variables for this instance's
         lifetime.
@@ -99,7 +148,9 @@ class Hiera(Interpolation):
         #: Per-context cache of the merged ``lookup_options`` mapping.
         self._lookup_options_cache: dict = {}
 
-        self._load_config(backends or default_backends(), base_path)
+        self._load_config(
+            default_backends() if backends is None else backends, base_path
+        )
 
     def _build_context(self, context: dict = None, **kwargs) -> dict:
         new_context = {}
@@ -118,11 +169,10 @@ class Hiera(Interpolation):
 
         Raises :class:`ConfigError` on any invalid/missing configuration.
         """
-        # Register each backend under every name it answers to.
-        self.backends: "dict[str, type]" = {}
-        for backend in backends:
-            for name in backend.NAMES:
-                self.backends[name] = backend
+        #: Allow-list of backend classes a hierarchy level's ``data_hash``
+        #: may resolve to (the Backend registry, looked up by name in
+        #: ``_hiera_config._build_levels``).
+        self.backends: "list[type]" = list(backends)
 
         self.base, self.base_path = _read_base_config(self.base_config, base_path)
 
@@ -161,18 +211,30 @@ class Hiera(Interpolation):
             self._default_files(ctx)
 
     def _load_file(self, path, backend):
-        """Load ``path`` via ``backend``, caching the parsed result.
+        """Load ``path`` via ``backend.data_hash(...)``, caching the result.
 
-        A read or parse failure is normalized to a :class:`BackendError`
-        naming ``path``; an already-pathed ``BackendError`` (or any other
-        :class:`HieraError`) propagates unchanged.
+        A read failure (``OSError``, e.g. the file vanished between the
+        directory walk and here) becomes ``Unable to read (<path>): ...``; a
+        parse failure (a :class:`BackendError` without ``.path`` set --
+        ``Backend.load`` already sets it) becomes ``Unable to parse
+        (<path>): ...``; any other non-:class:`HieraError` exception is
+        wrapped the same way, naming its type. An already-pathed
+        ``BackendError`` (or any other :class:`HieraError`) propagates
+        unchanged.
+
+        Puppet's own Hash check on the result
+        (``data_hash_function_provider.rb:70-76``) runs here too, so every
+        backend -- third-party ones included -- gets it (Design Q9).
         """
         if path not in self.cache:
             try:
-                data = backend.read_file(path)
+                data = backend.data_hash(path, dict(backend.conf.get("options") or {}))
             except BackendError as e:
                 if e.path is None:
-                    e.path = str(path)
+                    raise BackendError(
+                        "Unable to parse ({}): {}".format(path, e),
+                        path=str(path),
+                    ) from e
                 raise
             except HieraError:
                 raise
@@ -183,26 +245,12 @@ class Hiera(Interpolation):
                 ) from e
             except Exception as e:
                 raise BackendError(
-                    "Unable to read ({}): {}: {}".format(path, type(e).__name__, e),
-                    path=str(path),
-                ) from e
-
-            try:
-                self.cache[path] = backend.load(data)
-            except BackendError as e:
-                if e.path is None:
-                    raise BackendError(
-                        "Unable to parse ({}): {}".format(path, e),
-                        path=str(path),
-                    ) from e
-                raise
-            except HieraError:
-                raise
-            except Exception as e:
-                raise BackendError(
                     "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
                     path=str(path),
                 ) from e
+
+            _validate_data_hash(data, backend.name, path)
+            self.cache[path] = _as_lookupdict(data)
         return path
 
     def _get_key(self, key, paths, context, merge):

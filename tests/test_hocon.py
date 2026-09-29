@@ -13,6 +13,7 @@ an ``http_server`` proves no network request is ever made.
 
 import importlib
 import http.server
+import io
 import sys
 import threading
 
@@ -85,7 +86,7 @@ def test_plain_include_contributes_nothing(
     }
     content = 'include "{}"\nplain = p\n'.format(targets[kind])
 
-    result = HOCONBackend().load(content.encode("utf-8"))
+    result = HOCONBackend().loads(content)
 
     assert result == {"plain": "p"}
     assert pyhocon_tripwire == []
@@ -135,7 +136,7 @@ def test_include_form_raises(
     }
 
     with pytest.raises(BackendError, match="line 1"):
-        HOCONBackend().load(contents[kind].encode("utf-8"))
+        HOCONBackend().loads(contents[kind])
 
     assert pyhocon_tripwire == []
     assert hits == []
@@ -151,7 +152,7 @@ def test_include_form_raises(
     ids=["quoted-key", "plural-key", "in-string"],
 )
 def test_include_words_that_are_not_directives(content, expected, pyhocon_tripwire):
-    result = HOCONBackend().load(content.encode("utf-8"))
+    result = HOCONBackend().loads(content)
     assert result == expected
     assert pyhocon_tripwire == []
 
@@ -159,7 +160,7 @@ def test_include_words_that_are_not_directives(content, expected, pyhocon_tripwi
 def test_invalid_utf8_is_backend_error():
     pytest.importorskip("pyhocon")
     with pytest.raises(BackendError):
-        HOCONBackend().load(b"k = \xff\n")
+        HOCONBackend().load(io.BytesIO(b"k = \xff\n"))
 
 
 def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, make_tree):
@@ -176,7 +177,9 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
     importlib.invalidate_caches()
 
     assert has_hocon() is False
-    assert HOCONBackend not in default_backends()
+    # Design Q5: HOCONBackend is *always* registered; other backends keep
+    # working regardless, and a hocon_data level fails at build time instead.
+    assert HOCONBackend in default_backends()
 
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
@@ -186,7 +189,9 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
     assert h.get("k") == "v"
 
     with pytest.raises(BackendError, match="pyhocon"):
-        HOCONBackend().load(b"k = v")
+        HOCONBackend.check_available()
+    with pytest.raises(BackendError, match="pyhocon"):
+        HOCONBackend().loads("k = v")
 
 
 # Independent security review, round 2: 17 adversarial inputs where the text
@@ -245,7 +250,7 @@ def test_adversarial_include_forms_raise(content, line, pyhocon_tripwire, http_s
     _server, hits = http_server
 
     with pytest.raises(BackendError, match="line {}".format(line)):
-        HOCONBackend().load(content.encode("utf-8"))
+        HOCONBackend().loads(content)
 
     assert pyhocon_tripwire == []
     assert hits == []
@@ -266,6 +271,6 @@ def test_include_in_array_value_position_raises(content, pyhocon_tripwire):
     # pyera (which always raises for value position) must not silently blank
     # it into an empty/short array instead.
     with pytest.raises(BackendError):
-        HOCONBackend().load(content.encode("utf-8"))
+        HOCONBackend().loads(content)
 
     assert pyhocon_tripwire == []

@@ -1,5 +1,6 @@
 """The exception hierarchy and the lookup miss/error boundary."""
 
+import copy
 import pickle
 import re
 
@@ -255,11 +256,13 @@ def test_json_parse_error_names_file(make_tree):
     )
 
 
-def test_backend_exception_wrapped_with_path(make_tree):
-    class BrokenBackend(Backend):
-        NAMES = ("broken_data",)
+def test_backend_exception_wrapped_with_path(make_tree, monkeypatch):
+    monkeypatch.setattr(Backend, "_REGISTRY", copy.deepcopy(Backend._REGISTRY))
 
-        def load(self, data):
+    class BrokenBackend(Backend):
+        NAMES = {"function": ("broken_data",)}
+
+        def loads(self, text):
             raise ValueError("boom")
 
     root = make_tree(
