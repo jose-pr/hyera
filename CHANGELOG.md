@@ -51,6 +51,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   other forms raise `BackendError`. Previously pyhocon resolved plain and
   `file()` includes against the process working directory and fetched
   `http(s)` URLs named in a data file.
+- `sops` is refused when it resolves to a relative path (e.g. from the
+  current directory or a relative `PATH` entry), closing a gap where
+  Python 3.9's `shutil.which` could still return such a path even with the
+  Windows implicit-current-directory opt-out set.
 
 ### Added
 

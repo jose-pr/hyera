@@ -95,6 +95,23 @@ def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     assert os.path.isabs(last)
 
 
+def test_sops_refuses_relative_which_result(monkeypatch, tmp_path):
+    # Python 3.9's shutil.which searches the cwd first and can return a
+    # relative path even with NoDefaultCurrentDirectoryInExePath set; running
+    # whatever that resolves to would be the same implicit-cwd exposure the
+    # absolute-path hardening elsewhere in this module is meant to close.
+    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: ".\\sops.EXE")
+    called = []
+    monkeypatch.setattr(
+        "pyera.backends.subprocess.run", lambda *a, **k: called.append((a, k))
+    )
+
+    with pytest.raises(BackendError, match="relative"):
+        SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
+
+    assert not called
+
+
 def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: r"C:\tools\sops.CMD")
     called = []

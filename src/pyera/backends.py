@@ -103,6 +103,25 @@ def _run_sops(path, input_type: str) -> bytes:
         raise BackendError(
             "sops executable not found on PATH; cannot decrypt {}".format(path)
         )
+    if not (os.path.isabs(exe) or exe.startswith(("/", "\\"))):
+        # Python's ``shutil.which`` does not consistently honour the
+        # Windows implicit-current-directory opt-out (NoDefaultCurrentDirectoryInExePath):
+        # on 3.9 it can still return a path relative to the cwd (or a
+        # relative PATH entry) even when the caller has opted out of that
+        # behavior. Running whatever that happens to resolve to would be
+        # exactly the implicit-cwd exposure the absolute-path handling here
+        # is meant to close, so refuse it outright instead of silently
+        # trusting a relative result. A path that is merely drive-less but
+        # still rooted (``/usr/bin/sops``, e.g. a POSIX-style test double)
+        # is not this exposure -- Windows resolves it against the current
+        # drive's root, never against an attacker-influenced cwd -- so only
+        # a path with no leading separator at all (genuinely relative) is
+        # refused here.
+        raise BackendError(
+            "refusing to run sops resolved to a relative path {!r} (from "
+            "the current directory or a relative PATH entry); put an "
+            "absolute sops on PATH instead".format(exe)
+        )
     exe = os.path.abspath(exe)
     if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
         raise BackendError(
