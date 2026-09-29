@@ -6,6 +6,7 @@
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
 import logging
+from typing import Any
 
 from ._hiera_config import (
     HieraLevel,
@@ -17,7 +18,7 @@ from ._hiera_config import (
 )
 from ._interpolation import interpolate
 from ._invocation import _STRICT, Invocation
-from ._location_resolver import _format_source, _normalize_source, _resolve_level_paths
+from ._location_resolver import _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
@@ -90,7 +91,7 @@ class ScopedHiera:
     def sources(self):
         return self.hiera._sources(self.scope)
 
-    def format(self, text: str) -> str:
+    def format(self, text: str) -> Any:
         return self.hiera._format(text, self.scope)
 
     def scoped(
@@ -176,13 +177,30 @@ class Hiera:
             default_backends() if backends is None else backends, base_path
         )
 
-    def format(self, text: str) -> str:
-        """Resolve ``%{var}`` references in ``text`` against this instance's
-        bound scope."""
+    def format(self, text: str) -> Any:
+        """Interpolate ``text`` against this instance's bound scope, exactly
+        as a data value is interpolated (Puppet's ``Context#interpolate``)."""
         return self._format(text, self.scope)
 
-    def _format(self, text: str, scope: Scope) -> str:
-        return _format_source(_normalize_source(text), scope)
+    def _format(self, text, scope: Scope):
+        if not isinstance(text, str):
+            raise TypeError(
+                "format() expects a str, not {}".format(type(text).__name__)
+            )
+        levels = self._levels_for(self.hierarchy, scope, "main")
+
+        def lookup(k, i):
+            value = self._sub_lookup(k, levels, i)
+            if value is _MISSING and self.default_hierarchy:
+                value = self._sub_lookup(k, self._default_levels(scope), i)
+            return value
+
+        strict_token = _STRICT.set(scope.strict)
+        try:
+            inv = Invocation(scope, lookup)
+            return interpolate(text, inv)
+        finally:
+            _STRICT.reset(strict_token)
 
     def _load_config(self, backends, base_path=None):
         """Load and validate the base configuration, building hierarchy state.

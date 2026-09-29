@@ -202,3 +202,49 @@ def test_unshare_copies_every_position():
     assert u == {"p": [1], "q": [1]}
     assert u["p"] is not u["q"]
     assert u["p"] is not x
+
+
+def _format_hiera(make_tree):
+    return _hiera(
+        make_tree,
+        "k: v\narr: [x, y]\n",
+        num=42,
+        flag=False,
+        n=0,
+        l=["a", "b"],
+    )
+
+
+def test_format_missing_variable_follows_strict(make_tree):
+    h = _format_hiera(make_tree)
+    assert h.format("[%{absent}]") == "[]"
+    with pytest.raises(InterpolationError, match="Undefined variable 'absent'"):
+        h.scoped(strict="error").format("[%{absent}]")
+
+
+def test_format_leaves_literal_braces(make_tree):
+    h = _format_hiera(make_tree)
+    assert h.format('json {"a": 1} %{num}') == 'json {"a": 1} 42'
+
+
+def test_format_methods(make_tree):
+    h = _format_hiera(make_tree)
+    assert (
+        h.format("%{lookup('k')}|%{hiera('k')}|%{literal('%')}|%{ num }") == "v|v|%|42"
+    )
+
+
+def test_format_renders_like_puppet(make_tree):
+    h = _format_hiera(make_tree)
+    assert h.format("%{flag} %{n} %{l}") == 'false 0 ["a", "b"]'
+
+
+def test_format_whole_alias_returns_value(make_tree):
+    h = _format_hiera(make_tree)
+    assert h.format("%{alias('arr')}") == ["x", "y"]
+
+
+def test_format_rejects_non_str(make_tree):
+    h = _format_hiera(make_tree)
+    with pytest.raises(TypeError):
+        h.format(5)
