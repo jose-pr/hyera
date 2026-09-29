@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4ab1698ff9dd6860f33c3e361c1b42f1d754b8354369cabe0e8d34cf5934784e",
+  "results": {
+    "items": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "items"
+      ],
+      "status": "found",
+      "value": [
+        "same"
+      ]
+    }
+  }
+}

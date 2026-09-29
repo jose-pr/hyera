@@ -1,0 +1,13 @@
+description: >-
+  A probe the review fixtures did not isolate: both hierarchy levels
+  declare the exact same single-element array under a deep merge. Puppet
+  deduplicates deep-merged arrays, so the result is one element, not two
+  -- and because there is only one distinct value, the result is the same
+  regardless of which level's copy "wins" the ordering question (a
+  separate, already-marked divergence everywhere else the review found
+  it), which is why this probe is a clean, non-divergent kill target for
+  the deep-list-no-dedupe mutation.
+origin: "(no source fixture -- written as a probe for this behavior)"
+queries:
+  - key: items
+    merge: deep
