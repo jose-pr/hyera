@@ -1,0 +1,5 @@
+description: A UTF-8 BOM before the only level's JSON data.
+origin: critic-puppet-coverage/bom_json
+queries:
+- key: k
+  divergence: critic-puppet-coverage/data-file-encoding-lenient

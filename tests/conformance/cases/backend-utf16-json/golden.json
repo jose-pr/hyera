@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4c74741c785d3d2612bd8a4cb665f8b51253ad1cdff04d686a0f883227838b8d",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/common.raw.json): expected object key, got  at line 1 column 2"
+    }
+  }
+}
