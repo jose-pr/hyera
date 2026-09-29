@@ -51,7 +51,7 @@ def _write_simple_config(tmp_path):
 def test_non_ascii_config_is_read_as_utf8(tmp_path):
     config = _write_non_ascii_config(tmp_path)
     h = Hiera(str(config))
-    assert h.get("k") == "accented"
+    assert h.lookup("k") == "accented"
 
 
 def test_utf8_bom_config_parses(tmp_path):
@@ -75,7 +75,7 @@ def test_utf8_bom_config_parses(tmp_path):
         "hierarchy: [{name: Café, path: common.yaml}]}\n".encode("utf-8")
     )
     h = Hiera(str(config))
-    assert h.get("k") == "accented"
+    assert h.lookup("k") == "accented"
 
 
 def test_path_config_keeps_the_path(tmp_path):
@@ -95,16 +95,16 @@ def test_path_configured_hiera_pickles_and_deepcopies(tmp_path):
     h = Hiera(str(config))
 
     reloaded = pickle.loads(pickle.dumps(h))
-    assert reloaded.get("k") == h.get("k")
+    assert reloaded.lookup("k") == h.lookup("k")
 
     cloned = copy.deepcopy(h)
-    assert cloned.get("k") == h.get("k")
+    assert cloned.lookup("k") == h.lookup("k")
 
 
 def test_config_replaceable_while_instance_alive(tmp_path):
     config = _write_simple_config(tmp_path)
     h = Hiera(str(config))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
     replacement = tmp_path / "hiera.yaml.new"
     replacement.write_bytes(
@@ -118,7 +118,7 @@ def test_config_replaceable_while_instance_alive(tmp_path):
     os.replace(str(replacement), str(config))
     os.remove(str(config))
 
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 def test_file_like_config_is_left_to_the_caller(tmp_path):
@@ -129,4 +129,4 @@ def test_file_like_config_is_left_to_the_caller(tmp_path):
     h = Hiera(stream, base_path=str(tmp_path))
     assert h.base_config is stream
     assert not stream.closed
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"

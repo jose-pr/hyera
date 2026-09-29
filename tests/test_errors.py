@@ -57,13 +57,13 @@ def test_error_attributes_survive_pickle():
 def test_miss_raises_key_not_found_error(hiera_root):
     hiera = Hiera(str(hiera_root / "hiera.yaml"))
     with pytest.raises(KeyError) as excinfo:
-        hiera.get("nope::key", throw=True)
+        hiera.lookup("nope::key")
     assert isinstance(excinfo.value, HieraError)
     assert (
         str(excinfo.value)
         == "Function lookup() did not find a value for the name 'nope::key'"
     )
-    assert hiera.has("nope::key") is False
+    assert "nope::key" not in hiera
 
 
 def test_not_found_message_for_name_lists():
@@ -79,11 +79,11 @@ def test_not_found_message_for_name_lists():
 def test_non_str_key_raises_type_error(hiera_root):
     hiera = Hiera(str(hiera_root / "hiera.yaml"))
     with pytest.raises(TypeError):
-        hiera.get(5)
+        hiera.lookup(5)
     with pytest.raises(TypeError):
-        hiera.get(None)
+        hiera.lookup(None)
     with pytest.raises(TypeError):
-        hiera.has(5)
+        5 in hiera
 
 
 def test_bad_merge_strategy_raises_merge_error(make_tree):
@@ -108,8 +108,8 @@ def test_bad_merge_strategy_raises_merge_error(make_tree):
     )
     hiera = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(MergeError):
-        hiera.get("k")
-    assert hiera.get("k", merge="first") == ["a"]
+        hiera.lookup("k")
+    assert hiera.lookup("k", merge="first") == ["a"]
 
 
 def test_internal_keyerror_is_not_chained(make_tree):
@@ -135,7 +135,7 @@ def test_internal_keyerror_is_not_chained(make_tree):
     )
     hiera = Hiera(str(unknown_method_root / "hiera.yaml"))
     with pytest.raises(InterpolationError) as excinfo2:
-        hiera.get("k", throw=True)
+        hiera.lookup("k")
     assert excinfo2.value.__cause__ is None
     assert excinfo2.value.__context__ is None
 

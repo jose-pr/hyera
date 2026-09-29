@@ -165,15 +165,15 @@ def test_parse_lookup_key_syntax_error(key):
 _COMMON_HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
 
 
-def test_has_raises_on_type_mismatch(make_tree):
-    # has() only turns a genuine miss (KeyNotFoundError) into False; a
+def test_contains_raises_on_type_mismatch(make_tree):
+    # `in` only turns a genuine miss (KeyNotFoundError) into False; a
     # type-mismatch HieraLookupError from the navigation walk propagates,
-    # same as get() -- only a miss should be silent, per Puppet's own
+    # same as lookup() -- only a miss should be silent, per Puppet's own
     # lookup(), which raises both kinds of error even with a default set.
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "s: hello\n"})
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError, match="Got String"):
-        h.has("s.x")
+        "s.x" in h
 
 
 def test_default_does_not_hide_syntax_error(make_tree):
@@ -183,7 +183,7 @@ def test_default_does_not_hide_syntax_error(make_tree):
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "a: 1\n"})
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError, match="Syntax error"):
-        h.get("a..b", default="D")
+        h.lookup("a..b", default_value="D")
 
 
 def test_format_raises_on_type_mismatch(make_tree):
@@ -200,4 +200,4 @@ def test_nested_null_is_not_found(make_tree):
     # type mismatch -- Puppet's sub_lookup treats nil the same way.
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "n: ~\n"})
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("n.x", default="D") == "D"
+    assert h.lookup("n.x", default_value="D") == "D"

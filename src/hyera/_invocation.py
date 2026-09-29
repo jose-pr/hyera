@@ -13,12 +13,18 @@ from .exceptions import InterpolationError
 #: The call-time ``strict`` default for a data file's non-hash rule
 #: (``yaml_data.rb:31`` reads ``Puppet[:strict]`` per call, not at
 #: construction, since one backend instance is shared across scopes). Set
-#: from ``invocation.scope.strict`` at the top-level lookup entry
-#: (``core.Hiera._get``) and reset in ``finally``; :attr:`~hyera.backends.
-#: Backend.strict` falls back to it when the backend has no explicit value.
+#: from ``invocation.scope.strict`` at the single engine entry every public
+#: call shares (``_lookup_function.lookup``) and reset in ``finally``;
+#: :attr:`~hyera.backends.Backend.strict` falls back to it when the backend
+#: has no explicit value.
 _STRICT: "contextvars.ContextVar[str]" = contextvars.ContextVar(
     "hiera_strict", default="warning"
 )
+
+#: Sentinel for "not given" on :meth:`Invocation.derive`'s ``override_values``/
+#: ``default_values`` keywords -- distinct from ``None``, which
+#: :class:`Invocation` itself already treats as "empty".
+_UNSET = object()
 
 
 class Invocation:
@@ -26,7 +32,7 @@ class Invocation:
     :class:`~hyera.Scope`, the current sub-lookup callable, and the
     recursion-detection name stack.
 
-    Create exactly one per top-level lookup (``Hiera.get``/``.format``);
+    Create exactly one per top-level lookup (``Hiera.lookup``/``.format``);
     never share one across threads or across independent lookups. ``lookup``
     is the host's sub-lookup callable, ``(key, invocation) -> value |
     hyera._navigation._MISSING``, used to resolve ``%{hiera()}``/
@@ -65,15 +71,26 @@ class Invocation:
         """
         return self._lookup(key, self)
 
-    def derive(self, lookup) -> "Invocation":
-        """A new :class:`Invocation` sharing this one's scope, overrides,
-        defaults, ``lenient`` and recursion stack, with a different
-        sub-lookup callable."""
+    def derive(
+        self, lookup, *, override_values=_UNSET, default_values=_UNSET
+    ) -> "Invocation":
+        """A new :class:`Invocation` sharing this one's scope, ``lenient``
+        and recursion stack, with a different sub-lookup callable.
+
+        ``override_values``/``default_values`` default to this one's own
+        (omit either to inherit it); pass an explicit value (``{}`` to gather
+        with none at all, as Puppet's own ``lookup_options`` gather does with
+        a bare ``Invocation.new(scope)``) to replace it instead.
+        """
         return Invocation(
             self.scope,
             lookup,
-            override_values=self.override_values,
-            default_values=self.default_values,
+            override_values=(
+                self.override_values if override_values is _UNSET else override_values
+            ),
+            default_values=(
+                self.default_values if default_values is _UNSET else default_values
+            ),
             lenient=self.lenient,
             _name_stack=self._name_stack,
         )

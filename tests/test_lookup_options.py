@@ -28,7 +28,7 @@ def test_prefix_pattern_matches_by_search(make_tree):
         "app::ports: [443]\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("app::ports") == [80, 443]
+    assert h.lookup("app::ports") == [80, 443]
 
 
 def test_ruby_only_syntax_is_translated(make_tree):
@@ -44,9 +44,9 @@ def test_ruby_only_syntax_is_translated(make_tree):
         "rbkey: [b]\nhxbeef: [b]\nlbkey: [b]\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("rbkey") == ["a", "b"]
-    assert h.get("hxbeef") == ["a", "b"]
-    assert h.get("lbkey") == ["a", "b"]
+    assert h.lookup("rbkey") == ["a", "b"]
+    assert h.lookup("hxbeef") == ["a", "b"]
+    assert h.lookup("lbkey") == ["a", "b"]
 
 
 def test_invalid_pattern_raises(make_tree):
@@ -58,7 +58,7 @@ def test_invalid_pattern_raises(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError) as ei:
-        h.get("bar")
+        h.lookup("bar")
     assert str(ei.value).endswith(": /^foo(/")
 
 
@@ -71,7 +71,7 @@ def test_non_hash_lookup_options_raises(make_tree):
     with pytest.raises(
         HieraLookupError, match="value of lookup_options must be a hash"
     ):
-        h.get("k")
+        h.lookup("k")
 
 
 def test_entry_shapes(make_tree):
@@ -97,18 +97,18 @@ def test_entry_shapes(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     # A string exact entry gives no options and blocks the matching
     # pattern -> first-found wins.
-    assert h.get("kk") == [1]
+    assert h.lookup("kk") == [1]
     # A non-hash, non-string exact or pattern entry raises.
     with pytest.raises(HieraLookupError):
-        h.get("karr")
+        h.lookup("karr")
     with pytest.raises(HieraLookupError):
-        h.get("kint")
+        h.lookup("kint")
     with pytest.raises(HieraLookupError):
-        h.get("kbool")
+        h.lookup("kbool")
     with pytest.raises(HieraLookupError):
-        h.get("pa1")
+        h.lookup("pa1")
     # An exact `~` entry falls through to a matching pattern.
-    assert h.get("nilk") == [1, 2]
+    assert h.lookup("nilk") == [1, 2]
 
 
 def test_patterns_follow_merged_order(make_tree):
@@ -120,4 +120,4 @@ def test_patterns_follow_merged_order(make_tree):
         "a::b::list: [2]\nlookup_options: {'^a::.*': {merge: unique}}\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("a::b::list") == [1, 2]
+    assert h.lookup("a::b::list") == [1, 2]

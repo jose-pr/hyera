@@ -25,20 +25,36 @@ from hyera import Hiera, Scope
 h = Hiera("hiera.yaml", scope=Scope(facts={"os": {"family": "Debian"}}, environment="production"))
 
 # First match wins:
-h.get("ntp::servers")
+h.lookup("ntp::servers")
 
 # Merge across the whole hierarchy:
-h.get("classes", merge="unique")             # flatten + dedupe arrays
-h.get("users", merge="deep")                 # deep hash merge
+h.lookup("classes", merge="unique")          # flatten + dedupe arrays
+h.lookup("users", merge="deep")              # deep hash merge
 
-# Missing keys return the default (with throw=True they raise KeyNotFoundError, a KeyError):
-h.get("missing", default="fallback")
-h.has("some::key")
+# Missing keys raise KeyNotFoundError (also a KeyError) unless a default is given:
+h.lookup("missing", default_value="fallback")
+"some::key" in h
 
-# Bind a derived scope once and reuse:
+# A Hiera is callable, and h[...] takes lookup()'s own arguments:
+h("ntp::servers")
+h["classes", None, "unique"]
+
+# Bind a derived scope once and reuse -- a view, sharing config and caches:
 prod = h.scoped(environment="production")
-prod.get("ntp::servers")
+prod["ntp::servers"]
 ```
+
+Coming from `hiera()`/`hiera_array()`/`hiera_hash()` -- Puppet's legacy
+functions always force a merge, ignoring `lookup_options`; `merge="first"`
+below is that forcing, not merely "the default":
+
+| Puppet | hyera |
+| --- | --- |
+| `hiera('key')` | `h.lookup('key', None, 'first')` |
+| `hiera('key', 'default')` | `h.lookup('key', None, 'first', 'default')` |
+| `hiera_array('key')` | `h.lookup('key', None, 'unique')` |
+| `hiera_hash('key')` | `h.lookup('key', None, 'hash')` |
+| `hiera_include('key')` | not supported (applies classes to a catalog) |
 
 ### Scope and facts
 
@@ -56,7 +72,7 @@ from hyera import Hiera, Scope, load_facts
 
 scope = Scope(facts=load_facts("facts.yaml"), environment="production", strict="error")
 h = Hiera("hiera.yaml", scope=scope)
-h.get("ntp::servers")
+h.lookup("ntp::servers")
 ```
 
 `load_facts(path)` reads a `puppet lookup --facts`-style file (JSON for
@@ -70,11 +86,11 @@ from hyera import facts_from_facter
 scope = Scope(facts=facts_from_facter())
 ```
 
-`h.scoped(**derive_args)` returns a `ScopedHiera` bound to
-`h.scope.derive(**derive_args)`: `variables`/`facts`/`server_facts`
-shallow-update the parent scope's own (new values win, nothing goes
-stale); `environment`/`strict`/`trusted`/`node_name` replace the parent's
-when given.
+`h.scoped(**derive_args)` returns a `Hiera` view bound to
+`h.scope.derive(**derive_args)`, sharing `h`'s config, backends and caches:
+`variables`/`facts`/`server_facts` shallow-update the parent scope's own
+(new values win, nothing goes stale); `environment`/`strict`/`trusted`/
+`node_name` replace the parent's when given.
 
 ### Base config
 
@@ -139,17 +155,17 @@ not intend to resolve.
 
 ### Merging and `lookup_options`
 
-Pass `merge=` to `get()` — one of Puppet's strategy names, or a hash of deep
-options:
+Pass `merge=` to `lookup()` — one of Puppet's strategy names, or a hash of
+deep options:
 
 ```python
-h.get("classes", merge="unique")                 # flatten + dedupe arrays
-h.get("app::name", merge="default")               # explicit first-match
-h.get("conf", merge="deep")                       # recursive hash merge
-h.get("conf", merge={"strategy": "deep",          # deep-merge options
-                     "knockout_prefix": "--",
-                     "sort_merged_arrays": True,
-                     "merge_hash_arrays": True})
+h.lookup("classes", merge="unique")               # flatten + dedupe arrays
+h.lookup("app::name", merge="default")            # explicit first-match
+h.lookup("conf", merge="deep")                    # recursive hash merge
+h.lookup("conf", merge={"strategy": "deep",       # deep-merge options
+                        "knockout_prefix": "--",
+                        "sort_merged_arrays": True,
+                        "merge_hash_arrays": True})
 ```
 
 More idiomatically, declare the strategy (and optional `convert_to`) in the
@@ -331,8 +347,8 @@ concerned, where there is one):
   `InterpolationError` (an unknown interpolation method, a misplaced
   `%{alias(...)}`, a recursive lookup, or an undefined variable under
   `strict="error"`), `MergeError` (an unknown or invalid merge strategy),
-  and `KeyNotFoundError` (also a `KeyError`) — `.get(..., throw=True)`'s
-  miss.
+  and `KeyNotFoundError` (also a `KeyError`) — `lookup()`'s miss, with no
+  default given.
 
 ## License
 

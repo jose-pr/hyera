@@ -28,12 +28,13 @@ from ._lookup_adapter import (
     validate_data_value,
     validate_lookup_options,
 )
+from ._lookup_function import lookup as _lookup_call, nested_lookup, parse_call
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from ._scope import Scope
 from .backends import default_backends
 
-__all__ = ["Hiera", "ScopedHiera"]
+__all__ = ["Hiera"]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,65 +78,6 @@ def _validate_data_hash(data, name, path) -> None:
         ),
         path=str(path),
     )
-
-
-class ScopedHiera:
-    """A ``Hiera`` with a bound (derived) :class:`~hyera.Scope`.
-
-    Every method has ``Hiera``'s own signature and uses this scope instead
-    of ``hiera.scope``. Unknown attributes proxy to the wrapped ``Hiera``.
-    """
-
-    def __init__(self, hiera, scope: Scope):
-        self.hiera = hiera
-        self.scope = scope
-
-    def get(self, key: str, default=None, merge=None, throw=False):
-        return self.hiera._get(key, default, merge, throw, self.scope)
-
-    def has(self, key: str) -> bool:
-        return self.hiera._has(key, self.scope)
-
-    def sources(self):
-        return self.hiera._sources(self.scope)
-
-    def format(self, text: str) -> Any:
-        return self.hiera._format(text, self.scope)
-
-    def scoped(
-        self,
-        *,
-        variables=None,
-        facts=None,
-        trusted=None,
-        server_facts=None,
-        environment=None,
-        strict=None,
-        node_name=None,
-    ) -> "ScopedHiera":
-        return ScopedHiera(
-            self.hiera,
-            self.scope.derive(
-                variables=variables,
-                facts=facts,
-                trusted=trusted,
-                server_facts=server_facts,
-                environment=environment,
-                strict=strict,
-                node_name=node_name,
-            ),
-        )
-
-    def __getattr__(self, name):
-        # Copying/pickling rebuilds the instance without __init__ and then
-        # probes it for state/dunder methods; without this guard that probe
-        # reaches ``self.hiera`` -- itself an attribute lookup on the same
-        # not-yet-initialized instance -- recursing until the stack
-        # overflows. ``hiera``/``scope`` and any dunder name are never
-        # proxied.
-        if name in ("hiera", "scope") or name.startswith("__"):
-            raise AttributeError(name)
-        return getattr(self.hiera, name)
 
 
 class Hiera:
@@ -257,17 +199,18 @@ class Hiera:
         in full and raises the same error again, now at the right time.
 
         Runs under ``self.scope.strict`` (the ``_STRICT`` ContextVar, same as
-        ``_get``): a genuinely non-hash data file under ``strict="error"``
-        raises here as :class:`~hyera.BackendError` and is NOT caught by the
-        except clause above (matching the documented constructor contract --
-        a data file that cannot be read or parsed can fail construction
-        itself). This also keeps ``self.cache``'s ``(path, strict)`` entries
-        consistent with what a later ``.get()`` call on the same, unscoped
-        instance will look for: ``Hiera.get``/``.has``/``.sources`` all reuse
-        this same ``self.scope`` object, whose resolved source-path list
-        ``_levels_for`` caches per scope value -- without this, that cache
-        hit would skip ``_load_file`` entirely on a later call, leaving
-        ``self.cache`` holding only the pre-warm's own strict variant.
+        ``lookup``/``dig``/``get``): a genuinely non-hash data file under
+        ``strict="error"`` raises here as :class:`~hyera.BackendError` and is
+        NOT caught by the except clause above (matching the documented
+        constructor contract -- a data file that cannot be read or parsed
+        can fail construction itself). This also keeps ``self.cache``'s
+        ``(path, strict)`` entries consistent with what a later ``.lookup()``
+        call on the same, unscoped instance will look for: ``Hiera.lookup``/
+        ``in``/``.sources`` all reuse this same ``self.scope`` object, whose
+        resolved source-path list ``_levels_for`` caches per scope value --
+        without this, that cache hit would skip ``_load_file`` entirely on a
+        later call, leaving ``self.cache`` holding only the pre-warm's own
+        strict variant.
         """
         strict_token = _STRICT.set(self.scope.strict)
         try:
@@ -455,10 +398,12 @@ class Hiera:
         lookup -- with ``merge`` always ``None``: the caller's own
         accumulated merge is never carried over into a sub-lookup
         (``interpolation.rb:84``, which always passes a ``nil`` merge).
-        Returns :data:`~hyera._navigation._MISSING` on a miss instead of
-        raising.
+        The override hash and the default values hash still apply, exactly
+        as a top-level lookup of the same key would see them
+        (``interpolation.rb:77-86``). Returns
+        :data:`~hyera._navigation._MISSING` on a miss instead of raising.
         """
-        return self._search_and_merge(key, invocation, None)
+        return nested_lookup(key, invocation, self._search_and_merge)
 
     def scoped(
         self,
@@ -470,10 +415,17 @@ class Hiera:
         environment=None,
         strict=None,
         node_name=None,
-    ) -> ScopedHiera:
-        """A :class:`ScopedHiera` bound to ``self.scope.derive(...)``."""
-        return ScopedHiera(
-            self,
+    ) -> "Hiera":
+        """A view of this instance bound to ``self.scope.derive(...)``.
+
+        The view is a full :class:`Hiera`, not a proxy: it shares this
+        instance's config, backends and caches (``cache``, ``_source_cache``,
+        ``_lookup_options_cache``, all keyed on the scope value already), so
+        every method -- ``lookup``/``()``/``[]``/``in``, ``sources()``,
+        ``format()`` -- reads the derived scope instead of ``self.scope``.
+        Deriving from a view derives from *its* scope, not the original.
+        """
+        return self._view(
             self.scope.derive(
                 variables=variables,
                 facts=facts,
@@ -482,19 +434,14 @@ class Hiera:
                 environment=environment,
                 strict=strict,
                 node_name=node_name,
-            ),
+            )
         )
 
-    def has(self, key: str) -> bool:
-        """Return True if ``key`` exists in hiera, False otherwise."""
-        return self._has(key, self.scope)
-
-    def _has(self, key, scope) -> bool:
-        try:
-            self._get(key, None, None, True, scope)
-            return True
-        except KeyNotFoundError:
-            return False
+    def _view(self, scope: Scope) -> "Hiera":
+        view = object.__new__(type(self))
+        view.__dict__.update(self.__dict__)
+        view.scope = scope
+        return view
 
     def sources(self):
         """Resolve the ordered list of source paths for this instance's
@@ -631,52 +578,99 @@ class Hiera:
         compiled = self._lookup_options_map(scope)
         return extract_lookup_options_for_key(root, compiled)
 
-    def get(
+    def lookup(
         self,
-        key: str,
-        default=None,
+        name,
+        value_type=None,
         merge=None,
-        throw=False,
+        default_value=_MISSING,
+        *,
+        default_values_hash=None,
+        override=None,
+        block=None,
     ):
-        """Retrieve a hiera value by fully resolving its location, against
-        this instance's bound scope.
+        """Puppet's ``lookup()``: resolve ``name`` against this instance's
+        bound scope, in Puppet's own precedence order.
 
-        :param key: the hiera key to retrieve.
-        :param default: returned when the key is missing (unless ``throw``).
-        :param merge: Puppet's merge strategy names (``"first"``/``"default"``/
-            ``"unique"``/``"hash"``/``"deep"``/``"reverse_deep"``/
-            ``"unconstrained_deep"``) or a hash ``{"strategy": "deep",
-            "knockout_prefix": "--", ...}``. When omitted, ``lookup_options``
-            in the data (if any) decides; otherwise first-match wins. Invalid
-            input (an unknown strategy, a hash with no ``strategy``, a
-            mistyped option) raises ``hyera.MergeError``.
-        :param throw: raise ``KeyError`` on a missing key instead of returning
-            ``default``.
+        Five call forms, all equivalent (Puppet's ``functions/lookup.rb``):
+
+        1. ``h.lookup("key")`` -- name only.
+        2. ``h.lookup("key", "Integer")`` -- name and ``value_type``.
+        3. ``h.lookup("key", "Integer", "first", 0)`` -- name, ``value_type``,
+           ``merge``, ``default_value``, all positional.
+        4. ``h.lookup({"name": "key", "merge": "first"})`` -- a single dict
+           in place of every argument (``name`` required; every other
+           positional argument and option keyword must be omitted).
+        5. ``h.lookup("key", {"merge": "first"})`` -- name positional, every
+           other option in a dict passed as ``value_type``.
+
+        Every option name (``value_type``, ``merge``, ``default_value``,
+        ``default_values_hash``, ``override``) also works as a keyword:
+        ``h.lookup("key", merge="first")``. Passing an options dict (forms 4
+        or 5) together with another positional argument or an option
+        keyword is a ``TypeError`` -- except ``block``, which forms 4 and 5
+        both still accept as its own argument.
+
+        :param name: the key, or a list of keys tried in order (the first
+            one that is found, anywhere in the precedence order below,
+            wins).
+        :param value_type: a Puppet type expression (``"Integer"``,
+            ``"Optional[String]"``); every candidate value (override, found,
+            a default) is asserted against it, raising ``HieraLookupError``
+            with Puppet's own subject text ("Found value has wrong type,
+            …", "Default value has wrong type, …", etc.) on a mismatch.
+        :param merge: as :meth:`~hyera.Hiera.lookup`'s data-lookup merge
+            strategy; overrides only the *merge* ``lookup_options`` would
+            have picked -- an applicable ``convert_to`` still runs.
+        :param default_value: returned (after ``value_type``) when nothing
+            else was found; omit it entirely for "no default" (a bare
+            ``None`` is a real default and beats a miss).
+        :param default_values_hash: consulted, per name, only after the
+            hierarchy itself missed every name.
+        :param override: consulted, per name, *before* the hierarchy; also
+            interpolated into any value's ``%{var}`` references, but never
+            changes which hierarchy locations are read.
+        :param block: called with ``name`` exactly as given when nothing
+            else was found (before ``default_value``); its return value is
+            asserted against ``value_type`` too.
+
+        Precedence, per name in ``name``'s order: ``override`` -> the
+        hierarchy (with ``lookup_options``, ``default_hierarchy`` and
+        ``convert_to``) -> (next name) -> ``default_values_hash`` (every
+        name again) -> ``block`` -> ``default_value`` -> ``KeyNotFoundError``
+        (also a ``KeyError``), naming every name tried.
         """
-        return self._get(key, default, merge, throw, self.scope)
+        call = parse_call(
+            name, value_type, merge, default_value, default_values_hash, override, block
+        )
+        invocation = Invocation(
+            self.scope,
+            self._sub_lookup,
+            override_values=call.override,
+            default_values=call.default_values_hash,
+        )
+        return _lookup_call(call, invocation, self._search_and_merge)
 
-    def _get(self, key, default, merge, throw, scope):
-        if not isinstance(key, str):
-            raise TypeError(
-                "lookup key must be a str, not {}".format(type(key).__name__)
-            )
-        # Puppet reads `Puppet[:strict]` at call time inside a data-file
-        # backend's own non-hash rule (``yaml_data.rb:31``), not at
-        # construction -- a level's backend is shared across scopes. Bind
-        # the ContextVar for the whole call: resolving `key` itself can
-        # load and validate data files, same as any sub-lookup within it.
-        strict_token = _STRICT.set(scope.strict)
+    __call__ = lookup
+
+    def __getitem__(self, item):
+        if isinstance(item, tuple):
+            return self.lookup(*item)
+        return self.lookup(item)
+
+    def __contains__(self, name) -> bool:
         try:
-            invocation = Invocation(scope, self._sub_lookup)
-            value = self._search_and_merge(key, invocation, merge)
-        finally:
-            _STRICT.reset(strict_token)
+            self.lookup(name)
+            return True
+        except KeyNotFoundError:
+            return False
 
-        if value is _MISSING:
-            if throw:
-                raise KeyNotFoundError(key) from None
-            return default
-        return value
+    #: Without this, ``__getitem__`` alone would make a bare ``Hiera``
+    #: iterable (Python falls back to calling ``[0]``, ``[1]``, ... until
+    #: ``IndexError`` -- here, an endless stream of ``KeyNotFoundError``
+    #: instead). A ``Hiera`` is not a sequence; ``iter(h)`` raises
+    #: ``TypeError`` instead.
+    __iter__ = None
 
 
 # Import after defining Hiera to avoid circular import

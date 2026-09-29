@@ -47,7 +47,7 @@ def test_data_hash_sops_is_sops_data(monkeypatch, tmp_path, make_tree):
         files={"data/secret.yaml": b""},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 def test_sops_success_argv_and_value(monkeypatch, tmp_path):
@@ -85,7 +85,7 @@ def test_sops_end_to_end_lookup(monkeypatch, tmp_path, make_tree):
     )
 
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
@@ -100,7 +100,7 @@ def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     monkeypatch.chdir(tmp_path)
 
     h = Hiera("hiera.yaml", scope=Scope(variables={"node": "--output=pwned"}))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
     assert calls, "sops was never invoked for the per-node file"
     args, _kwargs = calls[-1]

@@ -418,12 +418,12 @@ def test_merged_lookup_leaves_cache_untouched(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     merge = {"strategy": "deep", "knockout_prefix": "--"}
 
-    first = h.get("conf", merge=merge)
-    second = h.get("conf", merge=merge)
+    first = h.lookup("conf", merge=merge)
+    second = h.lookup("conf", merge=merge)
     assert first == second
 
     first["items"].append("mutated")
-    third = h.get("conf", merge=merge)
+    third = h.lookup("conf", merge=merge)
     assert third == second
     assert "mutated" not in third["items"]
 
@@ -445,14 +445,16 @@ def test_invalid_merge_raises_merge_error(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
 
     with pytest.raises(MergeError):
-        h.get("k", merge="bogus")
+        h.lookup("k", merge="bogus")
     # lookup_options' `{merge: unique}` has no `strategy` key.
     with pytest.raises(MergeError):
-        h.get("k")
-    # A legacy Python type is no longer an accepted merge= spelling.
+        h.lookup("k")
+    # A legacy Python type is not merge='s call shape at all (a str or a
+    # dict) -- lookup()'s own call-shape validation now catches it as a
+    # TypeError before it ever reaches MergeStrategy.strategy().
     legacy_type_spelling = list
-    with pytest.raises(MergeError):
-        h.get("k", merge=legacy_type_spelling)
+    with pytest.raises(TypeError):
+        h.lookup("k", merge=legacy_type_spelling)
 
 
 # --- hiera3_deep_strategies: reverse_deep, unconstrained_deep ---------

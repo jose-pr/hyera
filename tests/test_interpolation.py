@@ -41,20 +41,20 @@ def test_value_with_backslash_is_literal(make_tree):
         make_tree,
         'winpath: "C:\\\\data\\\\sub"\n' "ref: \"%{hiera('winpath')}\"\n",
     )
-    stored = h.get("winpath")
+    stored = h.lookup("winpath")
     assert stored == "C:\\data\\sub"  # sanity: one backslash each
-    assert h.get("ref") == stored  # interpolation preserves it verbatim
+    assert h.lookup("ref") == stored  # interpolation preserves it verbatim
 
 
 def test_scope_value_with_group_ref_is_literal(make_tree):
     # A scope value containing "\g<0>" must not be treated as a group ref.
     h = _hiera(make_tree, 'msg: "got %{token}"\n', token=r"\g<0>")
-    assert h.get("msg") == r"got \g<0>"
+    assert h.lookup("msg") == r"got \g<0>"
 
 
 def test_missing_scope_interpolates_empty(make_tree):
     h = _hiera(make_tree, 'msg: "[%{absent}]"\n')
-    assert h.get("msg") == "[]"
+    assert h.lookup("msg") == "[]"
 
 
 def test_format_uses_bound_scope(make_tree):
@@ -148,15 +148,15 @@ def test_undefined_variable_same_for_both_forms(make_tree, caplog):
     h = _hiera(make_tree, 'a: "[%{nosuch}]"\nb: "[%{scope(\'nosuch\')}]"\n')
 
     with caplog.at_level(logging.WARNING):
-        assert h.get("a") == "[]"
-        assert h.get("b") == "[]"
+        assert h.lookup("a") == "[]"
+        assert h.lookup("b") == "[]"
     assert any("Undefined variable 'nosuch'" in r.getMessage() for r in caplog.records)
 
     strict_h = h.scoped(strict="error")
     with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
-        strict_h.get("a", throw=True)
+        strict_h.lookup("a")
     with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
-        strict_h.get("b", throw=True)
+        strict_h.lookup("b")
 
 
 def test_lenient_invocation_warns(caplog):
@@ -188,12 +188,12 @@ def test_anchor_interpolated_once_and_shared(make_tree):
         'lst: &l ["a", "%{k}"]\nb: [*l, *l]\n',
         k="v",
     )
-    v = h.get("b")
+    v = h.lookup("b")
     assert v == [["a", "v"], ["a", "v"]]
     assert v[0] is v[1]
 
     v[0].append("z")
-    v2 = h.get("b")
+    v2 = h.lookup("b")
     assert v2 == [["a", "v"], ["a", "v"]]
 
 

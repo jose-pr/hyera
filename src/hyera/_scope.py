@@ -170,8 +170,8 @@ class _WarnState:
         # A threading.Lock cannot be pickled/deepcopied; a copy starts with
         # a fresh, unlocked one (harmless -- dedup state itself still
         # carries over, and a lock is never held across a copy/pickle
-        # boundary anyway). Keeps `Hiera`/`ScopedHiera` (holding a `Scope`,
-        # holding this) picklable and deep-copyable, as documented.
+        # boundary anyway). Keeps `Hiera` and its scoped views (holding a
+        # `Scope`, holding this) picklable and deep-copyable, as documented.
         with self._lock:
             return {
                 "_variable_keys": set(self._variable_keys),

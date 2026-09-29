@@ -35,12 +35,12 @@ def test_strict_error_then_warning(make_tree, caplog):
     )
 
     with pytest.raises(BackendError, match="file does not contain a valid yaml hash"):
-        h.scoped(strict="error").get("k", throw=True)
+        h.scoped(strict="error").lookup("k")
 
     # A later warning-strict lookup still falls through cleanly -- the
     # error-strict attempt above must not have poisoned the cache for it.
     with pytest.raises(KeyError):
-        h.scoped(strict="warning").get("k", throw=True)
+        h.scoped(strict="warning").lookup("k")
 
 
 def test_strict_warning_then_error(make_tree):
@@ -48,11 +48,11 @@ def test_strict_warning_then_error(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
 
     with pytest.raises(KeyError):
-        h.scoped(strict="warning").get("k", throw=True)
+        h.scoped(strict="warning").lookup("k")
 
     # A later error-strict lookup on the very same instance still raises --
     # the warning-strict attempt above (and construction's own pre-warm, run
     # under the same "warning" default) must not have cached its way past
     # the non-hash rule for "error" too.
     with pytest.raises(BackendError, match="file does not contain a valid yaml hash"):
-        h.scoped(strict="error").get("k", throw=True)
+        h.scoped(strict="error").lookup("k")

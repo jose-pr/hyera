@@ -175,7 +175,7 @@ if duho is not None:
             merge = self._merge_spec()
             try:
                 hiera = Hiera(self.config, scope=Scope(variables=context))
-                value = hiera.get(self.key, merge=merge, throw=True)
+                value = hiera.lookup(self.key, merge=merge)
             except KeyNotFoundError:
                 if self.default is not None:
                     value = self.default

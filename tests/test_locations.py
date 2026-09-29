@@ -124,7 +124,7 @@ def test_undefined_variable_in_location_is_probed(make_tree, caplog, strict):
     )
     with caplog.at_level("WARNING"):
         h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict=strict))
-        assert h.get("k") == "empty"
+        assert h.lookup("k") == "empty"
     messages = [r.message for r in caplog.records]
     if strict == "warning":
         assert any("Undefined variable 'nosuch'" in m for m in messages)
@@ -151,7 +151,7 @@ def test_undefined_variable_in_datadir_warning_and_off(make_tree):
             files={"data/common.yaml": "k: common\n"},
         )
         h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict=strict))
-        assert h.get("k") == "common"
+        assert h.lookup("k") == "common"
 
 
 def test_undefined_variable_in_datadir_error_raises(make_tree):
@@ -165,7 +165,7 @@ def test_undefined_variable_in_datadir_error_raises(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(strict="error"))
     with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
-        h.get("k")
+        h.lookup("k")
 
 
 def test_nested_miss_in_datadir_under_strict_error(make_tree):
@@ -187,7 +187,7 @@ def test_nested_miss_in_datadir_under_strict_error(make_tree):
         str(root / "hiera.yaml"),
         scope=Scope(facts={"os": "linux"}, strict="error"),
     )
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 # --- method syntax is rejected in every location context ------------------
@@ -240,7 +240,7 @@ def test_mapped_paths_collection_array(make_tree):
         files={"data/roles/web.yaml": "k: web\n", "data/roles/db.yaml": "k: db\n"},
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web", "db"]}))
-    assert h.get("k") == "web"
+    assert h.lookup("k") == "web"
 
 
 def test_mapped_paths_collection_colon_prefix(make_tree):
@@ -257,7 +257,7 @@ def test_mapped_paths_collection_colon_prefix(make_tree):
         files={"data/roles/web.yaml": "k: web\n"},
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
-    assert h.get("k") == "web"
+    assert h.lookup("k") == "web"
 
 
 def test_mapped_paths_collection_string(make_tree):
@@ -270,7 +270,7 @@ def test_mapped_paths_collection_string(make_tree):
         files={"data/roles/web.yaml": "k: web\n"},
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": "web"}))
-    assert h.get("k") == "web"
+    assert h.lookup("k") == "web"
 
 
 def test_mapped_paths_collection_hash(make_tree):
@@ -289,7 +289,7 @@ def test_mapped_paths_collection_hash(make_tree):
     h = Hiera(
         str(root / "hiera.yaml"), scope=Scope(facts={"roles": {"primary": "web"}})
     )
-    assert h.get("k") == "web"
+    assert h.lookup("k") == "web"
 
 
 @pytest.mark.parametrize("collection", [None, "", []])
@@ -305,7 +305,7 @@ def test_mapped_paths_collection_empty_forms_no_paths(make_tree, collection):
     )
     facts = {} if collection is None else {"roles": collection}
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts=facts))
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 @pytest.mark.parametrize(
@@ -344,7 +344,7 @@ def test_mapped_item_is_a_local_variable_top_scope_still_reachable(make_tree):
     )
     # Unqualified %{role} reads the mapped item ("web"), shadowing the
     # top-scope fact of the same name.
-    assert h.get("k") == "web"
+    assert h.lookup("k") == "web"
 
 
 def test_mapped_item_explicit_top_scope_bypasses_local_layer(make_tree):
@@ -362,7 +362,7 @@ def test_mapped_item_explicit_top_scope_bypasses_local_layer(make_tree):
     )
     # %{::role} is explicitly top-scope: it must reach the fact, not the
     # mapped item variable of the same name.
-    assert h.get("k") == "toplevel"
+    assert h.lookup("k") == "toplevel"
 
 
 # --- a directory location raises, never silently loads its files ---------
@@ -396,4 +396,4 @@ def test_glob_over_a_directory_drops_it(make_tree):
         files={"data/sub/in.yaml": "k: nope\n", "data/z.yaml": "k: z\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "z"
+    assert h.lookup("k") == "z"

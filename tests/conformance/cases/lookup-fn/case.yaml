@@ -7,42 +7,32 @@ queries:
 - key: s
   id: s_type_integer
   type: Integer
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: n
   id: n_type_integer
   type: Integer
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: n
   id: n_type_string
   type: String
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: big
   id: big_type_range
   type: Integer[0,10]
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: s
   id: s_type_enum
   type: Enum['a', 'b']
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: hsi
   id: hsi_type_hash
   type: Hash[String, Integer]
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: mixed
   id: mixed_type_array_string
   type: Array[String]
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key: u
   id: u_type_array3
   type: Array[Integer, 3]
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key:
   - missing1
   - k
   id: namelist_missing1_k
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
 - key:
   - missing1
   - missing2
   id: namelist_all_missing
-  divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults

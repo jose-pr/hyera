@@ -102,10 +102,6 @@ def expected(query: dict, golden_result: dict) -> dict:
 
 def _check_common(case_dir, case, query):
     key = query["key"]
-    if isinstance(key, list) or query.get("type"):
-        raise AdapterUnsupported(
-            "spec-lookup-options-types/lookup-api-missing-type-names-defaults"
-        )
     args = _puppet_args(case, query)
     bad = _unrecognized_flags(args)
     if bad:
@@ -121,11 +117,11 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one query through :class:`hyera.Hiera`, projected like Puppet.
 
     A config-schema divergence (most of the ``config`` area) raises during
-    construction, not during ``.get()`` -- ``Hiera(...)`` is inside the same
-    try/except as the lookup call so a ``ConfigError`` there is reported as
-    ``{"status": "error", ...}`` exactly like one raised during the lookup,
-    instead of escaping as a raw pytest error on a case that otherwise
-    matches Puppet (both sides error).
+    construction, not during ``.lookup()`` -- ``Hiera(...)`` is inside the
+    same try/except as the lookup call so a ``ConfigError`` there is
+    reported as ``{"status": "error", ...}`` exactly like one raised during
+    the lookup, instead of escaping as a raw pytest error on a case that
+    otherwise matches Puppet (both sides error).
 
     ``as_puppet_json`` is deliberately in its OWN try/except, not folded into
     the one above: several divergences (``code-io-security/dotted-subkey-raw-
@@ -133,7 +129,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     valueerror``, ``spec-merge/bad-merge-strategy-uncaught-valueerror``) are
     *exactly* "hyera raises a raw, unwrapped exception (often ValueError)
     where Puppet also errors" -- catching every ``ValueError`` from
-    ``hiera.get()`` itself would silently launder that divergence into a
+    ``hiera.lookup()`` itself would silently launder that divergence into a
     clean status match (found as an XPASS(strict) regression the first time
     this was tried: it turned three existing raw-exception divergences into
     accidental passes). Only ``as_puppet_json``'s own ``ValueError`` (a
@@ -153,11 +149,20 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
             node_name=golden["node"],
         )
         hiera = Hiera(str(case_dir / "hiera.yaml"), scope=scope)
+        kwargs = {"value_type": query.get("type"), "merge": merge}
         if query.get("default") is not None:
-            value = hiera.get(key, default=query["default"], merge=merge)
-        else:
-            value = hiera.get(key, merge=merge, throw=True)
-    except KeyNotFoundError:
+            kwargs["default_value"] = query["default"]
+        value = hiera.lookup(key, **kwargs)
+    except KeyNotFoundError as e:
+        # The recorder's own "not_found" heuristic (_NOT_FOUND in record.py)
+        # matches only Puppet's *singular* miss message ("the name"); a
+        # multi-name miss ("any of the names [...]") never matches it, so
+        # record.py files that outcome as a generic "error" with the
+        # --explain message instead. Mirror that split here rather than
+        # collapsing every KeyNotFoundError to "not_found", or a name-list
+        # query would never match its own golden.
+        if isinstance(e.name, (list, tuple)) and len(e.name) != 1:
+            return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
         return {"status": "not_found"}
     except HieraError as e:
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}

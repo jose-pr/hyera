@@ -13,7 +13,7 @@ def test_version_5_accepted(make_tree):
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
         files={"data/common.yaml": "k: v\n"},
     )
-    assert Hiera(str(root / "hiera.yaml")).get("k") == "v"
+    assert Hiera(str(root / "hiera.yaml")).lookup("k") == "v"
 
 
 def test_version_4_rejected(make_tree):
@@ -49,9 +49,9 @@ def test_unique_merge_flattens_and_dedupes(make_tree):
         make_tree, "vals: [a, b]\nscalar: x\n", "vals: [b, c]\nscalar: x\n"
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("vals", merge="unique") == ["a", "b", "c"]
+    assert h.lookup("vals", merge="unique") == ["a", "b", "c"]
     # A scalar present at multiple levels flattens+dedupes to a single entry.
-    assert h.get("scalar", merge="unique") == ["x"]
+    assert h.lookup("scalar", merge="unique") == ["x"]
 
 
 def test_deep_merge_via_string_strategy(make_tree):
@@ -61,7 +61,11 @@ def test_deep_merge_via_string_strategy(make_tree):
         "conf: {b: 2, nested: {y: 2}}\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("conf", merge="deep") == {"a": 1, "b": 2, "nested": {"x": 1, "y": 2}}
+    assert h.lookup("conf", merge="deep") == {
+        "a": 1,
+        "b": 2,
+        "nested": {"x": 1, "y": 2},
+    }
 
 
 def test_deep_merge_sort_merged_arrays(make_tree):
@@ -73,7 +77,7 @@ def test_deep_merge_sort_merged_arrays(make_tree):
         "conf: {items: [b], nested: {more: [y]}}\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
+    merged = h.lookup("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
     # Sorting reaches lists nested anywhere in the merged structure.
     assert merged == {"items": ["a", "b", "c"], "nested": {"more": ["x", "y", "z"]}}
 
@@ -86,7 +90,7 @@ def test_deep_merge_sort_applies_after_knockout(make_tree):
         "conf: {items: [b, d]}\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get(
+    merged = h.lookup(
         "conf",
         merge={
             "strategy": "deep",
@@ -104,7 +108,7 @@ def test_merge_hash_arrays(make_tree):
         "rows: [{extra: 1}, {v: 2}]\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get("rows", merge={"strategy": "deep", "merge_hash_arrays": True})
+    merged = h.lookup("rows", merge={"strategy": "deep", "merge_hash_arrays": True})
     assert merged == [{"name": "a", "v": 1, "extra": 1}, {"name": "b", "v": 2}]
 
 
@@ -119,7 +123,7 @@ def test_lookup_options_sets_merge(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     # No merge= passed; lookup_options drives it.
-    assert h.get("classes") == ["web", "base"]
+    assert h.lookup("classes") == ["web", "base"]
 
 
 def test_lookup_options_regex_pattern(make_tree):
@@ -129,7 +133,7 @@ def test_lookup_options_regex_pattern(make_tree):
         "app::ports: [443]\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("app::ports") == [80, 443]
+    assert h.lookup("app::ports") == [80, 443]
 
 
 def test_lookup_options_unanchored_dotted_key_is_literal(make_tree):
@@ -143,7 +147,7 @@ def test_lookup_options_unanchored_dotted_key_is_literal(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     # No merge should apply -> first match wins.
-    assert h.get("dbxport") == [80]
+    assert h.lookup("dbxport") == [80]
 
 
 def test_explicit_merge_overrides_lookup_options(make_tree):
@@ -154,7 +158,7 @@ def test_explicit_merge_overrides_lookup_options(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     # Explicit first wins over lookup_options unique.
-    assert h.get("classes", merge="first") == ["web"]
+    assert h.lookup("classes", merge="first") == ["web"]
 
 
 def test_lookup_options_merged_once_per_context(make_tree):
@@ -176,9 +180,9 @@ def test_lookup_options_merged_once_per_context(make_tree):
         return real_lookup_levels(root, *args, **kwargs)
 
     h._lookup_levels = counting_lookup_levels
-    assert h.get("classes") == ["web", "base"]
-    assert h.get("other") == ["x"]
-    assert h.get("classes") == ["web", "base"]
+    assert h.lookup("classes") == ["web", "base"]
+    assert h.lookup("other") == ["x"]
+    assert h.lookup("classes") == ["web", "base"]
     # Three default-merge lookups, but lookup_options is merged at most once.
     assert calls.count("lookup_options") <= 1
 
@@ -204,11 +208,11 @@ def test_lookup_options_cache_is_per_context(make_tree):
     # Scope a declares a unique merge; scope b declares nothing.
     a = h.scoped(environment="a")
     b = h.scoped(environment="b")
-    assert a.get("vals") == [1, 2]
-    assert b.get("vals") == [1]
+    assert a.lookup("vals") == [1, 2]
+    assert b.lookup("vals") == [1]
     # Re-run in the opposite order to catch a cache that ignores scope.
-    assert b.get("vals") == [1]
-    assert a.get("vals") == [1, 2]
+    assert b.lookup("vals") == [1]
+    assert a.lookup("vals") == [1, 2]
 
 
 def test_convert_to_integer(make_tree):
@@ -220,7 +224,7 @@ def test_convert_to_integer(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("port") == 8080
+    assert h.lookup("port") == 8080
 
 
 def test_convert_to_sensitive(make_tree):
@@ -232,7 +236,7 @@ def test_convert_to_sensitive(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"))
-    val = h.get("secret")
+    val = h.lookup("secret")
     assert isinstance(val, Sensitive)
     assert val.unwrap() == "hunter2"
     assert "hunter2" not in str(val)
@@ -257,8 +261,8 @@ def test_mapped_paths(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"roles": ["web", "db"]}))
-    assert h.get("web_setting") is True
-    assert h.get("db_setting") is True
+    assert h.lookup("web_setting") is True
+    assert h.lookup("db_setting") is True
 
 
 # --- default_hierarchy ----------------------------------------------

@@ -63,7 +63,7 @@ def test_json_backend_loads(make_tree):
         files={"data/common.json": json.dumps({"k": "v"}).encode("utf-8")},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 @pytest.mark.parametrize("name", ["yaml", "json", "hocon", "yaml.enc"])
@@ -118,8 +118,8 @@ def test_hocon_backend(make_tree):
         files={"data/common.conf": "k = v\nn { a = 1 }\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
-    assert h.get("n.a") == 1
+    assert h.lookup("k") == "v"
+    assert h.lookup("n.a") == 1
 
 
 def test_hocon_backend_missing_dep_errors(monkeypatch):
@@ -154,7 +154,7 @@ def test_missing_hierarchy_uses_puppet_default(make_tree):
         files={"data/common.yaml": "k: v\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 @pytest.mark.parametrize(
@@ -189,7 +189,7 @@ def test_yaml_non_hash_warns_and_falls_through(make_tree, caplog):
     )
     with caplog.at_level(logging.WARNING):
         h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("anything", default="dflt") == "dflt"
+    assert h.lookup("anything", default_value="dflt") == "dflt"
     assert any(
         "does not contain a valid yaml hash" in r.message for r in caplog.records
     )

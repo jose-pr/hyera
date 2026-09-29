@@ -25,7 +25,7 @@ def test_dict_config_is_not_mutated(tmp_path):
 
     h = Hiera(cfg, base_path=str(tmp_path))
 
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
     assert cfg == snapshot
 
 
@@ -48,7 +48,7 @@ def test_relative_config_path_survives_chdir(monkeypatch, tmp_path):
     # made absolute at construction, so the lookup below must not re-derive
     # anything from the current cwd.
     monkeypatch.chdir(tmp_path / "rel" / "data")
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 def test_none_config_uses_puppet_default(make_tree):
@@ -60,7 +60,7 @@ def test_none_config_uses_puppet_default(make_tree):
 
     h = Hiera(None, base_path=str(root))
 
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 def test_missing_config_file_raises(tmp_path):
@@ -129,7 +129,7 @@ def test_entry_datadir_fallback(make_tree, defaults_yaml, expected_dir):
 
     h = Hiera(str(root / "hiera.yaml"))
 
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 _BASE_V5 = {

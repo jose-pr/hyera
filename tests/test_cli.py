@@ -428,7 +428,7 @@ def test_unexpected_exception_exit_2(hiera_root, monkeypatch, caplog, exc_type):
     def _raise(self, *a, **kw):
         raise exc_type("boom")
 
-    monkeypatch.setattr(hyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
     with caplog.at_level(logging.ERROR):
         rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
@@ -448,7 +448,7 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
     def _raise(self, *a, **kw):
         raise RecursionError("boom")
 
-    monkeypatch.setattr(hyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
     with caplog.at_level(logging.ERROR):
         rc = main(["k", "-c", str(hiera_root / "hiera.yaml"), "-v"])
@@ -484,7 +484,7 @@ def test_plain_keyerror_is_not_a_miss(hiera_root, monkeypatch):
     def _raise(self, *a, **kw):
         raise KeyError("x")
 
-    monkeypatch.setattr(hyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
     rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
 

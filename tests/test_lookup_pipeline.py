@@ -39,9 +39,9 @@ def test_dotted_key_digs_after_first_found(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(KeyNotFoundError):
-        h.get("db.port", throw=True)
+        h.lookup("db.port")
     with pytest.raises(KeyNotFoundError):
-        h.get("dot_first.b", throw=True)
+        h.lookup("dot_first.b")
 
 
 def test_dotted_key_merges_root_then_digs(make_tree):
@@ -56,14 +56,14 @@ def test_dotted_key_merges_root_then_digs(make_tree):
         "db: {port: 2, host: h2}\ndot_hash: {b: {x: 1, y: 2}}\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("db.port", merge="hash", throw=True) == 1
-    assert h.get("dot_hash.b", merge="hash", throw=True) == {"x": 1}
+    assert h.lookup("db.port", merge="hash") == 1
+    assert h.lookup("dot_hash.b", merge="hash") == {"x": 1}
 
 
 def test_quoted_segment_key(make_tree):
     root = _levels(make_tree, '"dotted.key": dv\n')
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get('"dotted.key"', throw=True) == "dv"
+    assert h.lookup('"dotted.key"') == "dv"
 
 
 def test_found_null_is_found(make_tree):
@@ -72,21 +72,21 @@ def test_found_null_is_found(make_tree):
     # strategy exactly as Puppet's Undef would.
     root = _levels(make_tree, "nil_first: ~\n", "nil_first: x\n")
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("nil_first", default="D") is None
-    assert h.get("nil_first", merge="unique", throw=True) == [None, "x"]
+    assert h.lookup("nil_first", default_value="D") is None
+    assert h.lookup("nil_first", merge="unique") == [None, "x"]
     with pytest.raises(MergeError, match="expects a Hash value, got Undef"):
-        h.get("nil_first", merge="hash", throw=True)
+        h.lookup("nil_first", merge="hash")
     # deep_merge treats a nil source as absent, keeping the other side.
-    assert h.get("nil_first", merge="deep", throw=True) == "x"
+    assert h.lookup("nil_first", merge="deep") == "x"
 
     deep_root = _levels(make_tree, "nil_deep: ~\n", "nil_deep: {a: 1}\n")
     deep_h = Hiera(str(deep_root / "hiera.yaml"))
-    assert deep_h.get("nil_deep", merge="deep", throw=True) == {"a": 1}
+    assert deep_h.lookup("nil_deep", merge="deep") == {"a": 1}
 
     only_root = _levels(make_tree, "onlynil: ~\n", "other: 1\n")
     only_h = Hiera(str(only_root / "hiera.yaml"))
     with pytest.raises(KeyNotFoundError):
-        only_h.get("onlynil.x", throw=True)
+        only_h.lookup("onlynil.x")
 
 
 def test_lookup_options_key_is_reserved(make_tree):
@@ -98,11 +98,11 @@ def test_lookup_options_key_is_reserved(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(KeyNotFoundError):
-        h.get("lookup_options", throw=True)
+        h.lookup("lookup_options")
     with pytest.raises(KeyNotFoundError):
-        h.get("lookup_options.x", throw=True)
+        h.lookup("lookup_options.x")
     # A missing interpolated lookup renders as empty, same as any miss.
-    assert h.get("ref_lo", throw=True) == "v="
+    assert h.lookup("ref_lo") == "v="
 
 
 def test_explicit_merge_keeps_convert_to(make_tree):
@@ -115,9 +115,9 @@ def test_explicit_merge_keeps_convert_to(make_tree):
     # An explicit merge= replaces only the *merge* lookup_options would
     # have picked (here, none -- both use first-match); convert_to still
     # runs on the result.
-    assert h.get("int_plain", merge="first", throw=True) == 42
+    assert h.lookup("int_plain", merge="first") == 42
     with pytest.raises(HieraLookupError) as exc_info:
-        h.get("int_plain", merge="unique", throw=True)
+        h.lookup("int_plain", merge="unique")
     assert str(exc_info.value).startswith(
         "The convert_to lookup_option for key 'int_plain' raised error:"
     )
@@ -133,8 +133,8 @@ def test_sub_lookup_uses_target_lookup_options(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     # A sub-lookup runs the target key's own lookup_options: ref_k gets
     # port already converted to an Integer, never the raw "5" string.
-    assert h.get("ref_k", throw=True) == "5"
-    assert h.get("port", throw=True) == 5
+    assert h.lookup("ref_k") == "5"
+    assert h.lookup("port") == 5
 
 
 def test_sub_lookup_never_shares_merge(make_tree):
@@ -147,8 +147,8 @@ def test_sub_lookup_never_shares_merge(make_tree):
     # al_x's own sub-lookup of "al" always runs with merge=None
     # (first-match): it sees only l1's ["a"], never al_x's own caller
     # merge="deep", which would otherwise have picked up l2's "b" too.
-    assert h.get("al_x", merge="deep", throw=True) == '["a"]'
-    assert h.get("al", merge="deep", throw=True) == ["b", "a"]
+    assert h.lookup("al_x", merge="deep") == '["a"]'
+    assert h.lookup("al", merge="deep") == ["b", "a"]
 
 
 def test_sub_lookup_spans_default_hierarchy(make_tree):
@@ -167,8 +167,8 @@ def test_sub_lookup_spans_default_hierarchy(make_tree):
     # pipeline too -- both the main hierarchy (main_ref) and
     # default_hierarchy itself (dh_ref) -- never only the level list
     # that happened to be walked to reach it.
-    assert h.get("main_ref", throw=True) == "dval"
-    assert h.get("dh_ref", throw=True) == "mval"
+    assert h.lookup("main_ref") == "dval"
+    assert h.lookup("dh_ref") == "mval"
 
 
 def test_rich_data_validated_per_value(make_tree):
@@ -178,13 +178,13 @@ def test_rich_data_validated_per_value(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError, match="expects Puppet::LookupValue"):
-        h.get("k_boolkey", throw=True)
+        h.lookup("k_boolkey")
     with pytest.raises(HieraLookupError, match="expects Puppet::LookupValue"):
-        h.get("k_nullkey", throw=True)
+        h.lookup("k_nullkey")
     # A bad sibling key never breaks a lookup of any other key in the
     # same file -- validation is per found root value, not per file.
-    assert h.get("k_intkey", throw=True) == {1: "one"}
-    assert h.get("k_ok", throw=True) == "fine"
+    assert h.lookup("k_intkey") == {1: "one"}
+    assert h.lookup("k_ok") == "fine"
 
 
 def test_lookups_inside_lookup_options_see_no_options(make_tree):
@@ -201,4 +201,4 @@ def test_lookups_inside_lookup_options_see_no_options(make_tree):
         "rk: [b]\n",
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("rk", throw=True) == ["a", "b"]
+    assert h.lookup("rk") == ["a", "b"]

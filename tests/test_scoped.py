@@ -1,11 +1,8 @@
-"""``ScopedHiera`` survives ``copy``, ``copy.deepcopy`` and ``pickle``.
-
-``__getattr__`` must guard against unbounded recursion: copying/pickling
-rebuilds the object without ``__init__``, and the resulting attribute
-lookups (looking for dunder/state methods on the still-empty instance)
-would otherwise reach ``__getattr__`` again, whose own body reads
-``self.hiera`` -- itself an attribute lookup on the same not-yet-initialized
-instance.
+"""A ``Hiera.scoped(...)`` view survives ``copy``, ``copy.deepcopy`` and
+``pickle`` -- it is a plain :class:`~hyera.Hiera` instance (``_view`` builds
+it with ``object.__new__`` plus a ``__dict__`` copy, no ``__getattr__``
+proxy), so the usual object machinery, not any custom hook of ours, is what
+these exercise.
 """
 
 import copy
@@ -39,7 +36,7 @@ def test_scoped_copies_and_pickles(use_path, make_tree):
         pickle.loads(pickle.dumps(s)),
     ):
         assert clone.scope == s.scope
-        assert clone.get("k") == s.get("k")
+        assert clone.lookup("k") == s.lookup("k")
 
 
 def test_scoped_missing_attribute_raises_attribute_error(make_tree):

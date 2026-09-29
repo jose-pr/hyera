@@ -208,7 +208,7 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
         files={"data/common.yaml": "k: v\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
     with pytest.raises(BackendError, match="pyhocon"):
         HOCONBackend.check_available()

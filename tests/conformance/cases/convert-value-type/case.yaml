@@ -7,430 +7,352 @@ queries:
   - key: s
     id: t01
     type: String
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t02
     type: Integer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: n
     id: t03
     type: Integer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: big
     id: t04
     type: Integer[0,10]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\[0,\\ 10\\]\\ value,\\ got\\ Integer\\[11,\\ 11\\]"
   - key: big
     id: t05
     type: Integer[default,10]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\[default,\\ 10\\]\\ value,\\ got\\ Integer\\[11,\\ 11\\]"
   - key: neg
     id: t06
     type: Integer[0]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\[0\\]\\ value,\\ got\\ Integer\\[\\-3,\\ \\-3\\]"
   - key: f
     id: t07
     type: Float
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: f
     id: t08
     type: Float[2.0]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Float\\[2\\.0\\]\\ value,\\ got\\ Float\\[1\\.5,\\ 1\\.5\\]"
   - key: n
     id: t09
     type: Float
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Float\\ value,\\ got\\ Integer"
   - key: n
     id: t10
     type: Numeric
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t11
     type: Numeric
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Numeric\\ value,\\ got\\ String"
   - key: b
     id: t12
     type: Boolean
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t13
     type: Boolean
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Boolean\\ value,\\ got\\ String"
   - key: nilk
     id: t14
     type: Optional[String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: nilk
     id: t15
     type: String
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ String\\ value,\\ got\\ Undef"
   - key: nilk
     id: t16
     type: Undef
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t17
     type: Undef
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Undef\\ value,\\ got\\ String"
   - key: nilk
     id: t18
     type: NotUndef
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ NotUndef\\ value,\\ got\\ Undef"
   - key: s
     id: t19
     type: NotUndef[Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: s
     id: t20
     type: Any
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t21
     type: Scalar
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: mixed
     id: t22
     type: Scalar
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Scalar\\ value,\\ got\\ Tuple"
   - key: s
     id: t23
     type: ScalarData
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t24
     type: String[1,2]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ String\\[1,\\ 2\\]\\ value,\\ got\\ String"
   - key: s
     id: t25
     type: String[5]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ String\\[5\\]\\ value,\\ got\\ String"
   - key: s
     id: t26
     type: Enum['a','b']
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ match\\ for\\ Enum\\['a',\\ 'b'\\],\\ got\\ 'str'"
   - key: s
     id: t27
     type: Enum[str]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t28
     type: Pattern[/^s/]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t29
     type: Pattern[/^x/, /^y/]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ match\\ for\\ Pattern\\[/\\^x/,\\ /\\^y/\\],\\ got\\ 'str'"
   - key: s
     id: t30
     type: Variant[Integer, String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: s
     id: t31
     type: Variant[Integer, Float]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Integer\\ or\\ Float,\\ got\\ String"
   - key: s
     id: t32
     type: Variant[Integer, Boolean, Float]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Integer,\\ Boolean,\\ or\\ Float,\\ got\\ String"
   - key: s
     id: t33
     type: Optional[Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Undef\\ or\\ Integer,\\ got\\ String"
   - key: s
     id: t34
     type: Optional[Enum[a,b]]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ undef\\ value\\ or\\ a\\ match\\ for\\ Enum\\['a',\\ 'b'\\],\\ got\\ 'str'"
   - key: mixed
     id: t35
     type: Array[String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ index\\ 1\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: strs
     id: t36
     type: Array[String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: ints2
     id: t37
     type: Array[Integer, 3]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ at\\ least\\ 3,\\ got\\ 2"
   - key: ints2
     id: t38
     type: Array[Integer, 1, 1]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ 1,\\ got\\ 2"
   - key: ints2
     id: t39
     type: Array
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: empty_a
     id: t40
     type: Array[String, 1]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ at\\ least\\ 1,\\ got\\ 0"
   - key: s
     id: t41
     type: Array
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Array\\ value,\\ got\\ String"
   - key: hsi
     id: t42
     type: Hash[String, Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: hsi
     id: t43
     type: Hash[String, String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'a'\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: hsi
     id: t44
     type: Hash[Integer, Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ key\\ of\\ entry\\ 'a'\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: hsi
     id: t45
     type: Hash[String, Integer, 3]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ at\\ least\\ 3,\\ got\\ 2"
   - key: hmix
     id: t46
     type: Hash[String, Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'b'\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: s
     id: t47
     type: Hash
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Hash\\ value,\\ got\\ String"
   - key: mixed
     id: t48
     type: Tuple[String, Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: mixed
     id: t49
     type: Tuple[String, String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ index\\ 1\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: mixed
     id: t50
     type: Tuple[String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ 1,\\ got\\ 2"
   - key: mixed
     id: t51
     type: Tuple[String, Integer, String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ size\\ to\\ be\\ 3,\\ got\\ 2"
   - key: hsi
     id: t52
     type: Struct[{a => Integer, b => Integer}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: hsi
     id: t53
     type: Struct[{a => Integer}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ unrecognized\\ key\\ 'b'"
   - key: hsi
     id: t54
     type: Struct[{a => Integer, b => Integer, c => String}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ for\\ key\\ 'c'"
   - key: hsi
     id: t55
     type: Struct[{a => Integer, b => Integer, Optional[c] => String}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: hsi
     id: t56
     type: Struct[{a => Integer, b => String}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'b'\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: nested
     id: t57
     type: Hash[String, Array[Integer]]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'a'\\ index\\ 1\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: deep
     id: t58
     type: Hash[String, Hash[String, Array[Integer]]]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'a'\\ entry\\ 'b'\\ index\\ 1\\ expects\\ an\\ Integer\\ value,\\ got\\ Struct"
   - key: s
     id: t59
     type: Regexp
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Regexp\\ value,\\ got\\ String"
   - key: s
     id: t60
     type: Sensitive
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Sensitive\\ value,\\ got\\ String"
   - key: s
     id: t61
     type: Sensitive[String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Sensitive\\[String\\]\\ value,\\ got\\ String"
   - key: s
     id: t62
     type: NoSuch[
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: s
     id: t63
     type: integer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*The\\ expression\\ <integer>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: s
     id: t64
     type: Collection
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Collection\\ value,\\ got\\ String"
   - key: s
     id: t65
     type: Default
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Default\\ value,\\ got\\ String"
   - key: s
     id: t66
     type: Type
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Type\\ value,\\ got\\ String"
   - key: s
     id: t67
     type: Timestamp
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Timestamp\\ value,\\ got\\ String"
   - key: s
     id: t68
     type: SemVer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ SemVer\\ value,\\ got\\ String"
   - key: n
     id: t69
     type: Integer[10,0]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*'from'\\ must\\ be\\ less\\ or\\ equal\\ to\\ 'to'\\.\\ Got\\ \\(10,\\ 0"
   - key: s
     id: t70
     type: Callable
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ Callable\\ value,\\ got\\ String"
   - key: big
     id: t71
     type: Variant[Integer[0,10], Integer[20,30]]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Integer\\[0,\\ 10\\]\\ or\\ Integer\\[20,\\ 30\\],\\ got\\ Integer\\[11,\\ 11\\]"
   - key: s
     id: t72
     type: Variant[Enum['a'], Pattern[/^x/]]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ match\\ for\\ Variant\\[Enum\\['a'\\],\\ Pattern\\[/\\^x/\\]\\],\\ got\\ 'str'"
   - key: b
     id: t73
     type: Variant[Integer, String]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Integer\\ or\\ String,\\ got\\ Boolean"
   - key: f
     id: t74
     type: Integer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\ value,\\ got\\ Float"
   - key: mixed
     id: t75
     type: Array[Integer]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ index\\ 0\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: nested
     id: t76
     type: Struct[{a => Array[String]}]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ entry\\ 'a'\\ index\\ 0\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: hsi
     id: t77
     type: Variant[Hash[String, String], Array]
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ variant\\ 0\\ entry\\ 'a'\\ expects\\ a\\ String\\ value,\\ got\\ Integer"
   - key: s
     id: t78
     type: Enum['a', 'b', 'c']
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
     error_class: HieraLookupError
     error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ match\\ for\\ Enum\\['a',\\ 'b',\\ 'c'\\],\\ got\\ 'str'"

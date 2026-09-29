@@ -51,28 +51,28 @@ def test_dotted_ref_in_path_selects_the_right_file(tree):
             variables={"a": {"b": {"c": 42}}},
         ),
     )
-    assert h.get("role") == "web"
+    assert h.lookup("role") == "web"
 
 
 def test_dotted_ref_in_value_interpolates_nested(tree):
     h = Hiera(str(tree / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
-    assert h.get("os_msg") == "running linux"
+    assert h.lookup("os_msg") == "running linux"
 
 
 def test_dotted_ref_multiple_levels_deep(tree):
     h = Hiera(str(tree / "hiera.yaml"), scope=_scope(variables={"a": {"b": {"c": 42}}}))
-    assert h.get("deep_ref") == "v42"
+    assert h.lookup("deep_ref") == "v42"
 
 
 def test_scope_function_resolves_dotted_ref(tree):
     # %{scope('facts.os')} must agree with the bare %{facts.os} form.
     h = Hiera(str(tree / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
-    assert h.get("scoped") == "linux"
+    assert h.lookup("scoped") == "linux"
 
 
 def test_absent_nested_ref_in_value_is_empty_string(tree):
     h = Hiera(str(tree / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
-    assert h.get("absent") == "xy"
+    assert h.lookup("absent") == "xy"
 
 
 def test_absent_nested_ref_in_path_probes_empty_segment(make_tree):
@@ -83,7 +83,7 @@ def test_absent_nested_ref_in_path_probes_empty_segment(make_tree):
         CONFIG, dict(FILES, **{"data/nodes/.yaml": "role: empty_segment\n"})
     )
     h = Hiera(str(root / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
-    assert h.get("role") == "empty_segment"
+    assert h.lookup("role") == "empty_segment"
 
 
 def test_partial_nested_ref_in_path_probes_empty_segment(make_tree):
@@ -94,7 +94,7 @@ def test_partial_nested_ref_in_path_probes_empty_segment(make_tree):
         CONFIG, dict(FILES, **{"data/nodes/.yaml": "role: empty_segment\n"})
     )
     h = Hiera(str(root / "hiera.yaml"), scope=_scope(trusted={"other": "x"}))
-    assert h.get("role") == "empty_segment"
+    assert h.lookup("role") == "empty_segment"
 
 
 def test_scalar_walked_as_container_raises(make_tree):
@@ -114,7 +114,7 @@ def test_scalar_walked_as_container_raises(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"t": "not-a-dict"}))
     with pytest.raises(HieraLookupError, match="Got String"):
-        h.get("role")
+        h.lookup("role")
 
 
 def test_flat_dotted_key_does_not_shadow(tree):
@@ -126,7 +126,7 @@ def test_flat_dotted_key_does_not_shadow(tree):
         str(tree / "hiera.yaml"),
         scope=Scope(variables={"trusted.certname": "web01.example.com"}),
     )
-    assert h.get("role") == "none"
+    assert h.lookup("role") == "none"
 
 
 def test_format_resolves_dotted_refs(tree):
@@ -155,7 +155,7 @@ def test_list_index_segment_in_dotted_ref(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"roles": ["web", "db"]}))
-    assert h.get("picked") == "web"
+    assert h.lookup("picked") == "web"
 
 
 def test_datadir_supports_dotted_refs(make_tree):
@@ -170,7 +170,7 @@ def test_datadir_supports_dotted_refs(make_tree):
         {"data/prod/common.yaml": "k: v\n"},
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"env": "prod"}))
-    assert h.get("k") == "v"
+    assert h.lookup("k") == "v"
 
 
 def test_mapped_paths_template_supports_dotted_refs(make_tree):
@@ -188,4 +188,4 @@ def test_mapped_paths_template_supports_dotted_refs(make_tree):
         str(root / "hiera.yaml"),
         scope=Scope(variables={"roles": ["web"]}, facts={"env": "prod"}),
     )
-    assert h.get("web_setting") is True
+    assert h.lookup("web_setting") is True

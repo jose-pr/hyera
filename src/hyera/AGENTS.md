@@ -64,40 +64,71 @@ private engine internals with no stability contract.
   `BackendError` (`.path` names it) for a data file that cannot be read or
   parsed. Context-free hierarchy levels are loaded by the constructor, so a
   `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
-  - **`.get(key, default=None, merge=None, throw=False)`**
-    — resolve `key` against the instance's bound scope. `key` must be a
-    `str`; anything else raises `TypeError`. A dotted `key` follows Puppet's
-    sub-key grammar (see the dotted reference gotcha below) and can itself
-    raise `HieraLookupError` (a malformed key, or a type mismatch during the
-    walk) — **even when a `default` was given**; only a genuine miss falls
-    back to it. `merge`: one of Puppet's strategy names (`"first"`/
-    `"default"`/`"unique"`/`"hash"`/`"deep"`/`"reverse_deep"`/
-    `"unconstrained_deep"`) or a dict `{"strategy": "deep",
-    "knockout_prefix": ..., "sort_merged_arrays": ..., "merge_hash_arrays":
-    ...}`. `reverse_deep`/`unconstrained_deep` are Hiera-3-era strategies
-    Puppet still accepts from `lookup_options`/`merge=`; `unconstrained_deep`
-    is `deep` with no fixed option set — it also takes `preserve_unmergeables`,
-    `overwrite_arrays`, `unpack_arrays`, `extend_existing_arrays`,
-    `keep_array_duplicates` and `merge_nil_values` (deep_merge's own
-    options, plain `deep` never reads them), and `reverse_deep` is
-    `unconstrained_deep` with the two merged values swapped (the
-    lower-priority one wins ties). Neither name is listed by anything
-    CLI-facing. Omitted → the data's `lookup_options` key decides, else
-    first-match-wins. Invalid input (an unknown strategy, a strategy hash
-    with no `strategy` key, an unrecognized or mistyped option, a
-    `hash`/`unique` merge of a value the strategy rejects) raises
-    `hyera.MergeError`. `throw=True` raises `KeyNotFoundError`
-    (a `KeyError`) instead of returning `default` on a miss. Falls back to
-    `default_hierarchy` when the main hierarchy misses.
-  - **`.has(key) -> bool`** — `True` iff `.get(key, throw=True)` would not
-    raise `KeyNotFoundError`, against the same bound scope. A non-`str`
-    `key` still raises `TypeError`; a dotted `key`'s own
-    `HieraLookupError`/`InterpolationError` propagates too — only a genuine
-    miss becomes `False`.
+  - **`.lookup(name, value_type=None, merge=None, default_value=<unset>, *,
+    default_values_hash=None, override=None, block=None)`** — Puppet's
+    `lookup()`, against the instance's bound scope. Five equivalent call
+    forms: `lookup("k")`; `lookup("k", "Integer")`; `lookup("k", "Integer",
+    "first", 0)` (every positional argument); `lookup({"name": "k", "merge":
+    "first"})` (a single dict in place of everything else — `"name"` is
+    required, and every other positional argument/option keyword must be
+    omitted); `lookup("k", {"merge": "first"})` (name positional, every
+    other option in a dict passed as `value_type`). Every option name also
+    works as a keyword (`lookup("k", merge="first")`); combining an options
+    dict (either form) with another positional argument or an option
+    keyword raises `TypeError` — `block` is the one exception, accepted
+    alongside either dict form. `name`: a `str`, or a `list` of `str` tried
+    in order (a `tuple` raises `TypeError`: `h["a", "b"]` must mean `(name,
+    value_type)`, so a name list has to be a `list`). `value_type`: a Puppet
+    type expression string (`"Integer"`, `"Optional[String]"`); every
+    candidate value (an override, a found value, a default) is asserted
+    against it, raising `HieraLookupError` on a mismatch with Puppet's own
+    subject text ("Found value has wrong type, …", "Default value has wrong
+    type, …", "Value found for key '<k>' in override hash has wrong type,
+    …", "… in default values hash has wrong type, …", "Value returned from
+    default block has wrong type, …"). `merge`: as `lookup_options`'
+    `merge` (see below) — an explicit `merge=` overrides only the merge
+    `lookup_options` would have picked; an applicable `convert_to` still
+    runs. `default_value`: returned (after `value_type`) when nothing else
+    was found; **omitted entirely** means no default at all — passing
+    `None` explicitly is a real default that beats a miss (and a found
+    `None` beats even that). `default_values_hash`: a dict tried, per name,
+    only after the whole hierarchy missed every name. `override`: a dict
+    consulted, per name, *before* the hierarchy — a hit here returns
+    immediately, `convert_to` included, never touching the hierarchy at
+    all; both `override` and `default_values_hash` also feed `%{var}`
+    interpolation inside any value looked up during the same call (never a
+    hierarchy location, which interpolates against the scope alone).
+    `block`: called with `name` exactly as given (a list stays a list) when
+    nothing else was found, before `default_value`; its return value is
+    asserted against `value_type` too. Precedence, per name in order:
+    `override` → the hierarchy (`lookup_options`, `default_hierarchy`,
+    `convert_to` all apply) → (next name) → `default_values_hash` (every
+    name again) → `block` → `default_value` → `KeyNotFoundError` (also a
+    `KeyError`), naming every name that was tried ("… for the name 'x'" for
+    one, "… for any of the names [...]" otherwise, including an empty
+    list). A non-`str`/non-`list` `name`, a `tuple`, an unparsable
+    `value_type`'s call shape, an empty-string `merge`, a non-callable
+    `block`, or an unknown/malformed option raises `TypeError`. Also
+    reachable as `h(...)` (`__call__`, identical to `.lookup(...)`) and
+    `h[...]` (`__getitem__`: a `tuple` unpacks into `.lookup(*item)`,
+    anything else becomes the sole `name` argument — so `h["a", "b"]` is
+    `lookup("a", "b")`, not a two-name list). `name in h` (`__contains__`)
+    is `True` unless `.lookup(name)` raises `KeyNotFoundError` — any other
+    error (a malformed key, a type mismatch) propagates, same as
+    `.lookup()`. `iter(h)` raises `TypeError` (`__iter__ = None`): a `Hiera`
+    is not a sequence, even though it defines `__getitem__`.
   - **`.scoped(*, variables=None, facts=None, trusted=None,
     server_facts=None, environment=None, strict=None, node_name=None) ->
-    ScopedHiera`** — `ScopedHiera(self, self.scope.derive(...))`: a view
-    bound to a scope derived from this instance's own (see `Scope.derive`).
+    Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new
+    `Hiera` (via `object.__new__` plus a `__dict__` copy, not a proxy) that
+    shares this instance's config, backends and all three caches (`.cache`,
+    `._source_cache`, `._lookup_options_cache` — already keyed on the scope
+    value, so sharing them is safe) with the derived scope bound in place
+    of `self.scope`. Every method — `.lookup`/`()`/`[]`/`in`, `.sources()`,
+    `.format()` — then reads the view's own scope. `.scoped(...)` layers:
+    calling it again on a view derives from *that* view's scope, not the
+    original instance's, so nested calls compose. The original instance's
+    own scope, and any other existing view, are never affected.
   - **`.sources() -> list`** — resolve+load the ordered candidate source
     paths for the bound scope (cached per scope value; a fresh `Hiera`
     instance if the on-disk tree may have changed).
@@ -107,6 +138,13 @@ private engine internals with no stability contract.
     undefined variables per the scope's `strict`. Returns a `str`, except
     that a `text` that is exactly one `%{alias('k')}` returns `k`'s value.
     Raises `TypeError` for a non-`str` `text`.
+  - Coming from `hiera()`/`hiera_array()`/`hiera_hash()`/`hiera_include()`
+    (Puppet's legacy functions always force a merge, ignoring
+    `lookup_options`): `hiera(k[, d])` → `h.lookup(k, None, "first"[, d])`;
+    `hiera_array(k)` → `h.lookup(k, None, "unique")`; `hiera_hash(k)` →
+    `h.lookup(k, None, "hash")`; `hiera_include(k)` has no equivalent (it
+    applies classes to a catalog, which hyera has no notion of) — none of
+    the four are implemented as methods; use `.lookup()` directly.
   - Gotcha: a single `Hiera` instance caches parsed file contents
     (`.cache`, keyed by file path and the `strict` value that loaded it —
     a YAML file's own non-hash validation is `strict`-sensitive, so the
@@ -114,27 +152,22 @@ private engine internals with no stability contract.
     values), resolved source-path lists (`._source_cache`) and the merged
     `lookup_options` mapping (`._lookup_options_cache`), the latter two
     keyed per `Scope` value — it does not notice on-disk changes after
-    first load for a given scope.
+    first load for a given scope. A `.scoped(...)` view shares all three
+    dicts with the instance it was derived from (and with every other view
+    of the same instance), by design (see `.scoped` above) — never copy
+    them expecting isolation.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
-    what it read at construction). `Hiera` and `ScopedHiera` survive
-    `copy.deepcopy` and `pickle` (a spawn-start process pool can receive
-    one; a relative config path stays relative to the receiving process's
-    working directory), which copies the parsed-data cache too,
+    what it read at construction). `Hiera` (a `.scoped(...)` view included)
+    survives `copy.deepcopy` and `pickle` (a spawn-start process pool can
+    receive one; a relative config path stays relative to the receiving
+    process's working directory), which copies the parsed-data cache too,
     sops-decrypted values included (`Scope`'s own warning-dedup state is
     NOT carried over verbatim — its internal lock cannot be pickled, so a
     copy starts with the same dedup keys but a fresh, unlocked mutex).
-    Concurrent `.get()` calls on one instance from multiple threads are safe
-    on GIL builds, where they only mutate that instance's own caches
-    (untested on free-threaded builds).
-- **`ScopedHiera(hiera, scope)`** — a `Hiera` with a bound (derived)
-  `Scope`; every method (`.get`/`.has`/`.sources`/`.format`/`.scoped`) has
-  `Hiera`'s own signature and uses `self.scope` instead of `hiera.scope`.
-  `.scoped(...)` layers: it derives from `self.scope`, not `hiera.scope`, so
-  nested `scoped()` calls compose instead of each restarting from the
-  instance's own scope. Unknown attributes proxy to the wrapped `Hiera`
-  (dunder names, `hiera` and `scope` themselves excepted); instances survive
-  `copy`, `copy.deepcopy` and `pickle`.
+    Concurrent `.lookup()` calls on one instance (or its views) from
+    multiple threads are safe on GIL builds, where they only mutate the
+    shared caches (untested on free-threaded builds).
 - **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
   `location_key`, `locations`) — one hierarchy entry, stored exactly as
   written in hiera.yaml (`locations` is never interpolated or normalized
@@ -183,7 +216,7 @@ private engine internals with no stability contract.
 ## Scope (`_scope.py`)
 
 Puppet's top scope, as one immutable, hashable value, bound to every
-`Hiera`/`ScopedHiera` instance (`Hiera(..., scope=...)`, `.scope`,
+`Hiera` instance, views included (`Hiera(..., scope=...)`, `.scope`,
 `.scoped(...)`). Logger `hyera._scope`.
 
 - **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None,
@@ -614,10 +647,10 @@ is a `Backend` subclass, found by name rather than passed around directly.
   - **`InterpolationError`** — a `%{...}` interpolation or function call
     could not be resolved.
   - **`MergeError`** — an unknown or invalid merge strategy.
-  - **`KeyNotFoundError`** (also a `KeyError`) — `.get(..., throw=True)`'s
-    miss, with Puppet's message ("Function lookup() did not find a value
-    for the name '<key>'", or the "any of the names [...]" plural form).
-    `.name` holds the key(s) tried.
+  - **`KeyNotFoundError`** (also a `KeyError`) — `.lookup()`'s miss (no
+    default given), with Puppet's message ("Function lookup() did not find
+    a value for the name '<key>'", or the "any of the names [...]" plural
+    form). `.name` holds the key(s) tried.
 
 Every class above is importable directly from `hyera` (e.g. `hyera.BackendError
 is hyera.backends.BackendError`, both paths work since `hyera.__init__`
@@ -698,14 +731,16 @@ re-exports it too).
   `%{var}`/`%{scope(...)}` reference, so the two are symmetric. Each runs a
   **full lookup** of its own target key: that key's own `lookup_options`
   (merge and `convert_to`), a `default_hierarchy` fallback on a main miss,
-  everything a top-level `.get()` would do — never only the hierarchy
-  currently being walked. The one thing it never inherits is the *caller's*
-  `merge=`/`lookup_options` accumulator: a sub-lookup always resolves with
-  `merge=None` (first-match, or its own `lookup_options`' merge), so nesting
-  `%{lookup(...)}` inside a `merge="deep"` lookup never pulls the caller's
-  strategy into the nested one. `lookup_options` and `lookup_options.<x>`
-  are reserved and never resolve, from any caller (interpolation, `.get()`,
-  a nested `%{lookup(...)}`) alike.
+  the enclosing `.lookup()` call's `override`/`default_values_hash` (still
+  consulted for the sub-lookup's own key) — everything a top-level
+  `.lookup()` would do — never only the hierarchy currently being walked.
+  The one thing it never inherits is the *caller's* `merge=`/`lookup_options`
+  accumulator: a sub-lookup always resolves with `merge=None` (first-match,
+  or its own `lookup_options`' merge), so nesting `%{lookup(...)}` inside a
+  `merge="deep"` lookup never pulls the caller's strategy into the nested
+  one. `lookup_options` and `lookup_options.<x>` are reserved and never
+  resolve, from any caller (interpolation, `.lookup()`, a nested
+  `%{lookup(...)}`) alike.
 - `%{x}` and `%{scope('x')}` follow the same rule for an undefined root: it
   is governed by the bound `Scope`'s `strict` (`"off"`/`"warning"`/`"error"`,
   default `"warning"`) exactly as `Scope.lookupvar` documents, while a
@@ -767,10 +802,10 @@ re-exports it too).
   a bad value at one key never breaks a lookup of any other key in the same
   file.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
-  **dotted lookup key** (`h.get("a.b.0")`) both follow Puppet's own
+  **dotted lookup key** (`h.lookup("a.b.0")`) both follow Puppet's own
   `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `datadir`,
   `mapped_paths` templates, values, `.format()`, `%{scope('a.b')}` and
-  `.get()` alike: a segment may be single- or double-quoted (quotes keep any
+  `.lookup()` alike: a segment may be single- or double-quoted (quotes keep any
   embedded `.` literal and are trimmed off; whitespace around an unquoted
   segment or the dots themselves is trimmed too, e.g. `%{ a . b }`), and a
   segment made only of optionally-signed digits indexes a list (out of
@@ -789,15 +824,16 @@ re-exports it too).
   A Puppet variable name cannot contain `.`, so there is **no flat-key
   fallback**: `%{a.b}` always means "navigate `.b` into the value of `a`",
   never a literal scope/data key named `"a.b"` — quote the whole
-  reference (`%{'a.b'}`, `h.get("'a.b'")`) to reach that key instead.
+  reference (`%{'a.b'}`, `h.lookup("'a.b'")`) to reach that key instead.
   A malformed key (an empty/unbalanced quoted segment, a stray leading,
   trailing or doubled `.`) raises `HieraLookupError` with Puppet's "Syntax
   error in key/string" text, and so does navigating into (or with) the
   wrong type — a non-collection value with a further segment, or a
   non-string/non-`Integer[...]`-shaped root variable name (that one raises
-  `InterpolationError` instead) — **even when a `default=` was given**, or
-  through `.has()`: only a genuine miss (an absent key, a `None` value
-  walked no further, or an out-of-range/nonexistent segment) is silent.
+  `InterpolationError` instead) — **even when a `default_value=` was
+  given**, or through `in`: only a genuine miss (an absent key, a `None`
+  value walked no further, or an out-of-range/nonexistent segment) is
+  silent.
   In a hierarchy path specifically, a *malformed* reference still just
   skips the level rather than raising (hierarchy paths do not follow
   Puppet's location rules yet) — but a well-formed one that hits a type

@@ -5,15 +5,12 @@ origin: tests/conformance/cases/hierarchy
 queries:
   - key: [nope, common_key]
     id: nope|common_key
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: nope
     id: nope-default
     default: fallback
   - key: common_key
     id: common_key-string
     type: String
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults
   - key: common_key
     id: common_key-integer
     type: Integer
-    divergence: spec-lookup-options-types/lookup-api-missing-type-names-defaults

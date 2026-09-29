@@ -60,9 +60,9 @@ classes:
 ```pycon
 >>> from hyera import Hiera, Scope
 >>> h = Hiera("hiera.yaml", scope=Scope(environment="production"))
->>> h.get("ntp::servers")
+>>> h.lookup("ntp::servers")
 ['ntp1.prod.example.com']
->>> h.get("classes", merge="unique")
+>>> h.lookup("classes", merge="unique")
 ['monitoring', 'base']
 ```
 

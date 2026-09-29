@@ -1,5 +1,5 @@
 """A glob/globs hierarchy level whose directory does not exist matches
-nothing, instead of ``Hiera()``/``.get()`` raising ``FileNotFoundError``
+nothing, instead of ``Hiera()``/``.lookup()`` raising ``FileNotFoundError``
 (Puppet's ``expand_globs`` returns no matches for a missing directory).
 """
 
@@ -27,7 +27,7 @@ def test_glob_over_missing_constant_dir(make_tree):
         files={"data/common.yaml": "k: common\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 def test_glob_over_missing_per_node_dir(make_tree):
@@ -45,9 +45,9 @@ def test_glob_over_missing_per_node_dir(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"node_id": "db7"}))
     web1 = h.scoped(facts={"node_id": "web1"})
-    assert web1.get("k") == "web1"
+    assert web1.lookup("k") == "web1"
     db7 = h.scoped(facts={"node_id": "db7"})
-    assert db7.get("k") == "common"
+    assert db7.lookup("k") == "common"
 
 
 def test_glob_level_with_missing_datadir(make_tree):
@@ -61,7 +61,7 @@ def test_glob_level_with_missing_datadir(make_tree):
         files={"data/common.yaml": "k: common\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 def _first_hierarchy_yaml_block(readme_text: str) -> str:
@@ -80,7 +80,7 @@ def test_readme_example_config_constructs(make_tree):
 
     root = make_tree(config_text, files={"data/common.yaml": "k: common\n"})
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "common"
+    assert h.lookup("k") == "common"
 
 
 def test_glob_level_rejects_directories(make_tree):
@@ -89,8 +89,8 @@ def test_glob_level_rejects_directories(make_tree):
         files={"data/z.yaml": "k: z\n", "data/sub/in.yaml": "k2: in\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("k") == "z"
-    assert not h.has("k2")
+    assert h.lookup("k") == "z"
+    assert "k2" not in h
 
     only_dir = make_tree(
         {"hierarchy": [{"name": "g", "glob": "sub"}]},
@@ -98,7 +98,7 @@ def test_glob_level_rejects_directories(make_tree):
         root="only_dir",
     )
     h2 = Hiera(str(only_dir / "hiera.yaml"))
-    assert not h2.has("k2")
+    assert "k2" not in h2
 
 
 def test_dangling_link_match_raises_backend_error(make_tree):

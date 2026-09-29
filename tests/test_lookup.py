@@ -12,67 +12,67 @@ def make(hiera_root, **variables):
 def test_first_match_wins(hiera_root):
     h = make(hiera_root, environment="production")
     # production.yaml overrides common.yaml
-    assert h.get("ntp::servers") == ["prod.pool.ntp.org"]
+    assert h.lookup("ntp::servers") == ["prod.pool.ntp.org"]
 
 
 def test_falls_through_to_common(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("app::name") == "myapp"
+    assert h.lookup("app::name") == "myapp"
 
 
 def test_missing_key_default(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("nope::key", default="fallback") == "fallback"
+    assert h.lookup("nope::key", default_value="fallback") == "fallback"
 
 
 def test_missing_key_throw(hiera_root):
     h = make(hiera_root, environment="production")
     with pytest.raises(KeyError):
-        h.get("nope::key", throw=True)
+        h.lookup("nope::key")
 
 
-def test_has(hiera_root):
+def test_contains(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.has("app::name") is True
-    assert h.has("nope::key") is False
+    assert "app::name" in h
+    assert "nope::key" not in h
 
 
 def test_scope_interpolation(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("greeting") == "hello production"
+    assert h.lookup("greeting") == "hello production"
 
 
 def test_hiera_function_interpolation(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("lookup_greeting") == "myapp in prod"
+    assert h.lookup("lookup_greeting") == "myapp in prod"
 
 
 def test_alias_returns_referenced_value(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("alias_target") == "myapp"
+    assert h.lookup("alias_target") == "myapp"
 
 
 def test_literal_percent(hiera_root):
     h = make(hiera_root, environment="production")
-    assert h.get("literal_pct") == "100% done"
+    assert h.lookup("literal_pct") == "100% done"
 
 
 def test_standalone_alias_preserves_list_type(hiera_root):
     # A single stand-alone alias returns the referenced value's native type.
     h = make(hiera_root, environment="production")
-    assert h.get("alias_list") == ["prod.pool.ntp.org"]
+    assert h.lookup("alias_list") == ["prod.pool.ntp.org"]
 
 
 def test_array_merge_includes_glob_level(hiera_root):
     h = make(hiera_root, environment="production")
-    merged = h.get("classes", merge="unique")
+    merged = h.lookup("classes", merge="unique")
     # production + web (glob) + common, in hierarchy order
     assert merged == ["prod", "web", "base"]
 
 
 def test_hash_merge_shallow(hiera_root):
     h = make(hiera_root, environment="production")
-    db = h.get("db", merge="hash")
+    db = h.lookup("db", merge="hash")
     # production wins for host; port comes from common
     assert db == {"host": "db.prod.internal", "port": 5432}
 
@@ -80,14 +80,14 @@ def test_hash_merge_shallow(hiera_root):
 def test_scoped_reuses_context(hiera_root):
     h = make(hiera_root)
     prod = h.scoped(environment="production")
-    assert prod.get("ntp::servers") == ["prod.pool.ntp.org"]
+    assert prod.lookup("ntp::servers") == ["prod.pool.ntp.org"]
 
 
-def test_scoped_has_uses_bound_context(hiera_root):
-    # ScopedHiera.has uses its own bound scope for path resolution too, not
+def test_scoped_contains_uses_bound_context(hiera_root):
+    # A scoped view uses its own bound scope for path resolution too, not
     # just for interpolation.
     h = make(hiera_root)
-    assert h.scoped(environment="production").has("lookup_greeting") is True
+    assert "lookup_greeting" in h.scoped(environment="production")
 
 
 def test_scoped_does_not_leak_context(hiera_root):
@@ -115,10 +115,10 @@ def test_falsy_values_are_returned(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("zero") == 0
-    assert h.get("empty") == ""
-    assert h.get("flag") is False
-    assert h.get("ref_zero") == "value=0"
+    assert h.lookup("zero") == 0
+    assert h.lookup("empty") == ""
+    assert h.lookup("flag") is False
+    assert h.lookup("ref_zero") == "value=0"
 
 
 def test_deep_hash_merge(make_tree):
@@ -137,7 +137,7 @@ def test_deep_hash_merge(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"environment": "prod"}))
-    merged = h.get("conf", merge="deep")
+    merged = h.lookup("conf", merge="deep")
     # prod overrides db.host but keeps db.port and the whole cache subtree.
     assert merged == {
         "db": {"host": "prod.db", "port": 5432},
@@ -152,4 +152,4 @@ def test_dict_base_config(hiera_root):
         "hierarchy": [{"name": "Common", "path": "common.yaml"}],
     }
     h = Hiera(config, base_path=str(hiera_root))
-    assert h.get("app::name") == "myapp"
+    assert h.lookup("app::name") == "myapp"
