@@ -206,8 +206,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dotted lookup keys and `%{...}` context references now follow Puppet's own
   `split_key`/`sub_lookup` sub-key grammar exactly, instead of a naive
   `str.split(".")`: a segment may be single- or double-quoted (so
-  `'a.b'.c`/`get("'a.b'".c)`-style keys reach a key that literally contains a
-  dot), a negative or out-of-range list index (`lst.-1`) is not found rather
+  `get("'a.b'.c")`-style keys reach a key that literally contains a dot),
+  a negative or out-of-range list index (`lst.-1`) is not found rather
   than wrapping to the last item, an integer segment matches only an integer
   hash key (`h.0` finds `{0: x}`, never `{"0": x}`), and walking further into
   a `null` value (`n.x` where `n` is `~`) is not found rather than raising a
