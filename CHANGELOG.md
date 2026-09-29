@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `hiera.yaml` is read as UTF-8 bytes (a BOM or UTF-16 is detected) instead
+  of the locale encoding, and closed right after reading. On Windows a
+  non-ASCII config was silently misread (a `datadir` with an accent found
+  nothing), a UTF-8 BOM config failed to parse, and the previously-open
+  handle stopped the file from being replaced and the instance from being
+  pickled or deep-copied. `Hiera.base_config` now keeps the exact path it
+  was given.
+
 ### Added
 
 - `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits

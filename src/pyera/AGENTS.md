@@ -13,10 +13,14 @@ Install and import as `pyera` (`pip install pyera`, extras
 - **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
   — the main entry point. `base_config`: a file path, a file-like object, or
   a pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
-  `hierarchy`, `default_hierarchy`). `backends`: list of `Backend` classes,
-  defaults to `default_backends()`. `base_path`: root that relative
-  `data_dir`/paths resolve against (defaults to the config file's directory,
-  or `os.getcwd()` for a dict/file-like config). `context`/`kwargs`: default
+  `hierarchy`, `default_hierarchy`). A path is read once, as bytes (UTF-8,
+  UTF-8 BOM, or UTF-16 with BOM), and `.base_config` keeps the path unchanged
+  (a `str` stays a `str`, a `Path` stays that `Path`). A file-like object is
+  read as given; `Hiera` never closes it and `.base_config` keeps that same
+  object. `backends`: list of `Backend` classes, defaults to
+  `default_backends()`. `base_path`: root that relative `data_dir`/paths
+  resolve against (defaults to the config file's directory, or
+  `os.getcwd()` for a dict/file-like config). `context`/`kwargs`: default
   format variables merged into every call's context. Raises `ConfigError` on
   any invalid/missing configuration (bad `version`, missing `hierarchy`,
   unknown `data_hash`, unparsable base file).
@@ -47,6 +51,15 @@ Install and import as `pyera` (`pip install pyera`, extras
     `lookup_options` mapping (`._lookup_options_cache`), all per resolved
     context — it does not notice on-disk changes after first load for a
     given context.
+  - Gotcha: a path-configured `Hiera` holds no open file, so the config file
+    can be replaced or removed on disk while the instance lives (it keeps
+    what it read at construction). It survives `copy.deepcopy` and `pickle`
+    (a spawn-start process pool can receive one; a relative config path
+    stays relative to the receiving process's working directory), which
+    copies the parsed-data cache too, sops-decrypted values included.
+    Concurrent `.get()` calls on one instance from multiple threads are safe
+    on GIL builds, where they only mutate that instance's own caches
+    (untested on free-threaded builds).
 - **`ScopedHiera(hiera, context=None)`** — wraps a `Hiera` with a bound
   context; `.get(key, ..., context=None, **kwargs)` and
   `.has(key, context=None, **kwargs)` merge the bound context *under*

@@ -580,12 +580,17 @@ class Hiera(object):
             self.base_path = Path(os.getcwd() if base_path is None else base_path)
         else:
             if not hasattr(self.base_config, "read"):
+                # Read once, as bytes, and hold no open handle: keeps the
+                # caller's path in ``self.base_config``, lets YAML's own
+                # UTF-8/UTF-16/BOM detection apply (matching Puppet's UTF-8
+                # base-config reader instead of the locale encoding), and
+                # leaves the file free to be replaced or pickled across.
                 configpath = Path(self.base_config)
                 self.base_path = configpath.parent
-                self.base_config = configpath.open()
+                self.base = YAMLBackend.load_ordered(configpath.read_bytes())
             else:
                 self.base_path = Path(os.getcwd())
-            self.base = YAMLBackend.load_ordered(self.base_config)
+                self.base = YAMLBackend.load_ordered(self.base_config)
 
         if not self.base:
             raise ConfigError("Failed to parse base Hiera configuration")
