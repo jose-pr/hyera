@@ -21,6 +21,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   construction when `data/modules` was absent, and a per-node glob
   directory crashed lookups for any node without one.
 
+### Security
+
+- Decrypted `sops` plaintext no longer appears in error messages or logs
+  when a decrypted file fails to parse.
+- The data file passed to `sops` is always an absolute path after a
+  literal `--`, so a name starting with `-` can never become a `sops`
+  option; the `sops` found on `PATH` is executed by its full resolved
+  path, and a `sops.bat`/`sops.cmd` shim is refused.
+
 ### Added
 
 - `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits

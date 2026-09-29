@@ -109,15 +109,25 @@ Install and import as `pyera` (`pip install pyera`, extras
   unattended use: `SOPS_TIMEOUT` (module-level, default `30` seconds) bounds
   the subprocess; a missing `sops` binary or non-zero exit raises
   `BackendError` with captured stderr rather than hanging or raising a raw
-  `OSError`.
+  `OSError`. The resolved `sops` is invoked as
+  `[<abs sops path>, "--input-type=<fmt>", "--output-type=<fmt>", "-d",
+  "--", <abs data path>]` — the data path is always absolute and after a
+  literal `--`, so a path or scope value starting with `-` can never be
+  parsed as a `sops` option; a `sops.bat`/`sops.cmd` shim is refused
+  (`cmd.exe` re-parses a batch file's own argument line). A decrypted file
+  that fails to parse raises `BackendError` with only a short reason and a
+  1-based line/column — never the decrypted plaintext, and with no
+  exception chain (`__cause__`/`__context__` are both `None`) to carry it.
 - **`JSONBackend`** — `NAMES = ("json_data", "json")`. `json.loads` with
   `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
   optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
   `BackendError` naming the extra if it's not installed.
 - **`has_hocon() -> bool`** — `True` iff `pyhocon` is importable.
-- Env: none. `SOPS_TIMEOUT` is a module attribute, not an env var — set it
-  directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change the sops timeout.
+- Env: `sops` runs with the process environment, so its own `SOPS_*` and
+  key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
+  env var — set it directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change
+  the sops timeout.
 
 ## Utilities (`util.py`)
 

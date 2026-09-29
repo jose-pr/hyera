@@ -3,6 +3,7 @@
 """Data backends: load a hiera data file (YAML, JSON, sops-encrypted YAML)."""
 
 import json
+import os
 import shutil
 import subprocess
 
@@ -82,44 +83,106 @@ class YAMLBackend(Backend):
             raise BackendError("Failed to parse YAML: {}".format(e)) from e
 
 
+def _run_sops(path, input_type: str) -> bytes:
+    """Run ``sops -d`` on ``path`` and return its decrypted stdout.
+
+    Hardened for unattended use: the resolved executable is run by its
+    absolute path (never a bare name re-resolved by the child), a batch
+    shim (``.bat``/``.cmd``) is refused outright (``cmd.exe`` re-parses its
+    own argument line, which a data path containing shell metacharacters
+    could abuse), and the data path is always passed absolute and after a
+    literal ``--`` so a path/scope value starting with ``-`` can never be
+    read as a sops option.
+    """
+    exe = shutil.which("sops")
+    if exe is None:
+        raise BackendError(
+            "sops executable not found on PATH; cannot decrypt {}".format(path)
+        )
+    exe = os.path.abspath(exe)
+    if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
+        raise BackendError(
+            "refusing to run sops batch shim {}: cmd.exe re-parses its own "
+            "argument line, which is unsafe for a data-derived path".format(exe)
+        )
+    abs_path = os.path.abspath(os.fspath(path))
+    try:
+        proc = subprocess.run(
+            [
+                exe,
+                "--input-type={}".format(input_type),
+                "--output-type={}".format(input_type),
+                "-d",
+                "--",
+                abs_path,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=SOPS_TIMEOUT,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise BackendError(
+            "sops timed out after {}s decrypting {}".format(SOPS_TIMEOUT, path)
+        ) from e
+    except OSError as e:
+        raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
+
+    if proc.returncode != 0:
+        detail = proc.stderr.decode("utf-8", "replace").strip()
+        raise BackendError(
+            "sops failed (exit {}) decrypting {}: {}".format(
+                proc.returncode, path, detail or "<no stderr>"
+            )
+        )
+    return proc.stdout
+
+
+def _yaml_problem(exc) -> str:
+    """Summarize a YAML parse error with no plaintext: never the decrypted
+    data, a source snippet (``mark.get_snippet()``), or ``str(exc)`` itself
+    -- only a short reason and a 1-based line/column when available.
+
+    PyYAML's ``context`` (e.g. "while scanning a quoted scalar") together
+    with ``context_mark`` pinpoints where the broken construct *starts*,
+    which is more useful than ``problem``/``problem_mark`` (often just
+    "found unexpected end of stream" at EOF); prefer it when present.
+    """
+    if isinstance(exc, yaml.MarkedYAMLError):
+        if exc.context is not None and exc.context_mark is not None:
+            text, mark = exc.context, exc.context_mark
+        elif exc.problem is not None and exc.problem_mark is not None:
+            text, mark = exc.problem, exc.problem_mark
+        else:
+            text = mark = None
+        if mark is not None:
+            return "{} (line {}, column {})".format(
+                text, mark.line + 1, mark.column + 1
+            )
+    return type(exc).__name__
+
+
 class SopsYAMLBackend(YAMLBackend):
     """YAML decrypted on the fly via the ``sops`` CLI.
 
     Hardened for unattended use: the subprocess has a finite timeout, its
-    stderr is captured and surfaced, and a missing ``sops`` binary raises a
-    clear :class:`BackendError` instead of an opaque ``FileNotFoundError``.
+    stderr is captured and surfaced, a missing ``sops`` binary raises a
+    clear :class:`BackendError` instead of an opaque ``FileNotFoundError``,
+    and a decrypted file that fails to parse reports only the problem and
+    its line/column -- never the decrypted plaintext.
     """
 
     NAMES = ("yaml.enc", "sops")
 
     def read_file(self, path) -> bytes:
-        if shutil.which("sops") is None:
-            raise BackendError(
-                "sops executable not found on PATH; cannot decrypt {}".format(path)
-            )
-        try:
-            proc = subprocess.run(
-                ["sops", "--input-type=yaml", "--output-type=yaml", "-d", str(path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=SOPS_TIMEOUT,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as e:
-            raise BackendError(
-                "sops timed out after {}s decrypting {}".format(SOPS_TIMEOUT, path)
-            ) from e
-        except OSError as e:
-            raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
+        return _run_sops(path, "yaml")
 
-        if proc.returncode != 0:
-            detail = proc.stderr.decode("utf-8", "replace").strip()
-            raise BackendError(
-                "sops failed (exit {}) decrypting {}: {}".format(
-                    proc.returncode, path, detail or "<no stderr>"
-                )
-            )
-        return proc.stdout
+    def load(self, data):
+        try:
+            return self.load_ordered(data)
+        except BackendError as e:
+            reason = _yaml_problem(e.__cause__)
+        raise BackendError("sops-decrypted YAML does not parse: " + reason)
 
 
 class JSONBackend(Backend):

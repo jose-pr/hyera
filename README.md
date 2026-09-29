@@ -140,11 +140,20 @@ usage/config error.
 ## sops and unattended runs
 
 `SopsYAMLBackend` shells out to `sops` to decrypt `*.yaml` levels. It is
-hardened so an automated lookup never hangs or dies opaquely:
+hardened so an automated lookup never hangs, dies opaquely, or leaks a
+decrypted secret:
 
 - a finite subprocess timeout (`pyera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
-- a clear error when the `sops` binary is not on `PATH`.
+- a clear error when the `sops` binary is not on `PATH`,
+- the data file is passed to `sops` as an absolute path after a literal
+  `--`, so a level or scope value that starts with `-` can never be read as
+  a `sops` option,
+- the `sops` found on `PATH` is the one executed, by its full resolved
+  path; a `sops.bat`/`sops.cmd` shim is refused (`cmd.exe` re-parses a
+  batch file's argument line, which a data-derived path could abuse),
+- a decrypted file that fails to parse reports only the problem and its
+  line/column — never the decrypted plaintext.
 
 ## Hiera 5 spec coverage
 
