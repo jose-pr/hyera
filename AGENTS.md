@@ -15,7 +15,7 @@ array, hash, and deep-hash merging.
 ```
 src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
-├── core.py                 # Hiera, ScopedHiera: entry point and top-level lookup (lookup.rb + lookup_adapter.rb)
+├── core.py                 # Hiera: entry point and engine (data_hash_function_provider.rb, data_provider.rb)
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
 ├── _location_resolver.py   # hierarchy level path resolution: Puppet interpolation rules, mapped_paths scope semantics (location_resolver.rb, hiera_config.rb)
 ├── _interpolation.py       # the %{...} engine: resolving functions and variable references (interpolation.rb)
@@ -25,6 +25,7 @@ src/hyera/
 ├── _scope.py                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
 ├── _facts.py                # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
 ├── _lookup_adapter.py      # lookup_options matching + convert_result (lookup_adapter.rb)
+├── _lookup_function.py     # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
 ├── _types.py               # type model, Sensitive (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
 ├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)
 ├── _type_mismatch.py       # describe_mismatch, assert_instance_of (type_mismatch_describer.rb, type_asserter.rb)
@@ -48,12 +49,15 @@ levels use hyera's own `Dir.glob` port in `_location_resolver.py`, never
 `Hiera(base_config, ...)` loads a Hiera 5 base config (path, file-like, or
 dict), builds a `HieraLevel` per hierarchy entry (each pairing a `Backend`
 with its source path template(s)), and pre-warms the context-free cache.
-`Hiera.get(key, ...)` resolves `key` against the hierarchy nested the way
-Puppet's provider stack does — locations within a level, levels within the
-hierarchy, then the (mostly-empty, for now) global/environment/module layer
-stack — reducing at each layer with a `MergeStrategy` (first-match by
-default), fully resolving interpolation and hiera function calls in each
-found value before it is merged.
+`Hiera.lookup(name, ...)` (Puppet's own `lookup()`, also reachable as
+`h(...)`/`h[...]`/`name in h`) resolves each candidate name's *root* key
+against the hierarchy nested the way Puppet's provider stack does —
+locations within a level, levels within the hierarchy, then the
+(mostly-empty, for now) global/environment/module layer stack — reducing at
+each layer with a `MergeStrategy` (first-match by default), fully resolving
+interpolation and hiera function calls in the found root value before it is
+merged, then digging any dotted sub-key out of the merged result exactly
+once.
 
 Backends register under one or more Hiera `data_hash` names (see
 `src/hyera/AGENTS.md` for the table) and only need to implement
@@ -64,7 +68,7 @@ Backends register under one or more Hiera `data_hash` names (see
 method.
 
 The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
-`Hiera.get`, designed for unattended use: no interactive prompts,
+`Hiera.lookup`, designed for unattended use: no interactive prompts,
 deterministic output, and exit codes `0` (found) / `1` (key missing) / `2`
 (usage or config error).
 
