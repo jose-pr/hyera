@@ -1,0 +1,3 @@
+mymod::only_main: mval
+mymod::main_ref: "%{lookup('mymod::only_default')}"
+mymod::main_alias: "%{alias('mymod::only_default')}"

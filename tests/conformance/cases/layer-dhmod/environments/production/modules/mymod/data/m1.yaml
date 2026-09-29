@@ -1,0 +1,3 @@
+lookup_options:
+  mymod::onlydefault: {merge: unique}
+mymod::both: [m1]

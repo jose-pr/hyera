@@ -1,0 +1,4 @@
+mymod::only_default: dval
+mymod::dh_ref: "%{lookup('mymod::only_main')}"
+mymod::dh_alias: "%{alias('mymod::only_main')}"
+mymod::dh_self: "%{lookup('mymod::only_default')}"

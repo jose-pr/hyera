@@ -1,0 +1,21 @@
+---
+nullkey: ~
+:symkey: symval
+symvalue: :sym
+sci: 1e3
+sci2: 1.5e3
+sexa: 1:20
+octal: 0755
+octal12: 0o17
+yes_bool: yes
+on_bool: on
+anchor_src: &a {x: 1}
+anchor_ref: *a
+mergekey:
+  <<: *a
+  y: 2
+nested:
+  a:
+    c: 1
+bin: !!binary aGVsbG8=
+"quoted.dot": flat

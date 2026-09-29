@@ -1,0 +1,7 @@
+---
+nullkey: fromsecond
+symkey: second-sym
+nested:
+  a:
+    b: 2
+onlysecond: 2

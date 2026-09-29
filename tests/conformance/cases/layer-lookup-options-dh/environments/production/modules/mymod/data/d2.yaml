@@ -1,0 +1,4 @@
+lookup_options:
+  mymod::k: {merge: unique}
+mymod::k: [2]
+mymod::j: [2]

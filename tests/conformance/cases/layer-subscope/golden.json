@@ -1,0 +1,86 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "b9b9c35ad2f13b69f21d3222d2443f5489158eea24dc6a61df6322254702fe76",
+  "results": {
+    "mymod::only_main": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::only_main"
+      ],
+      "status": "found",
+      "value": "mval"
+    },
+    "mymod::main_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::main_ref"
+      ],
+      "status": "found",
+      "value": "dval"
+    },
+    "mymod::main_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::main_alias"
+      ],
+      "status": "found",
+      "value": "dval"
+    },
+    "mymod::only_default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::only_default"
+      ],
+      "status": "found",
+      "value": "dval"
+    },
+    "mymod::dh_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dh_ref"
+      ],
+      "status": "found",
+      "value": "mval"
+    },
+    "mymod::dh_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dh_alias"
+      ],
+      "status": "found",
+      "value": "mval"
+    },
+    "mymod::dh_self": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dh_self"
+      ],
+      "status": "found",
+      "value": "dval"
+    }
+  }
+}

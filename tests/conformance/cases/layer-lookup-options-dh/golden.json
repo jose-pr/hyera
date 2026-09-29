@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "8eb6412edac0ca306968afff759eb83f54ea517346202bc1d4aa21da5a6077f3",
+  "results": {
+    "mymod::c": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::c"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "mymod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::k"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "mymod::j": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::j"
+      ],
+      "status": "found",
+      "value": [
+        1
+      ]
+    }
+  }
+}

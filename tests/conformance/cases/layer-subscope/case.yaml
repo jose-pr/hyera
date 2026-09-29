@@ -1,0 +1,22 @@
+description: Whether lookup()/alias() calls inside a module's main hierarchy data
+  can resolve a key that only exists in that module's own default_hierarchy, and vice
+  versa.
+origin: critic-puppet-coverage/subscope
+puppet_args:
+- --environment
+- production
+queries:
+- key: mymod::only_main
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::main_ref
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::main_alias
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::only_default
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dh_ref
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dh_alias
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dh_self
+  divergence: spec-layers-backends/no-config-layers

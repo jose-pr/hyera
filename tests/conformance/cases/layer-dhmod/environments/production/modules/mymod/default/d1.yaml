@@ -1,0 +1,6 @@
+lookup_options:
+  mymod::dlo: {merge: unique}
+mymod::both: [d1]
+mymod::onlydefault: [d1]
+mymod::dlo: [d1]
+mymod::explicit: {a: 1}

@@ -1,0 +1,16 @@
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: m1
+    path: m1.yaml
+  - name: m2
+    path: m2.yaml
+default_hierarchy:
+  - name: d1
+    path: d1.yaml
+    datadir: default
+  - name: d2
+    path: d2.yaml
+    datadir: default

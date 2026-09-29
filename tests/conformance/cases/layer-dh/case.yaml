@@ -1,0 +1,19 @@
+description: YAML-dialect edge cases (symbol keys, rich values, anchors, an unquoted
+  vs. quoted dotted key) spread over two hierarchy levels, testing both the dialect
+  divergences and level fallthrough/dotted navigation together.
+origin: spec-layers-backends/dh
+queries:
+- key: symkey
+  divergence: spec-layers-backends/yaml-symbol-keys
+- key: :symkey
+  divergence: spec-layers-backends/yaml-symbol-keys
+- key: symvalue
+  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
+- key: nested
+- key: nested.a
+- key: nested.a.b
+  divergence: code-core/dotted-key-root-semantics
+- key: onlysecond
+- key: anchor_ref
+- key: mergekey
+- key: quoted.dot

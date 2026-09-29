@@ -1,0 +1,137 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "f83cffedfa425305d790bf2796292087d8b6363d9e68aec56560bbda4f48674b",
+  "results": {
+    "symkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symkey"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": "symval"
+    },
+    ":symkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        ":symkey"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "not_found"
+    },
+    "symvalue": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symvalue"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'symvalue' failed: Value for key 'symvalue', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
+    },
+    "nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": {
+        "a": {
+          "c": 1
+        }
+      }
+    },
+    "nested.a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested.a"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": {
+        "c": 1
+      }
+    },
+    "nested.a.b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested.a.b"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "not_found"
+    },
+    "onlysecond": {
+      "argv": [
+        "--strict",
+        "warning",
+        "onlysecond"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": 2
+    },
+    "anchor_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "anchor_ref"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1
+      }
+    },
+    "mergekey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mergekey"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1,
+        "y": 2
+      }
+    },
+    "quoted.dot": {
+      "argv": [
+        "--strict",
+        "warning",
+        "quoted.dot"
+      ],
+      "warnings": [
+        "<case>/data/empty.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "not_found"
+    }
+  }
+}

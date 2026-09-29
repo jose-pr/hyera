@@ -1,0 +1,3 @@
+mymod::onlydefault: [d2]
+mymod::dlo: [d2]
+mymod::explicit: {b: 2}
