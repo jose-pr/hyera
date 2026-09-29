@@ -7,17 +7,16 @@ from .backends import (
     JSONBackend,
     SopsYAMLBackend,
     YAMLBackend,
+    default_backends,
 )
 from .exceptions import ConfigError, HieraError, InterpolationError
 from .core import (
     Hiera,
-    HieraLevel,
-    Merge,
     ScopedHiera,
-    Sensitive,
-    default_backends,
-    make_merge,
 )
+from ._hiera_config import HieraLevel
+from ._merge_strategy import Merge, make_merge
+from ._types import Sensitive
 from .util import LookupDict, sym_lookup
 
 __version__ = "0.1.0"

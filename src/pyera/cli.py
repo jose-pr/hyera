@@ -20,7 +20,8 @@ except ModuleNotFoundError as _e:
 
 from . import __version__
 from .exceptions import HieraError
-from .core import Hiera, Sensitive
+from .core import Hiera
+from ._types import Sensitive
 
 _LOGGER = _logging.getLogger("pyera")
 

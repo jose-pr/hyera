@@ -25,6 +25,7 @@ __all__ = [
     "HOCONBackend",
     "BackendError",
     "has_hocon",
+    "default_backends",
 ]
 
 #: How long (seconds) to wait for the ``sops`` subprocess before giving up.
@@ -632,6 +633,14 @@ def _as_lookupdict(obj):
     if isinstance(obj, list):
         return [_as_lookupdict(v) for v in obj]
     return obj
+
+
+def default_backends():
+    """The default backend list: YAML, sops-YAML, JSON, and HOCON if available."""
+    backends = [YAMLBackend, SopsYAMLBackend, JSONBackend]
+    if has_hocon():
+        backends.append(HOCONBackend)
+    return backends
 
 
 def has_hocon() -> bool:

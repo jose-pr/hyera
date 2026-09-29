@@ -6,9 +6,11 @@ consumed without reading its source. Kept current with the public API. For
 the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/pyera>.
 
 Install and import as `pyera` (`pip install pyera`, extras
-`[cli]`/`[hocon]`); the command is `pyera`.
+`[cli]`/`[hocon]`); the command is `pyera`. Import every public name from
+`pyera` itself, never from a submodule directly — `pyera._*` modules are
+private engine internals with no stability contract.
 
-## Engine (`core.py`)
+## Engine
 
 - **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
   — the main entry point. `base_config`: a file path, a file-like object, or
@@ -91,12 +93,12 @@ Install and import as `pyera` (`pip install pyera`, extras
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
   Sensitive`. `str()`/`repr()` show `Sensitive(<redacted>)`; `.unwrap()`
   returns the real value.
-- **`default_backends() -> list[type[Backend]]`** — `[YAMLBackend,
-  SopsYAMLBackend, JSONBackend]`, plus `HOCONBackend` if `pyhocon` is
-  importable.
 
 ## Backends (`backends.py`)
 
+- **`default_backends() -> list[type[Backend]]`** — `[YAMLBackend,
+  SopsYAMLBackend, JSONBackend]`, plus `HOCONBackend` if `pyhocon` is
+  importable.
 - **`Backend(conf=None)`** — base class; subclasses implement `.load(data)`
   (and optionally override `.read_file(path) -> bytes`). `NAMES: tuple[str,
   ...]` — the `data_hash` value(s) it answers to. `.datadir` reads `conf["datadir"]`

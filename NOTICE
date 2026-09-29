@@ -12,9 +12,13 @@ license is included at LICENSES/phiera-Apache-2.0.txt.
 
 The files derived from phiera are:
 
-    src/pyera/core.py        (from phiera/phiera.py)
-    src/pyera/backends.py    (from phiera/backends.py)
-    src/pyera/util.py        (from phiera/util.py)
+    src/pyera/core.py                (from phiera/phiera.py)
+    src/pyera/_hiera_config.py       (from phiera/phiera.py)
+    src/pyera/_location_resolver.py  (from phiera/phiera.py)
+    src/pyera/_interpolation.py      (from phiera/phiera.py)
+    src/pyera/_merge_strategy.py     (from phiera/phiera.py)
+    src/pyera/backends.py            (from phiera/backends.py)
+    src/pyera/util.py                (from phiera/util.py)
 
 Each was modified by jose-pr and carries a notice saying so. Modifications
 and all other files in this project are licensed under the MIT License

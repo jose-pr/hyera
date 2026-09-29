@@ -14,13 +14,23 @@ array, hash, and deep-hash merging.
 
 ```
 src/pyera/
-├── __init__.py    # public re-exports (see src/pyera/AGENTS.md for the header)
-├── core.py         # core engine: Hiera, ScopedHiera, HieraLevel, Merge, make_merge
-├── backends.py     # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend
-├── util.py         # LookupDict (dotted-path lookup), sym_lookup
-├── exceptions.py   # HieraError -> ConfigError, BackendError, InterpolationError
-└── cli.py          # duho-based `pyera` console script (Lookup command, main())
+├── __init__.py            # public re-exports (see src/pyera/AGENTS.md for the header)
+├── core.py                 # Hiera, ScopedHiera: entry point and top-level lookup (lookup.rb + lookup_adapter.rb)
+├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
+├── _location_resolver.py   # hierarchy level path resolution (location_resolver.rb)
+├── _interpolation.py       # Interpolation mixin: function and %{} variable resolution (interpolation.rb)
+├── _merge_strategy.py      # Merge, make_merge: merge strategies (merge_strategy.rb)
+├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
+├── _lookup_adapter.py      # lookup_options matching (lookup_adapter.rb)
+├── _types.py               # Sensitive, convert_to (pops/types)
+├── backends.py             # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend, default_backends
+├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
+├── exceptions.py           # HieraError -> ConfigError, BackendError, InterpolationError
+└── cli.py                  # duho-based `pyera` console script (Lookup command, main())
 ```
+
+`pyera._*` modules are private engine internals mirroring Puppet's own file
+split; import public names from `pyera` itself.
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib` (hierarchy
 glob levels rely on its `Path.glob`).

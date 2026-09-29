@@ -225,3 +225,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stops before anything is published. Pre-release tags (`v1.0.0-rc.1`)
   create a GitHub pre-release and are not uploaded to PyPI, and re-running a
   release skips files already on PyPI.
+- The engine is split into private modules; import public names from
+  `pyera`. `pyera.core` now defines only `Hiera` and `ScopedHiera`, and
+  `default_backends` lives in `pyera.backends`.
