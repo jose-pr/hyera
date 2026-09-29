@@ -208,9 +208,8 @@ class Hiera(Interpolation):
         A malformed dotted context reference or a navigation type mismatch
         reachable while resolving a hierarchy path (``%{...}`` in a
         ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
-        here and logged at debug level, not raised out of the constructor
-        (Design Q6 of ``navigation_sub_lookup/route_references``): Puppet
-        raises these at lookup time, never at construction, and a
+        here and logged at debug level, not raised out of the constructor:
+        Puppet raises these at lookup time, never at construction, and a
         constructor should fail only for configuration errors. Swallowing it
         here also means the walk this aborts was never cached (``_files_for``
         only caches a *completed* walk), so the first real lookup retries it
@@ -275,11 +274,12 @@ class Hiera(Interpolation):
         ``key`` is parsed once, up front, into its root and Puppet sub-key
         segments (``_navigation.parse_lookup_key``); each file is then
         looked up by the plain root and, if there are segments, walked with
-        ``sub_lookup`` (``navigation_sub_lookup``). A ``None`` result --
-        whether the root itself is absent/null or ``sub_lookup`` misses --
-        is a miss, same as before; a type-mismatch or malformed-key error
-        from either helper propagates, it is never swallowed into a level
-        skip (D04 item 3, Design Q5).
+        ``sub_lookup``. A ``None`` result -- whether the root itself is
+        absent/null or ``sub_lookup`` misses -- is a miss, same as before;
+        a type-mismatch or malformed-key error from either helper
+        propagates, it is never swallowed into a level skip (only a miss
+        should be, per Puppet's ``lookup()``, which raises both even with a
+        default value set).
         """
         found = False
         root, segments = (None, ()) if key is None else parse_lookup_key(key)

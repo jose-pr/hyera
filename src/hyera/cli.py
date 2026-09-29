@@ -53,8 +53,8 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
 
     A dotted name is rejected outright rather than stored as a flat key
     nothing can read: Puppet variable names cannot contain ``.``, and
-    ``navigation_sub_lookup`` removed the flat-dotted-key context fallback
-    that used to make one work by accident.
+    there is no flat-dotted-key context fallback that would have made one
+    work by accident.
     """
     context: dict = {}
     for item in items or ():

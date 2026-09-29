@@ -159,8 +159,7 @@ def test_parse_lookup_key_syntax_error(key):
         parse_lookup_key(key)
 
 
-# --- Wiring: dotted lookup keys and %{...} references go through the port
-# (navigation_sub_lookup/route_references) --------------------------------
+# --- Wiring: dotted lookup keys and %{...} references go through the port ---
 
 
 _COMMON_HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
@@ -169,7 +168,8 @@ _COMMON_HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
 def test_has_raises_on_type_mismatch(make_tree):
     # has() only turns a genuine miss (KeyNotFoundError) into False; a
     # type-mismatch HieraLookupError from the navigation walk propagates,
-    # same as get() (D04 item 3, Design Q5).
+    # same as get() -- only a miss should be silent, per Puppet's own
+    # lookup(), which raises both kinds of error even with a default set.
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "s: hello\n"})
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError, match="Got String"):

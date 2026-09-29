@@ -60,10 +60,9 @@ def mergefirst_root(make_tree):
     so an explicit ``--merge first`` overriding it is observable.
 
     Uses a flat ``os_family`` scope var, not a dotted ``facts.os.family``
-    one: ``--scope`` rejects a dotted name outright now
-    (``navigation_sub_lookup`` -- a Puppet variable name cannot contain
-    ``.``), and this fixture only needs *some* per-scope hierarchy level,
-    not specifically a dotted one.
+    one: ``--scope`` rejects a dotted name outright now (a Puppet variable
+    name cannot contain ``.``), and this fixture only needs *some*
+    per-scope hierarchy level, not specifically a dotted one.
     """
     return make_tree(
         {
@@ -330,7 +329,7 @@ def test_invalid_scope_exit_2(hiera_root):
 def test_dotted_scope_name_exit_2(hiera_root):
     # A Puppet variable name cannot contain '.', so a dotted --scope name is
     # rejected outright rather than stored as a flat key nothing can read
-    # (navigation_sub_lookup dropped the flat-dotted-context-key fallback).
+    # (there is no flat-dotted-context-key fallback to store it under).
     rc = main(
         ["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "trusted.certname=x"]
     )
