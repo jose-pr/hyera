@@ -97,6 +97,24 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
   `release.yml` stops before publishing anything. Pre-release tags create a
   GitHub pre-release and are never uploaded to PyPI; a hyphenless tag such
   as `v1.0.0rc1` counts as final.
+- **Docs**: `<py> -m pip install -e ".[dev,docs]"` on the 3.14 venv (the docs
+  tools need Python 3.10+), then `<py> -m mkdocs build --strict` from the
+  repo root. `docs/index.md` is hand-written; its runnable examples and its
+  extras table are checked by `tests/test_docs_examples.py`, so an API or
+  extras change that breaks the page fails the suite instead of going
+  unnoticed. `docs/api/` holds exactly one `:::` page per public module
+  (`pyera`, `pyera.backends`, `pyera.cli`) — renaming or removing one updates
+  both its page and `mkdocs.yml`'s nav. `docs/changelog.md` snippet-embeds
+  `CHANGELOG.md`.
+- **CI (docs)**: `test.yml`'s `docs` job builds the docs strictly on every
+  run (the same build the release gates on, exercised before a release
+  rather than by one); `docs.yml` deploys to GitHub Pages on a push to
+  `main` touching `docs/`, `mkdocs.yml`, `src/` or `CHANGELOG.md`, and on
+  `workflow_dispatch`; `release.yml` gates the GitHub release on a strict
+  docs build (`docs-gate`, no deploy) and, for a final tag only, dispatches
+  `docs.yml` to redeploy the docs for that release (`docs-deploy`) — kept
+  off the publish chain so a docs problem never blocks a package that
+  already passed its tests.
 
 ### Conformance goldens
 
