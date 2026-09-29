@@ -1,0 +1,7 @@
+lookup_options:
+  '^foo(':
+    merge: unique
+  plain:
+    merge: unique
+plain: [a]
+other: x

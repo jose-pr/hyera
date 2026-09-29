@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "65d1da5feca3553980c6fe57ce55fc5e644981b24a416dd0710258f092cccab6",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "end pattern with unmatched parenthesis: /^foo(/"
+    },
+    "other": {
+      "argv": [
+        "--strict",
+        "warning",
+        "other"
+      ],
+      "status": "error",
+      "message": "end pattern with unmatched parenthesis: /^foo(/"
+    }
+  }
+}
