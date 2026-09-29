@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a1e89d7a836feaa942da5f974ddb9054a17e370219a435b5c46c06f47adbf1b1",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 4 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "hiera.yaml version 4 cannot be used in the global layer (file: <case>/hiera.yaml)"
+    }
+  }
+}

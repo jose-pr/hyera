@@ -1,0 +1,8 @@
+description: >-
+  hiera.yaml version 6 does not exist; this runtime does not support it.
+origin: spec-config/cases/v6
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: 'does not support hiera\.yaml version 6'
+    divergence: spec-config/schema-validation-missing

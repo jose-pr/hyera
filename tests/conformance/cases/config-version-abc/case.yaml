@@ -1,0 +1,8 @@
+description: >-
+  A non-numeric `version` (Ruby `"abc".to_i` is 0) is rejected like an unsupported runtime version.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'does not support hiera\.yaml version 0'
+    divergence: spec-config/schema-validation-missing

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "acc1392f5d364f5c570ae29600cb1723b9744dcda08533aa6a3ef32ada10a9eb",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "This runtime does not support hiera.yaml version 6 (file: <case>/hiera.yaml)"
+    }
+  }
+}
