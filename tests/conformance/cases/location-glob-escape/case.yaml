@@ -1,0 +1,10 @@
+description: >-
+  A backslash escapes a glob metacharacter in Ruby Dir.glob
+  (x\[1\].yaml matches the literal file x[1].yaml, not x1.yaml).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch
+  - key: k2
+    note: Puppet 8.10 probe
+    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch

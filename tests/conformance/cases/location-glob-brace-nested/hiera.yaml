@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: n, glob: "{a,{b,c}}.yaml"}
+  - {name: e, glob: "x{,-y}.yaml"}

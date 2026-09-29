@@ -1,0 +1,12 @@
+description: >-
+  datadir "{data,other}" is a live brace pattern for a glob level (reads
+  both data/ and other/) but a literal directory name for a path level.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: spec-config/glob-brace-expansion-missing
+  - key: k2
+    note: Puppet 8.10 probe
+    divergence: spec-config/glob-brace-expansion-missing
+  - key: k3
+    note: Puppet 8.10 probe

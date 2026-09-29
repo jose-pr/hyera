@@ -1,0 +1,8 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: ab, glob: "a**b.yaml"}
+  - {name: litdir, glob: "sub"}
+  - {name: slash, glob: "*/"}
+  - {name: tss, glob: "t/**"}
+  - {name: common, path: common.yaml}

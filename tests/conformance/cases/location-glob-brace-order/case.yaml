@@ -1,0 +1,7 @@
+description: >-
+  A glob pattern with Ruby Dir.glob brace alternation, results in written
+  order ({second,first}.yaml matches second.yaml before first.yaml).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: spec-config/glob-brace-expansion-missing

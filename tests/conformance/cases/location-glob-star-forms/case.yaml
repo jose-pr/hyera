@@ -1,0 +1,14 @@
+description: >-
+  Glob star forms: a**b.yaml behaves like a*b.yaml, a literal directory
+  name and */ contribute nothing (globs never load a directory), and a
+  trailing ** is *.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+  - key: k2
+    note: Puppet 8.10 probe
+  - key: k3
+    id: k3-unique
+    merge: unique
+    note: Puppet 8.10 probe
+    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch

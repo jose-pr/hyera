@@ -1,0 +1,8 @@
+description: >-
+  A recursive glob (**/*.yaml) never descends into a dotfile directory.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch
+  - key: k2
+    note: Puppet 8.10 probe

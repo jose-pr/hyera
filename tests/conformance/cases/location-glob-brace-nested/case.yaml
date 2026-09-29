@@ -1,0 +1,10 @@
+description: >-
+  Nested brace alternation ({a,{b,c}}.yaml) and an empty alternative
+  (x{,-y}.yaml).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    divergence: spec-config/glob-brace-expansion-missing
+  - key: k2
+    note: Puppet 8.10 probe
+    divergence: spec-config/glob-brace-expansion-missing

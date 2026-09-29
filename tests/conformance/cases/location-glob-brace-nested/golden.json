@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "8c3019a26cd9e79a134748805ef2b613ea13a9ffa74775c85dd2cb92bf6664a3",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "found",
+      "value": "c"
+    },
+    "k2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k2"
+      ],
+      "status": "found",
+      "value": "xy"
+    }
+  }
+}
