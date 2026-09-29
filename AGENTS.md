@@ -19,7 +19,7 @@ src/hyera/
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
 ├── _location_resolver.py   # hierarchy level path resolution (location_resolver.rb)
 ├── _interpolation.py       # Interpolation mixin: function and %{} variable resolution (interpolation.rb)
-├── _merge_strategy.py      # Merge, make_merge: merge strategies (merge_strategy.rb)
+├── _merge_strategy.py      # MergeStrategy: merge strategies (merge_strategy.rb, deep_merge gem's core.rb)
 ├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
 ├── _scope.py                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
 ├── _facts.py                # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
@@ -46,11 +46,12 @@ glob levels rely on its `Path.glob`).
 `Hiera(base_config, ...)` loads a Hiera 5 base config (path, file-like, or
 dict), builds a `HieraLevel` per hierarchy entry (each pairing a `Backend`
 with its source path template(s)), and pre-warms the context-free cache.
-`Hiera.get(key, ...)` resolves the ordered candidate source paths for the
-call's context, walks them looking up `key` in each parsed file, and — for a
-merge strategy other than first-match — accumulates across every matching
-level via a `Merge` accumulator before fully resolving interpolation and
-hiera function calls in the result.
+`Hiera.get(key, ...)` resolves `key` against the hierarchy nested the way
+Puppet's provider stack does — locations within a level, levels within the
+hierarchy, then the (mostly-empty, for now) global/environment/module layer
+stack — reducing at each layer with a `MergeStrategy` (first-match by
+default), fully resolving interpolation and hiera function calls in each
+found value before it is merged.
 
 Backends register under one or more Hiera `data_hash` names (see
 `src/hyera/AGENTS.md` for the table) and only need to implement
@@ -74,9 +75,9 @@ Supported: `version: 5` validation, `defaults`, `hierarchy`/`default_hierarchy`,
 `name`, `path`/`paths`/`glob`/`globs`/`mapped_paths`, `datadir`,
 `data_hash` backends (yaml/json/hocon/sops), all five interpolation methods
 (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted subkeys, merges
-`first`/`unique`/`hash`/`deep` (with `knockout_prefix`/`sort_merged_arrays`/
-`merge_hash_arrays`), and `lookup_options` (per-key/regex merge strategy +
-`convert_to`).
+`first`/`default`/`unique`/`hash`/`deep` (with `knockout_prefix`/
+`sort_merged_arrays`/`merge_hash_arrays`), and `lookup_options` (per-key/regex
+merge strategy + `convert_to`).
 
 Not implemented: `lookup_key`/`data_dig` provider backends, `uri`/`uris`
 sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
