@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "bdeb9a41befa72e466f4e93953d6e2b3c8359ce6bf1aa610e9924089f337b4d5",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuchvar';"
+      ],
+      "status": "found",
+      "value": "empty_segment"
+    },
+    "k-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "k"
+      ],
+      "warnings": [
+        "Interpolation failed with 'nosuchvar', but compilation continuing;"
+      ],
+      "status": "found",
+      "value": "empty_segment"
+    },
+    "k-strict-off": {
+      "argv": [
+        "--strict",
+        "off",
+        "k"
+      ],
+      "status": "found",
+      "value": "empty_segment"
+    }
+  }
+}

@@ -1,10 +1,10 @@
 """Dotted scope references (``%{trusted.certname}``) in paths and values.
 
-Hiera 5 defines a dotted reference as nested key access. ``str.format``
-reads ``{a.b}`` as *attribute* access, so a dotted reference is resolved via
-``_scope_ref``/``_ContextFormatter`` instead of plain ``str.format``/
-``format_map`` -- otherwise it would raise ``AttributeError`` out of
-``HieraLevel.paths()``, including for the README's own lead example config.
+Hiera 5 defines a dotted reference as nested key access. Both values and
+hierarchy locations resolve a dotted reference through the same
+interpolation engine (``hyera._interpolation.interpolate``, over a bound
+``Scope``) -- locations with ``allow_methods=False``, including for the
+README's own lead example config.
 """
 
 import pytest
@@ -75,19 +75,26 @@ def test_absent_nested_ref_in_value_is_empty_string(tree):
     assert h.get("absent") == "xy"
 
 
-def test_absent_nested_ref_in_path_skips_level(tree):
-    # No `trusted` fact/variable at all: the node level is skipped, not an
-    # error (Scope's own default $trusted has a nil certname, which is the
-    # same "skip" outcome).
-    h = Hiera(str(tree / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
-    assert h.get("role") == "none"
+def test_absent_nested_ref_in_path_probes_empty_segment(make_tree):
+    # No `trusted.certname` at all: the reference resolves to '' (Puppet's
+    # own rule), so "nodes/%{trusted.certname}.yaml" probes the literal
+    # "nodes/.yaml" -- a real candidate, not a skipped level.
+    root = make_tree(
+        CONFIG, dict(FILES, **{"data/nodes/.yaml": "role: empty_segment\n"})
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=_scope(facts={"os": "linux"}))
+    assert h.get("role") == "empty_segment"
 
 
-def test_partial_nested_ref_in_path_skips_level(tree):
-    # An explicit `trusted` with no `certname` key -- still a skip, not a
-    # crash.
-    h = Hiera(str(tree / "hiera.yaml"), scope=_scope(trusted={"other": "x"}))
-    assert h.get("role") == "none"
+def test_partial_nested_ref_in_path_probes_empty_segment(make_tree):
+    # An explicit `trusted` with no `certname` key: the nested lookup is a
+    # genuine (silent) miss, resolving to '' the same way -- still a probe,
+    # not a skip.
+    root = make_tree(
+        CONFIG, dict(FILES, **{"data/nodes/.yaml": "role: empty_segment\n"})
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=_scope(trusted={"other": "x"}))
+    assert h.get("role") == "empty_segment"
 
 
 def test_scalar_walked_as_container_raises(make_tree):

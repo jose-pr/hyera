@@ -1,0 +1,8 @@
+description: >-
+  A nested dotted-fact miss (facts.nosuch) inside datadir: a genuine
+  (silent) navigation miss, not a strict-mode error, even under
+  --strict error.
+queries:
+  - id: k-strict-error
+    key: k
+    puppet_args: ["--strict", "error"]

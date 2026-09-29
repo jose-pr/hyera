@@ -4,4 +4,3 @@ description: >-
 origin: spec-config/cases/literal_braces_path
 queries:
   - key: k
-    divergence: spec-config/location-interpolation-grammar

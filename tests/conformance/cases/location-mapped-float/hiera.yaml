@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: m, mapped_paths: [roles, r, "r/%{r}.yaml"]}
+  - {name: common, path: common.yaml}

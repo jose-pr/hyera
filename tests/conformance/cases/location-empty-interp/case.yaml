@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/empty_interp
 queries:
   - key: k
-    divergence: spec-config/location-interpolation-grammar

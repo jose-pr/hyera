@@ -2,3 +2,5 @@ description: A hierarchy location path using %{literal(...)} method syntax.
 origin: spec-interpolation/pm_literal
 queries:
 - key: k
+  error_match: method syntax is not allowed
+  error_class: ConfigError

@@ -3,4 +3,5 @@ description: >-
 origin: spec-config/cases/mapped_int
 queries:
   - key: k
-    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup
+    error_match: Integer
+    error_class: ConfigError

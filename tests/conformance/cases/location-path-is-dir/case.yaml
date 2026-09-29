@@ -3,4 +3,5 @@ description: >-
 origin: spec-config/cases/path_is_dir
 queries:
   - key: k
-    divergence: spec-config/directories-loaded-as-data
+    error_match: Is a directory
+    error_class: BackendError

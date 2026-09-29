@@ -9,7 +9,6 @@ queries:
   - key: from_flag
   - key: extra_key
   - key: web_setting
-    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup
   - key: mod_key
   - key: db.port
     divergence: code-core/dotted-key-root-semantics

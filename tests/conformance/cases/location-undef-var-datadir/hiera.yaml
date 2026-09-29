@@ -1,0 +1,4 @@
+version: 5
+defaults: {data_hash: yaml_data}
+hierarchy:
+  - {name: dd, path: common.yaml, datadir: "data/%{nosuchvar}"}

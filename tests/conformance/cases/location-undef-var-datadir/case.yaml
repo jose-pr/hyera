@@ -1,0 +1,15 @@
+description: >-
+  An undefined top-scope variable inside a level's own "datadir" template:
+  datadir interpolation is strict (unlike a location itself), so it raises
+  under --strict error but resolves to '' under warning/off.
+origin: spec-config/cases/undef_var_datadir
+queries:
+  - key: k
+  - id: k-strict-error
+    key: k
+    puppet_args: ["--strict", "error"]
+    error_match: Undefined variable 'nosuchvar'
+    error_class: InterpolationError
+  - id: k-strict-off
+    key: k
+    puppet_args: ["--strict", "off"]

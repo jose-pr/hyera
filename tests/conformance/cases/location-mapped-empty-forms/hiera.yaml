@@ -1,0 +1,8 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: m1, mapped_paths: [nosuch, r, "r/%{r}.yaml"]}
+  - {name: m2, mapped_paths: [e, r, "r/%{r}.yaml"]}
+  - {name: m3, mapped_paths: [ea, r, "r/%{r}.yaml"]}
+  - {name: m4, mapped_paths: [ids, i, "i/%{i}.yaml"]}
+  - {name: common, path: common.yaml}

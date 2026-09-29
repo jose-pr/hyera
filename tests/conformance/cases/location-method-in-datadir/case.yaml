@@ -3,3 +3,5 @@ description: >-
 origin: spec-config/cases/method_in_datadir
 queries:
   - key: k
+    error_match: method syntax is not allowed
+    error_class: ConfigError

@@ -1,0 +1,6 @@
+description: >-
+  Every "empty" mapped_paths collection form: an undefined variable, an
+  empty string, and an empty array all contribute no candidate paths, while
+  a real array level further down the hierarchy still resolves normally.
+queries:
+  - key: k

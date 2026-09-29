@@ -4,9 +4,7 @@ description: 'Hierarchy location path templates exercising the same interpolatio
 origin: spec-interpolation/paths
 queries:
 - key: p_ws
-  divergence: spec-config/location-interpolation-grammar
 - key: p_q
-  divergence: spec-config/location-interpolation-grammar
 - key: p_false
 - key: p_zero
 - key: p_num

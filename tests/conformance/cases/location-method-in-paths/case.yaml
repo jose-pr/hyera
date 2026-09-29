@@ -1,0 +1,7 @@
+description: >-
+  A "paths" list whose second entry uses %{alias(...)} method-call syntax:
+  a sibling entry that would resolve fine does not rescue the level.
+queries:
+  - key: k
+    error_match: method syntax is not allowed
+    error_class: ConfigError

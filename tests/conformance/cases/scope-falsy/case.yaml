@@ -5,7 +5,6 @@ origin: standards-python/falsy
 queries:
 - key: from_virtual_false
 - key: from_spaced_env
-  divergence: spec-config/location-interpolation-grammar
 - key: msg_bool
 - key: msg_zero
 - key: msg_fact

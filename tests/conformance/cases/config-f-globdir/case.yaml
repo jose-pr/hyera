@@ -4,4 +4,3 @@ origin: docs-accuracy/f_globdir
 queries:
 - key: a_key
 - key: b_key
-  divergence: spec-config/directories-loaded-as-data

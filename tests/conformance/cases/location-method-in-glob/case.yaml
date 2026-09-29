@@ -1,0 +1,7 @@
+description: >-
+  A glob location using %{hiera(...)} method-call syntax, which Puppet
+  rejects in this context.
+queries:
+  - key: k
+    error_match: method syntax is not allowed
+    error_class: ConfigError

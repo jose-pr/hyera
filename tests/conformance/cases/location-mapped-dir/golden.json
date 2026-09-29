@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7a92738fce2777e97cafd0fdcde5c32f124ef738b16907b90118e95a9bb60b29",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Is a directory @ io_fread - <case>/data/r/web"
+    }
+  }
+}

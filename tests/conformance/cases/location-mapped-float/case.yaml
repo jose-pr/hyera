@@ -1,0 +1,6 @@
+description: >-
+  mapped_paths over a non-collection Float (1.5) collection var.
+queries:
+  - key: k
+    error_match: Float
+    error_class: ConfigError

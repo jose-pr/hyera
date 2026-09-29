@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from hyera import Hiera, InterpolationError, Scope, Sensitive
+from hyera import ConfigError, Hiera, InterpolationError, Scope, Sensitive
 from hyera._interpolation import (
     _float_to_s,
     _ruby_inspect,
@@ -137,9 +137,11 @@ def test_render_values():
 
 def test_method_syntax_not_allowed():
     # allow_methods=False (used for hierarchy locations) still allows a
-    # plain %{var} reference; only an explicit method call raises.
+    # plain %{var} reference; only an explicit method call raises -- as a
+    # ConfigError, since this is a hiera.yaml problem, not a lookup-time one
+    # (hierarchy_location_resolution Design Q3).
     inv = Invocation(Scope(), lambda k, i: _MISSING)
-    with pytest.raises(InterpolationError, match="method syntax is not allowed"):
+    with pytest.raises(ConfigError, match="method syntax is not allowed"):
         interpolate("%{lookup('x')}", inv, allow_methods=False)
 
 

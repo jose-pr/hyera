@@ -1,0 +1,6 @@
+description: >-
+  A mapped_paths template that resolves to a directory, not a file.
+queries:
+  - key: k
+    error_match: Is a directory
+    error_class: BackendError

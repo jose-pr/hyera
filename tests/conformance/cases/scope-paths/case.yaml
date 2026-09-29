@@ -4,10 +4,8 @@ origin: spec-context-facts/paths
 queries:
 - key: k_node_empty
 - key: k_undef
-  divergence: spec-context-facts/path-missing-var-skips-level
 - key: k_virt_top
 - key: k_virtual
 - key: k_count
 - key: k_role_web
-  divergence: spec-context-facts/path-missing-var-skips-level
 - key: k_common

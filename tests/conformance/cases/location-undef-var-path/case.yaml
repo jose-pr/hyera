@@ -1,0 +1,13 @@
+description: >-
+  An undefined top-scope variable in a hierarchy path: the reference
+  resolves to '' and the resulting literal path is still probed, in every
+  strict mode -- never a skipped level.
+origin: spec-config/cases/undef_var_path
+queries:
+  - key: k
+  - id: k-strict-error
+    key: k
+    puppet_args: ["--strict", "error"]
+  - id: k-strict-off
+    key: k
+    puppet_args: ["--strict", "off"]

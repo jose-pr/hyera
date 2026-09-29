@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/quoted_segment
 queries:
   - key: k
-    divergence: spec-config/location-interpolation-grammar

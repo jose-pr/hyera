@@ -2,3 +2,5 @@ description: A hierarchy location path using %{lookup(...)} method syntax.
 origin: spec-interpolation/pm_lookup
 queries:
 - key: k
+  error_match: method syntax is not allowed
+  error_class: ConfigError

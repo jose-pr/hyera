@@ -4,4 +4,3 @@ description: >-
 origin: spec-config/cases/recursive_var
 queries:
   - key: k
-    divergence: spec-config/location-interpolation-grammar

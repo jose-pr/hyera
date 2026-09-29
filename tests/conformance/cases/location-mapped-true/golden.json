@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "5258c75887689bd82110dfd89ef9f06ea73e202a8145ad99c0f53e73a23b14bc",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "undefined method 'empty?' for true"
+    }
+  }
+}

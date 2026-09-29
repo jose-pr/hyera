@@ -1,0 +1,6 @@
+description: >-
+  mapped_paths over a non-collection Boolean (true) collection var.
+queries:
+  - key: k
+    error_match: \btrue\b
+    error_class: ConfigError

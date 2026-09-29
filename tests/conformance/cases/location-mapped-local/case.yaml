@@ -4,4 +4,3 @@ description: >-
 origin: critic-puppet-coverage/mapped_local
 queries:
   - key: k
-    divergence: critic-puppet-coverage/mapped-paths-item-var-top-scope

@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "248c9b2e26db34d61e77f0f4a9dfbbf14c953548cd02a40087cfb6c59f20dc24",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuch';"
+      ],
+      "status": "found",
+      "value": "two"
+    }
+  }
+}
