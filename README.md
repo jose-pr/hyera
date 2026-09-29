@@ -183,7 +183,12 @@ leaks a decrypted secret:
   path; a `sops.bat`/`sops.cmd` shim is refused (`cmd.exe` re-parses a
   batch file's argument line, which a data-derived path could abuse),
 - a decrypted file that fails to parse reports only the problem and its
-  line/column — never the decrypted plaintext.
+  line/column — never the decrypted plaintext; a YAML value shaped to
+  quote itself into the error message (`!!float`, `!ruby/object:...`) is
+  redacted instead,
+- an INI file is always decrypted through sops's own JSON view, never
+  ini text — sops's INI writer can otherwise emit a value that a text
+  parser reads as a different key or an injected section.
 
 ## Hiera 5 spec coverage
 

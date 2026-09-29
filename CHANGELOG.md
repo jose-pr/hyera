@@ -49,6 +49,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- An INI file decrypted by `sops_data` is now parsed from sops's own
+  `--output-type=json` view, never ini text: sops's own INI writer emits
+  a value containing `"""` plus a newline ambiguously, so a decrypted
+  value could be read back as a different key or as an injected section
+  (reproduced against real sops 3.13.3: a `db.password` value replaced by
+  a later, attacker-supplied one). `sops_ini`/extension-inferred `ini`
+  both still tell sops to *read* the file as ini; only the output/parse
+  side changed.
+- Three more `_yaml_loader` messages a decrypted YAML file can shape
+  itself into (`invalid value for Float()`/`Integer()`, and `Tried to
+  load unspecified class:` for a `!ruby/object`/`!ruby/hash` tag) no
+  longer quote the offending scalar or class name on the `sops_data`
+  decrypt path; `yaml_data` (no sops involved) is unchanged. A handful of
+  fixed names hyera itself raises for a known YAML shape (`Time`, `Date`,
+  an unnamed `!ruby/object`, `!!set`) still show, since none of them ever
+  echo text from the document.
+- A `sops` decrypt timeout no longer leaves the underlying
+  `subprocess.TimeoutExpired` (and its captured partial stdout) reachable
+  via the raised `BackendError`'s `__context__`; only `__cause__` was
+  addressed by the previous `from None` fix.
+- A `UnicodeDecodeError` from a non-UTF-8 decrypted file now reports only
+  the byte offset, not the offending byte value or the stock codec
+  message's surrounding text.
 - Decrypted `sops` plaintext no longer appears in error messages or logs
   when a decrypted file fails to parse.
 - The data file passed to `sops` is always an absolute path after a
@@ -195,6 +218,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `convert_to` raises `hyera.HieraLookupError` with Puppet's message when
+  its type cannot be parsed or converted to, instead of returning the
+  value unchanged; fix the data or catch the error.
+- `hyera.Sensitive` prints as `Sensitive [value redacted]` and equals
+  another `Sensitive` that wraps an equal value.
 - YAML is parsed with `SafeLoader` — hiera data is untrusted config and must
   not be able to construct arbitrary Python objects.
 - `SopsYAMLBackend` hardened for unattended use: finite subprocess timeout,
@@ -318,16 +346,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   format from the file extension the same way the `sops` CLI itself does
   (`.yaml`/`.yml`/`.json`/`.env`/`.ini`, case-sensitive; any other
   extension is a clear error naming the file instead of a raw or
-  misleading failure). `IniBackend`/`DotenvBackend` parse sops's own
-  output shape for those two formats; neither has a Puppet `data_hash`
-  equivalent, so both are reachable only through `sops_data`. `sops` is
+  misleading failure). `DotenvBackend` parses sops's own dotenv output
+  shape; it has no Puppet `data_hash` equivalent, so it is reachable only
+  through `sops_data`. An INI file is decrypted through sops's own JSON
+  view instead of a dedicated ini parser (see Security). `sops` is
   another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
   `sops_dotenv` force that format regardless of the file's own extension.
 
-### Changed
-
-- `convert_to` raises `hyera.HieraLookupError` with Puppet's message when
-  its type cannot be parsed or converted to, instead of returning the
-  value unchanged; fix the data or catch the error.
-- `hyera.Sensitive` prints as `Sensitive [value redacted]` and equals
-  another `Sensitive` that wraps an equal value.

@@ -30,7 +30,6 @@ __all__ = [
     "JSONBackend",
     "HOCONBackend",
     "SopsBackend",
-    "IniBackend",
     "DotenvBackend",
     "BackendError",
     "RubySymbol",
@@ -953,91 +952,6 @@ class HOCONBackend(Backend):
         return _as_plain(parsed)
 
 
-class IniBackend(Backend):
-    """INI, in exactly the shape the ``sops`` CLI's go-ini writer emits it
-    (``stores/ini/store.go``) -- reachable only through :class:`SopsBackend`
-    (Puppet has no ``ini_data`` of its own).
-    """
-
-    NAMES = {"format": ("ini",)}
-    EXTENSIONS = (".ini",)
-
-    def loads(self, text):
-        result = {"DEFAULT": {}}
-        current = result["DEFAULT"]
-        lines = text.split("\n")
-        n = len(lines)
-        i = 0
-        lineno = 0
-        while i < n:
-            line = lines[i]
-            i += 1
-            lineno += 1
-            stripped = line.strip()
-            if stripped == "" or stripped[:1] in (";", "#"):
-                continue
-            if stripped[:1] == "[" and stripped[-1:] == "]" and len(stripped) >= 2:
-                name = stripped[1:-1]
-                result[name] = {}
-                current = result[name]
-                continue
-
-            if line[:1] == "`":
-                end = line.find("`", 1)
-                if end == -1:
-                    raise BackendError("invalid ini line {}".format(lineno))
-                key = line[1:end]
-                remainder = line[end + 1 :]
-            else:
-                key_end = line.find("=")
-                if key_end == -1:
-                    raise BackendError("invalid ini line {}".format(lineno))
-                key = line[:key_end].strip()
-                remainder = line[key_end:]
-
-            eq = remainder.find("=")
-            if eq == -1:
-                raise BackendError("invalid ini line {}".format(lineno))
-            value_part = remainder[eq + 1 :].strip()
-
-            if value_part.startswith('"""'):
-                body = value_part[3:]
-                if body.endswith('"""') and len(body) >= 3:
-                    value = body[:-3]
-                else:
-                    parts = [body]
-                    closed = False
-                    while i < n:
-                        nxt = lines[i]
-                        i += 1
-                        lineno += 1
-                        if nxt.endswith('"""'):
-                            parts.append(nxt[:-3])
-                            closed = True
-                            break
-                        parts.append(nxt)
-                    if not closed:
-                        raise BackendError("invalid ini line {}".format(lineno))
-                    value = "\n".join(parts)
-            elif (
-                len(value_part) >= 2
-                and value_part[:1] == "`"
-                and value_part[-1:] == "`"
-            ):
-                value = value_part[1:-1]
-            elif (
-                len(value_part) >= 2
-                and value_part[:1] == '"'
-                and value_part[-1:] == '"'
-            ):
-                value = value_part[1:-1]
-            else:
-                value = value_part
-
-            current[key] = value
-        return result
-
-
 class DotenvBackend(Backend):
     """dotenv, in exactly the shape the ``sops`` CLI's writer emits it
     (``stores/dotenv/store.go``) -- reachable only through
@@ -1068,7 +982,7 @@ def _refuse_batch_shim(exe: str) -> None:
         )
 
 
-def _run_sops(path, input_type: str) -> bytes:
+def _run_sops(path, input_type: str, output_type: str = None) -> bytes:
     """Run ``sops -d`` on ``path`` and return its decrypted stdout.
 
     Hardened for unattended use: the resolved executable is run by its
@@ -1078,7 +992,15 @@ def _run_sops(path, input_type: str) -> bytes:
     could abuse), and the data path is always passed absolute and after a
     literal ``--`` so a path/scope value starting with ``-`` can never be
     read as a sops option.
+
+    ``output_type`` defaults to ``input_type`` (the rule for
+    yaml/json/dotenv, keeping YAML on the Psych-compatible loader).
+    :class:`SopsBackend` passes a different value only for ``ini``:
+    sops's own INI *writer* is ambiguous, so INI is always decrypted as
+    ``--output-type=json`` and parsed as JSON instead.
     """
+    if output_type is None:
+        output_type = input_type
     exe = shutil.which("sops")
     if exe is None:
         raise BackendError(
@@ -1111,12 +1033,13 @@ def _run_sops(path, input_type: str) -> bytes:
     exe = os.path.abspath(exe)
     _refuse_batch_shim(exe)
     abs_path = os.path.abspath(os.fspath(path))
+    timed_out = False
     try:
         proc = subprocess.run(
             [
                 exe,
                 "--input-type={}".format(input_type),
-                "--output-type={}".format(input_type),
+                "--output-type={}".format(output_type),
                 "-d",
                 "--",
                 abs_path,
@@ -1126,16 +1049,25 @@ def _run_sops(path, input_type: str) -> bytes:
             timeout=SOPS_TIMEOUT,
             check=False,
         )
-    except subprocess.TimeoutExpired as e:
-        # `from None`, not `from e`: a TimeoutExpired carries the
-        # subprocess's partial stdout (possibly partially-decrypted
-        # plaintext) as an attribute, which chaining would keep reachable
-        # via `__cause__.stdout` on the raised BackendError.
+    except subprocess.TimeoutExpired:
+        # Recorded, not re-raised, inside the except (R4b): a
+        # TimeoutExpired carries the subprocess's partial stdout (possibly
+        # partially-decrypted plaintext) as an attribute, and raising
+        # *inside* an active except block sets it as `__context__` even
+        # under `from None` -- `from None` only sets
+        # `__suppress_context__`, so the attribute stays reachable via
+        # `__context__.stdout`/`.output` on the raised BackendError. The
+        # BackendError is raised below instead, once this except block has
+        # finished and Python has cleared the handled exception, so
+        # `__context__` is genuinely `None`, not just suppressed.
+        timed_out = True
+    except OSError as e:
+        raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
+
+    if timed_out:
         raise BackendError(
             "sops timed out after {}s decrypting {}".format(SOPS_TIMEOUT, path)
         ) from None
-    except OSError as e:
-        raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
 
     if proc.returncode != 0:
         detail = proc.stderr.decode("utf-8", "replace").strip()
@@ -1165,6 +1097,50 @@ def _sops_format(path_str: str):
         if path_str.endswith(suffix):
             return fmt
     return None
+
+
+#: S7: fixed prefixes of the two ``_yaml_loader`` messages that quote the
+#: offending scalar verbatim (``invalid value for Float()/Integer():
+#: "<data>"``). Matched as a plain prefix, never against the tail: the
+#: quoted scalar can itself embed a literal newline (a ``!!float |\n
+#: HUNTER2`` block scalar), which would otherwise make a naive
+#: ``.*$``-style regex fail to match the whole message and leak it.
+_SOPS_YAML_QUOTED_PREFIXES = (
+    "invalid value for Float(): ",
+    "invalid value for Integer(): ",
+)
+
+#: The third leaking shape's fixed prefix, ``Tried to load unspecified
+#: class: <name>`` (``_yaml_loader._disallowed``); ``<name>`` is
+#: attacker-controlled text for every ``!ruby/...`` tag except the fixed
+#: names below.
+_SOPS_YAML_CLASS_PREFIX = "Tried to load unspecified class: "
+
+#: Names ``_yaml_loader`` itself raises unconditionally for a known YAML
+#: shape (an implicit timestamp/date, `!!set`, a bare/nameless
+#: ``!ruby/object``) -- never text lifted from the decrypted document, so
+#: these stay visible. Everything else after "unspecified class: " comes
+#: from the tag's own (attacker-controlled) suffix text.
+_SOPS_YAML_CLASS_ALLOW = frozenset({"Time", "Date", "Object", "Psych::Set"})
+
+
+def _sops_redact_yaml_problem(problem: str) -> str:
+    """On the sops decrypt path only, blank a YAML loader message's
+    quoted scalar or attacker-suppliable class name. Plain ``yaml_data``
+    (no sops involved) keeps Puppet's full text -- :meth:`Backend.load`
+    never calls this. A decrypted value shaped like ``!!float HUNTER2`` or
+    ``!ruby/object:HUNTER2 {}`` would otherwise echo ``HUNTER2`` verbatim
+    into the raised error, the log, and an MCP result (the CLI's optional
+    MCP server serves this same error text over ``tools/call``).
+    """
+    for prefix in _SOPS_YAML_QUOTED_PREFIXES:
+        if problem.startswith(prefix):
+            return prefix + "<redacted>"
+    if problem.startswith(_SOPS_YAML_CLASS_PREFIX):
+        name = problem[len(_SOPS_YAML_CLASS_PREFIX) :]
+        if name not in _SOPS_YAML_CLASS_ALLOW:
+            return _SOPS_YAML_CLASS_PREFIX + "<redacted>"
+    return problem
 
 
 class SopsBackend(Backend):
@@ -1208,18 +1184,37 @@ class SopsBackend(Backend):
                 "data_hash: sops_<yaml|json|ini|dotenv> to choose a format"
                 "".format(path)
             )
-        raw = _run_sops(path, fmt)
-        format_backend = Backend.new(fmt, kind="format", strict=self.strict)
+        # sops's own INI *writer* is ambiguous -- a decrypted value
+        # containing `"""` plus a newline can inject a key or replace a
+        # whole other section, and no INI parser (including hyera's former
+        # one) can tell those bytes apart from a genuine file. INI is
+        # therefore always decrypted as sops's own JSON view instead
+        # (confirmed against real sops 3.13.3: it is exactly
+        # `{"DEFAULT": {...}, section: {...}}`) and parsed with
+        # JSONBackend; yaml/json/dotenv keep output-type equal to
+        # input-type.
+        parse_fmt = "json" if fmt == "ini" else fmt
+        raw = _run_sops(path, fmt, output_type=parse_fmt)
+        format_backend = Backend.new(parse_fmt, kind="format", strict=self.strict)
         problem = None
+        text = None
         try:
             text = raw.decode("utf-8")
             parsed = format_backend.loads(text)
         except UnicodeDecodeError as e:
-            problem = str(e)
+            # Optional hardening: the byte offset only, never the
+            # offending byte value or the surrounding text the stock
+            # codec message quotes.
+            problem = "invalid UTF-8 at byte offset {}".format(e.start)
         except BackendError as e:
-            problem = str(e)
+            problem = _sops_redact_yaml_problem(str(e))
         else:
             return format_backend._as_data_hash(parsed, path)
+        finally:
+            # Optional hardening: drop the plaintext locals before the
+            # raise below, so a frame-capturing error reporter (e.g.
+            # Sentry's default) does not also collect them.
+            del raw, text
         raise BackendError(
             "Unable to parse ({}): {}".format(path, problem), path=str(path)
         )

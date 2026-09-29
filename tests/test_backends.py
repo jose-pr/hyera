@@ -361,24 +361,19 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# IniBackend / DotenvBackend: reachable only through SopsBackend (see
-# tests/test_sops.py for the recorded-pair tests against real sops output);
-# these cover the two error paths directly.
+# DotenvBackend: reachable only through SopsBackend (see tests/test_sops.py
+# for the recorded-pair tests against real sops output); this covers its
+# error path directly.
+#
+# There is no IniBackend: a security review found go-ini's own
+# `"""..."""` writer output ambiguous -- a decrypted
+# value can inject a key or replace a whole other section, and no ini-text
+# parser can tell those bytes apart from a genuine file -- so
+# SopsBackend.data_hash always decrypts `ini` as sops's own `--output-type
+# json` view and parses it with JSONBackend instead. `ini` was never a
+# Puppet data_hash/format name outside this backend, so nothing else
+# depended on it; it and its tests were removed rather than kept unused.
 # ---------------------------------------------------------------------------
-
-
-def test_ini_backend_no_equals_sign_raises():
-    from hyera.backends import IniBackend
-
-    with pytest.raises(BackendError, match="invalid ini line 2"):
-        IniBackend().loads("[s]\nno equals here\n")
-
-
-def test_ini_backend_unclosed_triple_quote_raises():
-    from hyera.backends import IniBackend
-
-    with pytest.raises(BackendError, match="invalid ini line"):
-        IniBackend().loads('[s]\nk = """never closed\n')
 
 
 def test_dotenv_backend_no_equals_sign_raises():
@@ -388,12 +383,11 @@ def test_dotenv_backend_no_equals_sign_raises():
         DotenvBackend().loads("no equals here\n")
 
 
-def test_ini_and_dotenv_registered_only_in_format_namespace():
-    from hyera.backends import DotenvBackend, IniBackend
+def test_dotenv_registered_only_in_format_namespace():
+    from hyera.backends import DotenvBackend
 
-    assert "ini" in Backend.names("format")
     assert "dotenv" in Backend.names("format")
-    assert Backend.find("ini", kind="function") is None
+    assert "ini" not in Backend.names("format")
     assert Backend.find("dotenv", kind="function") is None
-    assert Backend.find("ini", kind="format") is IniBackend
     assert Backend.find("dotenv", kind="format") is DotenvBackend
+    assert Backend.find("ini", kind="format") is None

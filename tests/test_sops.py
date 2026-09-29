@@ -140,21 +140,58 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     assert not called
 
 
+# S7: `_yaml_loader` messages that quote the offending scalar/class name
+# verbatim -- `invalid value for Float()/Integer(): "<data>"` and `Tried to
+# load unspecified class: <data>` -- reproduced against the fake-sops
+# `probe_leak.py` harness (93 payloads through all four formats; these 10
+# were the ones that actually leaked as YAML, 2026-09-29).
+_S7_QUOTED_FLOAT_PAYLOADS = [
+    b"a: !!float HUNTER2\n",
+    b"a: !!float 'HUNTER2'\n",
+    b'a: !!float "HUNTER2"\n',
+    b"a: !!float |\n  HUNTER2\n",
+    b"a: !<tag:yaml.org,2002:float> HUNTER2\n",
+    b"a: !!float 1.HUNTER2\n",
+    b"a: !!float 0x1HUNTER2\n",
+    b"a: !!float 1__.5e+HUNTER2\n",
+]
+_S7_CLASS_PAYLOADS = [
+    b"a: !ruby/object:HUNTER2 {}\n",
+    b"a: !ruby/hash:HUNTER2 {}\n",
+]
+_S7_IDS = [
+    "float-bare",
+    "float-single-quoted",
+    "float-double-quoted",
+    "float-block",
+    "float-full-tag",
+    "float-dot-suffix",
+    "float-hex-suffix",
+    "float-exp-suffix",
+    "ruby-object-class",
+    "ruby-hash-class",
+]
+
+
 @pytest.mark.parametrize(
     "bad",
     [
         b"db_password: *HUNTER2\n",
         b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
-    ],
-    ids=["undefined-alias", "duplicate-anchor"],
+    ]
+    + _S7_QUOTED_FLOAT_PAYLOADS
+    + _S7_CLASS_PAYLOADS,
+    ids=["undefined-alias", "duplicate-anchor"] + _S7_IDS,
 )
 def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
-    # These two PyYAML error shapes quote the offending scalar verbatim in
-    # ``context``/``problem`` (an undefined alias name, or a duplicate
-    # anchor name) -- exactly the token an attacker-controlled or merely
-    # malformed decrypted value could carry. (An unknown *tag* is no longer
-    # a parse error under the Psych-compatible loader -- it tokenizes the
-    # node's content instead, matching Ruby.)
+    # These PyYAML/`_yaml_loader` error shapes quote the offending scalar
+    # or class name verbatim in ``context``/``problem`` (an undefined alias
+    # name, a duplicate anchor name, an invalid Float()/Integer() scalar,
+    # or a `!ruby/object`/`!ruby/hash` tag's class text, S7) -- exactly the
+    # token an attacker-controlled or merely malformed decrypted value
+    # could carry. (An unknown *tag* on its own is no longer a parse error
+    # under the Psych-compatible loader -- it tokenizes the node's content
+    # instead, matching Ruby.)
     _install_recorder(monkeypatch, tmp_path, stdout=bad)
     backend = SopsBackend({})
 
@@ -173,8 +210,10 @@ def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     [
         b"db_password: *HUNTER2\n",
         b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
-    ],
-    ids=["undefined-alias", "duplicate-anchor"],
+    ]
+    + _S7_QUOTED_FLOAT_PAYLOADS
+    + _S7_CLASS_PAYLOADS,
+    ids=["undefined-alias", "duplicate-anchor"] + _S7_IDS,
 )
 def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
     monkeypatch, tmp_path, caplog, stdout
@@ -209,8 +248,10 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
 
 def test_sops_timeout_chain_free(monkeypatch, tmp_path):
     # A TimeoutExpired carries the subprocess's partial stdout as an
-    # attribute; chaining "from e" keeps that reachable via __cause__.stdout
-    # even though the BackendError's own message never echoes it.
+    # attribute; chaining "from e" -- or raising while it is still the
+    # exception being handled, even under "from None" (R4b) -- keeps that
+    # reachable via __cause__.stdout/__context__.stdout even though the
+    # BackendError's own message never echoes it.
     def _timeout(args, **kwargs):
         raise subprocess.TimeoutExpired(
             cmd=args, timeout=SOPS_TIMEOUT, output=b"partial-HUNTER2", stderr=b""
@@ -226,6 +267,7 @@ def test_sops_timeout_chain_free(monkeypatch, tmp_path):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
     assert excinfo.value.__cause__ is None
+    assert excinfo.value.__context__ is None
     assert excinfo.value.__suppress_context__ is True
 
 
@@ -314,21 +356,28 @@ def test_sops_parse_error_plaintext_absent_from_cli(
 
 
 @pytest.mark.parametrize(
-    "name,expected_format",
+    "name,expected_format,expected_output_type",
     [
-        ("a.yaml", "yaml"),
-        ("a.yml", "yaml"),
-        ("a.json", "json"),
-        ("a.env", "dotenv"),
-        (".env", "dotenv"),
-        ("a.ini", "ini"),
+        ("a.yaml", "yaml", "yaml"),
+        ("a.yml", "yaml", "yaml"),
+        ("a.json", "json", "json"),
+        ("a.env", "dotenv", "dotenv"),
+        (".env", "dotenv", "dotenv"),
+        # S5: INI is always decrypted as sops's own JSON view, never as
+        # ini text -- sops's INI *writer* is ambiguous (a decrypted value
+        # can inject a key or replace a whole other section), so the
+        # input type is still ini (that is the file's real format) but
+        # the output type forced to json.
+        ("a.ini", "ini", "json"),
     ],
 )
 def test_sops_data_format_inference_accepted(
-    monkeypatch, tmp_path, name, expected_format
+    monkeypatch, tmp_path, name, expected_format, expected_output_type
 ):
     calls, _which = _install_recorder(
-        monkeypatch, tmp_path, stdout=b"{}\n" if expected_format == "json" else b""
+        monkeypatch,
+        tmp_path,
+        stdout=b"{}\n" if expected_output_type == "json" else b"",
     )
     path = tmp_path / name
     try:
@@ -338,7 +387,7 @@ def test_sops_data_format_inference_accepted(
     assert calls, "sops should have been invoked"
     args, _kwargs = calls[-1]
     assert "--input-type={}".format(expected_format) in args
-    assert "--output-type={}".format(expected_format) in args
+    assert "--output-type={}".format(expected_output_type) in args
 
 
 @pytest.mark.parametrize("name", ["a.YAML", "a.enc", "a.conf", "a.yaml.bak"])
@@ -363,9 +412,14 @@ _YAML_NATIVE_WITH_DATE = (
     b'e: bar\nsym: :foo\n:q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'
 )
 _JSON_NATIVE = b'{"a": 1, "b": {"c": ["x", "y"]}, "n": null, "f": 1.5}\n'
-_INI_NATIVE = (
-    b"top = 1\n\n[sec1]\nk   = v\nnum = 42\n; c\nq   = quoted value\nsp  = lead\n\n"
-    b"[sec2]\nx = has=eq\nK = upper\n"
+# S5: INI is always decrypted with --output-type=json, never the ini text a
+# real sops would otherwise write; this is that JSON view for the same
+# `s.ini` fixture the (now-removed) IniBackend's own recorded-pair test
+# used, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2 in WSL
+# (`sops -d --input-type=ini --output-type=json -- enc.s.ini`).
+_INI_AS_JSON = (
+    b'{"DEFAULT": {"top": "1"}, "sec1": {"k": "v", "num": "42", '
+    b'"q": "quoted value", "sp": "lead"}, "sec2": {"x": "has=eq", "K": "upper"}}\n'
 )
 _ENV_NATIVE = (
     b'# top comment\nK1=v1\nK2=has=eq\nK3=line1\\nline2\nK4= spaced \nK5="quoted"\n'
@@ -401,13 +455,34 @@ def test_sops_data_json_recorded_pair(monkeypatch, tmp_path):
 
 
 def test_sops_data_ini_recorded_pair(monkeypatch, tmp_path):
-    _install_recorder(monkeypatch, tmp_path, stdout=_INI_NATIVE)
+    calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=_INI_AS_JSON)
     result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {})
     assert result == {
         "DEFAULT": {"top": "1"},
         "sec1": {"k": "v", "num": "42", "q": "quoted value", "sp": "lead"},
         "sec2": {"x": "has=eq", "K": "upper"},
     }
+    args, _kwargs = calls[-1]
+    assert "--input-type=ini" in args
+    assert "--output-type=json" in args
+
+
+def test_sops_data_ini_writer_ambiguity_is_not_reachable(monkeypatch, tmp_path):
+    # S5 regression: a real sops 3.13.3 encrypt/decrypt of
+    # `{"db": {"password": "real-secret"}, "zz": {"note": "x\"\"\"\n[db]\n
+    # password = attacker\nq = \"\"\""}}` as ini writes an ambiguous
+    # `[db]\npassword = real-secret\n\n[zz]\nnote = """x"""\n[db]\n
+    # password = attacker\nq = """"""\n` that the (now-removed) ini text
+    # parser read back as `db.password == "attacker"`. Decrypting via
+    # sops's own JSON view instead (what SopsBackend now always does for
+    # ini) recovers the genuine value.
+    stdout = (
+        b'{"DEFAULT": {}, "db": {"password": "real-secret"}, "zz": '
+        b'{"note": "x\\"\\"\\"\\n[db]\\npassword = attacker\\nq = \\"\\"\\""}}\n'
+    )
+    _install_recorder(monkeypatch, tmp_path, stdout=stdout)
+    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {})
+    assert result["db"]["password"] == "real-secret"
 
 
 def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
@@ -426,7 +501,11 @@ def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
     "ext,stdout,match",
     [
         ("json", b'{"a": HUNTER2}\n', "Unable to parse"),
-        ("ini", b"HUNTER2_no_equals_sign\n", "invalid ini line 1"),
+        # S5: ini is always decrypted+parsed as sops's own JSON view (see
+        # SopsBackend.data_hash), so a malformed decrypted ini payload
+        # fails the same JSON parse as the "json" case above, never the
+        # (now-removed) IniBackend's own "invalid ini line N".
+        ("ini", b'{"a": HUNTER2}\n', "Unable to parse"),
         ("env", b"HUNTER2_no_equals_sign\n", "invalid dotenv line 1"),
     ],
 )
@@ -434,10 +513,11 @@ def test_sops_data_secret_free_for_json_ini_dotenv(
     monkeypatch, tmp_path, caplog, ext, stdout, match
 ):
     # A malformed decrypted payload that genuinely fails to parse for each
-    # of the three non-YAML formats. INI/dotenv line-error messages never
-    # embed the line's own text at all (by construction -- only the line
-    # number); JSON's parse-error path goes through the same chain-free
-    # "Unable to parse" wrapping YAML already had covered above.
+    # of the three non-YAML formats. dotenv's line-error message never
+    # embeds the line's own text at all (by construction -- only the line
+    # number); JSON's (and, since S5, ini's) parse-error path goes through
+    # the same chain-free "Unable to parse" wrapping YAML already had
+    # covered above.
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(BackendError, match=match) as excinfo:
@@ -484,10 +564,14 @@ def test_sops_format_pattern_forces_format_regardless_of_extension(
 
 
 def test_sops_format_pattern_overrides_extension_inference(monkeypatch, tmp_path):
-    # sops_ini forces ini even over a .yaml-looking name.
-    calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b"[s]\nk = v\n")
+    # sops_ini forces ini (as the sops --input-type) even over a
+    # .yaml-looking name; the output is still decrypted as JSON (S5).
+    calls, _which = _install_recorder(
+        monkeypatch, tmp_path, stdout=b'{"DEFAULT": {}, "s": {"k": "v"}}\n'
+    )
     path = tmp_path / "secret.yaml"
     result = Backend.new("sops_ini", {}).data_hash(path, {})
     assert result == {"DEFAULT": {}, "s": {"k": "v"}}
     args, _kwargs = calls[-1]
     assert "--input-type=ini" in args
+    assert "--output-type=json" in args

@@ -259,58 +259,78 @@ is a `Backend` subclass, found by name rather than passed around directly.
   duration of `.loads()`, so an undiscovered gap in the text scanner still
   cannot read a file or reach the network; they behave normally for any
   other pyhocon use in the same process, before or after.
-- **`SopsBackend`** — `NAMES = {"function": ("sops_data",)}` (a `sops`
-  alias and a `sops_<yaml|json|ini|dotenv>` `NamePattern` are added by a
-  a later commit). Not a `YAMLBackend` subclass; `__init__(conf=None,
-  *, strict=None, format=None)` — `format` is set by the `NamePattern`
-  capture, else inferred. `.data_hash` infers the format from the file's
-  extension with **sops's own rule**, case-sensitive (`cmd/sops/formats/
-  formats.go`, verified against the real v3.13.3 binary and source
-  2026-09-29): `.yaml`/`.yml` → yaml, `.json` → json, `.env` → dotenv,
-  `.ini` → ini, anything else → `ConfigError` (sops would read it as
-  binary, which is not a data hash) — `_SOPS_SUFFIXES`, checked in that
-  order via `str.endswith`. It shells out to `sops -d` (hardened for
-  unattended use: `SOPS_TIMEOUT`, module-level, default `30` seconds,
-  bounds the subprocess; a missing `sops` binary or non-zero exit raises
-  `BackendError` with captured stderr rather than hanging or raising a raw
-  `OSError`; invoked as `[<abs sops path>, "--input-type=<fmt>",
-  "--output-type=<fmt>", "-d", "--", <abs data path>]` — the data path is
-  always absolute and after a literal `--`, so a path or scope value
-  starting with `-` can never be parsed as a `sops` option; a
-  `sops.bat`/`sops.cmd` shim is refused, `cmd.exe` re-parses a batch file's
-  own argument line), then parses the decrypted bytes with the inferred
-  format's own registered `format`-namespace backend (`Backend.new(fmt,
-  kind="format")`) — YAML keeps `yaml_data`'s non-Hash rule; JSON/INI/
-  dotenv get the engine's generic Hash check instead. A decrypted file
-  that fails to parse raises a one-line, chain-free
+- **`SopsBackend`** — `NAMES = {"function": ("sops_data", "sops",
+  NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`. Not a `YAMLBackend`
+  subclass; `__init__(conf=None, *, strict=None, format=None)` —
+  `format` is set by the `NamePattern` capture, else inferred.
+  `.data_hash` infers the format from the file's extension with **sops's
+  own rule**, case-sensitive (`cmd/sops/formats/formats.go`, verified
+  against the real v3.13.3 binary and source 2026-09-29): `.yaml`/`.yml`
+  → yaml, `.json` → json, `.env` → dotenv, `.ini` → ini, anything else →
+  `ConfigError` (sops would read it as binary, which is not a data hash)
+  — `_SOPS_SUFFIXES`, checked in that order via `str.endswith`. It shells
+  out to `sops -d` (hardened for unattended use: `SOPS_TIMEOUT`,
+  module-level, default `30` seconds, bounds the subprocess; a missing
+  `sops` binary or non-zero exit raises `BackendError` with captured
+  stderr rather than hanging or raising a raw `OSError`; invoked as
+  `[<abs sops path>, "--input-type=<fmt>", "--output-type=<out>", "-d",
+  "--", <abs data path>]` — the data path is always absolute and after a
+  literal `--`, so a path or scope value starting with `-` can never be
+  parsed as a `sops` option; a `sops.bat`/`sops.cmd` shim is refused,
+  `cmd.exe` re-parses a batch file's own argument line; a
+  `subprocess.TimeoutExpired` is recorded and its `BackendError` raised
+  only after the `except` block, so `__context__` never carries its
+  `.stdout` -- security review R4b, 2026-09-29), then parses the
+  decrypted bytes with a `format`-namespace backend (`Backend.new(<out>,
+  kind="format")`) — YAML keeps `yaml_data`'s non-Hash rule; JSON/dotenv
+  get the engine's generic Hash check instead.
+  **`ini` is the one exception to "output type = input type" (security
+  review S5, 2026-09-29):** sops's own INI *writer* is ambiguous (a
+  decrypted value containing `"""` plus a newline can inject a key or
+  replace a whole other section, and no ini-text parser can tell those
+  bytes apart from a genuine file — reproduced against real sops 3.13.3),
+  so `ini` is always decrypted as `--output-type=json` and parsed with
+  `JSONBackend` instead; there is no `IniBackend`. sops's JSON view of an
+  ini-format file is exactly `{"DEFAULT": {...}, <section>: {...}, ...}`
+  (`DEFAULT` always present, even empty; a duplicate `[section]` "last
+  wins" the way a duplicate JSON object key does), confirmed against the
+  real binary. `data_hash: sops_ini` still forces sops's `--input-type`
+  to `ini` (reads the file as INI) but the output/parse side is always
+  `json`, the same as inferred-`ini`.
+  A decrypted file that fails to parse raises a one-line, chain-free
   `BackendError("Unable to parse (<path>): <problem>", path=...)` — never
-  the decrypted plaintext. **Gotcha:** sops re-emits YAML through its own
-  Go YAML writer, which changes shape on decrypt — a date-shaped scalar
-  becomes a full ISO timestamp (`2024-01-15` → `2024-01-15T00:00:00Z`,
-  still disallowed by `_yaml_loader`, just with a different message
-  source); tags are stripped (`!foo bar` → `bar`); `!!binary`/`!!null`
-  round-trip to plain text/`null`; octal ints are re-emitted as decimal
-  (`0755` → `493`); a `:symbol` scalar/key survives as plain `:name` text
-  (still parses to a `RubySymbol`/normalizes via `symkeys_to_string` on our
-  side, same as any other YAML source).
-- **`IniBackend`**/**`DotenvBackend`** — `format`-namespace only (`ini`/
-  `dotenv`; no Puppet `data_hash` equivalent, reachable only through
-  `SopsBackend`). Each parses **exactly the shape sops's own writer
-  emits** (`stores/ini/store.go`/`stores/dotenv/store.go`), not a general
-  INI/dotenv dialect — sops's own `--output-type json` view is the
-  acceptance oracle both were verified against (2026-09-29, real sops
-  3.13.3). `IniBackend.loads(text) -> {"DEFAULT": {...}, <section>:
-  {...}, ...}`: lines before any header go to `DEFAULT` (always present,
-  even empty); a repeated `[section]` header overwrites the previous one
-  (matching "last wins" when sops's own duplicate-section JSON is parsed);
-  a backtick-wrapped key/value (`` `k` ``) or a `"..."`-wrapped value is
-  unwrapped; a `"""..."""` value may span multiple lines; a line with
-  neither a header nor an `=` raises `BackendError("invalid ini line
-  <n>")` — never the line's own text. `DotenvBackend.loads(text) -> dict`:
+  the decrypted plaintext; a `UnicodeDecodeError` is reported as `invalid
+  UTF-8 at byte offset <n>` (never the stock codec message's offending
+  byte value); the `raw`/`text` locals are `del`eted before that raise.
+  **`_sops_redact_yaml_problem` (security review S7, 2026-09-29):** three
+  `_yaml_loader` messages quote the offending scalar or an attacker-
+  suppliable class name verbatim (`invalid value for Float()/Integer():
+  "<data>"`, `Tried to load unspecified class: <data>` for a `!ruby/...`
+  tag) — on the sops decrypt path only (plain `yaml_data` keeps Puppet's
+  full text), the quoted/named part is replaced with `<redacted>` unless
+  the class name is one of the fixed set `_yaml_loader` itself raises
+  unconditionally for a known YAML shape (`Time`, `Date`, `Object`,
+  `Psych::Set` — never text lifted from the document).
+  **Gotcha:** sops re-emits YAML through its own Go YAML writer, which
+  changes shape on decrypt — a date-shaped scalar becomes a full ISO
+  timestamp (`2024-01-15` → `2024-01-15T00:00:00Z`, still disallowed by
+  `_yaml_loader`, just with a different message source); tags are
+  stripped (`!foo bar` → `bar`); `!!binary`/`!!null` round-trip to plain
+  text/`null`; octal ints are re-emitted as decimal (`0755` → `493`); a
+  `:symbol` scalar/key survives as plain `:name` text (still parses to a
+  `RubySymbol`/normalizes via `symkeys_to_string` on our side, same as
+  any other YAML source).
+- **`DotenvBackend`** — `format`-namespace only (`dotenv`; no Puppet
+  `data_hash` equivalent, reachable only through `SopsBackend`). Parses
+  **exactly the shape sops's own writer emits** (`stores/dotenv/
+  store.go`), not a general dotenv dialect — sops's own `--output-type
+  json` view is the acceptance oracle it was verified against
+  (2026-09-29, real sops 3.13.3). `DotenvBackend.loads(text) -> dict`:
   blank lines and `#`-prefixed lines are skipped; the first `=` splits
   key/value; a literal two-character `\n` in the value becomes a real
   newline; a line with no `=` raises `BackendError("invalid dotenv line
-  <n>")` — same no-content-in-the-message rule.
+  <n>")` — never the line's own text. There is no `IniBackend`: see
+  `SopsBackend` above (S5) for why `ini` is parsed as JSON instead.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
