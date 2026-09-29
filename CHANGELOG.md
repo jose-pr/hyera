@@ -317,4 +317,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   extension is a clear error naming the file instead of a raw or
   misleading failure). `IniBackend`/`DotenvBackend` parse sops's own
   output shape for those two formats; neither has a Puppet `data_hash`
-  equivalent, so both are reachable only through `sops_data`.
+  equivalent, so both are reachable only through `sops_data`. `sops` is
+  another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
+  `sops_dotenv` force that format regardless of the file's own extension.

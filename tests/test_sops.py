@@ -35,14 +35,19 @@ def _install_recorder(
     return calls, which_path
 
 
-def test_data_hash_sops_not_registered(make_tree):
-    # A later change adds the `sops` name; until
-    # then it is simply unknown, exactly like any other unregistered name.
+def test_data_hash_sops_is_sops_data(monkeypatch, tmp_path, make_tree):
+    # `sops` is an alias for `sops_data` -- over the same mocked
+    # decrypt, the two names must produce identical results.
+    _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
     root = make_tree(
-        {"hierarchy": [{"name": "s", "path": "secret.yaml", "data_hash": "sops"}]},
+        {
+            "defaults": {"data_hash": "sops"},
+            "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
+        },
+        files={"data/secret.yaml": b""},
     )
-    with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
-        Hiera(str(root / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.get("k") == "v"
 
 
 def test_sops_success_argv_and_value(monkeypatch, tmp_path):
@@ -444,3 +449,45 @@ def test_sops_data_secret_free_for_json_ini_dotenv(
         exc = exc.__cause__ or exc.__context__
     assert not any("HUNTER2" in s for s in seen)
     assert not any("HUNTER2" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# The `sops` alias and the `sops_<format>` pattern name.
+# ---------------------------------------------------------------------------
+
+
+def test_sops_names_registered():
+    names = Backend.names()
+    assert names[-3:] == ["sops_data", "sops", "sops_<yaml|json|ini|dotenv>"]
+    assert Backend.find("sops_toml") is None
+
+
+@pytest.mark.parametrize("data_hash", ["ini", "dotenv"])
+def test_ini_and_dotenv_are_not_data_hash_names(make_tree, data_hash):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "secret.ini", "data_hash": data_hash}]},
+    )
+    with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
+        Hiera(str(root / "hiera.yaml"))
+
+
+def test_sops_format_pattern_forces_format_regardless_of_extension(
+    monkeypatch, tmp_path
+):
+    calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b'{"a": 1}\n')
+    path = tmp_path / "secrets.enc"
+    result = Backend.new("sops_json", {}).data_hash(path, {})
+    assert result == {"a": 1}
+    args, _kwargs = calls[-1]
+    assert "--input-type=json" in args
+    assert "--output-type=json" in args
+
+
+def test_sops_format_pattern_overrides_extension_inference(monkeypatch, tmp_path):
+    # sops_ini forces ini even over a .yaml-looking name.
+    calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b"[s]\nk = v\n")
+    path = tmp_path / "secret.yaml"
+    result = Backend.new("sops_ini", {}).data_hash(path, {})
+    assert result == {"DEFAULT": {}, "s": {"k": "v"}}
+    args, _kwargs = calls[-1]
+    assert "--input-type=ini" in args

@@ -78,7 +78,7 @@ from Puppet" below for the one exception):
 | `YAMLBackend`  | `yaml_data`       | parses YAML the way Puppet's Psych does (types, symbols, BOM), on libyaml when available |
 | `JSONBackend`  | `json_data`       |                                                 |
 | `HOCONBackend` | `hocon_data`      | requires `pip install pyera[hocon]`            |
-| `SopsBackend`  | `sops_data`       | decrypts via the `sops` CLI on the fly         |
+| `SopsBackend`  | `sops_data` (also `sops`, `sops_<yaml\|json\|ini\|dotenv>`) | decrypts via the `sops` CLI on the fly |
 
 A third-party backend registers itself the same way, by subclassing
 `pyera.Backend` and declaring `NAMES`; `Backend.find`/`.get`/`.new`/`.names`
@@ -204,9 +204,11 @@ pyera aims to resolve exactly like `puppet lookup`. Every `data_hash`/
 `lookup_key`/`data_dig` name it accepts is a real Puppet function name —
 with one deliberate exception:
 
-- **`sops_data`** — a `data_hash` backend with no Puppet equivalent, for
-  decrypting a [sops](https://github.com/getsops/sops)-encrypted data file
-  on the fly. A hierarchy that uses it does not load under real Puppet.
+- **`sops_data`** (also `sops`, and `sops_yaml`/`sops_json`/`sops_ini`/
+  `sops_dotenv` to force the format) — a `data_hash` backend with no
+  Puppet equivalent, for decrypting a
+  [sops](https://github.com/getsops/sops)-encrypted data file on the fly.
+  A hierarchy that uses it does not load under real Puppet.
 
 ## Notes
 

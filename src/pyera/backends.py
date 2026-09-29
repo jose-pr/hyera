@@ -1184,7 +1184,16 @@ class SopsBackend(Backend):
     constructor keyword.
     """
 
-    NAMES = {"function": ("sops_data",)}
+    NAMES = {
+        "function": (
+            "sops_data",
+            "sops",
+            NamePattern(
+                "sops_<yaml|json|ini|dotenv>",
+                re.compile(r"sops_(?P<format>yaml|json|ini|dotenv)"),
+            ),
+        )
+    }
 
     def __init__(self, conf=None, *, strict=None, format=None):
         super().__init__(conf, strict=strict)
