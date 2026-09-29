@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]  # PEP 639 license fields need 1.27
 build-backend = "hatchling.build"
 
 [project]
 name = "pyera"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [{ name = "jose-pr" }]
 description = "A Python implementation of Puppet Hiera hierarchical data lookup"
 readme = "README.md"
@@ -44,10 +44,17 @@ pyera = "pyera.cli:main"
 Homepage = "https://github.com/jose-pr/pyera/"
 Issues = "https://github.com/jose-pr/pyera/issues"
 
+# hatchling reads __version__ from the file itself, without importing the
+# package or consulting installed metadata -- a stale editable install can't
+# mislead it, and there is only one copy of the version to keep in sync.
+[tool.hatch.version]
+path = "src/pyera/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyera"]
-# Unshared per-machine notes never ship (see the sdist exclude below).
-exclude = ["*.local.*"]
+# *.local.* -- unshared per-machine notes (see the sdist exclude below).
+# CLAUDE*/.claude -- agent tooling config, never a shipped artifact.
+exclude = ["*.local.*", "CLAUDE*", ".claude"]
 
 
 # Ship the consumer-facing docs inside the installed package, so they are
@@ -58,11 +65,14 @@ exclude = ["*.local.*"]
 [tool.hatch.build.targets.wheel.force-include]
 "README.md" = "pyera/README.md"
 
-# `/.*` only covers dot-prefixed roots; an `AGENTS.local.md` beside the
-# shipping `AGENTS.md` has no leading dot and would otherwise be packaged.
-# Unshared `*.local.*` files never leave the checkout.
+# /.* -- category rule: nothing dot-prefixed at the repo root ships (mirrors
+# .gitignore's rule); an `AGENTS.local.md` beside the shipping `AGENTS.md`
+# has no leading dot and would otherwise be packaged, so *.local.* is listed
+# separately. /AGENTS.md -- the repo-root contributor doc does not ship (only
+# src/pyera/AGENTS.md, the API header, does). CLAUDE*/.claude -- agent
+# tooling config never ships.
 [tool.hatch.build.targets.sdist]
-exclude = ["/.*", "*.local.*"]
+exclude = ["/.*", "/AGENTS.md", "*.local.*", "CLAUDE*", ".claude"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

@@ -212,3 +212,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `pyyaml` is now required as `>=6.0,<7` and the `hocon` extra as
   `pyhocon>=0.3.29,<0.4`; both were unversioned. pyhocon 0.3.0-0.3.28 pin
   pyparsing 2.0.3-2.1.1, which fails to import on Python 3.10 and later.
+- Files named `CLAUDE*` or `.claude` are excluded from the sdist and the
+  wheel, and the repository's contributor `AGENTS.md` is no longer in the
+  sdist. The API reference `pyera/AGENTS.md` still ships in both.
+- Building requires `hatchling>=1.27`, so the package metadata declares
+  `License-Expression: MIT AND Apache-2.0` and lists `LICENSE`, `NOTICE` and
+  `LICENSES/phiera-Apache-2.0.txt` as license files; older hatchling wrote
+  only a free-text `License:` field.
