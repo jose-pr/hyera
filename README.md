@@ -203,7 +203,10 @@ leaks a decrypted secret:
 
 ## Hiera 5 spec coverage
 
-Supported: `version: 5` validation · `defaults` · `hierarchy` · `name` ·
+Supported: `version: 5` validation · Puppet's version 5 schema validation
+(closed key sets, a required unique `name`, at most one function/location
+key, non-empty strings, the `options` name pattern, and the rest) ·
+`defaults` · `hierarchy` · `name` ·
 `path`/`paths`/`glob`/`globs`/`mapped_paths` · `datadir` (default `data`,
 next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
@@ -251,8 +254,9 @@ with one deliberate exception:
 Everything raised derives from `HieraError` (`.path` names the file
 concerned, where there is one):
 
-- `ConfigError` — `hiera.yaml` is missing, unreadable, unparsable, or the
-  wrong shape.
+- `ConfigError` — `hiera.yaml` is missing, unreadable, unparsable, or
+  violates Puppet's version 5 schema. `.line` names the 1-based line in
+  `.path` the problem was found at, when known.
 - `BackendError` — a data file could not be read or parsed; `.path` names
   it.
 - `HieraLookupError` — a failure while resolving a key, with subclasses

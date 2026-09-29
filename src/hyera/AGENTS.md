@@ -34,21 +34,22 @@ private engine internals with no stability contract.
   `[{name: Common, path: common.yaml}]`) rather than raising; a hierarchy
   entry's own `datadir` wins, else `defaults.datadir`, else the literal
   `data`, always resolved next to hiera.yaml (or under `base_path`) — never
-  the Hiera 3 absolute `/etc/puppetlabs/...` path. Raises `ConfigError` for
-  anything about `hiera.yaml` — missing, unreadable, a directory,
-  unparsable, non-mapping (naming the Hiera 3 fallback this runtime does
-  not support yet), an unsupported `version` (only a literal Integer `5` is
-  accepted; a missing `version` or an explicit `3` reads as "hiera.yaml
-  version 3 is not supported yet"; `4` reads as "cannot be used in the
-  global layer"; anything else as "This runtime does not support
-  hiera.yaml version N"), an unrecognized key in `defaults` or a hierarchy
-  entry (only Puppet's own key set is accepted; the underscored spelling
-  some Hiera 5 docs use for the data directory is not one of them) — plus
-  wrong-shape problems (unknown `data_hash`, a malformed hierarchy level),
-  and `BackendError` (`.path` names it) for a data file
-  that cannot be read or parsed. Context-free hierarchy levels are loaded
-  by the constructor, so a `BackendError` can come from `Hiera(...)`
-  itself, not only from a lookup.
+  the Hiera 3 absolute `/etc/puppetlabs/...` path. `default_hierarchy` is
+  accepted in a single (non-layered) config, and its entries are schema-
+  validated exactly like `hierarchy`'s. Raises `ConfigError` for anything
+  about `hiera.yaml` — missing, unreadable, a directory, unparsable,
+  non-mapping (naming the Hiera 3 fallback this runtime does not support
+  yet), an unsupported `version` (only a literal Integer `5` is accepted; a
+  missing `version` or an explicit `3` reads as "hiera.yaml version 3 is
+  not supported yet"; `4` reads as "cannot be used in the global layer";
+  anything else as "This runtime does not support hiera.yaml version N"),
+  or any violation of Puppet's hiera.yaml version 5 schema (an unrecognized
+  key anywhere, a missing/duplicate/non-string `name`, more than one
+  function or location key, a malformed `options` entry, and the like) —
+  with Puppet's own message and, where known, `.path` and `.line` — and
+  `BackendError` (`.path` names it) for a data file that cannot be read or
+  parsed. Context-free hierarchy levels are loaded by the constructor, so a
+  `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
     — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
     A dotted `key` follows Puppet's sub-key grammar (see the dotted

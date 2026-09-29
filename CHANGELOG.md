@@ -56,6 +56,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `pyhocon` module, and every other caller of it, are unaffected.
 - `Hiera(dict_config)` no longer modifies the caller's dict; the config is
   deep-copied at construction.
+- A malformed hiera.yaml shape (a 2-element `mapped_paths`, a `hierarchy`
+  that is a Hash or a list of strings, a non-Hash `defaults`, a non-Array
+  `data_hash`, a `null` entry, and the like) now raises `ConfigError` with
+  Puppet's own message, instead of a raw `ValueError`, `TypeError` or
+  `AttributeError`. A string `paths`/`globs`/`uris` value is rejected
+  outright instead of being silently split into one source per character.
 
 ### Security
 
@@ -411,6 +417,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a missing `hierarchy` becomes `[{name: Common, path: common.yaml}]` (also
   when either is present but empty/`null`), matching Puppet's own built-in
   default configuration; both used to raise `ConfigError`.
+- hiera.yaml is validated against Puppet's version 5 schema: a closed key
+  set at the top level, in `defaults`, and in each hierarchy/
+  `plan_hierarchy`/`default_hierarchy` entry; a required, non-empty,
+  unique `name`; exactly one function key (`data_hash`/`lookup_key`/
+  `data_dig`/`hiera3_backend`) per entry or in `defaults`; at most one
+  location key (`path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths`);
+  non-empty `paths`/`globs`/`uris`, and exactly three `mapped_paths`; a
+  present key must be a non-empty string where one is expected (`~` is an
+  error, not treated as absent); Puppet's option-name pattern for
+  `options` keys, with `path`/`uri` reserved; and `hiera3_backend: json`/
+  `yaml` (or `hocon`, when available) points at the `data_hash` name to
+  use instead. Every violation raises `ConfigError` with Puppet's own
+  message, and `.path`/`.line` when known. A hiera.yaml with a misspelled
+  key, a missing or duplicate `name`, or two location keys on one entry
+  used to load (silently misreading the config) and now raises; fix the
+  config.
 
 ### Removed
 
