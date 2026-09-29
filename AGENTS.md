@@ -26,7 +26,7 @@ src/hyera/
 ├── _facts.py                # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
 ├── _lookup_adapter.py      # lookup_options matching + convert_result (lookup_adapter.rb)
 ├── _lookup_function.py     # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
-├── _data_functions.py      # dig, get: navigation over a looked-up value (functions/dig.rb, get.rb)
+├── _data_functions.py      # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
 ├── _types.py               # type model, Sensitive (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
 ├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)
 ├── _type_mismatch.py       # describe_mismatch, assert_instance_of (type_mismatch_describer.rb, type_asserter.rb)

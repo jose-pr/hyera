@@ -786,6 +786,19 @@ class Hiera:
             assert_instance_of(subject, parse_type(value_type), result)
         return result
 
+    def getvar(self, dotted, default_value=None, block=None):
+        """Puppet's ``getvar()`` (``functions/getvar.rb``): Puppet's
+        ``get()`` over a scope variable's value instead of a looked-up one.
+
+        ``dotted`` must start with a valid (optionally ``::``-qualified)
+        Puppet variable name, immediately followed by ``.`` or the string's
+        end, else ``HieraLookupError``. An undefined variable returns
+        ``default_value`` regardless of the bound scope's ``strict`` --
+        Puppet's own ``catch(:undefined_variable)``, never a raise for that
+        reason alone. The rest navigates exactly as `.get()` does.
+        """
+        return _data_functions.getvar(self.scope, dotted, default_value, block)
+
 
 # Import after defining Hiera to avoid circular import
 from .exceptions import (  # noqa: E402

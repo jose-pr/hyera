@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Hiera.get(dotted, default_value=None, block=None, ...)`, Puppet's
   `get()` with a dotted navigation string; it returns `default_value`
   instead of raising on a miss.
+- `Hiera.getvar(dotted, default_value=None, block=None)`, Puppet's
+  `getvar()` over the scope.
 
 ### Changed
 

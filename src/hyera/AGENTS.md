@@ -150,6 +150,14 @@ private engine internals with no stability contract.
     `TypeError` instead. `value_type` asserts the final result with the
     subject that says where it came from ("Found value", "Default value"
     or "Value returned from block").
+  - **`.getvar(dotted, default_value=None, block=None) -> Any`** — Puppet's
+    `getvar()`: `.get()`'s own navigation, over a scope variable's value
+    instead of a looked-up one. `dotted` must start with a valid
+    (optionally `::`-qualified) Puppet variable name immediately followed
+    by `.` or the string's end, else `HieraLookupError("'getvar' The given
+    string does not start with a valid variable name")`. An undefined
+    variable returns `default_value` regardless of the bound scope's
+    `strict` — never raises for that alone.
   - **`.scoped(*, variables=None, facts=None, trusted=None,
     server_facts=None, environment=None, strict=None, node_name=None) ->
     Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new

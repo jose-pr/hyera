@@ -205,11 +205,13 @@ invalid type or a failed conversion raises `hyera.HieraLookupError`.
 
 ### Navigating values
 
-`dig`/`get` are Puppet's own navigation functions, ported onto `Hiera`:
+`dig`/`get`/`getvar` are Puppet's own navigation functions, each ported
+onto `Hiera`:
 
 ```python
 h.dig("db", "credentials", "user")            # None if any step is missing
 h.get("db.credentials.user", default_value="admin")   # a dotted navigation string
+h.getvar("facts.os.family")                   # reads the bound scope, not the data
 ```
 
 `dig` looks up its first argument, then walks the rest of them into the
@@ -217,7 +219,8 @@ result (a `list` index or a `dict` key at a time), returning `None` the
 moment a step is missing rather than raising. `get` takes the same idea as
 one dotted string and a `default_value`, plus an optional `block` that
 receives a walk error (a non-collection or a non-integer list index)
-instead of raising.
+instead of raising. `getvar` runs `get`'s own navigation over a scope
+variable instead of a looked-up key.
 
 ## Command line
 

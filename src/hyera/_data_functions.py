@@ -1,14 +1,26 @@
-"""Puppet's ``dig()``/``get()`` functions, ported onto an already-resolved
-value: ``functions/dig.rb``, ``functions/get.rb``.
+"""Puppet's ``dig()``/``get()``/``getvar()`` functions, ported onto an
+already-resolved value (``dig``/``get``) or the bound ``Scope``
+(``getvar``): ``functions/dig.rb``, ``functions/get.rb``,
+``functions/getvar.rb``.
 
 Original code; no phiera/Puppet-source header (see ``core.Hiera.dig``/
-``.get``, the thin methods wrapping this module).
+``.get``/``.getvar``, the thin methods wrapping this module).
 """
+
+import re
 
 from ._interpolation import _ruby_inspect
 from ._navigation import split_key
 from ._types import infer
 from .exceptions import HieraLookupError
+
+#: getvar.rb:50 -- must start with a valid (optionally ``::``-qualified)
+#: Puppet variable name, immediately followed by ``.`` or the end of the
+#: string. ``(?a)`` restricts Puppet's ASCII-only ``\w`` (Python's default
+#: ``\w`` also matches Unicode word characters).
+_VALID_START_RE = re.compile(r"(?a)\A(?:::)?(?:[a-z]\w*::)*[a-z_]\w*(?:\.|\Z)")
+#: getvar.rb:69 -- splits the leading variable name from the rest.
+_NAME_RE = re.compile(r"(?a)^((?:::)?(?:\w+::)*\w+)")
 
 
 class _DigError(HieraLookupError):
@@ -123,3 +135,32 @@ def get(value, navigation, default_value=None, block=None):
         lambda _problem: HieraLookupError("Syntax error in dotted-navigation string"),
     )[1:]
     return get_segments(value, segments, default_value, block)[0]
+
+
+def getvar(scope, navigation, default_value=None, block=None):
+    """Puppet's ``getvar()`` (``functions/getvar.rb:48-85``): ``get()``
+    over a scope variable's value instead of a looked-up one.
+
+    ``navigation`` must start with a valid (optionally ``::``-qualified)
+    Puppet variable name immediately followed by ``.`` or the string's end,
+    else ``HieraLookupError("'getvar' The given string does not start with
+    a valid variable name")``. An undefined variable returns
+    ``default_value`` regardless of the scope's ``strict`` (Puppet's own
+    ``catch(:undefined_variable)``) -- never raises for that reason alone.
+    """
+    if not _VALID_START_RE.search(navigation):
+        raise HieraLookupError(
+            "'getvar' The given string does not start with a valid variable name"
+        )
+    name_match = _NAME_RE.match(navigation)
+    name = name_match.group(1)
+    rest = navigation[name_match.end() :]
+    if rest and not rest.startswith("."):
+        raise HieraLookupError(
+            "First character after var name in get string must be a "
+            "'.' - got {}".format(rest[0])
+        )
+    value = scope.lookup(name)
+    if value is scope.UNDEFINED:
+        return default_value
+    return get(value, rest[1:], default_value, block)

@@ -1,6 +1,6 @@
-"""``Hiera.dig``/``.get``: Puppet's ``dig()``/``get()`` functions
-(``functions/dig.rb``, ``get.rb``), ported onto an already-looked-up
-value."""
+"""``Hiera.dig``/``.get``/``.getvar``: Puppet's ``dig()``/``get()``/
+``getvar()`` functions (``functions/dig.rb``, ``get.rb``, ``getvar.rb``),
+ported onto an already-looked-up value or the bound scope."""
 
 import pytest
 
@@ -98,3 +98,27 @@ def test_get_navigates_like_puppet(fn):
         h.get("h.a..b", "D")
     assert h.get("nope.x", "D") == "D"  # missing root
     assert h.get("0.a", "D") == "D"  # an int root can never match
+
+
+def test_getvar_reads_scope(fn):
+    h = fn
+    assert h.getvar("facts.role") == "web"
+    assert h.getvar("nosuch.x", "GD") == "GD"
+
+    strict_h = Hiera(
+        str(h.base_path / "hiera.yaml"),
+        scope=Scope(facts={"role": "web"}, strict="error"),
+    )
+    # An undefined variable returns the default regardless of strict.
+    assert strict_h.getvar("nosuch.x", "GD") == "GD"
+
+    with pytest.raises(
+        HieraLookupError,
+        match="'getvar' The given string does not start with a valid variable name",
+    ):
+        h.getvar("1abc")
+    with pytest.raises(
+        HieraLookupError,
+        match="'getvar' The given string does not start with a valid variable name",
+    ):
+        h.getvar("facts-x")
