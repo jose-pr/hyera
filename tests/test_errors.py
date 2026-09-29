@@ -1,6 +1,7 @@
 """The exception hierarchy and the lookup miss/error boundary."""
 
 import pickle
+import re
 
 import pytest
 
@@ -172,6 +173,12 @@ def test_unparsable_config_raises_config_error(make_tree):
     with pytest.raises(ConfigError) as excinfo:
         Hiera(str(root / "hiera.yaml"))
     assert isinstance(excinfo.value.__cause__, BackendError)
+    assert "\n" not in str(excinfo.value)
+    assert "<byte string>" not in str(excinfo.value)
+    assert re.search(
+        r"\(.*hiera\.yaml\): .*while parsing a flow mapping at line 2 column 11$",
+        str(excinfo.value),
+    )
 
 
 def test_non_mapping_config_raises_config_error(make_tree):
@@ -227,6 +234,25 @@ def test_data_parse_error_raises_backend_error(make_tree):
     assert not isinstance(excinfo.value, ConfigError)
     assert excinfo.value.path.endswith("other.yaml")
     assert str(excinfo.value).startswith("Unable to parse (")
+    assert len(str(excinfo.value).splitlines()) == 1
+    assert re.search(
+        r"^Unable to parse \(.*other\.yaml\): .*while parsing a flow sequence "
+        r"at line 1 column 4$",
+        str(excinfo.value),
+    )
+
+
+def test_json_parse_error_names_file(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "j", "path": "first.json", "data_hash": "json_data"}]},
+        files={"data/first.json": ""},
+    )
+    with pytest.raises(BackendError) as excinfo:
+        Hiera(str(root / "hiera.yaml"))
+    assert re.search(
+        r"^Unable to parse \(.*first\.json\): Expecting value at line 1 column 1$",
+        str(excinfo.value),
+    )
 
 
 def test_backend_exception_wrapped_with_path(make_tree):

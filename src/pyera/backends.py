@@ -12,7 +12,7 @@ import subprocess
 
 import yaml
 
-from .exceptions import BackendError
+from .exceptions import BackendError, _one_line
 from .util import LookupDict
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,10 +83,17 @@ class YAMLBackend(Backend):
         OrderedLoader.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_mapping
         )
+        problem = None
         try:
             return yaml.load(stream, OrderedLoader)
         except yaml.YAMLError as e:
-            raise BackendError("Failed to parse YAML: {}".format(e)) from e
+            problem = _yaml_problem(e)
+        # Raised *outside* the except block on purpose: chaining "from e"
+        # (or even a bare re-raise inside the handler) would leave
+        # __cause__/__context__ holding PyYAML's own exception -- which
+        # embeds a source snippet -- reachable from a caller that walks the
+        # chain. `problem` alone carries no source text (see _yaml_problem).
+        raise BackendError(problem)
 
 
 def _refuse_batch_shim(exe: str) -> None:
@@ -187,28 +194,31 @@ _YAML_QUOTED_TOKEN_RE = re.compile(r"'[^']*'")
 
 
 def _yaml_problem(exc) -> str:
-    """Summarize a YAML parse error with no plaintext: never the decrypted
-    data, a source snippet (``mark.get_snippet()``), ``str(exc)`` itself, or
-    a quoted token embedded in the reason text -- only a short reason and a
-    1-based line/column when available.
+    """Summarize a YAML parse error with no plaintext, in Psych's shape:
+    ``<problem> <context> at line L column C``. Never the decrypted data, a
+    source snippet (``mark.get_snippet()``), ``str(exc)`` itself, or a
+    quoted token embedded in the reason text.
 
-    PyYAML's ``context`` (e.g. "while scanning a quoted scalar") together
-    with ``context_mark`` pinpoints where the broken construct *starts*,
-    which is more useful than ``problem``/``problem_mark`` (often just
-    "found unexpected end of stream" at EOF); prefer it when present.
+    ``problem``/``context`` are PyYAML's own fixed phrases (tokens and tags
+    at most, per Ruby Psych's ``[problem, context].compact.join(' ')``) --
+    joining both, when present, matches Puppet's own message text. Position
+    is the context mark when present, else the problem mark, both 1-based.
     """
     if isinstance(exc, yaml.MarkedYAMLError):
-        if exc.context is not None and exc.context_mark is not None:
-            text, mark = exc.context, exc.context_mark
-        elif exc.problem is not None and exc.problem_mark is not None:
-            text, mark = exc.problem, exc.problem_mark
-        else:
-            text = mark = None
-        if mark is not None:
+        parts = [p for p in (exc.problem, exc.context) if p]
+        text = " ".join(parts)
+        mark = exc.context_mark or exc.problem_mark
+        if text:
             text = _YAML_QUOTED_TOKEN_RE.sub("'<redacted>'", text)
-            return "{} (line {}, column {})".format(
+        if mark is not None:
+            return "{} at line {} column {}".format(
                 text, mark.line + 1, mark.column + 1
-            )
+            ).strip()
+        if text:
+            return text
+    elif isinstance(exc, yaml.reader.ReaderError):
+        first_line = str(exc).splitlines()[0] if str(exc) else ""
+        return "{} at position {}".format(first_line, exc.position)
     return type(exc).__name__
 
 
@@ -227,13 +237,6 @@ class SopsYAMLBackend(YAMLBackend):
     def read_file(self, path) -> bytes:
         return _run_sops(path, "yaml")
 
-    def load(self, data):
-        try:
-            return self.load_ordered(data)
-        except BackendError as e:
-            reason = _yaml_problem(e.__cause__)
-        raise BackendError("sops-decrypted YAML does not parse: " + reason)
-
 
 class JSONBackend(Backend):
     NAMES = ("json_data", "json")
@@ -241,8 +244,12 @@ class JSONBackend(Backend):
     def load(self, data):
         try:
             return json.loads(data, object_pairs_hook=LookupDict)
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            raise BackendError("Failed to parse JSON: {}".format(e)) from e
+        except json.JSONDecodeError as e:
+            raise BackendError(
+                "{} at line {} column {}".format(e.msg, e.lineno, e.colno)
+            ) from e
+        except UnicodeDecodeError as e:
+            raise BackendError(str(e)) from e
 
 
 _URL_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*://")
@@ -612,7 +619,7 @@ class HOCONBackend(Backend):
             if isinstance(data, bytes):
                 data = data.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise BackendError("Failed to parse HOCON: {}".format(e)) from e
+            raise BackendError(_one_line(str(e))) from e
         text = _strip_hocon_includes(data)
         token = _HOCON_INCLUDE_GUARD.set(True)
         try:
@@ -620,7 +627,7 @@ class HOCONBackend(Backend):
         except BackendError:
             raise
         except Exception as e:
-            raise BackendError("Failed to parse HOCON: {}".format(e)) from e
+            raise BackendError(_one_line(str(e))) from e
         finally:
             _HOCON_INCLUDE_GUARD.reset(token)
         return _as_lookupdict(parsed)

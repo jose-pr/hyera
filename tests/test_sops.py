@@ -225,7 +225,10 @@ def test_sops_parse_error_has_no_plaintext():
     assert "hunter2-SECRET" not in repr(e)
     assert e.__cause__ is None
     assert e.__context__ is None
-    assert "line 2" in str(e)
+    assert (
+        str(e) == "found unexpected end of stream while scanning a quoted scalar "
+        "at line 2 column 14"
+    )
 
 
 def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(

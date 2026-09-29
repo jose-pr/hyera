@@ -112,7 +112,10 @@ private engine internals with no stability contract.
   `yaml.SafeLoader` (data is untrusted config) into `LookupDict` mappings.
   `.load_ordered(stream, Loader=yaml.SafeLoader, object_pairs_hook=LookupDict)`
   (staticmethod) does the actual parse; raises `BackendError` on a YAML
-  error.
+  error, one line, Psych's shape (`<problem> <context> at line L column C`,
+  1-based; either part may be absent) — never a source snippet or the
+  underlying value, and with no exception chain (`__cause__`/`__context__`
+  both `None`).
 - **`SopsYAMLBackend(YAMLBackend)`** — `NAMES = ("yaml.enc", "sops")`.
   Shells out to the `sops` CLI to decrypt before YAML-parsing. Hardened for
   unattended use: `SOPS_TIMEOUT` (module-level, default `30` seconds) bounds
@@ -123,18 +126,21 @@ private engine internals with no stability contract.
   "--", <abs data path>]` — the data path is always absolute and after a
   literal `--`, so a path or scope value starting with `-` can never be
   parsed as a `sops` option; a `sops.bat`/`sops.cmd` shim is refused
-  (`cmd.exe` re-parses a batch file's own argument line). A decrypted file
-  that fails to parse raises `BackendError` with only a short reason and a
-  1-based line/column — never the decrypted plaintext, and with no
-  exception chain (`__cause__`/`__context__` are both `None`) to carry it.
+  (`cmd.exe` re-parses a batch file's own argument line). `.load` is
+  inherited from `YAMLBackend`: a decrypted file that fails to parse raises
+  the same one-line, chain-free `BackendError` — never the decrypted
+  plaintext.
 - **`JSONBackend`** — `NAMES = ("json_data", "json")`. `json.loads` with
-  `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
+  `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure,
+  one line: `<msg> at line L column C` (`json.JSONDecodeError`'s own
+  fields), or `str(e)` for a `UnicodeDecodeError`. Both chain `from e`.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
   optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
   `BackendError` naming the extra if it's not installed, or if an installed
   `pyhocon` fails to import for any other reason (e.g. against a too-new
-  stdlib). Invalid UTF-8 raises `BackendError` rather than a raw
-  `UnicodeDecodeError`. `include` directives are sanitized before pyhocon
+  stdlib). Invalid UTF-8, and any pyhocon parse failure, raise `BackendError`
+  with a one-line message (`str(e)`, whitespace-collapsed) chained `from e`,
+  rather than a raw `UnicodeDecodeError` or pyhocon exception. `include` directives are sanitized before pyhocon
   ever parses the text, so pyhocon's own include machinery (file reads
   relative to the process cwd, `http(s)`/`file` URL fetches) never runs: a
   plain `include "..."` contributes nothing, matching Puppet; every other
@@ -175,10 +181,14 @@ private engine internals with no stability contract.
 `None`) →
 
 - **`ConfigError`** — anything about `hiera.yaml`: missing, unreadable,
-  unparsable, non-mapping, or wrong shape.
+  unparsable, non-mapping, or wrong shape. A read/shape problem's message
+  names the origin directly; an unparsable file's is `(<path>): <problem>
+  at line L column C` (Psych's shape, one line).
 - **`BackendError`** — a data file could not be read or parsed. `.path`
-  names it. Can be raised from `Hiera(...)` itself (context-free levels are
-  loaded by the constructor) as well as from a lookup.
+  names it; an unparsable file's message is `Unable to parse (<path>):
+  <problem> at line L column C`, one line. Can be raised from `Hiera(...)`
+  itself (context-free levels are loaded by the constructor) as well as
+  from a lookup.
 - **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
   a key. →
   - **`InterpolationError`** — a `%{...}` interpolation or function call

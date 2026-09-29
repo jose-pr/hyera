@@ -250,3 +250,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ConfigError` instead of `FileNotFoundError`, `BackendError`,
   `AttributeError`, `TypeError` or `ValueError`. Catch `ConfigError` for
   `hiera.yaml` and `BackendError` for data files.
+- Parse errors are one line and name the file, line and column —
+  `Unable to parse (<path>): <problem> at line L column C` for data files
+  and `(<path>): <problem> at line L column C` for `hiera.yaml`, never a
+  multi-line snippet or the underlying value.
