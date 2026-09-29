@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c03e2513ec440f220d933b282e197202de91d1894c6427d36176ba689600f3ae",
+  "results": {
+    "g1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g1"
+      ],
+      "status": "found",
+      "value": "RedHat-42"
+    },
+    "g2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g2"
+      ],
+      "status": "found",
+      "value": "RedHat|RedHat|42"
+    },
+    "g3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g3"
+      ],
+      "status": "found",
+      "value": "%{num}-RedHat"
+    }
+  }
+}

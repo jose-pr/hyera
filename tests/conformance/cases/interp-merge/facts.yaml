@@ -1,0 +1,5 @@
+---
+os: {family: RedHat}
+lo_key: lo_target
+strategy: unique
+ko: "KOx"

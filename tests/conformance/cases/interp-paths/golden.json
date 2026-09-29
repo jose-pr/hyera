@@ -1,0 +1,81 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "2ad9f5245ee85ef804cf8bcfa99d8db4634177cf9aad8a5d6bbcc17e5467f9cf",
+  "results": {
+    "p_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_ws"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_q": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_q"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_false"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_zero"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_num"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_top"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_idx": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_idx"
+      ],
+      "status": "found",
+      "value": "hit"
+    },
+    "p_common": {
+      "argv": [
+        "--strict",
+        "warning",
+        "p_common"
+      ],
+      "status": "found",
+      "value": "c"
+    }
+  }
+}

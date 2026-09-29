@@ -1,0 +1,17 @@
+description: 'Hierarchy location path templates exercising the same interpolation
+  forms as values: whitespace, a quoted dotted segment, falsy/zero facts, a top-scope-colon
+  prefix, and list indexing.'
+origin: spec-interpolation/paths
+queries:
+- key: p_ws
+  divergence: spec-interpolation/whitespace-in-expression-ignored
+- key: p_q
+  divergence: code-io-security/subkey-segment-parsing-diverges
+- key: p_false
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: p_zero
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: p_num
+- key: p_top
+- key: p_idx
+- key: p_common

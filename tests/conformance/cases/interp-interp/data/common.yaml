@@ -1,0 +1,112 @@
+---
+base: basev
+an_int: 1
+a_bool: true
+a_float: 2.5
+an_arr: [p, q]
+a_hash: {k: kv, n: 2}
+a_null: ~
+"dot.key": {inner: dki}
+lit_holder: "%{literal('%')}{facts.os.family}"
+
+s_var: "v=%{num}"
+s_topvar: "v=%{::num}"
+s_topfacts: "v=%{::facts.os.family}"
+s_facts_nested: "%{facts.os.family}"
+s_facts_deep: "%{facts.os.release.major}"
+s_ws: "[%{ facts.os.family }]"
+s_ws_topvar: "[%{ ::num }]"
+s_ws_func: "[%{ lookup('base') }]"
+s_empty: "[%{}]"
+s_empty_colons: "[%{::}]"
+s_empty_dq: '[%{""}]'
+s_empty_sq: "[%{''}]"
+s_empty_ws: "[%{  }]"
+s_quoted_dq: '%{facts.nested."a.b"}'
+s_quoted_sq: "%{facts.nested.'a.b'}"
+s_index: "%{facts.nested.list.1}"
+s_index_neg: "[%{facts.nested.list.-1}]"
+s_index_oob: "[%{facts.nested.list.9}]"
+s_str_walk: "[%{facts.os.family.x}]"
+s_arr_key: "[%{facts.arr.foo}]"
+s_undef: "[%{nosuchvar}]"
+s_undef_nested: "[%{facts.nosuch.x}]"
+s_int: "n=%{num}"
+s_float: "f=%{flt}"
+s_bigfloat: "f=%{bigflt}"
+s_zero: "z=%{zero}"
+s_false: "b=%{flag}"
+s_true: "b=%{tru}"
+s_emptystr: "[%{emptystr}]"
+s_arr: "a=%{arr}"
+s_hash: "h=%{hsh}"
+s_facts_false: "b=%{facts.flag}"
+s_facts_zero: "z=%{facts.zero}"
+s_whole_int: "%{num}"
+s_whole_arr_scope: "%{scope('arr')}"
+s_whole_arr_var: "%{arr}"
+s_scope_fn: "%{scope('facts.os.family')}"
+s_scope_fn_dq: '%{scope("num")}'
+s_scope_fn_false: "b=%{scope('flag')}"
+s_scope_fn_missing: "[%{scope('nosuchvar')}]"
+s_hiera_fn: "%{hiera('base')}"
+s_lookup_fn: "x-%{lookup('base')}-y"
+s_lookup_int: "%{lookup('an_int')}"
+s_lookup_int_emb: "p=%{lookup('an_int')}"
+s_lookup_bool_emb: "p=%{lookup('a_bool')}"
+s_lookup_float_emb: "p=%{lookup('a_float')}"
+s_lookup_arr: "%{lookup('an_arr')}"
+s_lookup_arr_emb: "a=%{lookup('an_arr')}"
+s_lookup_hash_emb: "h=%{lookup('a_hash')}"
+s_lookup_null_emb: "n=[%{lookup('a_null')}]"
+s_lookup_missing: "m=[%{lookup('no_such_key')}]"
+s_lookup_missing_whole: "%{lookup('no_such_key')}"
+s_lookup_dotted: "%{lookup('a_hash.k')}"
+s_lookup_quoted: "%{lookup(\"'dot.key'.inner\")}"
+s_lookup_colons: "[%{lookup('::base')}]"
+s_lookup_lo: "[%{lookup('lookup_options')}]"
+s_lookup_strwalk: "[%{lookup('base.x')}]"
+s_alias_str: "%{alias('base')}"
+s_alias_arr: "%{alias('an_arr')}"
+s_alias_hash: "%{alias('a_hash')}"
+s_alias_int: "%{alias('an_int')}"
+s_alias_bool: "%{alias('a_bool')}"
+s_alias_null: "%{alias('a_null')}"
+s_alias_missing: "%{alias('no_such_key')}"
+s_alias_embedded: "x %{alias('base')}"
+s_alias_ws_inside: "%{ alias('an_arr') }"
+s_alias_trailing_space: "%{alias('an_arr')} "
+s_alias_two: "%{alias('base')}%{alias('base')}"
+s_alias_dotted: "%{alias('a_hash.k')}"
+s_literal: "100%{literal('%')} done"
+s_literal_escape: "%{literal('%')}{facts.os.family}"
+s_literal_dq: '%{literal("it''s")}'
+s_literal_brace: "%{literal('%{')}"
+s_unknown_fn: "%{foo('x')}"
+s_mixed_quotes: "[%{lookup('base\")}]"
+s_fn_ws_args: "[%{lookup( 'base' )}]"
+s_noquote_fn: "[%{lookup(base)}]"
+s_fn_empty_arg: "[%{lookup('')}]"
+s_scope_tmpl: "%{facts.tmpl}"
+s_scope_tmpl_top: "%{tmpl}"
+s_lookup_reinterp: "%{lookup('lit_holder')}"
+s_chain: "%{lookup('s_hiera_fn')}"
+s_recursive_a: "%{lookup('s_recursive_b')}"
+s_recursive_b: "%{lookup('s_recursive_a')}"
+s_self: "%{lookup('s_self')}"
+s_alias_self: "%{alias('s_alias_self')}"
+s_multi: "%{facts.os.family}-%{num}-%{lookup('base')}-%{literal('%')}"
+s_fn_then_var: "%{lookup('base')}%{num}"
+key_interp:
+  "%{facts.os.family}_key": v
+  plain: "%{num}"
+arr_interp:
+  - "%{facts.os.family}"
+  - ["%{num}", {n: "%{lookup('base')}"}]
+alias_in_list:
+  - "%{alias('an_arr')}"
+alias_in_hash:
+  x: "%{alias('a_hash')}"
+via_alias: "%{alias('a_hash')}"
+via_interp:
+  inner: "%{facts.os.family}"

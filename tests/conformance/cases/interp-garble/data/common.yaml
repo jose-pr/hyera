@@ -1,0 +1,3 @@
+g1: "%{tmpl}-%{num}"
+g2: "%{facts.tmpl}|%{facts.os.family}|%{num}"
+g3: "%{literal('%')}{num}-%{facts.os.family}"

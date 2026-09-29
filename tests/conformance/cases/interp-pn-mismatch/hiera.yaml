@@ -1,0 +1,8 @@
+---
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - name: m
+    path: "n/%{facts.os.family.x}.yaml"
+  - name: c
+    path: common.yaml

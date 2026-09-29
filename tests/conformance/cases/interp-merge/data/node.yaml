@@ -1,0 +1,25 @@
+---
+lookup_options:
+  "%{facts.lo_key}":
+    merge: unique
+  lo_strat:
+    merge: "%{facts.strategy}"
+  lo_aliased:
+    merge: unique
+m_alias: "%{alias('m_src')}"
+m_src: [n1]
+lo_target: [a]
+lo_strat: [a]
+lo_aliased: [a]
+via_lo_alias: "%{alias('lo_aliased')}"
+via_lo_lookup: "x=%{lookup('lo_aliased')}"
+ko_arr: ["%{facts.ko}", y]
+dm:
+  a: "%{facts.os.family}"
+first_interp: "%{lookup('m_src')}"
+nested_first:
+  inner: "%{alias('lo_aliased')}"
+lo_ref: "[%{lookup('lookup_options')}]"
+lo_alias: "%{alias('lookup_options')}"
+h_alias: "%{alias('hsrc')}"
+hsrc: {a: 1}

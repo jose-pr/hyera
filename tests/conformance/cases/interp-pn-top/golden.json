@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "268a7f0b78c6603127eb74a5a3cb2a2dfecbeeefd89dbc1205ad929ebc166894",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuchvar';"
+      ],
+      "status": "found",
+      "value": "dotyaml"
+    }
+  }
+}

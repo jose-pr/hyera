@@ -1,0 +1,62 @@
+description: 'Puppet''s top-scope variable model: environment, fact access forms,
+  scope()/trusted/server_facts defaults, falsy values, undefined variables, dotted/indexed
+  navigation, and class-only variables (module_name/calling_module/calling_class)
+  outside any class context.'
+origin: spec-context-facts/vars
+queries:
+- key: v_env
+- key: v_facts_os_family
+- key: v_top_os_family
+- key: v_topq_os_family
+- key: v_scope_fn
+- key: v_scope_fn_q
+- key: v_facts_bool_false
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: v_top_bool_false
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: v_top_bool_true
+  divergence: spec-interpolation/ruby-to_s-formatting
+- key: v_zero
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: v_num
+- key: v_float
+- key: v_scope_num
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: v_scope_bool
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: v_scope_list
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: v_list_embed
+  divergence: spec-interpolation/ruby-to_s-formatting
+- key: v_hash_embed
+  divergence: spec-interpolation/ruby-to_s-formatting
+  hash_inspect: true
+- key: v_trusted
+  divergence: spec-interpolation/ruby-to_s-formatting
+  hash_inspect: true
+- key: v_trusted_certname
+- key: v_serverversion
+  divergence: spec-context-facts/no-puppet-scope-model
+- key: v_clientcert
+- key: v_facts_clientcert
+- key: v_undef
+- key: v_scope_undef
+  divergence: spec-interpolation/missing-inline-lookup-raises
+- key: v_facts_undef
+- key: v_neg_idx
+  divergence: code-io-security/subkey-segment-parsing-diverges
+- key: v_hash_numkey
+  divergence: code-io-security/subkey-segment-parsing-diverges
+- key: v_list_idx
+- key: v_quoted_seg
+  divergence: code-io-security/subkey-segment-parsing-diverges
+- key: v_flat_dotted
+  divergence: new/context-ref-flat-key-fallback
+- key: v_string_walk
+  divergence: new/context-ref-type-mismatch-returns-empty
+- key: v_module_name
+- key: v_calling_module
+- key: v_calling_class
+- key: v_facts_whole_type
+  divergence: spec-interpolation/ruby-to_s-formatting
+  hash_inspect: true

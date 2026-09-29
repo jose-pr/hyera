@@ -1,0 +1,18 @@
+---
+lookup_options:
+  secret: {convert_to: Sensitive}
+  secret_hash: {convert_to: Sensitive}
+secret: hunter2
+secret_hash: {user: admin, pass: hunter2}
+bool_t: true
+bool_f: false
+int0: 0
+flt: 1.5
+empty_str: ""
+nested: {b: 2, a: [1, {z: 1, y: 2}]}
+mixedkeys: {1: one, b: two}
+nullinlist: [1, ~, 3]
+nan: .nan
+inf: .inf
+unicode: "café ☃"
+multiline: "line1\nline2"

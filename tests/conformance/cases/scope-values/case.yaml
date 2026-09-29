@@ -1,0 +1,10 @@
+description: 'Value rendering edge cases: Sensitive (convert_to), integer/string mixed
+  hash keys, NaN/Infinity, and Unicode.'
+origin: code-io-security/values
+queries:
+- key: secret
+- key: secret_hash
+- key: mixedkeys
+- key: nan
+- key: inf
+- key: unicode

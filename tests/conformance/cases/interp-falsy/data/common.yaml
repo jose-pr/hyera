@@ -1,0 +1,6 @@
+f1: "a=%{facts.flag}"
+f2: "a=%{scope('facts.flag')}"
+f3: "a=%{facts.zero}"
+f4: "a=%{scope('facts.zero')}"
+f5: "a=%{facts.tru}"
+f6: "a=%{scope('facts.tru')}"

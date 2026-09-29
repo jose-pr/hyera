@@ -1,0 +1,44 @@
+description: lookup_options with a dotted-fact pattern key and a dynamic merge strategy,
+  alias() combined with lookup_options, and knockout/deep merges over interpolated
+  values.
+origin: spec-interpolation/merge
+queries:
+- key: lo_target
+  divergence: spec-interpolation/hash-keys-not-interpolated
+- key: lo_strat
+- key: lo_aliased
+- key: via_lo_alias
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+- key: via_lo_lookup
+  divergence:
+  - spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+  - spec-interpolation/method-result-type-and-nonscalar
+- key: first_interp
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: nested_first
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+- key: m_alias
+  id: m_alias_unique
+  merge: unique
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+- key: ko_arr
+  id: ko_arr_deep_ko
+  merge:
+    strategy: deep
+    knockout_prefix: KO
+  divergence: spec-merge/deep-array-merge-order-and-dedupe
+- key: dm
+  id: dm_deep
+  merge: deep
+- key: lo_ref
+  divergence: spec-lookup-options-types/lookup-options-key-not-reserved
+- key: lo_alias
+  divergence: spec-lookup-options-types/lookup-options-key-not-reserved
+- key: h_alias
+  id: h_alias_hash
+  merge: hash
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+- key: h_alias
+  id: h_alias_deep
+  merge: deep
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options

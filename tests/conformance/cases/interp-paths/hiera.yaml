@@ -1,0 +1,22 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: ws
+    path: "ws/%{ facts.os.family }.yaml"
+  - name: quoted
+    path: "q/%{facts.nested.'a.b'}.yaml"
+  - name: falsy
+    path: "b/%{flag}.yaml"
+  - name: zero
+    path: "z/%{zero}.yaml"
+  - name: num
+    path: "i/%{num}.yaml"
+  - name: topcolon
+    path: "t/%{::num}.yaml"
+  - name: idx
+    path: "idx/%{facts.nested.list.0}.yaml"
+  - name: common
+    path: common.yaml

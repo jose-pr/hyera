@@ -1,0 +1,9 @@
+description: 'lookup()/alias() result types: a whole-value Integer and Array through
+  lookup(), an Array through alias().'
+origin: spec-context-facts/fntype
+queries:
+- key: v_lookup_num
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: v_lookup_list
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: v_alias_list

@@ -1,0 +1,19 @@
+---
+os:
+  family: RedHat
+  release:
+    major: "9"
+num: 42
+flt: 1.5
+bigflt: 1.0e+20
+zero: 0
+flag: false
+tru: true
+emptystr: ""
+arr: [a, b]
+hsh: {k: v, n: 1}
+nested:
+  "a.b": quoted
+  list: [x, y, z]
+  n1: {deeper: dd}
+tmpl: "%{facts.os.family}"

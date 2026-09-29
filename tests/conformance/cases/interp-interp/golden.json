@@ -1,0 +1,928 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3addd0ab4a40f3285aedf3e2933484ebd7e9d27c86a14bbe84ea2f9879769fee",
+  "results": {
+    "lit_holder": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lit_holder"
+      ],
+      "status": "found",
+      "value": "%{facts.os.family}"
+    },
+    "s_var": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_var"
+      ],
+      "status": "found",
+      "value": "v=42"
+    },
+    "s_topvar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_topvar"
+      ],
+      "status": "found",
+      "value": "v=42"
+    },
+    "s_topfacts": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_topfacts"
+      ],
+      "status": "found",
+      "value": "v=RedHat"
+    },
+    "s_facts_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_facts_nested"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_facts_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_facts_deep"
+      ],
+      "status": "found",
+      "value": "9"
+    },
+    "s_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_ws"
+      ],
+      "status": "found",
+      "value": "[RedHat]"
+    },
+    "s_ws_topvar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_ws_topvar"
+      ],
+      "status": "found",
+      "value": "[42]"
+    },
+    "s_ws_func": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_ws_func"
+      ],
+      "status": "found",
+      "value": "[basev]"
+    },
+    "s_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_empty_colons": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty_colons"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_empty_dq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty_dq"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_empty_sq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty_sq"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_empty_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty_ws"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_quoted_dq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_quoted_dq"
+      ],
+      "status": "found",
+      "value": "quoted"
+    },
+    "s_quoted_sq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_quoted_sq"
+      ],
+      "status": "found",
+      "value": "quoted"
+    },
+    "s_index": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_index"
+      ],
+      "status": "found",
+      "value": "y"
+    },
+    "s_index_neg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_index_neg"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_index_oob": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_index_oob"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_str_walk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_str_walk"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_str_walk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'facts.os.family.x'"
+    },
+    "s_arr_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_arr_key"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_arr_key' failed: Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'foo' from key 'facts.arr.foo'"
+    },
+    "s_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_undef"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuchvar';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_undef_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_undef_nested"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_int"
+      ],
+      "status": "found",
+      "value": "n=42"
+    },
+    "s_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_float"
+      ],
+      "status": "found",
+      "value": "f=1.5"
+    },
+    "s_bigfloat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_bigfloat"
+      ],
+      "status": "found",
+      "value": "f=1.0e+20"
+    },
+    "s_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_zero"
+      ],
+      "status": "found",
+      "value": "z=0"
+    },
+    "s_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_false"
+      ],
+      "status": "found",
+      "value": "b=false"
+    },
+    "s_true": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_true"
+      ],
+      "status": "found",
+      "value": "b=true"
+    },
+    "s_emptystr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_emptystr"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_arr"
+      ],
+      "status": "found",
+      "value": "a=[\"a\", \"b\"]"
+    },
+    "s_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_hash"
+      ],
+      "status": "found",
+      "value": "h={\"k\"=>\"v\", \"n\"=>1}",
+      "raw_value": "h={\"k\" => \"v\", \"n\" => 1}"
+    },
+    "s_facts_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_facts_false"
+      ],
+      "status": "found",
+      "value": "b=false"
+    },
+    "s_facts_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_facts_zero"
+      ],
+      "status": "found",
+      "value": "z=0"
+    },
+    "s_whole_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_whole_int"
+      ],
+      "status": "found",
+      "value": "42"
+    },
+    "s_whole_arr_scope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_whole_arr_scope"
+      ],
+      "status": "found",
+      "value": "[\"a\", \"b\"]"
+    },
+    "s_whole_arr_var": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_whole_arr_var"
+      ],
+      "status": "found",
+      "value": "[\"a\", \"b\"]"
+    },
+    "s_scope_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_fn"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_scope_fn_dq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_fn_dq"
+      ],
+      "status": "found",
+      "value": "42"
+    },
+    "s_scope_fn_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_fn_false"
+      ],
+      "status": "found",
+      "value": "b=false"
+    },
+    "s_scope_fn_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_fn_missing"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuchvar';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_hiera_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_hiera_fn"
+      ],
+      "status": "found",
+      "value": "basev"
+    },
+    "s_lookup_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_fn"
+      ],
+      "status": "found",
+      "value": "x-basev-y"
+    },
+    "s_lookup_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_int"
+      ],
+      "status": "found",
+      "value": "1"
+    },
+    "s_lookup_int_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_int_emb"
+      ],
+      "status": "found",
+      "value": "p=1"
+    },
+    "s_lookup_bool_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_bool_emb"
+      ],
+      "status": "found",
+      "value": "p=true"
+    },
+    "s_lookup_float_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_float_emb"
+      ],
+      "status": "found",
+      "value": "p=2.5"
+    },
+    "s_lookup_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_arr"
+      ],
+      "status": "found",
+      "value": "[\"p\", \"q\"]"
+    },
+    "s_lookup_arr_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_arr_emb"
+      ],
+      "status": "found",
+      "value": "a=[\"p\", \"q\"]"
+    },
+    "s_lookup_hash_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_hash_emb"
+      ],
+      "status": "found",
+      "value": "h={\"k\"=>\"kv\", \"n\"=>2}",
+      "raw_value": "h={\"k\" => \"kv\", \"n\" => 2}"
+    },
+    "s_lookup_null_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_null_emb"
+      ],
+      "status": "found",
+      "value": "n=[]"
+    },
+    "s_lookup_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_missing"
+      ],
+      "status": "found",
+      "value": "m=[]"
+    },
+    "s_lookup_missing_whole": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_missing_whole"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "s_lookup_dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_dotted"
+      ],
+      "status": "found",
+      "value": "kv"
+    },
+    "s_lookup_quoted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_quoted"
+      ],
+      "status": "found",
+      "value": "dki"
+    },
+    "s_lookup_colons": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_colons"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_lookup_lo": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_lo"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_lookup_strwalk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_strwalk"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_lookup_strwalk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'base.x'"
+    },
+    "s_alias_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_str"
+      ],
+      "status": "found",
+      "value": "basev"
+    },
+    "s_alias_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_arr"
+      ],
+      "status": "found",
+      "value": [
+        "p",
+        "q"
+      ]
+    },
+    "s_alias_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": "kv",
+        "n": 2
+      }
+    },
+    "s_alias_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_int"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "s_alias_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_bool"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "s_alias_null": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_null"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "s_alias_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_missing"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "s_alias_embedded": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_embedded"
+      ],
+      "status": "error",
+      "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
+    },
+    "s_alias_ws_inside": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_ws_inside"
+      ],
+      "status": "found",
+      "value": [
+        "p",
+        "q"
+      ]
+    },
+    "s_alias_trailing_space": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_trailing_space"
+      ],
+      "status": "error",
+      "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
+    },
+    "s_alias_two": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_two"
+      ],
+      "status": "error",
+      "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
+    },
+    "s_alias_dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_dotted"
+      ],
+      "status": "found",
+      "value": "kv"
+    },
+    "s_literal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_literal"
+      ],
+      "status": "found",
+      "value": "100% done"
+    },
+    "s_literal_escape": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_literal_escape"
+      ],
+      "status": "found",
+      "value": "%{facts.os.family}"
+    },
+    "s_literal_dq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_literal_dq"
+      ],
+      "status": "found",
+      "value": "it's"
+    },
+    "s_literal_brace": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_literal_brace"
+      ],
+      "status": "found",
+      "value": "%{"
+    },
+    "s_unknown_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_unknown_fn"
+      ],
+      "status": "error",
+      "message": "Unknown interpolation method 'foo'"
+    },
+    "s_mixed_quotes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_mixed_quotes"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_mixed_quotes' failed: Syntax error in string: [%{lookup('base\")}]"
+    },
+    "s_fn_ws_args": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fn_ws_args"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_fn_ws_args' failed: Syntax error in string: [%{lookup( 'base' )}]"
+    },
+    "s_noquote_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_noquote_fn"
+      ],
+      "warnings": [
+        "Undefined variable 'lookup(base)';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "s_fn_empty_arg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fn_empty_arg"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_fn_empty_arg' failed: Syntax error in string: [%{lookup('')}]"
+    },
+    "s_scope_tmpl": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_tmpl"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_scope_tmpl_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_tmpl_top"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_lookup_reinterp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_reinterp"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_chain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_chain"
+      ],
+      "status": "found",
+      "value": "basev"
+    },
+    "s_recursive_a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_recursive_a"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_recursive_a' failed: Lookup of key 's_recursive_b' failed: Lookup of key 's_recursive_a' failed: Recursive lookup detected in [s_recursive_a, s_recursive_b]"
+    },
+    "s_recursive_b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_recursive_b"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_recursive_b' failed: Lookup of key 's_recursive_a' failed: Lookup of key 's_recursive_b' failed: Recursive lookup detected in [s_recursive_b, s_recursive_a]"
+    },
+    "s_self": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_self"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_self' failed: Lookup of key 's_self' failed: Recursive lookup detected in [s_self]"
+    },
+    "s_alias_self": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_self"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_alias_self' failed: Lookup of key 's_alias_self' failed: Recursive lookup detected in [s_alias_self]"
+    },
+    "s_multi": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_multi"
+      ],
+      "status": "found",
+      "value": "RedHat-42-basev-%"
+    },
+    "s_fn_then_var": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_fn_then_var"
+      ],
+      "status": "found",
+      "value": "basev42"
+    },
+    "key_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "key_interp"
+      ],
+      "status": "found",
+      "value": {
+        "RedHat_key": "v",
+        "plain": "42"
+      }
+    },
+    "arr_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr_interp"
+      ],
+      "status": "found",
+      "value": [
+        "RedHat",
+        [
+          "42",
+          {
+            "n": "basev"
+          }
+        ]
+      ]
+    },
+    "alias_in_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_in_list"
+      ],
+      "status": "found",
+      "value": [
+        [
+          "p",
+          "q"
+        ]
+      ]
+    },
+    "alias_in_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_in_hash"
+      ],
+      "status": "found",
+      "value": {
+        "x": {
+          "k": "kv",
+          "n": 2
+        }
+      }
+    },
+    "via_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_alias"
+      ],
+      "status": "found",
+      "value": {
+        "k": "kv",
+        "n": 2
+      }
+    },
+    "via_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_interp"
+      ],
+      "status": "found",
+      "value": {
+        "inner": "RedHat"
+      }
+    },
+    "via_alias.k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_alias.k"
+      ],
+      "status": "found",
+      "value": "kv"
+    },
+    "via_interp.inner": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_interp.inner"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    }
+  }
+}

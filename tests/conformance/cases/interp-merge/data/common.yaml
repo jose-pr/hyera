@@ -1,0 +1,11 @@
+---
+m_alias: [c1]
+m_src: [c2]
+lo_target: [b]
+lo_strat: [b]
+lo_aliased: [b]
+ko_arr: [x, z]
+dm:
+  b: 1
+hsrc: {b: 2}
+h_alias: {c: 3}

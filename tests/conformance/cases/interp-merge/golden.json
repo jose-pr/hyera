@@ -1,0 +1,179 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "944319bcdc76add2afc3bfbd125a9d50f6e35b9e5010cb040ae3050610ac8395",
+  "results": {
+    "lo_target": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_target"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lo_strat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_strat"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lo_aliased": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_aliased"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "via_lo_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_lo_alias"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "via_lo_lookup": {
+      "argv": [
+        "--strict",
+        "warning",
+        "via_lo_lookup"
+      ],
+      "status": "found",
+      "value": "x=[\"a\", \"b\"]"
+    },
+    "first_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "first_interp"
+      ],
+      "status": "found",
+      "value": "[\"n1\"]"
+    },
+    "nested_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested_first"
+      ],
+      "status": "found",
+      "value": {
+        "inner": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    "m_alias_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "m_alias"
+      ],
+      "status": "found",
+      "value": [
+        "n1",
+        "c1"
+      ]
+    },
+    "ko_arr_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "KO",
+        "ko_arr"
+      ],
+      "status": "found",
+      "value": [
+        "z",
+        "y"
+      ]
+    },
+    "dm_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "dm"
+      ],
+      "status": "found",
+      "value": {
+        "b": 1,
+        "a": "RedHat"
+      }
+    },
+    "lo_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_ref"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "lo_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_alias"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "h_alias_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_alias"
+      ],
+      "status": "found",
+      "value": {
+        "c": 3,
+        "a": 1
+      }
+    },
+    "h_alias_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "h_alias"
+      ],
+      "status": "found",
+      "value": {
+        "c": 3,
+        "a": 1
+      }
+    }
+  }
+}

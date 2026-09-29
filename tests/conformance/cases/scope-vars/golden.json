@@ -1,0 +1,345 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "12c6bdd9f27a9c46f2019f3b6f2debfd8538cd2dea376428131b02318625b586",
+  "results": {
+    "v_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_env"
+      ],
+      "status": "found",
+      "value": "production"
+    },
+    "v_facts_os_family": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_os_family"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "v_top_os_family": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_top_os_family"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "v_topq_os_family": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_topq_os_family"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "v_scope_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_fn"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "v_scope_fn_q": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_fn_q"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "v_facts_bool_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_bool_false"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "v_top_bool_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_top_bool_false"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "v_top_bool_true": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_top_bool_true"
+      ],
+      "status": "found",
+      "value": "true"
+    },
+    "v_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_zero"
+      ],
+      "status": "found",
+      "value": "0"
+    },
+    "v_num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_num"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "v_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_float"
+      ],
+      "status": "found",
+      "value": "1.5"
+    },
+    "v_scope_num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_num"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "v_scope_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_bool"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "v_scope_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_list"
+      ],
+      "status": "found",
+      "value": "[\"web\", \"db\"]"
+    },
+    "v_list_embed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_list_embed"
+      ],
+      "status": "found",
+      "value": "r=[\"web\", \"db\"]"
+    },
+    "v_hash_embed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_hash_embed"
+      ],
+      "status": "found",
+      "value": "o={\"family\"=>\"RedHat\", \"release\"=>{\"major\"=>\"9\"}}",
+      "raw_value": "o={\"family\" => \"RedHat\", \"release\" => {\"major\" => \"9\"}}"
+    },
+    "v_trusted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_trusted"
+      ],
+      "status": "found",
+      "value": "{\"authenticated\"=>\"local\", \"certname\"=>nil, \"extensions\"=>{}, \"hostname\"=>nil, \"domain\"=>nil, \"external\"=>{}}",
+      "raw_value": "{\"authenticated\" => \"local\", \"certname\" => nil, \"extensions\" => {}, \"hostname\" => nil, \"domain\" => nil, \"external\" => {}}"
+    },
+    "v_trusted_certname": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_trusted_certname"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_serverversion": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_serverversion"
+      ],
+      "status": "found",
+      "value": "8.10.0"
+    },
+    "v_clientcert": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_clientcert"
+      ],
+      "warnings": [
+        "Undefined variable 'clientcert';"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "v_facts_clientcert": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_clientcert"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "v_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_undef"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "v_scope_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_undef"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "v_facts_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_undef"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "v_neg_idx": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_neg_idx"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "v_hash_numkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_hash_numkey"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "v_list_idx": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_list_idx"
+      ],
+      "status": "found",
+      "value": "b"
+    },
+    "v_quoted_seg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_quoted_seg"
+      ],
+      "status": "found",
+      "value": "dv"
+    },
+    "v_flat_dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_flat_dotted"
+      ],
+      "warnings": [
+        "Undefined variable 'dotted';"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "v_string_walk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_string_walk"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'v_string_walk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'facts.os.family.x'"
+    },
+    "v_module_name": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_module_name"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_calling_module": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_calling_module"
+      ],
+      "warnings": [
+        "Undefined variable 'calling_module';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_calling_class": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_calling_class"
+      ],
+      "warnings": [
+        "Undefined variable 'calling_class';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_facts_whole_type": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_whole_type"
+      ],
+      "status": "found",
+      "value": "{\"os\"=>{\"family\"=>\"RedHat\", \"release\"=>{\"major\"=>\"9\"}}, \"is_virtual\"=>false, \"flag_true\"=>true, \"processors\"=>{\"count\"=>0}, \"roles\"=>[\"web\", \"db\"], \"num\"=>5, \"float\"=>1.5, \"nested\"=>{\"1\"=>\"one\", \"list\"=>[\"a\", \"b\", \"c\"]}, \"dotted.name\"=>\"dv\", \"kernel\"=>\"Linux\"}",
+      "raw_value": "{\"os\" => {\"family\" => \"RedHat\", \"release\" => {\"major\" => \"9\"}}, \"is_virtual\" => false, \"flag_true\" => true, \"processors\" => {\"count\" => 0}, \"roles\" => [\"web\", \"db\"], \"num\" => 5, \"float\" => 1.5, \"nested\" => {\"1\" => \"one\", \"list\" => [\"a\", \"b\", \"c\"]}, \"dotted.name\" => \"dv\", \"kernel\" => \"Linux\"}"
+    }
+  }
+}

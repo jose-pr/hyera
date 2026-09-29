@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "bbce2179b7b2e48ad7fe019deb8132b2d185f1fac299071634c1a100f4153b67",
+  "results": {
+    "secret": {
+      "argv": [
+        "--strict",
+        "warning",
+        "secret"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "secret_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "secret_hash"
+      ],
+      "status": "found",
+      "value": "Sensitive [value redacted]"
+    },
+    "mixedkeys": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mixedkeys"
+      ],
+      "status": "found",
+      "value": {
+        "1": "one",
+        "b": "two"
+      }
+    },
+    "nan": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nan"
+      ],
+      "status": "error",
+      "message": "NaN not allowed in JSON"
+    },
+    "inf": {
+      "argv": [
+        "--strict",
+        "warning",
+        "inf"
+      ],
+      "status": "error",
+      "message": "Infinity not allowed in JSON"
+    },
+    "unicode": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unicode"
+      ],
+      "status": "found",
+      "value": "café ☃"
+    }
+  }
+}

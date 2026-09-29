@@ -1,0 +1,5 @@
+description: A hierarchy location path with literal (non-interpolated) curly braces.
+origin: spec-interpolation/pn_brace
+queries:
+- key: k
+  divergence: spec-context-facts/str-format-braces-in-paths

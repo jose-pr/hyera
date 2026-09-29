@@ -1,0 +1,5 @@
+description: A hierarchy location path referencing an undefined top-scope variable.
+origin: spec-interpolation/pn_top
+queries:
+- key: k
+  divergence: spec-context-facts/path-missing-var-skips-level

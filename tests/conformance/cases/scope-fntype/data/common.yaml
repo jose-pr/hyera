@@ -1,0 +1,5 @@
+numval: 5
+listval: [a, b]
+v_lookup_num: "%{lookup('numval')}"
+v_lookup_list: "%{lookup('listval')}"
+v_alias_list: "%{alias('listval')}"
