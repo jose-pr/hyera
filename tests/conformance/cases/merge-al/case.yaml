@@ -1,0 +1,21 @@
+description: >-
+  alias()/hiera() results feeding into a merge, and a lookup_options-governed alias target.
+origin: spec-merge/fx/al
+queries:
+  - key: "al_x"
+    id: "al_x_deep"
+    merge: deep
+    divergence: spec-merge/alias-lookup-merge-and-lookup-options
+  - key: "al_x"
+    id: "al_x_hash"
+    merge: hash
+    divergence: spec-merge/alias-lookup-merge-and-lookup-options
+  - key: "al_ref"
+    divergence: spec-merge/alias-lookup-merge-and-lookup-options
+  - key: "al_u"
+    id: "al_u_unique"
+    merge: unique
+    divergence: spec-merge/alias-lookup-merge-and-lookup-options
+  - key: "al_interp"
+
+    divergence: spec-interpolation/method-result-type-and-nonscalar

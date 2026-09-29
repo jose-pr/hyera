@@ -1,0 +1,13 @@
+lookup_options:
+  lo_hi_wins: {merge: hash}
+  lo_shallow: {merge: unique}
+lo_unique: [b]
+lo_deep_ko: {drop: 2, l: [x, z]}
+lo_dotted: {port: {b: 2}}
+lo_dotkey: {port: [2]}
+lo_conv: "6"
+lo_hi_wins: {a: {y: 2}}
+lo_shallow: [v2]
+lo_re_one: [b]
+lo_re_exact: {b: 2}
+lo_deep_opts: {l: [b], r: [{b: 2}]}

@@ -1,0 +1,3 @@
+lookup_options:
+  "^re_part": {merge: unique}
+re_partial: [a]

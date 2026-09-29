@@ -1,0 +1,9 @@
+lookup_options:
+  al_lo_target: {merge: unique}
+al_x: "%{alias('al_h')}"
+al_h: {a: 1}
+al_ref: "%{alias('al_lo_target')}"
+al_lo_target: [a]
+al_u: "%{alias('al_arr')}"
+al_arr: [p]
+al_interp: "v=%{lookup('al_lo_target')}"

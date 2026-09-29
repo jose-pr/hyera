@@ -1,0 +1,74 @@
+u_scalars: b
+u_nested: [[d], a]
+u_mixed: [y, x]
+u_hash_in_array: [{k: 1}, {k: 2}]
+u_hash_value: [a]
+u_nil: [a]
+u_empty: [a]
+u_order: [b, a]
+u_bool_int: [true, 2]
+u_float_int: [1.0, 3]
+u_zero_false: [false]
+u_str_num: [1]
+h_basic: {b: {y: 2}, c: 3}
+h_non_hash_lower: str
+h_non_hash_higher: {a: 1}
+h_nil_higher: {a: 1}
+h_empty: {a: 1}
+h_nil_values: {a: 1, b: ~}
+h_order: {m: 1, z: 2}
+d_basic: {a: {y: 2, l: [2, 3]}, s: two, t: 3}
+d_top_arrays: [c, a]
+d_scalar_top: y
+d_hash_vs_array: {k: [1]}
+d_array_vs_hash: {k: {a: 1}}
+d_array_vs_scalar: {k: 5}
+d_scalar_vs_array: {k: [1]}
+d_nil_higher: {k: 1}
+d_nil_lower: {k: ~}
+d_array_vs_nil: {k: ~}
+d_false_lower: {k: false}
+d_false_higher: {k: true}
+d_top_nil_higher: {a: 1}
+d_top_nil_lower: ~
+d_top_hash_vs_array: [1]
+d_top_array_vs_hash: {a: 1}
+d_top_array_vs_scalar: 5
+d_dup_in_array: {l: [b]}
+d_aoh: {l: [{n: 1}, {n: 2}]}
+d_three: {l: [2]}
+d_order: {m: {p: 1}, a: 2}
+d_bool_int: {l: [true, 1.0]}
+d_empty_hash_higher: {k: {a: 1}}
+d_empty_str_higher: {k: [1]}
+d_str_vs_hash: {k: {a: 1}}
+d_top_scalar_vs_hash: {a: 1}
+ko_hash_key: {drop: 2, other: 3}
+ko_hash_key_nested: {n: {drop: 2, other: 3}}
+ko_array_nested: {l: [a, c]}
+ko_array_top: [a, c]
+ko_lower_level: {l: ["--a", c]}
+ko_naked_array: {l: [a]}
+ko_naked_scalar: {k: [1, 2]}
+ko_prefixed_scalar: {k: [1]}
+ko_prefixed_scalar_vs_scalar: {k: bar}
+ko_value_vs_hash: {k: {a: 1}}
+ko_int_array: {l: [1, "1"]}
+ko_three: {l: [b]}
+s_nested: {l: [b]}
+s_unmerged_nested: {l: [b]}
+s_mixed: {l: [1]}
+s_hashes: {l: [{a: 1}]}
+s_top: [b]
+mha_equal: {r: [{n: a, x: 1}, {n: b, y: 2}]}
+mha_src_longer: {r: [{c: 3}]}
+mha_dest_longer: {r: [{c: 3}, {d: 4}]}
+mha_top: [{b: 2}]
+mha_empty_src: {r: [{a: 1}]}
+mha_mixed: {r: [{b: 2}]}
+dot_first: {b: 2}
+dot_hash: {b: {y: 2}}
+dot_unique: {l: [2]}
+dot_deep: {b: {l: [2]}}
+f_nil: x
+f_false: true

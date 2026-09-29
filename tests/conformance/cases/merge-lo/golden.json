@@ -1,0 +1,178 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "780436c0265e6c6a87305cc2ae8c94e057e41ce43d9dbf4cfe2d165ac2d9ac17",
+  "results": {
+    "lo_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_unique"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lo_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_deep_ko"
+      ],
+      "status": "found",
+      "value": {
+        "drop": 2,
+        "l": [
+          "z",
+          "y"
+        ],
+        "keep": 1
+      }
+    },
+    "lo_hi_wins": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_hi_wins"
+      ],
+      "status": "found",
+      "value": {
+        "a": {
+          "y": 2,
+          "x": 1
+        }
+      }
+    },
+    "lo_shallow": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_shallow"
+      ],
+      "status": "found",
+      "value": [
+        "v",
+        "1"
+      ]
+    },
+    "lo_re_one": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_re_one"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lo_re_exact": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_re_exact"
+      ],
+      "status": "found",
+      "value": {
+        "b": 2,
+        "a": 1
+      }
+    },
+    "lo_deep_opts": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_deep_opts"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "b",
+          "c"
+        ],
+        "r": [
+          {
+            "b": 2,
+            "a": 1
+          }
+        ]
+      }
+    },
+    "lo_conv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_conv"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "lo_dotted_port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_dotted.port"
+      ],
+      "status": "found",
+      "value": {
+        "b": 2,
+        "a": 1
+      }
+    },
+    "lo_dotkey_port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_dotkey.port"
+      ],
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "lo_conv_explicit_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "lo_conv"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "lo_unique_explicit_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "lo_unique"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "lo_unique_explicit_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "lo_unique"
+      ],
+      "status": "found",
+      "value": [
+        "b",
+        "a"
+      ]
+    }
+  }
+}

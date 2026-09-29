@@ -1,0 +1,21 @@
+lookup_options:
+  lo_unique: {merge: unique}
+  lo_deep_ko: {merge: {strategy: deep, knockout_prefix: "--"}}
+  lo_dotted: {merge: deep}
+  "lo_dotkey.port": {merge: unique}
+  lo_conv: {convert_to: Integer}
+  lo_hi_wins: {merge: deep}
+  lo_shallow: {convert_to: Array}
+  "^lo_re_.*": {merge: unique}
+  lo_re_exact: {merge: hash}
+  lo_deep_opts: {merge: {strategy: deep, sort_merged_arrays: true, merge_hash_arrays: true}}
+lo_unique: [a]
+lo_deep_ko: {keep: 1, l: ["--x", y]}
+lo_dotted: {port: {a: 1}}
+lo_dotkey: {port: [1]}
+lo_conv: "5"
+lo_hi_wins: {a: {x: 1}}
+lo_shallow: v1
+lo_re_one: [a]
+lo_re_exact: {a: 1}
+lo_deep_opts: {l: [c, a], r: [{a: 1}]}

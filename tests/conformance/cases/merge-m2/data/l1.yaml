@@ -1,0 +1,11 @@
+u_hash_lower: [a]
+u_two_hashes: {a: 1}
+d_dup_lower: {l: [b]}
+d_top_dup_lower: [a]
+s_lower_only: {o: 1}
+s_higher_only_nested: {n: {m: [z, y]}}
+s_bool: {l: [true]}
+ko_regex_prefix: {l: [".a", "xb"]}
+ko_top_scalar: "--"
+ko_ruby_regex: {l: ["x+a"]}
+h_both_arrays: [a]

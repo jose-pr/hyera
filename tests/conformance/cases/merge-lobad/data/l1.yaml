@@ -1,0 +1,23 @@
+lookup_options:
+  b_unique_sort: {merge: {strategy: unique, sort_merged_arrays: true}}
+  b_no_strategy: {merge: {knockout_prefix: "--"}}
+  b_deep_unknown: {merge: {strategy: deep, bogus: 1}}
+  b_reverse: {merge: reverse_deep}
+  b_unconstrained: {merge: {strategy: unconstrained_deep, keep_array_duplicates: true}}
+  b_bad_name: {merge: bogus}
+  b_empty_ko: {merge: {strategy: deep, knockout_prefix: ""}}
+  b_hash_opts: {merge: {strategy: hash, knockout_prefix: "--"}}
+  b_first_opts: {merge: {strategy: first}}
+  b_default: {merge: default}
+  b_merge_key: {merge: {merge: unique}}
+b_unique_sort: [c, a]
+b_no_strategy: {a: 1}
+b_deep_unknown: {a: 1}
+b_reverse: {a: {x: 1}, s: hi}
+b_unconstrained: {l: [a, a]}
+b_bad_name: [a]
+b_empty_ko: {a: 1}
+b_hash_opts: {a: 1}
+b_first_opts: [a]
+b_default: [a]
+b_merge_key: [a]

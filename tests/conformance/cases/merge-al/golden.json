@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "021b49e15dc13bd5e10915da0ce52c146b311eb4a90d113049a45cd1acb9db36",
+  "results": {
+    "al_x_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "al_x"
+      ],
+      "status": "found",
+      "value": {
+        "c": 3,
+        "a": 1
+      }
+    },
+    "al_x_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "al_x"
+      ],
+      "status": "found",
+      "value": {
+        "c": 3,
+        "a": 1
+      }
+    },
+    "al_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "al_ref"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "al_u_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "al_u"
+      ],
+      "status": "found",
+      "value": [
+        "p",
+        "q"
+      ]
+    },
+    "al_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "al_interp"
+      ],
+      "status": "found",
+      "value": "v=[\"a\", \"b\"]"
+    }
+  }
+}

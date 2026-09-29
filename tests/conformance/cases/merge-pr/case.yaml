@@ -1,0 +1,12 @@
+description: >-
+  paths/path/glob level ordering feeding first-match, unique and hash merges.
+origin: spec-merge/fx/pr
+queries:
+  - key: "pr"
+    id: "pr_unique"
+    merge: unique
+  - key: "prh"
+    id: "pr_hash"
+    merge: hash
+  - key: "prh"
+    id: "pr_first"

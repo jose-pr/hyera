@@ -1,0 +1,1360 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "f1bd6ca2e7a0a3269763c8c4d36c8db02dae64f997d290a9b90e94fe6594ef36",
+  "results": {
+    "u_scalars": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_scalars"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "u_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_nested"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ]
+    },
+    "u_mixed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_mixed"
+      ],
+      "status": "found",
+      "value": [
+        "x",
+        "y"
+      ]
+    },
+    "u_hash_in_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_hash_in_array"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "k": 1
+        },
+        {
+          "k": 2
+        }
+      ]
+    },
+    "u_hash_value": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_hash_value"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "k": 1
+        },
+        "a"
+      ]
+    },
+    "u_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_nil"
+      ],
+      "status": "found",
+      "value": [
+        null,
+        "a"
+      ]
+    },
+    "u_single_dup": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_single_dup"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "u_single_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_single_nested"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "a",
+        "b"
+      ]
+    },
+    "u_single_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_single_scalar"
+      ],
+      "status": "found",
+      "value": [
+        "s"
+      ]
+    },
+    "u_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_empty"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "u_all_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_all_empty"
+      ],
+      "status": "found",
+      "value": []
+    },
+    "u_order": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_order"
+      ],
+      "status": "found",
+      "value": [
+        "c",
+        "a",
+        "b"
+      ]
+    },
+    "u_bool_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_bool_int"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        true,
+        2
+      ]
+    },
+    "u_float_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_float_int"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2,
+        1.0,
+        3
+      ]
+    },
+    "u_zero_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_zero_false"
+      ],
+      "status": "found",
+      "value": [
+        0,
+        false
+      ]
+    },
+    "u_str_num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u_str_num"
+      ],
+      "status": "found",
+      "value": [
+        "1",
+        1
+      ]
+    },
+    "h_basic": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_basic"
+      ],
+      "status": "found",
+      "value": {
+        "d": 4,
+        "b": {
+          "x": 1
+        },
+        "c": 3,
+        "a": 1
+      }
+    },
+    "h_non_hash_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_non_hash_lower"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_non_hash_lower' failed: The second element of the merge has wrong type, expects a Hash value, got String"
+    },
+    "h_non_hash_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_non_hash_higher"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_non_hash_higher' failed: The first element of the merge has wrong type, expects a Hash value, got String"
+    },
+    "h_nil_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_nil_higher"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'h_nil_higher' failed: The first element of the merge has wrong type, expects a Hash value, got Undef"
+    },
+    "h_single_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_single_scalar"
+      ],
+      "status": "found",
+      "value": "str"
+    },
+    "h_single_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_single_array"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "h_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_empty"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "h_nil_values": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_nil_values"
+      ],
+      "status": "found",
+      "value": {
+        "a": null,
+        "b": null
+      }
+    },
+    "h_order": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h_order"
+      ],
+      "status": "found",
+      "value": {
+        "m": 1,
+        "z": 1,
+        "a": 1
+      }
+    },
+    "d_basic": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_basic"
+      ],
+      "status": "found",
+      "value": {
+        "a": {
+          "z": 3,
+          "y": 2,
+          "l": [
+            2,
+            3,
+            1
+          ],
+          "x": 1
+        },
+        "s": "one",
+        "t": 3
+      }
+    },
+    "d_top_arrays": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_arrays"
+      ],
+      "status": "found",
+      "value": [
+        "c",
+        "a",
+        "b"
+      ]
+    },
+    "d_scalar_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_scalar_top"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "d_hash_vs_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_hash_vs_array"
+      ],
+      "status": "found",
+      "value": {
+        "k": {
+          "a": 1
+        }
+      }
+    },
+    "d_array_vs_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_array_vs_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": [
+          1
+        ]
+      }
+    },
+    "d_array_vs_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_array_vs_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "k": [
+          1
+        ]
+      }
+    },
+    "d_scalar_vs_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_scalar_vs_array"
+      ],
+      "status": "found",
+      "value": {
+        "k": 5
+      }
+    },
+    "d_nil_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_nil_higher"
+      ],
+      "status": "found",
+      "value": {
+        "k": 1
+      }
+    },
+    "d_nil_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_nil_lower"
+      ],
+      "status": "found",
+      "value": {
+        "k": 1
+      }
+    },
+    "d_array_vs_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_array_vs_nil"
+      ],
+      "status": "found",
+      "value": {
+        "k": [
+          1
+        ]
+      }
+    },
+    "d_false_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_false_lower"
+      ],
+      "status": "found",
+      "value": {
+        "k": [
+          "a"
+        ]
+      }
+    },
+    "d_false_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_false_higher"
+      ],
+      "status": "found",
+      "value": {
+        "k": false
+      }
+    },
+    "d_top_nil_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_nil_higher"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "d_top_nil_lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_nil_lower"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "d_top_hash_vs_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_hash_vs_array"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "d_top_array_vs_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_array_vs_hash"
+      ],
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "d_top_array_vs_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_array_vs_scalar"
+      ],
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "d_dup_in_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_dup_in_array"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "b",
+          "a"
+        ]
+      }
+    },
+    "d_dup_single": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_dup_single"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "a"
+        ]
+      }
+    },
+    "d_aoh": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_aoh"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          {
+            "n": 1
+          },
+          {
+            "n": 2
+          }
+        ]
+      }
+    },
+    "d_three": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_three"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          3,
+          2,
+          1
+        ]
+      }
+    },
+    "d_order": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_order"
+      ],
+      "status": "found",
+      "value": {
+        "m": {
+          "p": 1,
+          "q": 1
+        },
+        "a": 2,
+        "z": 1
+      }
+    },
+    "d_bool_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_bool_int"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          true,
+          1.0,
+          1
+        ]
+      }
+    },
+    "d_empty_hash_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_empty_hash_higher"
+      ],
+      "status": "found",
+      "value": {
+        "k": {
+          "a": 1
+        }
+      }
+    },
+    "d_empty_str_higher": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_empty_str_higher"
+      ],
+      "status": "found",
+      "value": {
+        "k": ""
+      }
+    },
+    "d_str_vs_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_str_vs_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": "str"
+      }
+    },
+    "d_top_scalar_vs_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d_top_scalar_vs_hash"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "ko_hash_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_hash_key"
+      ],
+      "status": "found",
+      "value": {
+        "drop": 2,
+        "other": 3,
+        "--drop": "x",
+        "keep": 1
+      }
+    },
+    "ko_hash_key_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_hash_key_nested"
+      ],
+      "status": "found",
+      "value": {
+        "n": {
+          "drop": 2,
+          "other": 3,
+          "--drop": "x",
+          "keep": 1
+        }
+      }
+    },
+    "ko_array_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_array_nested"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "c",
+          "b"
+        ]
+      }
+    },
+    "ko_array_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_array_top"
+      ],
+      "status": "found",
+      "value": [
+        "c",
+        "b"
+      ]
+    },
+    "ko_lower_level": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_lower_level"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "--a",
+          "c",
+          "a"
+        ]
+      }
+    },
+    "ko_single_level": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_single_level"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "--a",
+          "b"
+        ]
+      }
+    },
+    "ko_single_level_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_single_level_top"
+      ],
+      "status": "found",
+      "value": [
+        "--a",
+        "b"
+      ]
+    },
+    "ko_naked_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_naked_array"
+      ],
+      "status": "found",
+      "value": {
+        "l": []
+      }
+    },
+    "ko_naked_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_naked_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "k": ""
+      }
+    },
+    "ko_prefixed_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_prefixed_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "k": ""
+      }
+    },
+    "ko_prefixed_scalar_vs_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_prefixed_scalar_vs_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "k": ""
+      }
+    },
+    "ko_value_vs_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_value_vs_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": ""
+      }
+    },
+    "ko_int_array": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_int_array"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          1
+        ]
+      }
+    },
+    "ko_three": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_three"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "c",
+          "b"
+        ]
+      }
+    },
+    "s_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_nested"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "b",
+          "c"
+        ]
+      }
+    },
+    "s_single_level_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_single_level_top"
+      ],
+      "status": "found",
+      "value": [
+        "c",
+        "a"
+      ]
+    },
+    "s_single_level_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_single_level_nested"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "c",
+          "a"
+        ]
+      }
+    },
+    "s_unmerged_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_unmerged_nested"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "b",
+          "c"
+        ],
+        "m": [
+          "y",
+          "z"
+        ]
+      }
+    },
+    "s_mixed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_mixed"
+      ],
+      "status": "error",
+      "message": "comparison of Integer with String failed"
+    },
+    "s_hashes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_hashes"
+      ],
+      "status": "error",
+      "message": "comparison of Hash with Hash failed"
+    },
+    "s_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "s_top"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "mha_equal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_equal"
+      ],
+      "status": "found",
+      "value": {
+        "r": [
+          {
+            "n": "a",
+            "x": 1,
+            "v": 1
+          },
+          {
+            "n": "b",
+            "y": 2
+          }
+        ]
+      }
+    },
+    "mha_src_longer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_src_longer"
+      ],
+      "status": "found",
+      "value": {
+        "r": [
+          {
+            "c": 3,
+            "a": 1
+          },
+          {
+            "b": 2
+          }
+        ]
+      }
+    },
+    "mha_dest_longer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_dest_longer"
+      ],
+      "status": "found",
+      "value": {
+        "r": [
+          {
+            "c": 3,
+            "a": 1
+          },
+          {
+            "d": 4
+          }
+        ]
+      }
+    },
+    "mha_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_top"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "b": 2,
+          "a": 1
+        }
+      ]
+    },
+    "mha_empty_src": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_empty_src"
+      ],
+      "status": "found",
+      "value": {
+        "r": [
+          {
+            "a": 1
+          }
+        ]
+      }
+    },
+    "mha_mixed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha_mixed"
+      ],
+      "status": "found",
+      "value": {
+        "r": [
+          {
+            "b": 2
+          },
+          {
+            "a": 1
+          },
+          "x"
+        ]
+      }
+    },
+    "dot_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dot_first.b"
+      ],
+      "status": "not_found"
+    },
+    "dot_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "dot_hash.b"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1
+      }
+    },
+    "dot_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "dot_unique.l"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'dot_unique.l' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
+    },
+    "dot_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "dot_deep.b"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          2,
+          1
+        ]
+      }
+    },
+    "f_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_nil"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "f_nil_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_nil_only"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "f_nil_only_default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "DFLT",
+        "f_nil_only"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "f_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f_false"
+      ],
+      "status": "found",
+      "value": false
+    },
+    "f_nil_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "f_nil"
+      ],
+      "status": "found",
+      "value": [
+        null,
+        "x"
+      ]
+    },
+    "f_nil_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "f_nil"
+      ],
+      "status": "found",
+      "value": "x"
+    },
+    "ko_sort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "--sort-merged-arrays",
+        "ko_array_nested"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "b",
+          "c"
+        ]
+      }
+    }
+  }
+}

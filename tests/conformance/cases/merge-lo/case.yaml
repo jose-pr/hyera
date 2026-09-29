@@ -1,0 +1,32 @@
+description: >-
+  lookup_options merge strategies (incl. structured merge hashes, dotted keys, a regex pattern alongside its own exact key) with an explicit --merge overriding lookup_options.
+origin: spec-merge/fx/lo
+queries:
+  - key: "lo_unique"
+  - key: "lo_deep_ko"
+    divergence: spec-merge/merged-hash-key-order
+  - key: "lo_hi_wins"
+  - key: "lo_shallow"
+    divergence: new/convert-array-splits-string
+  - key: "lo_re_one"
+  - key: "lo_re_exact"
+  - key: "lo_deep_opts"
+  - key: "lo_conv"
+  - key: "lo_dotted.port"
+    id: "lo_dotted_port"
+    divergence: code-core/dotted-key-root-semantics
+  - key: "lo_dotkey.port"
+    id: "lo_dotkey_port"
+    divergence: code-core/dotted-key-root-semantics
+  - key: "lo_conv"
+    id: "lo_conv_explicit_first"
+    merge: first
+    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+  - key: "lo_unique"
+    id: "lo_unique_explicit_first"
+    merge: first
+  - key: "lo_unique"
+    id: "lo_unique_explicit_deep"
+    merge: deep
+
+    divergence: spec-merge/deep-array-merge-order-and-dedupe

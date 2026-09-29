@@ -1,0 +1,125 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "2e17f677b52c6b3a202011dd37b2c64b5280ebc63976388314e722021274fb55",
+  "results": {
+    "b_unique_sort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_unique_sort"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'sort_merged_arrays'"
+    },
+    "b_no_strategy": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_no_strategy"
+      ],
+      "status": "error",
+      "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
+    },
+    "b_deep_unknown": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_deep_unknown"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'bogus'"
+    },
+    "b_reverse": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_reverse"
+      ],
+      "status": "found",
+      "value": {
+        "a": {
+          "x": 1,
+          "y": 2
+        },
+        "s": "lo"
+      }
+    },
+    "b_unconstrained": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_unconstrained"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "b",
+          "a",
+          "a",
+          "a"
+        ]
+      }
+    },
+    "b_bad_name": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_bad_name"
+      ],
+      "status": "error",
+      "message": "Unknown merge strategy: 'bogus'"
+    },
+    "b_empty_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_empty_ko"
+      ],
+      "status": "error",
+      "message": "knockout_prefix cannot be an empty string in deep_merge!"
+    },
+    "b_hash_opts": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_hash_opts"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
+    },
+    "b_first_opts": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_first_opts"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "b_default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_default"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "b_merge_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "b_merge_key"
+      ],
+      "status": "error",
+      "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
+    }
+  }
+}

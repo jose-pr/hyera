@@ -1,0 +1,26 @@
+description: >-
+  Malformed or exotic lookup_options merge specs: missing strategy, unknown option, unknown strategy name, reverse_deep, unconstrained_deep, and a 'merge' key nested inside its own value.
+origin: spec-merge/fx/lobad
+queries:
+  - key: "b_unique_sort"
+    divergence: spec-merge/merge-options-not-validated
+  - key: "b_no_strategy"
+    divergence: spec-merge/merge-options-not-validated
+  - key: "b_deep_unknown"
+    divergence: spec-merge/merge-options-not-validated
+  - key: "b_reverse"
+    divergence: spec-merge/strategy-aliases-missing
+  - key: "b_unconstrained"
+    divergence: spec-merge/strategy-aliases-missing
+  - key: "b_bad_name"
+    divergence: spec-merge/bad-merge-strategy-uncaught-valueerror
+  - key: "b_empty_ko"
+    divergence: spec-merge/merge-options-not-validated
+  - key: "b_hash_opts"
+    divergence: spec-merge/merge-options-not-validated
+  - key: "b_first_opts"
+  - key: "b_default"
+    divergence: spec-merge/strategy-aliases-missing
+  - key: "b_merge_key"
+
+    divergence: spec-merge/merge-options-not-validated

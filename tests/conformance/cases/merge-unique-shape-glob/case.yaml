@@ -1,0 +1,9 @@
+description: >-
+  Same hierarchy-shape unique-merge quirk as merge-unique-shape, but the
+  multi-location level comes from a glob matching two files instead of an
+  explicit paths: list.
+origin: critic-puppet-coverage/unique_shape_glob
+queries:
+  - key: k
+    merge: unique
+    divergence: critic-puppet-coverage/unique-merge-dedupe-depends-on-hierarchy-shape

@@ -1,0 +1,11 @@
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: one
+    paths: [p1a.yaml, p1b.yaml]
+  - name: two
+    path: p2.yaml
+  - name: g
+    glob: "g/*.yaml"

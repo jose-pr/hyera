@@ -1,0 +1,6 @@
+description: >-
+  A lookup_options regex pattern that only partially matches a key name.
+origin: spec-merge/fx/lo2
+queries:
+  - key: "re_partial"
+    divergence: spec-lookup-options-types/lookup-options-regex-fullmatch

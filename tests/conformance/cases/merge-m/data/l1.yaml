@@ -1,0 +1,86 @@
+u_scalars: a
+u_nested: [a, [b, [c]]]
+u_mixed: x
+u_hash_in_array: [{k: 1}]
+u_hash_value: {k: 1}
+u_nil: ~
+u_single_dup: [a, a, b]
+u_single_nested: [[a], [a, b]]
+u_single_scalar: s
+u_empty: []
+u_all_empty: []
+u_order: [c, a]
+u_bool_int: [1, true]
+u_float_int: [1, 2]
+u_zero_false: [0]
+u_str_num: ["1"]
+h_basic: {a: 1, b: {x: 1}}
+h_non_hash_lower: {a: 1}
+h_non_hash_higher: str
+h_nil_higher: ~
+h_single_scalar: str
+h_single_array: [1, 2]
+h_empty: {}
+h_nil_values: {a: ~}
+h_order: {z: 1, a: 1}
+d_basic: {a: {x: 1, l: [1, 2]}, s: one}
+d_top_arrays: [a, b]
+d_scalar_top: x
+d_hash_vs_array: {k: {a: 1}}
+d_array_vs_hash: {k: [1]}
+d_array_vs_scalar: {k: [1]}
+d_scalar_vs_array: {k: 5}
+d_nil_higher: {k: ~}
+d_nil_lower: {k: 1}
+d_array_vs_nil: {k: [1]}
+d_false_lower: {k: [a]}
+d_false_higher: {k: false}
+d_top_nil_higher: ~
+d_top_nil_lower: {a: 1}
+d_top_hash_vs_array: {a: 1}
+d_top_array_vs_hash: [1]
+d_top_array_vs_scalar: [1]
+d_dup_in_array: {l: [a, a]}
+d_dup_single: {l: [a, a]}
+d_aoh: {l: [{n: 1}]}
+d_three: {l: [1]}
+d_order: {z: 1, m: {q: 1}}
+d_bool_int: {l: [1]}
+d_empty_hash_higher: {k: {}}
+d_empty_str_higher: {k: ""}
+d_str_vs_hash: {k: str}
+d_top_scalar_vs_hash: x
+ko_hash_key: {"--drop": x, keep: 1}
+ko_hash_key_nested: {n: {"--drop": x, keep: 1}}
+ko_array_nested: {l: ["--a", b]}
+ko_array_top: ["--a", b]
+ko_lower_level: {l: [a]}
+ko_single_level: {l: ["--a", b]}
+ko_single_level_top: ["--a", b]
+ko_naked_array: {l: ["--"]}
+ko_naked_scalar: {k: "--"}
+ko_prefixed_scalar: {k: "--foo"}
+ko_prefixed_scalar_vs_scalar: {k: "--foo"}
+ko_value_vs_hash: {k: "--"}
+ko_int_array: {l: ["--1"]}
+ko_three: {l: ["--a"]}
+s_nested: {l: [c, a]}
+s_single_level_top: [c, a]
+s_single_level_nested: {l: [c, a]}
+s_unmerged_nested: {l: [c, a], m: [z, y]}
+s_mixed: {l: [2, a]}
+s_hashes: {l: [{b: 1}]}
+s_top: [c, a]
+mha_equal: {r: [{n: a, v: 1}, {n: b}]}
+mha_src_longer: {r: [{a: 1}, {b: 2}]}
+mha_dest_longer: {r: [{a: 1}]}
+mha_top: [{a: 1}]
+mha_empty_src: {r: []}
+mha_mixed: {r: [{a: 1}, x]}
+dot_first: {x: 1}
+dot_hash: {b: {x: 1}}
+dot_unique: {l: [1]}
+dot_deep: {b: {l: [1]}}
+f_nil: ~
+f_nil_only: ~
+f_false: false
