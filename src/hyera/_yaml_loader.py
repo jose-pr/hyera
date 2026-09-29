@@ -197,7 +197,7 @@ def _tokenize(string: str):
 # PyYAML loader/resolver/constructor wiring
 # ---------------------------------------------------------------------------
 
-_PLAIN_TAG = "tag:pyera.internal,2026:plain"
+_PLAIN_TAG = "tag:hyera.internal,2026:plain"
 
 #: Tags this loader treats as merge keys are left to PyYAML's own default
 #: resolution/`flatten_mapping` -- only the literal plain scalar `<<` needs

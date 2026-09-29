@@ -6,8 +6,8 @@ import re
 
 import pytest
 
-import pyera
-from pyera import (
+import hyera
+from hyera import (
     Backend,
     BackendError,
     ConfigError,
@@ -40,8 +40,8 @@ def test_hierarchy_and_exports():
         "KeyNotFoundError",
     ]
     for name in names:
-        assert name in pyera.__all__
-        assert getattr(pyera, name) is getattr(pyera.exceptions, name)
+        assert name in hyera.__all__
+        assert getattr(hyera, name) is getattr(hyera.exceptions, name)
 
 
 def test_error_attributes_survive_pickle():

@@ -1,6 +1,6 @@
 """Interpolation edge cases: literal backslashes, regex-special values, format()."""
 
-from pyera import Hiera
+from hyera import Hiera
 
 
 def _hiera(make_tree, common):

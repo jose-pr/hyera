@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from pyera.backends import Backend, HOCONBackend, NamePattern
+from hyera.backends import Backend, HOCONBackend, NamePattern
 
 
 @pytest.fixture(autouse=True)
@@ -198,4 +198,4 @@ def test_hocon_check_available_names_extra(monkeypatch):
     with pytest.raises(Exception) as excinfo:
         HOCONBackend.check_available()
     assert "pyhocon" in str(excinfo.value)
-    assert "pyera[hocon]" in str(excinfo.value)
+    assert "hyera[hocon]" in str(excinfo.value)

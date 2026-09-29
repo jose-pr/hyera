@@ -9,7 +9,7 @@ reads ``{a.b}`` as *attribute* access, so a dotted reference is resolved via
 
 import pytest
 
-from pyera import Hiera
+from hyera import Hiera
 
 CONFIG = """\
     version: 5

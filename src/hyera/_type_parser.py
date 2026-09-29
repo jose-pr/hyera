@@ -718,7 +718,7 @@ _ACCESS_BUILDERS = {
 def parse_type(text):
     """Parse a Puppet type-expression string into a type instance.
 
-    Raises :class:`pyera.HieraLookupError` with Puppet's own parser text on
+    Raises :class:`hyera.HieraLookupError` with Puppet's own parser text on
     a syntax error, an unsupported construct (parent plan Design Q5's
     unsupported tier), or a top-level expression that is not type-shaped.
     """

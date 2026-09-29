@@ -63,7 +63,7 @@ def _validate_data_hash(data, name, path) -> None:
 
 def _as_lookupdict(obj):
     """Recursively adapt a backend's plain ``dict``/``list`` result
-    into :class:`~pyera.util.LookupDict` for dotted-key lookup. Backends
+    into :class:`~hyera.util.LookupDict` for dotted-key lookup. Backends
     themselves return plain data; only the engine's cache needs the dotted
     lookup. ``navigation_sub_lookup`` removes both sides of this adapter."""
     if isinstance(obj, dict):
@@ -123,7 +123,7 @@ class Hiera(Interpolation):
 
     :param base_config: hiera base configuration: file path, file-like object,
         or a pre-parsed ``dict``.
-    :param backends: an allow-list of :class:`~pyera.backends.Backend`
+    :param backends: an allow-list of :class:`~hyera.backends.Backend`
         classes; defaults to :func:`default_backends` — every backend
         registered in the ``function`` namespace (``YAMLBackend``,
         ``JSONBackend``, ``HOCONBackend``, ``SopsBackend``).

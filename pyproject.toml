@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]  # PEP 639 license fields need 1.27
 build-backend = "hatchling.build"
 
 [project]
-name = "pyera"
+name = "hyera"
 dynamic = ["version"]
 authors = [{ name = "jose-pr" }]
 description = "A Python implementation of Puppet Hiera hierarchical data lookup"
@@ -42,25 +42,25 @@ hocon = ["pyhocon>=0.3.62,<0.4"]
 # Composes every feature extra that has tests, so ranges live only in those
 # extras -- without pyhocon/duho the HOCON/CLI tests silently skip instead of
 # running. `hatchling` is left out: build isolation supplies it.
-dev = ["pyera[cli,hocon]", "black", "build", "pytest", "twine"]
+dev = ["hyera[cli,hocon]", "black", "build", "pytest", "twine"]
 docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 [project.scripts]
-pyera = "pyera.cli:main"
+hyera = "hyera.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/jose-pr/pyera/"
-Documentation = "https://jose-pr.github.io/pyera/"
-Issues = "https://github.com/jose-pr/pyera/issues"
+Homepage = "https://github.com/jose-pr/hyera/"
+Documentation = "https://jose-pr.github.io/hyera/"
+Issues = "https://github.com/jose-pr/hyera/issues"
 
 # hatchling reads __version__ from the file itself, without importing the
 # package or consulting installed metadata -- a stale editable install can't
 # mislead it, and there is only one copy of the version to keep in sync.
 [tool.hatch.version]
-path = "src/pyera/__init__.py"
+path = "src/hyera/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pyera"]
+packages = ["src/hyera"]
 # *.local.* -- unshared per-machine notes (see the sdist exclude below).
 # CLAUDE*/.claude -- agent tooling config, never a shipped artifact.
 exclude = ["*.local.*", "CLAUDE*", ".claude"]
@@ -68,17 +68,17 @@ exclude = ["*.local.*", "CLAUDE*", ".claude"]
 
 # Ship the consumer-facing docs inside the installed package, so they are
 # readable from site-packages via importlib.resources without the repo.
-# src/pyera/AGENTS.md is included automatically by living in the package
+# src/hyera/AGENTS.md is included automatically by living in the package
 # dir; the repo-root AGENTS.md is development-only and deliberately not
 # shipped.
 [tool.hatch.build.targets.wheel.force-include]
-"README.md" = "pyera/README.md"
+"README.md" = "hyera/README.md"
 
 # /.* -- category rule: nothing dot-prefixed at the repo root ships (mirrors
 # .gitignore's rule); an `AGENTS.local.md` beside the shipping `AGENTS.md`
 # has no leading dot and would otherwise be packaged, so *.local.* is listed
 # separately. /AGENTS.md -- the repo-root contributor doc does not ship (only
-# src/pyera/AGENTS.md, the API header, does). CLAUDE*/.claude -- agent
+# src/hyera/AGENTS.md, the API header, does). CLAUDE*/.claude -- agent
 # tooling config never ships.
 [tool.hatch.build.targets.sdist]
 exclude = ["/.*", "/AGENTS.md", "*.local.*", "CLAUDE*", ".claude"]

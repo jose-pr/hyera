@@ -10,7 +10,7 @@ import os
 import pathlib
 import pickle
 
-from pyera import Hiera
+from hyera import Hiera
 
 CONFIG_TEXT = (
     "version: 5\n"

@@ -10,6 +10,6 @@ queries:
     error_match: sops
     deviation:
       id: sops-backend
-      reason: pyera keeps a sops data_hash backend that Puppet does not have
+      reason: hyera keeps a sops data_hash backend that Puppet does not have
       expect:
         status: error

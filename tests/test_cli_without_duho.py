@@ -3,7 +3,7 @@
 No ``duho`` import at module level here -- both local venvs have duho
 installed (it's in the ``dev`` extra), so each check runs in a fresh
 subprocess with ``sys.modules["duho"]`` forced to ``None`` before importing
-``pyera``, to simulate a plain ``pip install pyera`` with no extras.
+``hyera``, to simulate a plain ``pip install hyera`` with no extras.
 """
 
 import os
@@ -11,9 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pyera
+import hyera
 
-_SRC = str(Path(pyera.__file__).resolve().parents[1])
+_SRC = str(Path(hyera.__file__).resolve().parents[1])
 
 
 def _run(code: str) -> "subprocess.CompletedProcess":
@@ -30,12 +30,12 @@ def test_console_script_without_cli_extra():
     code = (
         "import sys\n"
         "sys.modules['duho'] = None\n"
-        "from pyera.cli import main\n"
+        "from hyera.cli import main\n"
         "sys.exit(main(['k']))\n"
     )
     result = _run(code)
     assert result.returncode == 2
-    assert 'pip install "pyera[cli]"' in result.stderr
+    assert 'pip install "hyera[cli]"' in result.stderr
     assert "Traceback" not in result.stderr
     assert "Traceback" not in result.stdout
 
@@ -44,12 +44,12 @@ def test_module_entrypoint_without_cli_extra():
     code = (
         "import sys\n"
         "sys.modules['duho'] = None\n"
-        "sys.argv = ['pyera', '--help']\n"
+        "sys.argv = ['hyera', '--help']\n"
         "import runpy\n"
-        "runpy.run_module('pyera', run_name='__main__')\n"
+        "runpy.run_module('hyera', run_name='__main__')\n"
     )
     result = _run(code)
     assert result.returncode == 2
-    assert 'pip install "pyera[cli]"' in result.stderr
+    assert 'pip install "hyera[cli]"' in result.stderr
     assert "Traceback" not in result.stderr
     assert "Traceback" not in result.stdout

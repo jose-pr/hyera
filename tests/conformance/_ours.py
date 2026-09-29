@@ -1,6 +1,6 @@
-"""The only seam that knows pyera's Python API and CLI.
+"""The only seam that knows hyera's Python API and CLI.
 
-Every conformance test reaches pyera through this module. A plan that
+Every conformance test reaches hyera through this module. A plan that
 changes the lookup API (``.get`` -> ``.lookup``), scope building, the
 strict option, an exception class, or the CLI edits this file in the same
 commit, removing the ``AdapterUnsupported`` branches it makes expressible.
@@ -12,13 +12,13 @@ import json
 
 import yaml
 
-from pyera import Hiera, HieraError, KeyNotFoundError, Sensitive
-from pyera.cli import main as _cli_main
+from hyera import Hiera, HieraError, KeyNotFoundError, Sensitive
+from hyera.cli import main as _cli_main
 
 import _golden
 from _golden import SENSITIVE_JSON
 
-#: Strict xfail reason for every CLI-channel query until pyera's CLI
+#: Strict xfail reason for every CLI-channel query until hyera's CLI
 #: accepts puppet lookup's own flags (cli_puppet_lookup_parity fidelity
 #: plan). Set to None there, in the same commit that removes this marker.
 CLI_CHANNEL_DIVERGENCE = "spec-layers-backends/cli-flag-parity"
@@ -141,7 +141,7 @@ def _check_common(case_dir, case, query):
 
 
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
-    """Resolve one query through :class:`pyera.Hiera`, projected like Puppet.
+    """Resolve one query through :class:`hyera.Hiera`, projected like Puppet.
 
     A config-schema divergence (most of the ``config`` area) raises during
     construction, not during ``.get()`` -- ``Hiera(...)`` is inside the same
@@ -154,7 +154,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     the one above: several divergences (``code-io-security/dotted-subkey-raw-
     exceptions``, ``spec-lookup-options-types/merge-errors-escape-as-
     valueerror``, ``spec-merge/bad-merge-strategy-uncaught-valueerror``) are
-    *exactly* "pyera raises a raw, unwrapped exception (often ValueError)
+    *exactly* "hyera raises a raw, unwrapped exception (often ValueError)
     where Puppet also errors" -- catching every ``ValueError`` from
     ``hiera.get()`` itself would silently launder that divergence into a
     clean status match (found as an XPASS(strict) regression the first time
@@ -162,7 +162,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     accidental passes). Only ``as_puppet_json``'s own ``ValueError`` (a
     NaN/Infinity value, which fails Puppet's own ``--render-as json`` the
     same way ``allow_nan=False`` does here) is a harness-projection concern,
-    not a pyera-behavior one, so only that call is guarded.
+    not a hyera-behavior one, so only that call is guarded.
     """
     key, env = _check_common(case_dir, case, query)
     facts = _load_facts(case_dir)
@@ -186,7 +186,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
 
 
 def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
-    """Resolve one query through ``pyera.cli.main``, invoked in-process.
+    """Resolve one query through ``hyera.cli.main``, invoked in-process.
 
     Passes the golden's own recorded ``puppet lookup`` argv straight to our
     CLI. Today that argv (``--hiera_config``/``--facts``/``--node``/
@@ -224,4 +224,4 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
         return {"status": "not_found"}
     if rc == 2:
         return {"status": "error"}
-    raise AssertionError("unexpected pyera CLI exit code {!r}".format(rc))
+    raise AssertionError("unexpected hyera CLI exit code {!r}".format(rc))

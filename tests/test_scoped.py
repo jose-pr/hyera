@@ -13,7 +13,7 @@ import pickle
 
 import pytest
 
-from pyera import Hiera
+from hyera import Hiera
 
 
 def _make_hiera(make_tree, use_path: bool):

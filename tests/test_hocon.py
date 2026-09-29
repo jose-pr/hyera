@@ -19,8 +19,8 @@ import threading
 
 import pytest
 
-from pyera import BackendError, Hiera, default_backends
-from pyera.backends import HOCONBackend, has_hocon
+from hyera import BackendError, Hiera, default_backends
+from hyera.backends import HOCONBackend, has_hocon
 
 
 @pytest.fixture
@@ -268,7 +268,7 @@ def test_include_in_array_value_position_raises(content, pyhocon_tripwire):
     # A key-position plain include contributes nothing (blanked) at the top
     # level or inside an object, but the same directive inside a `[...]`
     # array is a value, not a key -- Puppet keeps it as literal text, and
-    # pyera (which always raises for value position) must not silently blank
+    # hyera (which always raises for value position) must not silently blank
     # it into an empty/short array instead.
     with pytest.raises(BackendError):
         HOCONBackend().loads(content)

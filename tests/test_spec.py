@@ -3,7 +3,7 @@ mapped_paths, default_hierarchy, convert_to."""
 
 import pytest
 
-from pyera import ConfigError, Hiera, Sensitive, make_merge
+from hyera import ConfigError, Hiera, Sensitive, make_merge
 
 # --- version ---------------------------------------------------------
 

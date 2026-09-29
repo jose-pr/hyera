@@ -1,4 +1,4 @@
-pyera
+hyera
 Copyright (c) 2026 jose-pr
 
 This project is a derivative of phiera, a Python Hiera parser by Andrei
@@ -12,12 +12,12 @@ license is included at LICENSES/phiera-Apache-2.0.txt.
 
 The files derived from phiera are:
 
-    src/pyera/core.py                (from phiera/phiera.py)
-    src/pyera/_hiera_config.py       (from phiera/phiera.py)
-    src/pyera/_location_resolver.py  (from phiera/phiera.py)
-    src/pyera/_interpolation.py      (from phiera/phiera.py)
-    src/pyera/_merge_strategy.py     (from phiera/phiera.py)
-    src/pyera/util.py                (from phiera/util.py)
+    src/hyera/core.py                (from phiera/phiera.py)
+    src/hyera/_hiera_config.py       (from phiera/phiera.py)
+    src/hyera/_location_resolver.py  (from phiera/phiera.py)
+    src/hyera/_interpolation.py      (from phiera/phiera.py)
+    src/hyera/_merge_strategy.py     (from phiera/phiera.py)
+    src/hyera/util.py                (from phiera/util.py)
 
 Each was modified by jose-pr and carries a notice saying so. Modifications
 and all other files in this project are licensed under the MIT License

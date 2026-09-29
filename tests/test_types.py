@@ -13,12 +13,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pyera import HieraLookupError
-from pyera._new_function import new_instance
-from pyera._string_converter import convert as _string_convert
-from pyera._type_mismatch import assert_instance_of
-from pyera._type_parser import parse_type
-from pyera._types import ALIASES, PTypeReferenceType, infer, infer_set
+from hyera import HieraLookupError
+from hyera._new_function import new_instance
+from hyera._string_converter import convert as _string_convert
+from hyera._type_mismatch import assert_instance_of
+from hyera._type_parser import parse_type
+from hyera._types import ALIASES, PTypeReferenceType, infer, infer_set
 
 _CASES = Path(__file__).parent / "conformance" / "cases"
 
@@ -130,7 +130,7 @@ def test_aliases_and_references():
     assert data_t.instance({1: "a"}) is False
 
     rich_t = parse_type("RichData")
-    from pyera import Sensitive
+    from hyera import Sensitive
 
     assert rich_t.instance(Sensitive("x")) is True
 
@@ -147,7 +147,7 @@ def test_aliases_and_references():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "pyera.backends"
+    RubySymbol.__module__ = "hyera.backends"
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
 
 
@@ -349,7 +349,7 @@ _KNOWN_QUIRK_QIDS = {"tuple_t"}
 
 @pytest.mark.parametrize("qid,spec,value,result", list(_new_params()))
 def test_new_matches_golden(qid, spec, value, result):
-    from pyera import Sensitive
+    from hyera import Sensitive
 
     if qid in _Q8_UNSUPPORTED_QIDS:
         with pytest.raises(HieraLookupError) as exc_info:

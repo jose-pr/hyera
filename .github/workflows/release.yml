@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/pyera/
+      url: https://pypi.org/project/hyera/
     permissions:
       id-token: write # required for PyPI Trusted Publishing (OIDC)
     steps:

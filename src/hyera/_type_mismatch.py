@@ -397,7 +397,7 @@ def describe_mismatch(name, expected, actual):
 def assert_instance_of(subject, expected, value, nil_ok=False):
     """Puppet's ``TypeAsserter.assert_instance_of``: return ``value`` if it
     is an instance of ``expected`` (or ``None`` with ``nil_ok``), else raise
-    :class:`pyera.HieraLookupError` with Puppet's mismatch text."""
+    :class:`hyera.HieraLookupError` with Puppet's mismatch text."""
     if value is None and nil_ok:
         return value
     mismatches = _describe(expected, value, [])

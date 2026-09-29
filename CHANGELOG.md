@@ -31,19 +31,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An explicit `--merge first` on the CLI now overrides a `lookup_options`
   merge, as `puppet lookup --merge first` does (omitting `--merge` still
   lets `lookup_options` decide).
-- The `pyera` console script and `python -m pyera` now print `pip install
-  "pyera[cli]"` and exit 2 when the `cli` extra is missing, instead of
+- The `hyera` console script and `python -m hyera` now print `pip install
+  "hyera[cli]"` and exit 2 when the `cli` extra is missing, instead of
   crashing with a `ModuleNotFoundError` traceback.
 - `ScopedHiera` can be copied, deep-copied and pickled; each previously
   raised `RecursionError`.
-- The `PYERA_MCP` trigger env var name (and the served tool's name) no
+- The `HYERA_MCP` trigger env var name (and the served tool's name) no
   longer depends on `sys.argv[0]`. Running the CLI as `python -m
-  pyera.cli` (trigger var `CLI_MCP`) or embedding `Lookup` in a
+  hyera.cli` (trigger var `CLI_MCP`) or embedding `Lookup` in a
   differently-named script previously changed which environment variable
-  launched the MCP server, silently breaking the documented `PYERA_MCP`
+  launched the MCP server, silently breaking the documented `HYERA_MCP`
   contract.
-- The missing-extra install hints (`pip install "pyera[cli]"` and `pip
-  install "pyera[hocon]"`) are now double-quoted throughout; the old
+- The missing-extra install hints (`pip install "hyera[cli]"` and `pip
+  install "hyera[hocon]"`) are now double-quoted throughout; the old
   single-quoted form fails when pasted into `cmd.exe`, where single quotes
   are literal.
 
@@ -85,13 +85,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Documentation site at <https://jose-pr.github.io/pyera/>: a getting-started
-  page, an API reference generated from the docstrings of `pyera`,
-  `pyera.backends` and `pyera.cli`, and this changelog. The package metadata
+- Documentation site at <https://jose-pr.github.io/hyera/>: a getting-started
+  page, an API reference generated from the docstrings of `hyera`,
+  `hyera.backends` and `hyera.cli`, and this changelog. The package metadata
   links it as `Documentation`; the `docs` extra installs its build tools.
-- `PYERA_MCP=stdio pyera` serves the command over MCP (stdio): one tool,
-  `pyera`, taking the command-line fields as arguments and returning what
-  the command prints. Any other `PYERA_MCP` value exits `2`.
+- `HYERA_MCP=stdio hyera` serves the command over MCP (stdio): one tool,
+  `hyera`, taking the command-line fields as arguments and returning what
+  the command prints. Any other `HYERA_MCP` value exits `2`.
 - `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits
   [phiera](https://github.com/Nike-Inc/phiera), the Apache-2.0 project this
   library is derived from. The package license is now `MIT AND Apache-2.0`.
@@ -103,27 +103,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `convert_to`, with an explicit `merge=` argument overriding it);
   `mapped_paths` source levels; and `default_hierarchy` fallback.
 - `convert_to` casts: `Integer`, `Float`, `String`, `Boolean`, `Array`, and
-  `Sensitive` (a redacting `pyera.Sensitive` wrapper). Unknown/failed casts
+  `Sensitive` (a redacting `hyera.Sensitive` wrapper). Unknown/failed casts
   leave the value unchanged (never raise — unattended-safe).
 - `HOCONBackend` (`hocon_data`/`hocon`) via the optional `pyhocon` dependency
-  (`pip install pyera[hocon]`); registered automatically when importable.
+  (`pip install hyera[hocon]`); registered automatically when importable.
 - CLI merge surface: `--merge first|unique|hash|deep` (with `array`/`set`
   aliases) and `--knockout-prefix`.
 - `src/` package layout, `pyproject.toml`, and PyPI-ready metadata. The
-  distribution, import package and console script are all `pyera`.
+  distribution, import package and console script are all `hyera`.
 - Glob hierarchy levels (`glob:` / `globs:`), expanded via `pathlib_next` and
   resolved in sorted (deterministic) order.
-- Command-line interface `pyera KEY` (built on `duho`), with
+- Command-line interface `hyera KEY` (built on `duho`), with
   `--config`, repeatable `--scope key=value`, `--merge`, `--deep`,
   `--output raw|json|yaml`, and `--default`. Exit codes: `0` found (or
   `--default` printed), `1` missing, `2` any other error. Installed as the
-  `pyera` console script and runnable via `python -m pyera`.
+  `hyera` console script and runnable via `python -m hyera`.
 - Typed exception hierarchy: `HieraError` (base, `.path` names the file
   concerned) → `ConfigError` (invalid/missing `hiera.yaml`), `BackendError`
   (a data file could not be read or parsed, `.path` names it), and
   `HieraLookupError` (a failure while resolving a key) → `InterpolationError`,
   `MergeError`, and `KeyNotFoundError` (also a `KeyError`; `.get(...,
-  throw=True)`'s miss). All exported from `pyera`.
+  throw=True)`'s miss). All exported from `hyera`.
 - Test suite (pytest) covering lookup, interpolation, merge, glob, backends,
   and the CLI; green on Python 3.9 and 3.14.
 
@@ -229,7 +229,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pyparsing releases.
 - Files named `CLAUDE*` or `.claude` are excluded from the sdist and the
   wheel, and the repository's contributor `AGENTS.md` is no longer in the
-  sdist. The API reference `pyera/AGENTS.md` still ships in both.
+  sdist. The API reference `hyera/AGENTS.md` still ships in both.
 - Building requires `hatchling>=1.27`, so the package metadata declares
   `License-Expression: MIT AND Apache-2.0` and lists `LICENSE`, `NOTICE` and
   `LICENSES/phiera-Apache-2.0.txt` as license files; older hatchling wrote
@@ -239,8 +239,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   create a GitHub pre-release and are not uploaded to PyPI, and re-running a
   release skips files already on PyPI.
 - The engine is split into private modules; import public names from
-  `pyera`. `pyera.core` now defines only `Hiera` and `ScopedHiera`, and
-  `default_backends` lives in `pyera.backends`.
+  `hyera`. `hyera.core` now defines only `Hiera` and `ScopedHiera`, and
+  `default_backends` lives in `hyera.backends`.
 - `Hiera.get_key`, `load`, `load_file`, `buildcontext`, `can_resolve` and
   the `resolve*` methods are private (leading underscore); `sources()` no
   longer takes `_load`; the module globals `function`, `interpolate`,
@@ -269,7 +269,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   detection. `SopsYAMLBackend` is renamed `SopsBackend` (`sops_data`).
   `default_backends()` always lists `HOCONBackend`; without `pyhocon` a
   `hocon_data` level now fails at construction (and at parse time) naming
-  the `pyera[hocon]` extra, instead of `HOCONBackend` silently vanishing
+  the `hyera[hocon]` extra, instead of `HOCONBackend` silently vanishing
   from the default list. A data file whose top-level value is not a Hash
   now follows Puppet instead of crashing: YAML warns and falls through
   (raising only under `--strict error`); JSON/HOCON/a third-party backend's
@@ -278,7 +278,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - YAML data and `hiera.yaml` now follow Puppet's Psych parser rules instead
   of PyYAML's own: octal/hex/sexagesimal/comma-separated numbers, Ruby's
   case-insensitive `yes`/`no`/`on`/`off` booleans and `null`, `:symbol`
-  scalars (`RubySymbol`, in `pyera.backends`) and `!ruby/symbol`/`!ruby/sym`
+  scalars (`RubySymbol`, in `hyera.backends`) and `!ruby/symbol`/`!ruby/sym`
   values, complex (list/hash) keys as hashable tuples, `<<` merge keys,
   multi-document files (only the first is read), and a leading UTF-8 BOM
   all resolve/parse the way Ruby does. An unrecognized YAML tag is no

@@ -1,4 +1,4 @@
-"""Replay the recorded Puppet goldens against pyera's Python API.
+"""Replay the recorded Puppet goldens against hyera's Python API.
 
 Needs no Puppet: every expectation comes from ``cases/<case>/golden.json``,
 written by ``record.py``. A query marked ``divergence:`` in ``case.yaml``
@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-import pyera
+import hyera
 from _golden import (
     RUNTIME_PREDICATES,
     case_dirs,
@@ -102,4 +102,4 @@ def test_api_matches_puppet(case_dir, case, query):
             )
         error_class = query.get("error_class")
         if error_class:
-            assert actual.get("exc_class") == getattr(pyera, error_class).__name__
+            assert actual.get("exc_class") == getattr(hyera, error_class).__name__

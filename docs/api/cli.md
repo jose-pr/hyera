@@ -1,1 +1,1 @@
-::: pyera.cli
+::: hyera.cli

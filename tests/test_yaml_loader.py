@@ -8,16 +8,16 @@ import math
 import pytest
 import yaml
 
-from pyera.backends import BackendError, YAMLBackend
-from pyera.exceptions import ConfigError
-from pyera._yaml_loader import (
+from hyera.backends import BackendError, YAMLBackend
+from hyera.exceptions import ConfigError
+from hyera._yaml_loader import (
     RubySymbol,
     _C_LOADER,
     _PURE_LOADER,
     safe_load,
     symkeys_to_string,
 )
-from pyera._hiera_config import _read_base_config
+from hyera._hiera_config import _read_base_config
 
 _LOADERS = [
     pytest.param(

@@ -1,4 +1,4 @@
-# pyera
+# hyera
 
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
@@ -10,17 +10,17 @@ hash, and deep-hash merging.
 ## Install
 
 ```sh
-pip install pyera          # library only
-pip install pyera[cli]     # + the `pyera` command-line tool (via duho)
+pip install hyera          # library only
+pip install hyera[cli]     # + the `hyera` command-line tool (via duho)
 ```
 
 The PyPI distribution, the import package and the command are all named
-`pyera`.
+`hyera`.
 
 ## Library
 
 ```python
-from pyera import Hiera
+from hyera import Hiera
 
 h = Hiera("hiera.yaml", context={"environment": "production"})
 
@@ -77,11 +77,11 @@ from Puppet" below for the one exception):
 | -------------- | ----------------- | ---------------------------------------------- |
 | `YAMLBackend`  | `yaml_data`       | parses YAML the way Puppet's Psych does (types, symbols, BOM), on libyaml when available |
 | `JSONBackend`  | `json_data`       |                                                 |
-| `HOCONBackend` | `hocon_data`      | requires `pip install pyera[hocon]`            |
+| `HOCONBackend` | `hocon_data`      | requires `pip install hyera[hocon]`            |
 | `SopsBackend`  | `sops_data` (also `sops`, `sops_<yaml\|json\|ini\|dotenv>`) | decrypts via the `sops` CLI on the fly |
 
 A third-party backend registers itself the same way, by subclassing
-`pyera.Backend` and declaring `NAMES`; `Backend.find`/`.get`/`.new`/`.names`
+`hyera.Backend` and declaring `NAMES`; `Backend.find`/`.get`/`.new`/`.names`
 look a backend up by name, and `Hiera(backends=[...])` restricts a lookup to
 an explicit allow-list of classes.
 
@@ -127,16 +127,16 @@ An exact key match always wins over a pattern match.
 
 An explicit `merge=` argument overrides `lookup_options`. `convert_to`
 supports `Integer`, `Float`, `String`, `Boolean`, `Array`, and `Sensitive`
-(the last wraps the value in a redacting `pyera.Sensitive` marker).
+(the last wraps the value in a redacting `hyera.Sensitive` marker).
 
 ## Command line
 
 ```sh
-pyera KEY [options]
+hyera KEY [options]
 
-pyera ntp::servers --config hiera.yaml --scope environment=production
-pyera classes --merge unique --output json
-pyera missing::key --default '(none)'
+hyera ntp::servers --config hiera.yaml --scope environment=production
+hyera classes --merge unique --output json
+hyera missing::key --default '(none)'
 ```
 
 Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
@@ -145,19 +145,19 @@ first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
 `-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides;
 an explicit `--merge`, `first` included, overrides it.
 
-The CLI needs the `cli` extra (`pip install "pyera[cli]"`); without it the
+The CLI needs the `cli` extra (`pip install "hyera[cli]"`); without it the
 command prints that hint and exits 2.
 
 The CLI is built for unattended use: no interactive prompts, deterministic
 output, and meaningful exit codes: `0` found (or `--default` printed), `1`
 key not found, `2` any other error — reported as one stderr line (`-v` or
 `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup` exits `1` for both a
-miss and an error, printing nothing for the error case; pyera's CLI tells
+miss and an error, printing nothing for the error case; hyera's CLI tells
 the two apart.
 
-`PYERA_MCP=stdio pyera` runs the same command as an MCP server over
+`HYERA_MCP=stdio hyera` runs the same command as an MCP server over
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
-`pyera`, whose arguments are the command-line fields (`key`, `config`,
+`hyera`, whose arguments are the command-line fields (`key`, `config`,
 `scope`, `merge`, ...) and whose result is what the command would print.
 
 ## sops and unattended runs
@@ -170,7 +170,7 @@ extension is a clear error, since `sops` would read that file as binary.
 It is hardened so an automated lookup never hangs, dies opaquely, or
 leaks a decrypted secret:
 
-- a finite subprocess timeout (`pyera.backends.SOPS_TIMEOUT`, default 30 s),
+- a finite subprocess timeout (`hyera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
 - a clear error when the `sops` binary is not on `PATH`,
 - the data file is passed to `sops` as an absolute path after a literal
@@ -196,11 +196,11 @@ subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
 `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive` ·
-HOCON `include file()` (Puppet reads the file; pyera always raises instead).
+HOCON `include file()` (Puppet reads the file; hyera always raises instead).
 
 ## Differences from Puppet
 
-pyera aims to resolve exactly like `puppet lookup`. Every `data_hash`/
+hyera aims to resolve exactly like `puppet lookup`. Every `data_hash`/
 `lookup_key`/`data_dig` name it accepts is a real Puppet function name —
 with one deliberate exception:
 

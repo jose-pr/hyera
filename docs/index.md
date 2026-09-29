@@ -1,4 +1,4 @@
-# pyera
+# hyera
 
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
@@ -6,18 +6,18 @@ lookup. It reads a Hiera base config, walks the hierarchy for a given context,
 and fully resolves values — including `%{...}` interpolation and the
 `hiera`/`lookup`/`scope`/`literal`/`alias` functions — with optional array,
 hash, and deep-hash merging. The PyPI distribution, the import package and
-the command are all named `pyera`; `Hiera` is the class it exports.
+the command are all named `hyera`; `Hiera` is the class it exports.
 
 ## Installation
 
 ```bash
-pip install pyera
+pip install hyera
 ```
 
 Extras add optional features:
 
 ```bash
-pip install 'pyera[cli]'
+pip install 'hyera[cli]'
 ```
 
 | Extra | Adds | Needed for |
@@ -58,7 +58,7 @@ classes:
 ```
 
 ```pycon
->>> from pyera import Hiera
+>>> from hyera import Hiera
 >>> h = Hiera("hiera.yaml", context={"environment": "production"})
 >>> h.get("ntp::servers")
 ['ntp1.prod.example.com']
@@ -67,14 +67,14 @@ classes:
 ```
 
 ```console
-$ python -m pyera classes --config hiera.yaml --scope environment=production --merge unique
+$ python -m hyera classes --config hiera.yaml --scope environment=production --merge unique
 ["monitoring", "base"]
 ```
 
 ## Learn more
 
-- [pyera](api/pyera.md)
-- [pyera.backends](api/backends.md)
-- [pyera.cli](api/cli.md)
+- [hyera](api/hyera.md)
+- [hyera.backends](api/backends.md)
+- [hyera.cli](api/cli.md)
 - [Changelog](changelog.md)
-- <https://github.com/jose-pr/pyera>
+- <https://github.com/jose-pr/hyera>

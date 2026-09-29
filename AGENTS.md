@@ -1,8 +1,8 @@
-# pyera
+# hyera
 
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
-lookup — a `src/pyera` packaged library plus an optional `pyera` CLI, built on
+lookup — a `src/hyera` packaged library plus an optional `hyera` CLI, built on
 the `duho`/`pathlib_next` stack.
 
 It reads a Hiera 5 base config, walks a hierarchy of data sources for a given
@@ -13,8 +13,8 @@ array, hash, and deep-hash merging.
 ## Code layout
 
 ```
-src/pyera/
-├── __init__.py            # public re-exports (see src/pyera/AGENTS.md for the header)
+src/hyera/
+├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
 ├── core.py                 # Hiera, ScopedHiera: entry point and top-level lookup (lookup.rb + lookup_adapter.rb)
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
 ├── _location_resolver.py   # hierarchy level path resolution (location_resolver.rb)
@@ -31,11 +31,11 @@ src/pyera/
 ├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
-└── cli.py                  # duho-based `pyera` console script (Lookup command, main())
+└── cli.py                  # duho-based `hyera` console script (Lookup command, main())
 ```
 
-`pyera._*` modules are private engine internals mirroring Puppet's own file
-split; import public names from `pyera` itself.
+`hyera._*` modules are private engine internals mirroring Puppet's own file
+split; import public names from `hyera` itself.
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib` (hierarchy
 glob levels rely on its `Path.glob`).
@@ -52,16 +52,16 @@ level via a `Merge` accumulator before fully resolving interpolation and
 hiera function calls in the result.
 
 Backends register under one or more Hiera `data_hash` names (see
-`src/pyera/AGENTS.md` for the table) and only need to implement
+`src/hyera/AGENTS.md` for the table) and only need to implement
 `read_file`/`load`; `YAMLBackend` and `JSONBackend` both parse into
 `LookupDict` so `a.b.0.c`-style dotted lookups work uniformly.
 
-The CLI (`src/pyera/cli.py`) is a thin `duho.Cli` wrapper around
+The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
 `Hiera.get`, designed for unattended use: no interactive prompts,
 deterministic output, and exit codes `0` (found) / `1` (key missing) / `2`
 (usage or config error).
 
-See **`src/pyera/AGENTS.md`** for the header-file-style public API — every
+See **`src/hyera/AGENTS.md`** for the header-file-style public API — every
 export with its signature, arguments, and gotchas.
 
 ## Hiera 5 spec coverage
@@ -87,10 +87,10 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
 - Editable install: `<py> -m pip install -e ".[dev]"`. `dev` pulls in the
   `cli` and `hocon` extras, so nothing else needs adding by hand.
 - Package: built with `hatchling`. The PyPI distribution, the import
-  package and the console script are all `pyera`. `pyera[cli]` pulls in
-  `duho` for the console script, `pyera[hocon]` pulls in `pyhocon` for
+  package and the console script are all `hyera`. `hyera[cli]` pulls in
+  `duho` for the console script, `hyera[hocon]` pulls in `pyhocon` for
   `HOCONBackend`.
-- **Version**: lives in exactly one place, `src/pyera/__init__.py`
+- **Version**: lives in exactly one place, `src/hyera/__init__.py`
   (`__version__`); `[tool.hatch.version]` reads it to build the package.
   Bump it in the same commit as the CHANGELOG entry for that release.
 - **CI**: `test.yml` runs the full OS/Python matrix, a `black --check`, and
@@ -108,7 +108,7 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
   extras table are checked by `tests/test_docs_examples.py`, so an API or
   extras change that breaks the page fails the suite instead of going
   unnoticed. `docs/api/` holds exactly one `:::` page per public module
-  (`pyera`, `pyera.backends`, `pyera.cli`) — renaming or removing one updates
+  (`hyera`, `hyera.backends`, `hyera.cli`) — renaming or removing one updates
   both its page and `mkdocs.yml`'s nav. `docs/changelog.md` snippet-embeds
   `CHANGELOG.md`.
 - **CI (docs)**: `test.yml`'s `docs` job builds the docs strictly on every
@@ -127,8 +127,8 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
 this implementation, so a fidelity fix has an oracle-backed acceptance
 test instead of a hand-written expectation.
 
-- Layout: `_golden.py` (schema/digest/lint, no `pyera` import), `_ours.py`
-  (the only module that calls into `pyera`'s API/CLI), `record.py`
+- Layout: `_golden.py` (schema/digest/lint, no `hyera` import), `_ours.py`
+  (the only module that calls into `hyera`'s API/CLI), `record.py`
   (recorder, dev-only), `test_conformance.py` / `test_conformance_cli.py`
   (replay). Cases live under `cases/<area>-<topic>/` with a hand-written
   `case.yaml` and a generated `golden.json`.

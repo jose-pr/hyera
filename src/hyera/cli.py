@@ -1,6 +1,6 @@
-"""Command-line interface for pyera, built on duho.
+"""Command-line interface for hyera, built on duho.
 
-``pyera KEY --config hiera.yaml --scope environment=production``
+``hyera KEY --config hiera.yaml --scope environment=production``
 
 Designed for unattended use: no interactive prompts, deterministic output,
 and meaningful exit codes: ``0`` found (or ``--default`` printed), ``1``
@@ -26,18 +26,18 @@ from .exceptions import HieraError, KeyNotFoundError, _one_line
 from .core import Hiera
 from ._types import Sensitive
 
-_LOGGER = _logging.getLogger("pyera")
+_LOGGER = _logging.getLogger("hyera")
 
 #: CLI merge choice -> spec strategy name (array/set are legacy aliases).
 _MERGE_ALIASES = {"array": "unique", "set": "unique"}
 
 #: Printed (to stderr) when the ``cli`` extra (duho) is not installed.
-# Double-quoted, not single-quoted: `pip install 'pyera[cli]'` fails when
+# Double-quoted, not single-quoted: `pip install 'hyera[cli]'` fails when
 # pasted into cmd.exe, where single quotes are literal (pip then sees the
-# argv "'pyera[cli]'" verbatim and rejects it); double quotes work in
+# argv "'hyera[cli]'" verbatim and rejects it); double quotes work in
 # cmd.exe, PowerShell and POSIX shells alike.
 _NO_CLI_EXTRA_HINT = (
-    "pyera: the command-line interface needs the cli extra: " 'pip install "pyera[cli]"'
+    "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )
 
 
@@ -64,7 +64,7 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
 def _plain(value):
     """Convert to plain, YAML/JSON-safe types, recursively.
 
-    A :class:`~pyera.core.Sensitive` becomes its redacted text (the same
+    A :class:`~hyera.core.Sensitive` becomes its redacted text (the same
     text raw/json output already show); any ``dict`` (a ``LookupDict``
     included) becomes a plain ``dict``; a ``list``/``tuple`` becomes a
     plain ``list``. Everything else passes through unchanged.
@@ -106,7 +106,7 @@ if duho is not None:
 
         _version_ = __version__
         _mcp_ = True
-        _parsername_ = "pyera"
+        _parsername_ = "hyera"
 
         key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
         config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")

@@ -193,7 +193,7 @@ def _build_hierarchies(base, backends):
 def _build_levels(hierarchy, defaults, backends):
     """Build HieraLevel instances from hierarchy configuration.
 
-    ``backends`` is an allow-list of :class:`~pyera.backends.Backend`
+    ``backends`` is an allow-list of :class:`~hyera.backends.Backend`
     subclasses: ``data_hash`` names are resolved against the
     process-global registry (:meth:`Backend.find`), then checked against
     this allow-list, so a name registered by a third party but not passed

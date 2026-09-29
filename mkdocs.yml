@@ -1,8 +1,8 @@
-site_name: pyera
+site_name: hyera
 site_description: A Python implementation of Puppet Hiera hierarchical data lookup
-site_url: https://jose-pr.github.io/pyera/
-repo_url: https://github.com/jose-pr/pyera
-repo_name: jose-pr/pyera
+site_url: https://jose-pr.github.io/hyera/
+repo_url: https://github.com/jose-pr/hyera
+repo_name: jose-pr/hyera
 edit_uri: edit/main/docs/
 
 # Constrain the scan to docs/ so pymdownx.snippets + strict nav don't trip on
@@ -29,9 +29,9 @@ theme:
 nav:
   - Home: index.md
   - API Reference:
-      - pyera: api/pyera.md
-      - pyera.backends: api/backends.md
-      - pyera.cli: api/cli.md
+      - hyera: api/hyera.md
+      - hyera.backends: api/backends.md
+      - hyera.cli: api/cli.md
   - Changelog: changelog.md
 
 plugins:

@@ -7,8 +7,8 @@ import sys
 
 import pytest
 
-from pyera import BackendError, ConfigError, Hiera, default_backends
-from pyera.backends import (
+from hyera import BackendError, ConfigError, Hiera, default_backends
+from hyera.backends import (
     Backend,
     HOCONBackend,
     JSONBackend,
@@ -86,32 +86,32 @@ def test_backend_data_dir_extension():
 
 
 def test_sops_missing_binary(monkeypatch, tmp_path):
-    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: None)
+    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: None)
     backend = SopsBackend({})
     with pytest.raises(BackendError, match="sops executable not found"):
         backend.data_hash(tmp_path / "secret.yaml", {})
 
 
 def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
-    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
     class _Proc:
         returncode = 1
         stdout = b""
         stderr = b"decryption failed: no key"
 
-    monkeypatch.setattr("pyera.backends.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera.backends.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="decryption failed: no key"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
 
 def test_sops_timeout(monkeypatch, tmp_path):
-    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
     def _raise(*a, **k):
         raise subprocess.TimeoutExpired(cmd="sops", timeout=30)
 
-    monkeypatch.setattr("pyera.backends.subprocess.run", _raise)
+    monkeypatch.setattr("hyera.backends.subprocess.run", _raise)
     with pytest.raises(BackendError, match="timed out"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
@@ -356,7 +356,7 @@ def test_hocon_private_parser_copy_leaves_shared_module_alone():
 
 def test_hocon_missing_dependency_names_extra(monkeypatch):
     monkeypatch.setitem(sys.modules, "pyhocon", None)
-    with pytest.raises(BackendError, match="pyera\\[hocon\\]"):
+    with pytest.raises(BackendError, match="hyera\\[hocon\\]"):
         HOCONBackend().loads("k = v")
 
 
@@ -368,28 +368,28 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
 
 
 def test_ini_backend_no_equals_sign_raises():
-    from pyera.backends import IniBackend
+    from hyera.backends import IniBackend
 
     with pytest.raises(BackendError, match="invalid ini line 2"):
         IniBackend().loads("[s]\nno equals here\n")
 
 
 def test_ini_backend_unclosed_triple_quote_raises():
-    from pyera.backends import IniBackend
+    from hyera.backends import IniBackend
 
     with pytest.raises(BackendError, match="invalid ini line"):
         IniBackend().loads('[s]\nk = """never closed\n')
 
 
 def test_dotenv_backend_no_equals_sign_raises():
-    from pyera.backends import DotenvBackend
+    from hyera.backends import DotenvBackend
 
     with pytest.raises(BackendError, match="invalid dotenv line 1"):
         DotenvBackend().loads("no equals here\n")
 
 
 def test_ini_and_dotenv_registered_only_in_format_namespace():
-    from pyera.backends import DotenvBackend, IniBackend
+    from hyera.backends import DotenvBackend, IniBackend
 
     assert "ini" in Backend.names("format")
     assert "dotenv" in Backend.names("format")

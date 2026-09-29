@@ -6,7 +6,7 @@ nothing, instead of ``Hiera()``/``.get()`` raising ``FileNotFoundError``
 import re
 from pathlib import Path as StdPath
 
-from pyera import Hiera
+from hyera import Hiera
 
 REPO_ROOT = StdPath(__file__).resolve().parents[1]
 

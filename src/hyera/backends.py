@@ -697,7 +697,7 @@ def _strip_hocon_includes(text: str) -> str:
 
             # Inside a `[...]` array, every position is a value, never a
             # key -- Puppet keeps a value-position include as literal text,
-            # and pyera (which always raises for value position) must not
+            # and hyera (which always raises for value position) must not
             # blank it away into an empty/short array instead.
             in_array = bool(brackets) and brackets[-1] == "["
             key_position = (not in_array) and last_sig in (None, "\n", "{", ",")
@@ -878,7 +878,7 @@ def _hocon_parser():
                 raise BackendError(
                     "hocon_data requires pyhocon>=0.3.60 (get_period_expr, "
                     "used to keep durations as text): "
-                    'pip install "pyera[hocon]"'
+                    'pip install "hyera[hocon]"'
                 )
             mod.get_period_expr = lambda: pyparsing.NoMatch()
             _HOCON_PARSER_MODULE = mod
@@ -897,7 +897,7 @@ class HOCONBackend(Backend):
 
     Always registered (Design Q5): a missing/broken ``pyhocon`` fails at
     :meth:`check_available` (backend/level construction) and again in
-    :meth:`loads`, both naming the ``pyera[hocon]`` extra -- so the failure
+    :meth:`loads`, both naming the ``hyera[hocon]`` extra -- so the failure
     is always reachable instead of silently disappearing from
     :func:`default_backends`.
 
@@ -915,7 +915,7 @@ class HOCONBackend(Backend):
 
     _MISSING_DEP_MESSAGE = (
         "hocon_data requires the optional 'pyhocon' package: "
-        'pip install "pyera[hocon]"'
+        'pip install "hyera[hocon]"'
     )
 
     @classmethod
@@ -931,7 +931,7 @@ class HOCONBackend(Backend):
         except Exception as e:
             raise BackendError(
                 "hocon_data backend could not import 'pyhocon' ({}: {}); "
-                'pip install "pyera[hocon]"'.format(type(e).__name__, e)
+                'pip install "hyera[hocon]"'.format(type(e).__name__, e)
             ) from None
         _install_hocon_include_guard()
         text = _strip_hocon_includes(text)

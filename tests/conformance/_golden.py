@@ -1,8 +1,8 @@
 """Schema, digest and lint helpers shared by the recorder and the replay tests.
 
 Kept dependency-free apart from PyYAML so the replay runner imports it
-without needing Puppet, and the recorder imports it without needing pyera.
-Never import ``pyera`` from this module -- that seam is ``_ours.py`` only.
+without needing Puppet, and the recorder imports it without needing hyera.
+Never import ``hyera`` from this module -- that seam is ``_ours.py`` only.
 """
 
 import hashlib

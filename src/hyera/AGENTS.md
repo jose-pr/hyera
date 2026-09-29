@@ -1,13 +1,13 @@
-# `pyera` — public API header
+# `hyera` — public API header
 
-Header-file-style reference for the `pyera` package: every `__all__` export
+Header-file-style reference for the `hyera` package: every `__all__` export
 with its signature, arguments, contract, and gotchas, so this module can be
 consumed without reading its source. Kept current with the public API. For
-the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/pyera>.
+the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/hyera>.
 
-Install and import as `pyera` (`pip install pyera`, extras
-`[cli]`/`[hocon]`); the command is `pyera`. Import every public name from
-`pyera` itself, never from a submodule directly — `pyera._*` modules are
+Install and import as `hyera` (`pip install hyera`, extras
+`[cli]`/`[hocon]`); the command is `hyera`. Import every public name from
+`hyera` itself, never from a submodule directly — `hyera._*` modules are
 private engine internals with no stability contract.
 
 ## Engine
@@ -159,7 +159,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   like an unknown name.
 - **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
   ("yaml",), "render": ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`.
-  `.loads` is `pyera._yaml_loader.safe_load` (Psych's parsing rules, not
+  `.loads` is `hyera._yaml_loader.safe_load` (Psych's parsing rules, not
   PyYAML's own) into a plain `dict`/`list` (no `LookupDict` here; the
   engine adapts); raises `BackendError` on a YAML error, one line, Psych's
   shape (`<problem> <context> at line L column C`, 1-based; either part may
@@ -171,7 +171,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `strict="error"`, else warns-and-empties. `.dumps` is
   `yaml.safe_dump(sort_keys=False, allow_unicode=True,
   default_flow_style=False)`.
-- **`pyera._yaml_loader`** (private) — ports Psych 5.3.1's `safe_load` +
+- **`hyera._yaml_loader`** (private) — ports Psych 5.3.1's `safe_load` +
   `ScalarScanner#tokenize` on top of PyYAML (`CSafeLoader`/libyaml when
   available, else the pure `SafeLoader`; both are wired identically, so
   results only differ on one known gap — see the gotcha below).
@@ -189,7 +189,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   exception, so `flatten_mapping` keeps recognizing it). A YAML
   date/timestamp-shaped scalar raises `BackendError("Tried to load
   unspecified class: Date"/"...: Time")` — like Puppet, there is no lenient
-  mode. `RubySymbol(name)` (re-exported from `pyera.backends`, `__slots__`,
+  mode. `RubySymbol(name)` (re-exported from `hyera.backends`, `__slots__`,
   not a `str` subclass) represents a Ruby `:symbol`; `symkeys_to_string(obj)`
   recursively turns `RubySymbol` **keys** (not values) into their plain
   string names — used for both data files and `hiera.yaml`. An unknown tag
@@ -221,7 +221,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `backend_registry_and_data_loading/registry`): a missing/broken `pyhocon`
   fails at `.check_available()` (backend/level construction, so a
   `hocon_data` hierarchy level fails to build) *and* in `.loads`, both
-  naming the `pyera[hocon]` extra, rather than silently vanishing from
+  naming the `hyera[hocon]` extra, rather than silently vanishing from
   `default_backends()`. `has_hocon() -> bool` — `True` iff `pyhocon`
   imports without error; any import-time exception (not just
   `ImportError`) is caught and logged at debug. `.loads` parses through a
@@ -308,7 +308,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   <n>")` — same no-content-in-the-message rule.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
-  env var — set it directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change
+  env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
   the sops timeout.
 
 ## Utilities (`util.py`)
@@ -345,18 +345,18 @@ is a `Backend` subclass, found by name rather than passed around directly.
     for the name '<key>'", or the "any of the names [...]" plural form).
     `.name` holds the key(s) tried.
 
-Every class above is importable directly from `pyera` (e.g. `pyera.BackendError
-is pyera.backends.BackendError`, both paths work since `pyera.__init__`
+Every class above is importable directly from `hyera` (e.g. `hyera.BackendError
+is hyera.backends.BackendError`, both paths work since `hyera.__init__`
 re-exports it too).
 
 ## CLI (`cli.py`)
 
-- **`main(argv=None) -> int`** — the `pyera` console-script entry point;
+- **`main(argv=None) -> int`** — the `hyera` console-script entry point;
   builds and dispatches the `Lookup` duho command (`duho.main`), which sets
   up `-v/-q/--loglevel` logging and returns the process exit code. When the
   `cli` extra (`duho`) is not installed, `main` always exists but prints
-  `pyera: the command-line interface needs the cli extra: pip install
-  "pyera[cli]"` to stderr and returns 2, instead of raising
+  `hyera: the command-line interface needs the cli extra: pip install
+  "hyera[cli]"` to stderr and returns 2, instead of raising
   `ModuleNotFoundError`; `Lookup` itself is not defined in that case.
 - **`Lookup`** — the `duho.Cli` command class (only defined when `duho` is
   installed). Fields: `key` (positional),
@@ -372,18 +372,18 @@ re-exports it too).
   `first` included, always overrides `lookup_options`. Exit codes: `0`
   found (or `--default` printed), `1` the key was not found (a
   `KeyNotFoundError` and nothing else), `2` any other error. A `2` logs
-  exactly one `pyera`-logger ERROR line: `Lookup of key 'K' failed: …` for
+  exactly one `hyera`-logger ERROR line: `Lookup of key 'K' failed: …` for
   a lookup failure (construction included), `Cannot render the value of
   key 'K': …` if printing the found/default value itself fails. The
   traceback is omitted unless `-v` or `DUHO_TRACEBACK=1` is set.
-- Env: `PYERA_MCP=stdio` runs the command as an MCP server over
-  stdin/stdout (duho), exposing one tool, `pyera` (`Lookup`'s
+- Env: `HYERA_MCP=stdio` runs the command as an MCP server over
+  stdin/stdout (duho), exposing one tool, `hyera` (`Lookup`'s
   `_parsername_`, not its class name), whose arguments are the CLI fields
   (`key`, `config`, `scope`, ...); a `tools/call` returns what the command
-  would print, and `initialize`'s `serverInfo.name` is `"pyera"` too. Any
-  other `PYERA_MCP` value exits `2` with `unsupported MCP transport`. The
-  trigger variable name itself is always `PYERA_MCP`, from that same
-  `_parsername_`, regardless of `sys.argv[0]` (so `python -m pyera.cli` or
+  would print, and `initialize`'s `serverInfo.name` is `"hyera"` too. Any
+  other `HYERA_MCP` value exits `2` with `unsupported MCP transport`. The
+  trigger variable name itself is always `HYERA_MCP`, from that same
+  `_parsername_`, regardless of `sys.argv[0]` (so `python -m hyera.cli` or
   embedding `Lookup` in a differently-named script never changes it). The
   trigger is read before the arguments, so an MCP session never performs a
   command-line lookup. A
@@ -416,11 +416,11 @@ re-exports it too).
 - `HOCONBackend`'s include handling differs from Puppet in two deliberate
   places, both erring toward raising rather than silently doing what Puppet
   does: Puppet's `include file(...)` reads the named file (cwd-relative or
-  absolute); pyera always raises `BackendError` instead, since reading a
+  absolute); hyera always raises `BackendError` instead, since reading a
   file a data file names, from wherever the process happens to run, is
   exactly the exposure being closed. Puppet keeps an `include` directive
   written in value position (`msg = please include "x"`) as literal text;
-  pyera raises there too. Tracked as a project finding for
+  hyera raises there too. Tracked as a project finding for
   `backend_registry_and_data_loading` to weigh.
 - **A BOM behaves differently in a data file than in `hiera.yaml` vs. how
   it might look at first** — actually the *same* either way, and that is
@@ -445,7 +445,7 @@ re-exports it too).
 - A YAML **complex key** (`? [a, b]\n: 1`, or a Hash key) parses to a
   hashable tuple (recursively frozen), and a **symbol value** (`:foo`,
   `!ruby/symbol x`) parses to a `RubySymbol` — both load without error, but
-  neither is a valid Puppet lookup *value*, and `pyera` does not reject
+  neither is a valid Puppet lookup *value*, and `hyera` does not reject
   them yet (`lookup_pipeline_and_api`'s RichData check does); a value keyed
   or shaped this way currently returns successfully instead of erroring
   like Puppet.

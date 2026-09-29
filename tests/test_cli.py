@@ -12,13 +12,13 @@ import yaml
 
 duho = pytest.importorskip("duho")
 
-import pyera  # noqa: E402
-from pyera.cli import main  # noqa: E402
+import hyera  # noqa: E402
+from hyera.cli import main  # noqa: E402
 
 
 def _error_records(caplog):
     return [
-        r for r in caplog.records if r.name == "pyera" and r.levelno == logging.ERROR
+        r for r in caplog.records if r.name == "hyera" and r.levelno == logging.ERROR
     ]
 
 
@@ -158,10 +158,10 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
 
 
 def test_mcp_stdio_serves_lookup(hiera_root):
-    # PYERA_MCP=stdio runs the CLI as an MCP server exposing one tool. Both
+    # HYERA_MCP=stdio runs the CLI as an MCP server exposing one tool. Both
     # the tool name and the initialize response's serverInfo.name come from
     # duho's root tool-name resolution (Lookup._parsername_ -- see R7a),
-    # which is "pyera", not the command class's own name "Lookup".
+    # which is "hyera", not the command class's own name "Lookup".
     messages = [
         {
             "jsonrpc": "2.0",
@@ -179,7 +179,7 @@ def test_mcp_stdio_serves_lookup(hiera_root):
             "id": 2,
             "method": "tools/call",
             "params": {
-                "name": "pyera",
+                "name": "hyera",
                 "arguments": {
                     "key": "app::name",
                     "config": str(hiera_root / "hiera.yaml"),
@@ -190,28 +190,28 @@ def test_mcp_stdio_serves_lookup(hiera_root):
     ]
     src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
     proc = subprocess.run(
-        [sys.executable, "-m", "pyera"],
+        [sys.executable, "-m", "hyera"],
         input="".join(json.dumps(m) + "\n" for m in messages),
         capture_output=True,
         text=True,
-        env={**os.environ, "PYERA_MCP": "stdio", "PYTHONPATH": src},
+        env={**os.environ, "HYERA_MCP": "stdio", "PYTHONPATH": src},
         timeout=60,
     )
 
     assert proc.returncode == 0, proc.stderr
     replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
-    assert replies[1]["result"]["serverInfo"]["name"] == "pyera"
+    assert replies[1]["result"]["serverInfo"]["name"] == "hyera"
     assert replies[2]["result"]["content"] == [{"type": "text", "text": "myapp\n"}]
 
 
 def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, capsys):
     # The MCP trigger env var name must come from Lookup's own declared
     # `_parsername_`, not from sys.argv[0]'s stem -- otherwise embedding
-    # pyera's CLI in another script (or running it as `python -m pyera.cli`)
+    # hyera's CLI in another script (or running it as `python -m hyera.cli`)
     # silently changes which env var launches the MCP server, contradicting
-    # the documented PYERA_MCP contract.
+    # the documented HYERA_MCP contract.
     monkeypatch.setattr(sys, "argv", ["/x/cli.py"])
-    monkeypatch.setenv("PYERA_MCP", "bogus")
+    monkeypatch.setenv("HYERA_MCP", "bogus")
 
     rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
 
@@ -220,8 +220,8 @@ def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, ca
 
 
 def test_mcp_unknown_transport_exits_2(hiera_root, monkeypatch, capsys):
-    monkeypatch.setattr(sys, "argv", ["pyera"])
-    monkeypatch.setenv("PYERA_MCP", "bogus")
+    monkeypatch.setattr(sys, "argv", ["hyera"])
+    monkeypatch.setenv("HYERA_MCP", "bogus")
 
     rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
 
@@ -305,10 +305,10 @@ def test_invalid_scope_exit_2(hiera_root):
 
 
 def test_module_entrypoint_smoke(monkeypatch):
-    # `python -m pyera` wires through to cli.main.
-    monkeypatch.setattr(sys, "argv", ["pyera", "--help"])
+    # `python -m hyera` wires through to cli.main.
+    monkeypatch.setattr(sys, "argv", ["hyera", "--help"])
     with pytest.raises(SystemExit) as exc:
-        runpy.run_module("pyera", run_name="__main__")
+        runpy.run_module("hyera", run_name="__main__")
     assert exc.value.code == 0  # --help exits 0
 
 
@@ -382,7 +382,7 @@ def test_unexpected_exception_exit_2(hiera_root, monkeypatch, caplog, exc_type):
     def _raise(self, *a, **kw):
         raise exc_type("boom")
 
-    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "get", _raise)
 
     with caplog.at_level(logging.ERROR):
         rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
@@ -402,7 +402,7 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
     def _raise(self, *a, **kw):
         raise RecursionError("boom")
 
-    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "get", _raise)
 
     with caplog.at_level(logging.ERROR):
         rc = main(["k", "-c", str(hiera_root / "hiera.yaml"), "-v"])
@@ -417,7 +417,7 @@ def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
     def _raise_type_error(value, fmt):
         raise TypeError("x")
 
-    monkeypatch.setattr("pyera.cli._dump", _raise_type_error)
+    monkeypatch.setattr("hyera.cli._dump", _raise_type_error)
 
     with caplog.at_level(logging.ERROR):
         rc = main(
@@ -438,7 +438,7 @@ def test_plain_keyerror_is_not_a_miss(hiera_root, monkeypatch):
     def _raise(self, *a, **kw):
         raise KeyError("x")
 
-    monkeypatch.setattr(pyera.Hiera, "get", _raise)
+    monkeypatch.setattr(hyera.Hiera, "get", _raise)
 
     rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
 
@@ -452,7 +452,7 @@ def test_recursive_data_exits_2_without_traceback(make_tree):
     )
 
     proc = subprocess.run(
-        [sys.executable, "-m", "pyera", "a", "-c", str(root / "hiera.yaml")],
+        [sys.executable, "-m", "hyera", "a", "-c", str(root / "hiera.yaml")],
         capture_output=True,
         text=True,
         timeout=120,

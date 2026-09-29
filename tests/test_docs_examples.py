@@ -63,7 +63,7 @@ def test_python_examples(tour):
 
 def test_console_examples(tour, capsys):
     pytest.importorskip("duho")
-    import pyera.cli
+    import hyera.cli
 
     blocks = _blocks("console")
     assert blocks
@@ -71,9 +71,9 @@ def test_console_examples(tour, capsys):
         for chunk in body.split("$ ")[1:]:
             cmd_line, _, expected = chunk.partition("\n")
             args = shlex.split(cmd_line)
-            assert args[:3] == ["python", "-m", "pyera"]
+            assert args[:3] == ["python", "-m", "hyera"]
             capsys.readouterr()
-            rc = pyera.cli.main(args[3:])
+            rc = hyera.cli.main(args[3:])
             assert rc == 0
             out = capsys.readouterr().out
             assert out.rstrip("\n") == expected.rstrip("\n")
