@@ -4,34 +4,23 @@ origin: spec-merge/fx/m2
 queries:
   - key: "u_hash_lower"
     merge: unique
-    divergence: spec-merge/merge-value-type-validation
   - key: "u_two_hashes"
     merge: unique
-    divergence: spec-merge/merge-value-type-validation
   - key: "d_dup_lower"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "d_top_dup_lower"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "s_lower_only"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "s_higher_only_nested"
     merge: {strategy: deep, sort_merged_arrays: true}
   - key: "s_bool"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "ko_regex_prefix"
     merge: {strategy: deep, knockout_prefix: "."}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_top_scalar"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_ruby_regex"
     merge: {strategy: deep, knockout_prefix: "x+"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "h_both_arrays"
     merge: hash
-
-    divergence: spec-merge/hash-merge-nonhash-returns-empty-dict

@@ -283,6 +283,20 @@ def test_bad_config_exit_2(tmp_path):
     assert rc == 2
 
 
+def test_bad_lookup_options_merge_exits_2(make_tree, caplog):
+    # A lookup_options `merge:` hash with no `strategy` key is a MergeError,
+    # not caught anywhere but the CLI's own catch-all -- exit 2, not a crash.
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={
+            "data/common.yaml": "k: v\nlookup_options: {k: {merge: {merge: unique}}}\n"
+        },
+    )
+    rc = main(["k", "-c", str(root / "hiera.yaml")])
+    assert rc == 2
+    assert "strategy" in _error_records(caplog)[-1].getMessage()
+
+
 def test_merge_array_alias_extension(hiera_root, capsys):
     # Non-Puppet extension; this test goes with the feature: `--merge array`
     # is our own legacy alias for `unique`.

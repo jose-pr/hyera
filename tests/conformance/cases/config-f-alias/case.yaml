@@ -5,11 +5,9 @@ queries:
 - key: a
   id: a_unique
   merge: unique
-  divergence: spec-merge/alias-lookup-merge-and-lookup-options
 - key: a
   id: a_deep
   merge: deep
-  divergence: spec-merge/alias-lookup-merge-and-lookup-options
 - key: a
 - key: bool_embed
 - key: bool_bare

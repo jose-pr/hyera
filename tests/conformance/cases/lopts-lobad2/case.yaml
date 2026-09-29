@@ -4,5 +4,4 @@ description: >-
 origin: spec-lookup-options-types/lobad2
 queries:
   - key: k
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
     error_match: "wrong type"

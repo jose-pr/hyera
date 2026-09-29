@@ -18,7 +18,6 @@ queries:
 - key: hexi
 - key: boolg
 - key: dotted
-  divergence: spec-merge/merge-value-type-validation
 - key: dotted.sub
   id: dotted_sub
-  divergence: spec-merge/merge-value-type-validation
+  divergence: code-core/dotted-key-root-semantics

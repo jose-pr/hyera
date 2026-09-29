@@ -18,7 +18,7 @@ from ._hiera_config import (
 from ._interpolation import Interpolation, _format_source, _normalize_source
 from ._location_resolver import _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
-from ._merge_strategy import make_merge
+from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from ._scope import Scope
 from .backends import default_backends
@@ -26,6 +26,12 @@ from .backends import default_backends
 __all__ = ["Hiera", "ScopedHiera"]
 
 _LOGGER = logging.getLogger(__name__)
+
+#: Puppet's provider stack (``lookup_adapter.rb:296``): a key is looked up
+#: through each layer in turn, merged the same way as levels/locations
+#: within a layer. Only ``"global"`` is populated until
+#: ``config_layers_global_env_module`` fills ``environment``/``module``.
+_LAYERS = ("global", "environment", "module")
 
 
 def _puppet_type_label(value) -> str:
@@ -74,8 +80,8 @@ class ScopedHiera:
         self.hiera = hiera
         self.scope = scope
 
-    def get(self, key: str, default=None, merge=None, merge_deep=False, throw=False):
-        return self.hiera._get(key, default, merge, merge_deep, throw, self.scope)
+    def get(self, key: str, default=None, merge=None, throw=False):
+        return self.hiera._get(key, default, merge, throw, self.scope)
 
     def has(self, key: str) -> bool:
         return self.hiera._has(key, self.scope)
@@ -229,7 +235,7 @@ class Hiera(Interpolation):
         try:
             self._sources(self.scope)
             if self.default_hierarchy:
-                self._default_files(self.scope)
+                self._default_levels(self.scope)
         except (HieraLookupError, InterpolationError) as e:
             _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
 
@@ -276,47 +282,81 @@ class Hiera(Interpolation):
             self.cache[path] = data
         return path
 
-    def _get_key(self, key, paths, scope, merge):
-        """Get the value of ``key``, resolving it, walking ``paths`` in order.
+    def _lookup_levels(self, key, levels, scope, strategy):
+        """Puppet's per-location/per-level reduce (``data_hash_function_
+        provider.rb:26-33`` over a level's locations,
+        ``configured_data_provider.rb:49-61`` over the hierarchy's levels).
 
-        ``merge`` is a :class:`Merge` accumulator or ``None`` (first wins).
+        ``levels`` is a tuple with one tuple of location entries per
+        hierarchy level (:meth:`_levels_for`); ``strategy`` is an already
+        resolved :class:`~hyera._merge_strategy.MergeStrategy`. Returns the
+        merged value, or :data:`~hyera._navigation._MISSING` on a miss.
 
         ``key`` is parsed once, up front, into its root and Puppet sub-key
-        segments (``_navigation.parse_lookup_key``); each file is then
+        segments (``_navigation.parse_lookup_key``); each location is then
         looked up by the plain root and, if there are segments, walked with
         ``sub_lookup``. A ``None`` result -- whether the root itself is
-        absent/null or ``sub_lookup`` misses -- is a miss, same as before;
-        a type-mismatch or malformed-key error from either helper
-        propagates, it is never swallowed into a level skip (only a miss
-        should be, per Puppet's ``lookup()``, which raises both even with a
-        default value set).
+        absent/null or ``sub_lookup`` misses -- is a miss; a type-mismatch or
+        malformed-key error from either helper propagates, never swallowed
+        into a location/level skip (only a miss should be, per Puppet's
+        ``lookup()``, which raises both even with a default value set).
         """
-        found = False
         root, segments = (None, ()) if key is None else parse_lookup_key(key)
-        for path in paths:
-            data = self.cache[path]
-            if not isinstance(data, dict) or root not in data:
-                continue
+
+        def at_location(entry):
+            data = self.cache.get(entry, _MISSING)
+            if data is _MISSING or not isinstance(data, dict) or root not in data:
+                return _MISSING
             value = sub_lookup(key, segments, data[root]) if segments else data[root]
             if value is _MISSING or value is None:
-                continue
+                return _MISSING
+            # A sub-lookup (``%{hiera()}``/``%{lookup()}``/``%{alias()}``)
+            # never inherits the caller's merge strategy -- accumulation
+            # happens exactly once, at the top level (``interpolation.rb:84``
+            # passes merge ``nil``); ``levels`` is threaded through unchanged
+            # so a sub-lookup still searches the full hierarchy.
+            return self._resolve(value, levels, scope, None)
 
-            value = self._resolve(value, paths, scope, merge)
-            if merge is None:
-                return value
-            merge.merge_value(value)
-            found = True
+        def at_level(locations):
+            return strategy.lookup(locations, at_location)
 
-        if merge is not None and found:
-            return merge.finalize()
+        return strategy.lookup(levels, at_level)
 
-        if segments:
-            _LOGGER.debug(
-                "Lookup key '%s' not found; ensure it is provided in the "
-                "hiera data.",
-                key,
-            )
-        raise KeyError(key)
+    def _lookup_layers(self, key, levels, scope, strategy):
+        """Puppet's provider stack (``lookup_adapter.rb:332-340``): reduce
+        ``_LAYERS`` the same way, with only ``"global"`` populated."""
+
+        def at_layer(layer):
+            if layer != "global":
+                return _MISSING
+            return self._lookup_levels(key, levels, scope, strategy)
+
+        return strategy.lookup(_LAYERS, at_layer)
+
+    def _get_key(self, key, levels, scope, merge):
+        """Get the value of ``key``, resolving it against ``levels``.
+
+        ``merge`` is a raw ``merge=`` spec (name, options hash, a
+        :class:`~hyera._merge_strategy.MergeStrategy` instance, or ``None``
+        for first-match), normalized here via
+        :meth:`~hyera._merge_strategy.MergeStrategy.strategy`. Used for a
+        function-call sub-lookup (``%{hiera()}``/``%{lookup()}``/
+        ``%{alias()}``, always with ``merge=None``) and for merging
+        ``lookup_options`` (``merge="hash"``, without the layer stack) --
+        never for the main lookup, which goes through :meth:`_lookup_layers`
+        directly (see ``.get``/``._get``).
+        """
+        strategy = MergeStrategy.strategy(merge)
+        value = self._lookup_levels(key, levels, scope, strategy)
+        if value is _MISSING:
+            if key is not None and parse_lookup_key(key)[1]:
+                _LOGGER.debug(
+                    "Lookup key '%s' not found; ensure it is provided in the "
+                    "hiera data.",
+                    key,
+                )
+            raise KeyError(key)
+        return value
 
     def scoped(
         self,
@@ -349,7 +389,7 @@ class Hiera(Interpolation):
 
     def _has(self, key, scope) -> bool:
         try:
-            self._get(key, None, None, False, True, scope)
+            self._get(key, None, None, True, scope)
             return True
         except KeyNotFoundError:
             return False
@@ -372,41 +412,76 @@ class Hiera(Interpolation):
     def _sources(self, scope):
         return self._files_for(self.hierarchy, scope, "main")
 
-    def _files_for(self, hierarchy, scope, tag):
-        # A Scope value always hashes (it is immutable by construction), so
-        # there is no "unhashable context value" fallback to skip caching.
+    def _levels_for(self, hierarchy, scope, tag):
+        """Every location each hierarchy level visits, one tuple per level.
+
+        A location entry is a loaded cache-key path (an existing file,
+        already read through :meth:`_load_file`) or the plain
+        (unloaded/non-existent) candidate path itself -- a "missing"
+        location, still a location Puppet's own strategy reduce sees (see
+        ``at_location`` in :meth:`_lookup_levels`, which maps anything not
+        in ``self.cache`` to a miss). A directory location expands to its
+        file children (non-file children are dropped outright, never
+        represented at all, matching the old flattened-files behavior); a
+        glob location's matches always exist.
+
+        Cached per scope value (the filesystem walk -- glob/iterdir/stat --
+        is what's expensive, not the reduce over the result), sharing
+        ``_source_cache``/the same instance-lifetime staleness contract as
+        the old flattened list. A Scope value always hashes (it is
+        immutable by construction), so there is no "unhashable context
+        value" fallback to skip caching.
+        """
         cache_key = (tag, scope)
         cached = self._source_cache.get(cache_key)
         if cached is not None:
-            return list(cached)
+            return cached
 
-        files = []
+        levels = []
         for level in hierarchy:
+            locations = []
             for path in _resolve_level_paths(level, self.base_path, scope):
-                paths = path.iterdir() if path.is_dir() else [path]
-                for path in paths:
-                    if path.exists() and path.is_file():
-                        files.append(self._load_file(path, level.backend))
-        self._source_cache[cache_key] = list(files)
-        return files
+                if path.is_dir():
+                    for child in path.iterdir():
+                        if child.exists() and child.is_file():
+                            locations.append(self._load_file(child, level.backend))
+                elif path.exists() and path.is_file():
+                    locations.append(self._load_file(path, level.backend))
+                else:
+                    locations.append(path)
+            levels.append(tuple(locations))
+        levels = tuple(levels)
+        self._source_cache[cache_key] = levels
+        return levels
 
-    def _default_files(self, scope):
-        return self._files_for(self.default_hierarchy, scope, "default")
+    def _files_for(self, hierarchy, scope, tag):
+        """The flattened, loaded-only view of :meth:`_levels_for` -- exactly
+        what the old per-file walk returned, and what ``sources()`` shows."""
+        return [
+            path
+            for locations in self._levels_for(hierarchy, scope, tag)
+            for path in locations
+            if path in self.cache
+        ]
 
-    def _lookup_options_map(self, files, scope, tag="main"):
+    def _default_levels(self, scope):
+        return self._levels_for(self.default_hierarchy, scope, "default")
+
+    def _lookup_options_map(self, levels, scope, tag="main"):
         """The merged ``lookup_options`` mapping for a scope, or ``None``.
 
-        Merging it walks every file in the hierarchy, and a default-merge
-        ``get()`` needs it for every key — so the result is cached per
-        scope value alongside ``_source_cache``, sharing the same
-        instance-lifetime staleness contract.
+        Merging it walks every location/level, and a default-merge ``get()``
+        needs it for every key — so the result is cached per scope value
+        alongside ``_source_cache``, sharing the same instance-lifetime
+        staleness contract. Gathered through the location/level nesting
+        only, never the layer stack (``lookup_adapter.rb:241,346-380``).
         """
         cache_key = (tag, scope)
         if cache_key in self._lookup_options_cache:
             return self._lookup_options_cache[cache_key]
 
         try:
-            options = self._get_key("lookup_options", files, scope, make_merge("hash"))
+            options = self._get_key("lookup_options", levels, scope, "hash")
         except KeyError:
             options = None
         if not isinstance(options, dict):
@@ -414,26 +489,25 @@ class Hiera(Interpolation):
         self._lookup_options_cache[cache_key] = options
         return options
 
-    def _lookup_adapter(self, key, files, scope):
+    def _lookup_adapter(self, key, levels, scope):
         """Delegate to the lookup options adapter."""
-        options = self._lookup_options_map(files, scope)
+        options = self._lookup_options_map(levels, scope)
         return _extract_lookup_options_for_key(key, options)
 
-    def _lookup_options_for(self, key, files, scope):
+    def _lookup_options_for(self, key, levels, scope):
         """Return the merged ``lookup_options`` entry matching ``key``, or None.
 
         ``lookup_options`` is a reserved data key: ``{pattern: {merge, convert_to}}``.
         Higher-priority (earlier) levels win per pattern. An exact key match
         wins over a regex pattern match; the first regex match otherwise wins.
         """
-        return self._lookup_adapter(key, files, scope)
+        return self._lookup_adapter(key, levels, scope)
 
     def get(
         self,
         key: str,
         default=None,
         merge=None,
-        merge_deep=False,
         throw=False,
     ):
         """Retrieve a hiera value by fully resolving its location, against
@@ -441,57 +515,53 @@ class Hiera(Interpolation):
 
         :param key: the hiera key to retrieve.
         :param default: returned when the key is missing (unless ``throw``).
-        :param merge: merge strategy. A name (``"first"``/``"unique"``/
-            ``"hash"``/``"deep"``), a legacy type (``list``/``set``/``dict``),
-            or a hash ``{"strategy": "deep", "knockout_prefix": "--", ...}``.
-            When omitted, ``lookup_options`` in the data (if any) decides;
-            otherwise first-match wins.
-        :param merge_deep: legacy flag — with ``merge`` a type, promote a hash
-            merge to a deep merge.
+        :param merge: Puppet's merge strategy names (``"first"``/``"default"``/
+            ``"unique"``/``"hash"``/``"deep"``/``"reverse_deep"``/
+            ``"unconstrained_deep"``) or a hash ``{"strategy": "deep",
+            "knockout_prefix": "--", ...}``. When omitted, ``lookup_options``
+            in the data (if any) decides; otherwise first-match wins. Invalid
+            input (an unknown strategy, a hash with no ``strategy``, a
+            mistyped option) raises ``hyera.MergeError``.
         :param throw: raise ``KeyError`` on a missing key instead of returning
             ``default``.
         """
-        return self._get(key, default, merge, merge_deep, throw, self.scope)
+        return self._get(key, default, merge, throw, self.scope)
 
-    def _get(self, key, default, merge, merge_deep, throw, scope):
+    def _get(self, key, default, merge, throw, scope):
         if not isinstance(key, str):
             raise TypeError(
                 "lookup key must be a str, not {}".format(type(key).__name__)
             )
-        files = self._files_for(self.hierarchy, scope, "main")
+        levels = self._levels_for(self.hierarchy, scope, "main")
 
         explicit = merge is not None
-        if merge_deep and merge in (dict, "hash"):
-            merge = "deep"
-        merge_obj = make_merge(merge)
+        strategy = MergeStrategy.strategy(merge)
 
         convert_to = None
         if not explicit and key is not None:
-            opts = self._lookup_options_for(key, files, scope)
+            opts = self._lookup_options_for(key, levels, scope)
             if opts is not None:
                 if opts.get("merge") is not None:
-                    merge_obj = make_merge(opts["merge"])
+                    strategy = MergeStrategy.strategy(opts["merge"])
                 convert_to = opts.get("convert_to")
 
-        try:
-            value = self._get_key(key, files, scope, merge=merge_obj)
-        except KeyError:
-            if self.default_hierarchy:
-                try:
-                    value = self._get_key(
-                        key,
-                        self._default_files(scope),
-                        scope,
-                        merge=make_merge(merge) if explicit else merge_obj,
-                    )
-                except KeyError:
-                    if throw:
-                        raise KeyNotFoundError(key) from None
-                    return default
-            elif throw:
+        # Main lookup: the full provider stack (only "global" populated).
+        value = self._lookup_layers(key, levels, scope, strategy)
+        if value is _MISSING and self.default_hierarchy:
+            # default_hierarchy is consulted only on a main-hierarchy miss,
+            # with the same strategy and no layer wrap
+            # (``lookup_adapter.rb``'s ``lookup_default_in_module``); an
+            # explicit caller ``merge=`` still applies even when
+            # ``lookup_options`` picked the main strategy above.
+            fallback = MergeStrategy.strategy(merge) if explicit else strategy
+            value = self._lookup_levels(
+                key, self._default_levels(scope), scope, fallback
+            )
+
+        if value is _MISSING:
+            if throw:
                 raise KeyNotFoundError(key) from None
-            else:
-                return default
+            return default
 
         if convert_to is not None:
             value = convert_result(key, convert_to, value)

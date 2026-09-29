@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from hyera import HieraError, MergeError
+from hyera import Hiera, HieraError, MergeError
 from hyera._merge_strategy import (
     _MISSING,
     DeepMergeStrategy,
@@ -394,3 +394,62 @@ def test_deep_merge_mutates_only_owned_values():
     original_e2 = {"b": {"c": [1, 2]}}
     DeepMergeStrategy.INSTANCE.merge(e1, e2)
     assert e2 == original_e2
+
+
+# --- wired through the engine ---------------------------------------
+
+
+def test_merged_lookup_leaves_cache_untouched(make_tree):
+    # A merged result is freshly built per call, never a reference into
+    # ``h.cache``: mutating one result must not change a later one, or the
+    # cached parsed data itself.
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "high", "path": "high.yaml"},
+                {"name": "low", "path": "low.yaml"},
+            ]
+        },
+        files={
+            "data/high.yaml": "conf: {items: ['--a', b]}\n",
+            "data/low.yaml": "conf: {items: [c]}\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    merge = {"strategy": "deep", "knockout_prefix": "--"}
+
+    first = h.get("conf", merge=merge)
+    second = h.get("conf", merge=merge)
+    assert first == second
+
+    first["items"].append("mutated")
+    third = h.get("conf", merge=merge)
+    assert third == second
+    assert "mutated" not in third["items"]
+
+    for data in h.cache.values():
+        conf = data.get("conf")
+        if conf:
+            assert "mutated" not in conf.get("items", [])
+
+
+def test_invalid_merge_raises_merge_error(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={
+            "data/common.yaml": (
+                "k: v\nlookup_options: {k: {merge: {merge: unique}}}\n"
+            )
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+
+    with pytest.raises(MergeError):
+        h.get("k", merge="bogus")
+    # lookup_options' `{merge: unique}` has no `strategy` key.
+    with pytest.raises(MergeError):
+        h.get("k")
+    # A legacy Python type is no longer an accepted merge= spelling.
+    legacy_type_spelling = list
+    with pytest.raises(MergeError):
+        h.get("k", merge=legacy_type_spelling)

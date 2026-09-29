@@ -7,7 +7,6 @@ queries:
   - key: app::ports
     divergence: spec-lookup-options-types/lookup-options-regex-fullmatch
   - key: a::b::list
-    divergence: spec-lookup-options-types/lookup-options-pattern-order-across-levels
   - key: s::t::x
   - key: exact_k
   - key: nilk
@@ -28,7 +27,6 @@ queries:
   - key: db.port
     divergence: spec-lookup-options-types/lookup-options-root-key-and-dig
   - key: db
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: dotcv.port
     divergence: spec-lookup-options-types/lookup-options-root-key-and-dig
   - key: dotfirst.wanted

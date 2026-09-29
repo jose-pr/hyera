@@ -121,10 +121,7 @@ def test_falsy_values_are_returned(make_tree):
     assert h.get("ref_zero") == "value=0"
 
 
-def test_legacy_merge_deep_flag_extension(make_tree):
-    # Non-Puppet extension; this test goes with the feature: `merge=dict,
-    # merge_deep=True` is our own legacy convenience spelling, not part of
-    # Puppet's lookup() call forms.
+def test_deep_hash_merge(make_tree):
     root = make_tree(
         {
             "hierarchy": [
@@ -140,7 +137,7 @@ def test_legacy_merge_deep_flag_extension(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"environment": "prod"}))
-    merged = h.get("conf", merge=dict, merge_deep=True)
+    merged = h.get("conf", merge="deep")
     # prod overrides db.host but keeps db.port and the whole cache subtree.
     assert merged == {
         "db": {"host": "prod.db", "port": 5432},

@@ -64,18 +64,20 @@ private engine internals with no stability contract.
   `BackendError` (`.path` names it) for a data file that cannot be read or
   parsed. Context-free hierarchy levels are loaded by the constructor, so a
   `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
-  - **`.get(key, default=None, merge=None, merge_deep=False, throw=False)`**
+  - **`.get(key, default=None, merge=None, throw=False)`**
     — resolve `key` against the instance's bound scope. `key` must be a
     `str`; anything else raises `TypeError`. A dotted `key` follows Puppet's
     sub-key grammar (see the dotted reference gotcha below) and can itself
     raise `HieraLookupError` (a malformed key, or a type mismatch during the
     walk) — **even when a `default` was given**; only a genuine miss falls
-    back to it. `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/
-    `"deep"`), a legacy type (`list`/`set`/`dict`), or a dict `{"strategy":
+    back to it. `merge`: one of Puppet's strategy names (`"first"`/
+    `"default"`/`"unique"`/`"hash"`/`"deep"`) or a dict `{"strategy":
     "deep", "knockout_prefix": ..., "sort_merged_arrays": ...,
     "merge_hash_arrays": ...}`. Omitted → the data's `lookup_options` key
-    decides, else first-match-wins. `merge_deep`: legacy flag, promotes a
-    `dict`/`"hash"` merge to `"deep"`. `throw=True` raises `KeyNotFoundError`
+    decides, else first-match-wins. Invalid input (an unknown strategy, a
+    strategy hash with no `strategy` key, an unrecognized or mistyped
+    option, a `hash`/`unique` merge of a value the strategy rejects) raises
+    `hyera.MergeError`. `throw=True` raises `KeyNotFoundError`
     (a `KeyError`) instead of returning `default` on a miss. Falls back to
     `default_hierarchy` when the main hierarchy misses.
   - **`.has(key) -> bool`** — `True` iff `.get(key, throw=True)` would not
@@ -118,20 +120,6 @@ private engine internals with no stability contract.
   instance's own scope. Unknown attributes proxy to the wrapped `Hiera`
   (dunder names, `hiera` and `scope` themselves excepted); instances survive
   `copy`, `copy.deepcopy` and `pickle`.
-- **`make_merge(spec) -> Merge | None`** — normalize a `merge=` spec (name,
-  legacy type, or options dict) into a `Merge` accumulator, or `None` for
-  first-match. Raises `MergeError` on an unrecognized strategy/type.
-- **`Merge(strategy, knockout_prefix=None, sort_merged_arrays=False, merge_hash_arrays=False)`**
-  — accumulates matches across the hierarchy. `"unique"`: flatten
-  scalars+arrays, dedupe, first-seen order (+ optional sort). `"hash"`:
-  shallow merge, higher-priority (earlier) level wins per key. `"deep"`:
-  recursive merge — hashes recurse, lists concatenate+dedupe (or merge
-  element-wise by index with `merge_hash_arrays` when both sides are
-  equal-length lists of dicts), a scalar already set by a higher-priority
-  level is never clobbered; `knockout_prefix` marks keys/values to remove
-  post-merge. `sort_merged_arrays` applies to `"unique"` and `"deep"`; on
-  `"deep"` it runs after knockout and sorts lists nested anywhere in the
-  result, leaving any list with no total order (mixed types) in merge order.
 - **`HieraLevel`** (`NamedTuple`: `backend`, `sources`, `glob`, `mapped`) —
   one hierarchy entry. `.new(conf, backend)` builds one from a hierarchy
   dict (`path`/`paths`/`glob`/`globs`/`mapped_paths`). `.paths(base_path,
@@ -644,6 +632,29 @@ re-exports it too).
 - Nested/inline lookups (function calls resolving other keys) never inherit
   the caller's `merge=` — accumulation happens exactly once per lookup, at
   the top level.
+- **Merges follow Puppet exactly, including its quirks:** `unique` is
+  first-found's higher-priority sibling — it flattens nested arrays and
+  wraps a scalar into a one-element list, and only ever dedupes (`uniq`)
+  when a SINGLE variant was found; a value found across multiple locations
+  of a multi-location level (or multiple levels) is flattened and unioned
+  but never separately deduped beyond that union, so duplicates survive
+  when the only match came from one multi-location level. Dedup/union
+  compare with Ruby `eql?`, not Python `==`: `1`, `1.0` and `True` are three
+  distinct values. `hash` puts the lower-priority side's keys first, with
+  higher-priority values winning per key. `deep` puts lower-priority array
+  elements first (union, not concatenation) and dedupes the same way;
+  `knockout_prefix` is a regular expression (spliced in unescaped, so a
+  prefix like `.` or `x+` behaves as a pattern) that removes matching array
+  elements and blanks matching strings during each merge step — it never
+  removes a hash key, only a same-named *value*. A value found only once
+  (no second location/level to merge against) is never asserted against
+  the strategy's type rules and is returned exactly as found, markers and
+  order included. `sort_merged_arrays` raises `MergeError` when Ruby's
+  `<=>` cannot order two elements of an array it actually merged (nil vs. a
+  number, a Boolean vs. anything, mismatched numeric/string types).
+  Invalid `merge=` input (an unknown strategy name, a strategy hash with no
+  `strategy` key, an unrecognized or mistyped option) raises
+  `hyera.MergeError`, never a bare `ValueError`/`TypeError`.
 - A missing bare `%{var}` interpolation resolves to `""` (matches Ruby
   Hiera); a missing function-call argument raises `InterpolationError`
   instead — the two failure modes are not symmetric.

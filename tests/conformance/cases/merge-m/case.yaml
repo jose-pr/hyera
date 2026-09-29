@@ -6,7 +6,6 @@ queries:
     merge: unique
   - key: "u_nested"
     merge: unique
-    divergence: spec-merge/unique-no-flatten
   - key: "u_mixed"
     merge: unique
   - key: "u_hash_in_array"
@@ -20,7 +19,6 @@ queries:
     merge: unique
   - key: "u_single_nested"
     merge: unique
-    divergence: spec-merge/unique-no-flatten
   - key: "u_single_scalar"
     merge: unique
   - key: "u_empty"
@@ -31,32 +29,25 @@ queries:
     merge: unique
   - key: "u_bool_int"
     merge: unique
-    divergence: spec-merge/ruby-equality-in-dedupe
   - key: "u_float_int"
     merge: unique
-    divergence: spec-merge/ruby-equality-in-dedupe
   - key: "u_zero_false"
     merge: unique
-    divergence: spec-merge/ruby-equality-in-dedupe
   - key: "u_str_num"
     merge: unique
   - key: "h_basic"
     merge: hash
   - key: "h_non_hash_lower"
     merge: hash
-    divergence: spec-merge/merge-value-type-validation
   - key: "h_non_hash_higher"
     merge: hash
-    divergence: spec-merge/merge-value-type-validation
   - key: "h_nil_higher"
     merge: hash
-    divergence: spec-merge/merge-value-type-validation
+    divergence: code-core/null-value-treated-as-missing
   - key: "h_single_scalar"
     merge: hash
-    divergence: spec-merge/hash-merge-nonhash-returns-empty-dict
   - key: "h_single_array"
     merge: hash
-    divergence: spec-merge/hash-merge-nonhash-returns-empty-dict
   - key: "h_empty"
     merge: hash
   - key: "h_nil_values"
@@ -65,33 +56,26 @@ queries:
     merge: hash
   - key: "d_basic"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "d_top_arrays"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "d_scalar_top"
     merge: deep
   - key: "d_hash_vs_array"
     merge: deep
   - key: "d_array_vs_hash"
     merge: deep
-    divergence: spec-merge/deep-mismatched-nil-false-at-key
   - key: "d_array_vs_scalar"
     merge: deep
-    divergence: spec-merge/deep-mismatched-nil-false-at-key
   - key: "d_scalar_vs_array"
     merge: deep
   - key: "d_nil_higher"
     merge: deep
-    divergence: spec-merge/deep-mismatched-nil-false-at-key
   - key: "d_nil_lower"
     merge: deep
   - key: "d_array_vs_nil"
     merge: deep
-    divergence: spec-merge/deep-mismatched-nil-false-at-key
   - key: "d_false_lower"
     merge: deep
-    divergence: spec-merge/deep-mismatched-nil-false-at-key
   - key: "d_false_higher"
     merge: deep
   - key: "d_top_nil_higher"
@@ -106,19 +90,16 @@ queries:
     merge: deep
   - key: "d_dup_in_array"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "d_dup_single"
     merge: deep
   - key: "d_aoh"
     merge: deep
   - key: "d_three"
     merge: deep
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "d_order"
     merge: deep
   - key: "d_bool_int"
     merge: deep
-    divergence: spec-merge/ruby-equality-in-dedupe
   - key: "d_empty_hash_higher"
     merge: deep
   - key: "d_empty_str_higher"
@@ -129,78 +110,58 @@ queries:
     merge: deep
   - key: "ko_hash_key"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_hash_key_nested"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_array_nested"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_array_top"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_lower_level"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_single_level"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_single_level_top"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_naked_array"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "ko_naked_scalar"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_prefixed_scalar"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_prefixed_scalar_vs_scalar"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_value_vs_hash"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-hash-key-and-scalar-semantics
   - key: "ko_int_array"
     merge: {strategy: deep, knockout_prefix: "--"}
   - key: "ko_three"
     merge: {strategy: deep, knockout_prefix: "--"}
-    divergence: spec-merge/knockout-array-scope-and-timing
   - key: "s_nested"
     merge: {strategy: deep, sort_merged_arrays: true}
   - key: "s_single_level_top"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "s_single_level_nested"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "s_unmerged_nested"
     merge: {strategy: deep, sort_merged_arrays: true}
   - key: "s_mixed"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "s_hashes"
     merge: {strategy: deep, sort_merged_arrays: true}
-    divergence: spec-merge/sort-merged-arrays-scope-and-errors
   - key: "s_top"
     merge: {strategy: deep, sort_merged_arrays: true}
   - key: "mha_equal"
     merge: {strategy: deep, merge_hash_arrays: true}
   - key: "mha_src_longer"
     merge: {strategy: deep, merge_hash_arrays: true}
-    divergence: spec-merge/merge-hash-arrays-unequal-length
   - key: "mha_dest_longer"
     merge: {strategy: deep, merge_hash_arrays: true}
-    divergence: spec-merge/merge-hash-arrays-unequal-length
   - key: "mha_top"
     merge: {strategy: deep, merge_hash_arrays: true}
   - key: "mha_empty_src"
     merge: {strategy: deep, merge_hash_arrays: true}
   - key: "mha_mixed"
     merge: {strategy: deep, merge_hash_arrays: true}
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
   - key: "dot_first.b"
     id: "dot_first"
     divergence: code-core/dotted-key-root-semantics
@@ -215,7 +176,6 @@ queries:
   - key: "dot_deep.b"
     id: "dot_deep"
     merge: deep
-    divergence: code-core/dotted-key-root-semantics
   - key: "f_nil"
     divergence: code-core/null-value-treated-as-missing
   - key: "f_nil_only"

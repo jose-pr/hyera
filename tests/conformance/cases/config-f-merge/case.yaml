@@ -5,7 +5,6 @@ queries:
 - key: u
   id: u_unique
   merge: unique
-  divergence: spec-merge/unique-no-flatten
 - key: single
   id: single_unique
   merge: unique
@@ -15,36 +14,26 @@ queries:
 - key: d
   id: d_deep
   merge: deep
-  divergence:
-  - spec-merge/deep-array-merge-order-and-dedupe
-  - spec-merge/deep-mismatched-nil-false-at-key
 - key: d
   id: d_deep_sort
   merge:
     strategy: deep
     sort_merged_arrays: true
-  divergence: spec-merge/deep-mismatched-nil-false-at-key
 - key: single
   id: single_deep_sort
   merge:
     strategy: deep
     sort_merged_arrays: true
-  divergence: spec-merge/sort-merged-arrays-scope-and-errors
 - key: mh
   id: mh_deep_hasharr
   merge:
     strategy: deep
     merge_hash_arrays: true
-  divergence: spec-merge/merge-hash-arrays-unequal-length
 - key: mh
   id: mh_deep
   merge: deep
-  divergence: spec-merge/deep-array-merge-order-and-dedupe
 - key: d
   id: d_deep_ko
   merge:
     strategy: deep
     knockout_prefix: --
-  divergence:
-  - spec-merge/deep-array-merge-order-and-dedupe
-  - spec-merge/knockout-hash-key-and-scalar-semantics

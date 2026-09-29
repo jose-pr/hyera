@@ -16,4 +16,3 @@ queries:
   merge:
     strategy: deep
     knockout_prefix: --
-  divergence: spec-layers-backends/no-config-layers

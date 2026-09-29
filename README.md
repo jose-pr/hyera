@@ -28,8 +28,8 @@ h = Hiera("hiera.yaml", scope=Scope(facts={"os": {"family": "Debian"}}, environm
 h.get("ntp::servers")
 
 # Merge across the whole hierarchy:
-h.get("classes", merge=list)                 # array merge
-h.get("users", merge=dict, merge_deep=True)  # deep hash merge
+h.get("classes", merge="unique")             # flatten + dedupe arrays
+h.get("users", merge="deep")                 # deep hash merge
 
 # Missing keys return the default (with throw=True they raise KeyNotFoundError, a KeyError):
 h.get("missing", default="fallback")
@@ -139,12 +139,12 @@ not intend to resolve.
 
 ### Merging and `lookup_options`
 
-Pass `merge=` to `get()` — a strategy name, a legacy type, or a hash of deep
+Pass `merge=` to `get()` — one of Puppet's strategy names, or a hash of deep
 options:
 
 ```python
 h.get("classes", merge="unique")                 # flatten + dedupe arrays
-h.get("classes", merge=list)                      # legacy alias for unique
+h.get("app::name", merge="default")               # explicit first-match
 h.get("conf", merge="deep")                       # recursive hash merge
 h.get("conf", merge={"strategy": "deep",          # deep-merge options
                      "knockout_prefix": "--",
@@ -248,8 +248,8 @@ next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted
-subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
-`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
+subkeys and alias native-type preservation · merges `first`/`default`/`unique`/
+`hash`/`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
 `lookup_options` (per-key/regex merge strategy + `convert_to`).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
@@ -285,6 +285,10 @@ with one deliberate exception:
 - **`Hiera(path)` raises `ConfigError` when the file does not exist.**
   Puppet then falls back to its built-in default configuration; ask for
   that explicitly with `Hiera(None, base_path=...)` here.
+- **A deep-merge `knockout_prefix` that Python's `re` module cannot compile
+  raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
+  about a redundant nested repeat operator) and uses it as a regex; Python
+  refuses to compile it at all.
 
 ## Notes
 

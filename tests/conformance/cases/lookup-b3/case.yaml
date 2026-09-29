@@ -33,13 +33,11 @@ queries:
   merge:
     strategy: deep
     knockout_prefix: --
-  divergence: spec-merge/knockout-hash-key-and-scalar-semantics
 - key: ko_str
   id: ko_str_deep_ko
   merge:
     strategy: deep
     knockout_prefix: --
-  divergence: spec-merge/knockout-hash-key-and-scalar-semantics
 - key: sm
   id: sm_deep_sort
   merge:
@@ -48,7 +46,6 @@ queries:
 - key: top_list
   id: top_list_deep
   merge: deep
-  divergence: spec-merge/deep-array-merge-order-and-dedupe
 - key: conv_bad
 - key: conv_bool
 - key: conv_bool_yes

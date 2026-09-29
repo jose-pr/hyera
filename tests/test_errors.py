@@ -17,7 +17,6 @@ from hyera import (
     InterpolationError,
     KeyNotFoundError,
     MergeError,
-    make_merge,
 )
 
 
@@ -88,13 +87,6 @@ def test_non_str_key_raises_type_error(hiera_root):
 
 
 def test_bad_merge_strategy_raises_merge_error(make_tree):
-    with pytest.raises(MergeError) as excinfo:
-        make_merge("bogus")
-    assert str(excinfo.value) == "Unknown merge strategy: 'bogus'"
-
-    with pytest.raises(MergeError):
-        make_merge(["deep"])
-
     root = make_tree(
         {
             "hierarchy": [

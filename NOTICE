@@ -16,7 +16,6 @@ The files derived from phiera are:
     src/hyera/_hiera_config.py       (from phiera/phiera.py)
     src/hyera/_location_resolver.py  (from phiera/phiera.py)
     src/hyera/_interpolation.py      (from phiera/phiera.py)
-    src/hyera/_merge_strategy.py     (from phiera/phiera.py)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -34,6 +33,7 @@ The files ported from Puppet are:
     src/hyera/_interpolation.py   (from puppet/pops/lookup/interpolation.rb)
     src/hyera/_navigation.py      (from puppet/pops/lookup/sub_lookup.rb, lookup_key.rb)
     src/hyera/_lookup_adapter.py  (from puppet/pops/lookup/lookup_adapter.rb)
+    src/hyera/_merge_strategy.py  (from puppet/pops/merge_strategy.rb)
     src/hyera/backends.py         (from puppet/functions/yaml_data.rb)
     src/hyera/_yaml_loader.py     (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
     src/hyera/_types.py           (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
@@ -44,6 +44,20 @@ The files ported from Puppet are:
     src/hyera/_scope.py           (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
                                     context/trusted_information.rb, node/facts.rb)
     src/hyera/_facts.py           (from puppet/application/lookup.rb, util/yaml.rb)
+
+Each was modified by jose-pr and carries a notice saying so.
+
+This project also ports selected code from the deep_merge gem, by Steve
+Midgley and Daniel DeLeo:
+
+    https://github.com/danielsdeleo/deep_merge
+
+deep_merge is licensed under the MIT License. A copy of that license is
+included at LICENSES/deep_merge-MIT.txt.
+
+The files ported from deep_merge are:
+
+    src/hyera/_merge_strategy.py  (from deep_merge/lib/deep_merge/core.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 

@@ -20,13 +20,11 @@ queries:
 - key: m_alias
   id: m_alias_unique
   merge: unique
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
 - key: ko_arr
   id: ko_arr_deep_ko
   merge:
     strategy: deep
     knockout_prefix: KO
-  divergence: spec-merge/deep-array-merge-order-and-dedupe
 - key: dm
   id: dm_deep
   merge: deep
@@ -37,8 +35,6 @@ queries:
 - key: h_alias
   id: h_alias_hash
   merge: hash
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
 - key: h_alias
   id: h_alias_deep
   merge: deep
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options

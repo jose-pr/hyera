@@ -3,7 +3,7 @@ mapped_paths, default_hierarchy, convert_to."""
 
 import pytest
 
-from hyera import ConfigError, Hiera, Scope, Sensitive, make_merge
+from hyera import ConfigError, Hiera, Scope, Sensitive
 
 # --- version ---------------------------------------------------------
 
@@ -106,11 +106,6 @@ def test_merge_hash_arrays(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     merged = h.get("rows", merge={"strategy": "deep", "merge_hash_arrays": True})
     assert merged == [{"name": "a", "v": 1, "extra": 1}, {"name": "b", "v": 2}]
-
-
-def test_make_merge_first_is_none():
-    assert make_merge("first") is None
-    assert make_merge(None) is None
 
 
 # --- lookup_options --------------------------------------------------

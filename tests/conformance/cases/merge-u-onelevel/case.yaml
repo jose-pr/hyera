@@ -7,6 +7,5 @@ queries:
     merge: unique
   - key: n
     merge: unique
-    divergence: spec-merge/unique-no-flatten
   - key: s
     merge: unique

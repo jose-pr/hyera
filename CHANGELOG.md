@@ -6,6 +6,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The `default` merge strategy (first match, as in Puppet).
+
+### Changed
+
+- Merges now follow Puppet 8: deep merges put lower-priority array elements
+  first and drop duplicates on both sides; merged hashes list lower-priority
+  keys first; `unique` flattens nested arrays; duplicates are found with
+  Ruby equality, so `1`, `1.0` and `true` stay distinct; `knockout_prefix`
+  is a regular expression that removes array elements and blanks strings
+  during each merge step and never removes hash keys; `merge_hash_arrays`
+  merges lists of any length; `sort_merged_arrays` sorts only merged
+  arrays.
+- Invalid merge input raises `hyera.MergeError`: an unknown strategy, a
+  merge hash without `strategy`, an unknown or mistyped option, a `hash`
+  merge of a non-hash, a `unique` merge of a hash, and an array
+  `sort_merged_arrays` cannot order.
+
+### Removed
+
+- `hyera.Merge` and `hyera.make_merge`: pass a strategy name or a
+  `{"strategy": ...}` hash as `merge=`.
+- `merge=list`/`set`/`dict`: use `"unique"` or `"hash"`.
+- The `merge_deep=` argument of `get()`: pass `merge="deep"`.
+- `sort_merged_arrays` with `unique`, `merge` as an alias of `strategy` in a
+  merge hash, and lenient sorting of arrays that cannot be ordered.
+
 ## [0.0.0a0] - 2026-09-29
 
 ### Added

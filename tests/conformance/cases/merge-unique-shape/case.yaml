@@ -6,12 +6,7 @@ origin: critic-puppet-coverage/unique_shape
 queries:
   - key: k
     merge: unique
-    divergence: critic-puppet-coverage/unique-merge-dedupe-depends-on-hierarchy-shape
   - key: n
     merge: unique
-    divergence:
-      - critic-puppet-coverage/unique-merge-dedupe-depends-on-hierarchy-shape
-      - spec-merge/unique-no-flatten
   - key: s
     merge: unique
-    divergence: critic-puppet-coverage/unique-merge-dedupe-depends-on-hierarchy-shape

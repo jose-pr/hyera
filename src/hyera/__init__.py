@@ -23,7 +23,6 @@ from .core import (
 )
 from ._facts import facts_from_facter, load_facts
 from ._hiera_config import HieraLevel
-from ._merge_strategy import Merge, make_merge
 from ._scope import Scope
 from ._types import Sensitive
 
@@ -33,12 +32,10 @@ __all__ = [
     "Hiera",
     "ScopedHiera",
     "HieraLevel",
-    "Merge",
     "Scope",
     "Sensitive",
     "load_facts",
     "facts_from_facter",
-    "make_merge",
     "default_backends",
     "Backend",
     "YAMLBackend",

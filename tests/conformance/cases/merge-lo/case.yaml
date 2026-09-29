@@ -4,7 +4,6 @@ origin: spec-merge/fx/lo
 queries:
   - key: "lo_unique"
   - key: "lo_deep_ko"
-    divergence: spec-merge/merged-hash-key-order
   - key: "lo_hi_wins"
   - key: "lo_shallow"
   - key: "lo_re_one"
@@ -27,5 +26,3 @@ queries:
   - key: "lo_unique"
     id: "lo_unique_explicit_deep"
     merge: deep
-
-    divergence: spec-merge/deep-array-merge-order-and-dedupe
