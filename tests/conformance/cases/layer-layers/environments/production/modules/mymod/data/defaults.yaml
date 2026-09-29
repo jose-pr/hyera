@@ -1,0 +1,7 @@
+---
+mymod::dflt: d1
+mymod::dflt_arr: [d1]
+mymod::only_mod: default-should-not-win
+lookup_options:
+  mymod::dflt_opt: {merge: unique}
+mymod::dflt_opt: [o1]

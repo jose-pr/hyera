@@ -1,0 +1,7 @@
+---
+shared: global
+mymod::shared: global
+mymod::merged: {g: 1}
+mymod::arr: [g]
+lookup_options:
+  mymod::arr: {merge: unique}

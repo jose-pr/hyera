@@ -1,0 +1,48 @@
+description: 'The full global/environment/module layer stack: a module-scoped key
+  (mymod::x) is looked up in the module''s own hierarchy first, then its default_hierarchy,
+  then the environment layer, then the global layer; merges span all three layers;
+  an unqualified key inside a module''s data and a key qualified to a different module
+  are never module-scoped.'
+origin: spec-layers-backends/layers
+puppet_args:
+- --environment
+- production
+queries:
+- key: shared
+  divergence: spec-layers-backends/no-config-layers
+- key: env_only
+  divergence: spec-layers-backends/no-config-layers
+- key: env_os
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::shared
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::only_mod
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::env_vs_mod
+  divergence: spec-layers-backends/no-config-layers
+- key: unqualified_in_module
+  divergence: spec-layers-backends/no-config-layers
+- key: other::key
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dflt
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dflt_arr
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dflt_opt
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::merged
+  id: mymod_merged_deep
+  merge: deep
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::arr
+  id: mymod_arr_unique
+  merge: unique
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::only_mod
+  id: mymod_only_mod_unique
+  merge: unique
+  divergence: spec-layers-backends/no-config-layers
+- key: mymod::dflt_arr
+  id: mymod_dflt_arr_unique
+  merge: unique
+  divergence: spec-layers-backends/no-config-layers

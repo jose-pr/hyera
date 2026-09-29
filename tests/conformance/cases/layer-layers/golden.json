@@ -1,0 +1,237 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a0f57ea540f7c7bcb7b7cb4ec040921763f12dcc9b8c4db7bd43a7b25b4b909d",
+  "results": {
+    "shared": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "shared"
+      ],
+      "status": "found",
+      "value": "global"
+    },
+    "env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "env_only"
+      ],
+      "status": "found",
+      "value": "e"
+    },
+    "env_os": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "env_os"
+      ],
+      "status": "found",
+      "value": "redhat"
+    },
+    "mymod::shared": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::shared"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": "global"
+    },
+    "mymod::only_mod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::only_mod"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "mymod::env_vs_mod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::env_vs_mod"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": "env"
+    },
+    "unqualified_in_module": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "unqualified_in_module"
+      ],
+      "status": "not_found"
+    },
+    "other::key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "other::key"
+      ],
+      "status": "not_found"
+    },
+    "mymod::dflt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dflt"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": "d1"
+    },
+    "mymod::dflt_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dflt_arr"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": [
+        "d1"
+      ]
+    },
+    "mymod::dflt_opt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "mymod::dflt_opt"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": [
+        "o1",
+        "o2"
+      ]
+    },
+    "mymod_merged_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--merge",
+        "deep",
+        "mymod::merged"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": {
+        "m": 3,
+        "e": 2,
+        "g": 1
+      }
+    },
+    "mymod_arr_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--merge",
+        "unique",
+        "mymod::arr"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": [
+        "g",
+        "e",
+        "m"
+      ]
+    },
+    "mymod_only_mod_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--merge",
+        "unique",
+        "mymod::only_mod"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": [
+        "m"
+      ]
+    },
+    "mymod_dflt_arr_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--merge",
+        "unique",
+        "mymod::dflt_arr"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "found",
+      "value": [
+        "d1"
+      ]
+    }
+  }
+}
