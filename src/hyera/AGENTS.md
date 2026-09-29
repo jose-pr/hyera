@@ -237,28 +237,60 @@ is a `Backend` subclass, found by name rather than passed around directly.
   Ruby hocon, which has no duration/size type at all — instead of becoming
   a `datetime.timedelta` (which used to crash `-o yaml`); the *shared*
   `pyhocon` module (what a third party importing `pyhocon` directly sees)
-  is never touched. A root value that is not an object (e.g. a top-level
-  `[1, 2]`) raises `BackendError("... has type LIST rather than object at
-  file root")`. `.loads` returns plain `dict`/`list` (`ConfigTree`/
-  `ConfigList` converted recursively). Invalid UTF-8 (handled by the base
-  `.load`), and any other pyhocon parse failure, raise `BackendError` with
-  a one-line message (`str(e)`, whitespace-collapsed), no exception chain.
-  `include` directives are
-  sanitized before pyhocon ever parses the text, so pyhocon's own include
-  machinery (file reads relative to the process cwd, `http(s)`/`file` URL
-  fetches) never runs: a plain `include "..."` contributes nothing,
-  matching Puppet; every other form — `file(...)`, `url(...)`,
-  `classpath(...)`, `required(...)`, `package(...)`, any other `name(...)`,
-  a case-mismatched keyword (`INCLUDE ...`), a bare `include` with nothing
-  valid after it, or an `include` directive in value position — raises
-  `BackendError` instead (two of these, `file()` and value position,
-  differ from what Puppet itself does; see the gotcha below). `${VAR}`
-  substitutions fall back to environment variables, as in Puppet. As a
-  fail-closed backstop, pyhocon's own include-resolving methods
-  (`parse_file`/`parse_URL`/`resolve_package_path`) also raise for the
-  duration of `.loads()`, so an undiscovered gap in the text scanner still
-  cannot read a file or reach the network; they behave normally for any
-  other pyhocon use in the same process, before or after.
+  is never touched, except for two deprecation shims scoped to the private
+  copy only: its `codecs`/`logger` names are replaced so pyhocon 0.3.63's
+  own `codecs.open()`/`Logger.warn()` calls (both deprecated on Python
+  3.14+) never raise under this project's `filterwarnings = ["error"]`
+  when a real `include file(...)` resolves. A root value that is not an
+  object (e.g. a top-level `[1, 2]`) raises `BackendError("... has type
+  LIST rather than object at file root")`. `.loads` returns plain
+  `dict`/`list` (`ConfigTree`/`ConfigList` converted recursively). Invalid
+  UTF-8 (handled by the base `.load`), and any other pyhocon parse
+  failure, raise `BackendError` with a one-line message (`str(e)`,
+  whitespace-collapsed), no exception chain.
+
+  `__init__(conf=None, *, strict=None, hocon_includes=None)` —
+  `hocon_includes` (hyera's own extension, not Puppet vocabulary):
+  `None` (the default) reads `conf.get("hocon_includes", True)`, so a
+  hierarchy entry/`defaults` key of the same name reaches it the same way
+  `datadir`/`data_dir` already do; an explicit `True`/`False` overrides
+  `conf`. `self.hocon_includes` (bool) selects which of two scanners
+  `.loads` runs before pyhocon ever parses the text:
+
+  - **`True` (default, matches Puppet's own `hocon_data`):** a plain
+    `include "..."` contributes nothing; `include file(...)` (relative or
+    absolute, also inside a nested object or after another key) is left
+    untouched, so pyhocon's own resolution — which already reads the file
+    relative to the process cwd or absolute, exactly as Ruby hocon does —
+    runs for real (a missing, non-required target silently contributes
+    nothing, matching Puppet); a directive in value position (including
+    inside a `[...]` array), of any spelling/case, is defanged into an
+    ordinary quoted token so the result is the exact literal text Puppet
+    keeps; every other key-position form — `url(...)`, `classpath(...)`,
+    `required(...)` (whether or not its target exists), `package(...)`,
+    any other `name(...)`, a space before the paren, a case-mismatched
+    keyword (`INCLUDE ...`, a dotless-i look-alike), or a bare `include`
+    with nothing valid after it — raises `BackendError`, matching
+    Puppet's own parse/method errors (Ruby hocon implements none of
+    them). One accepted divergence: Puppet's `include file("*.conf")`
+    never globs (contributes nothing); pyhocon's own resolution does and
+    includes every match (`hocon-file-include-globs-where-puppet-does-not`).
+  - **`False` (opt-in restriction, the pre-fidelity behaviour):** every form
+    but a plain quoted include raises, `include file(...)` included.
+
+  `${VAR}` substitutions fall back to environment variables, as in
+  Puppet, in either mode. As a fail-closed backstop, pyhocon's own
+  include-resolving methods (`parse_file`/`parse_URL`/
+  `resolve_package_path`) also raise for the duration of `.loads()`, for
+  whichever forms the active mode does not intend to resolve for real
+  (`url`/`package` always; `file` too when `hocon_includes` is `False`),
+  so an undiscovered gap in the text scanner still cannot read a file or
+  reach the network; they behave normally for any other pyhocon use in
+  the same process, before or after. This backstop wraps **both** the
+  shared `pyhocon.config_parser` module and hyera's own private copy
+  (`_hocon_parser()`'s `mod` — a *different* `ConfigFactory`/
+  `ConfigParser` class from the shared module's own, since
+  `.loads` always parses through the private copy).
 - **`SopsBackend`** — `NAMES = {"function": ("sops_data", "sops",
   NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`. Not a `YAMLBackend`
   subclass; `__init__(conf=None, *, strict=None, format=None)` —
@@ -440,15 +472,24 @@ re-exports it too).
   literally contains dots takes precedence over the nested walk. An
   unresolvable reference skips the hierarchy level (in a path) or
   interpolates as `""` (in a value) — it never raises.
-- `HOCONBackend`'s include handling differs from Puppet in two deliberate
-  places, both erring toward raising rather than silently doing what Puppet
-  does: Puppet's `include file(...)` reads the named file (cwd-relative or
-  absolute); hyera always raises `BackendError` instead, since reading a
-  file a data file names, from wherever the process happens to run, is
-  exactly the exposure being closed. Puppet keeps an `include` directive
-  written in value position (`msg = please include "x"`) as literal text;
-  hyera raises there too. Tracked as a project finding for
-  `backend_registry_and_data_loading` to weigh.
+- `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
+  by default (2026-09-29 — see the API section above): `include
+  file(...)` really reads the named file (cwd-relative or absolute), and
+  a directive in value position (`msg = please include "x"`) is kept as
+  literal text, both confirmed against the real oracle (Puppet 8.10.0 /
+  Ruby hocon 1.4.0, WSL). The stricter pre-fidelity behaviour (raise on both)
+  is kept as the `hocon_includes=False` opt-in. One measured, accepted
+  divergence: `include file("*.conf")` globs under pyhocon's own
+  resolution where Puppet's never does (see the API section).
+  `hocon_include_parity` closed the two findings this reversed
+  (`hocon-data-include-file-and-value-position-includes-raise-pu`,
+  `hocon-array-value-position-include-raises-vs-puppet-literal`) and
+  found, in the same pass, that the fail-closed pyhocon-include guard had
+  never actually wrapped the module `HOCONBackend.loads` parses through
+  (`_hocon_parser()`'s private copy has its own, distinct
+  `ConfigFactory`/`ConfigParser` classes — `is not` the shared module's) —
+  a gap dating to `json_hocon_loaders`'s private-copy fix for duration
+  parsing, now closed by installing the guard on that copy too.
 - **A BOM behaves differently in a data file than in `hiera.yaml` vs. how
   it might look at first** — actually the *same* either way, and that is
   itself the gotcha: `puppet lookup` reads hiera.yaml via `HieraConfig` ->

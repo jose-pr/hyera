@@ -85,10 +85,21 @@ A third-party backend registers itself the same way, by subclassing
 look a backend up by name, and `Hiera(backends=[...])` restricts a lookup to
 an explicit allow-list of classes.
 
-`HOCONBackend` sanitizes `include` directives before parsing, matching
-Puppet: a plain `include "file"` contributes nothing. `include file(…)`,
-`url(…)`, `classpath(…)` and `required(…)` all raise `BackendError`
-instead of reading a file or fetching a URL.
+`HOCONBackend` resolves `include` directives exactly as Puppet's own
+`hocon_data` does by default: a plain `include "file"` contributes
+nothing; `include file(…)` really reads the file (relative to the process
+working directory, or absolute); a directive in value position (including
+inside a `[...]` array) is kept as literal text; `url(…)`, `classpath(…)`,
+`required(…)`, `package(…)` and a case-mismatched keyword all raise
+`BackendError`, matching Puppet's own parse/method errors for those forms.
+Pass `hocon_includes=False` to `HOCONBackend` (or set `hocon_includes:
+false` on the hierarchy entry/`defaults` — hyera's own extension, not
+Puppet vocabulary) to restore the stricter, pre-fidelity behaviour instead:
+every form but a plain quoted include raises, `include file(…)` included.
+In either mode, pyhocon's own include-resolving methods stay wrapped as a
+fail-closed backstop, so an undiscovered gap in the text scanner still
+cannot read a file or reach the network for a form the active mode does
+not intend to resolve.
 
 ### Merging and `lookup_options`
 
@@ -203,8 +214,7 @@ subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 
 Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
-`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive` ·
-HOCON `include file()` (Puppet reads the file; hyera always raises instead).
+`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
 
 ## Differences from Puppet
 
@@ -225,6 +235,11 @@ with one deliberate exception:
   `Data`/`RichData` is also unsupported (`parse_type` resolves only the
   five Puppet static-loader aliases; any other capitalized name becomes an
   unresolved type reference).
+- **`hocon_data`'s `include file("*.conf")` globs.** Puppet's own
+  `hocon_data` never expands a glob in a `file(...)` argument (it
+  contributes nothing); hyera's default lets pyhocon's own resolution run
+  for real, which does glob and includes every match. Every other
+  `include` form matches Puppet exactly (see "Backends" above).
 
 ## Notes
 

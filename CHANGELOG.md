@@ -46,6 +46,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   install "hyera[hocon]"`) are now double-quoted throughout; the old
   single-quoted form fails when pasted into `cmd.exe`, where single quotes
   are literal.
+- A real `include file(...)`/`include url(...)` resolution (now the
+  default -- see the HOCON `include` entry under Security) no longer
+  crashes on Python 3.14+: pyhocon 0.3.63 itself still calls the
+  deprecated `codecs.open()` and `Logger.warn()`, which raise
+  `DeprecationWarning` there, turned into a fatal error by this project's
+  own `filterwarnings = ["error"]`. Both calls are shimmed in hyera's
+  already-private `pyhocon.config_parser` module copy; the shared
+  `pyhocon` module, and every other caller of it, are unaffected.
 
 ### Security
 
@@ -78,12 +86,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   literal `--`, so a name starting with `-` can never become a `sops`
   option; the `sops` found on `PATH` is executed by its full resolved
   path, and a `sops.bat`/`sops.cmd` shim is refused.
-- HOCON data files no longer read files or fetch URLs through `include`.
-  A plain `include "file"` contributes nothing, as in Puppet;
-  `include file(...)`, `url(...)`, `classpath(...)`, `required(...)` and
-  other forms raise `BackendError`. Previously pyhocon resolved plain and
-  `file()` includes against the process working directory and fetched
-  `http(s)` URLs named in a data file.
+- HOCON `include` directives resolve exactly as Puppet's own `hocon_data`
+  does by default (hyera never does *less* than Puppet by default,
+  only as an explicit opt-in): a plain `include "file"` contributes
+  nothing, as in Puppet; `include file(...)` really reads the file
+  (relative to the process working directory, or absolute), as Puppet's
+  `hocon_data` does; a directive in value position (including inside a
+  `[...]` array) is kept as literal text, as Puppet keeps it; and
+  `url(...)`, `classpath(...)`, `required(...)`, `package(...)`, a
+  case-mismatched keyword, or a bare `include` with nothing valid after
+  it all raise `BackendError`, matching Puppet's own parse/method errors
+  for those forms (Ruby hocon implements none of them). The pre-fidelity
+  refusal -- every form other than a plain quoted include raises,
+  `include file(...)` included -- is kept as an opt-in:
+  `HOCONBackend(hocon_includes=False)`, or a `hocon_includes: false` key
+  on the hierarchy entry/`defaults` (hyera's own extension, not Puppet
+  vocabulary). One accepted divergence: Puppet's `include file("*.conf")`
+  never globs; pyhocon's own resolution does and includes every match.
 - `sops` is refused when it resolves to a relative path (e.g. from the
   current directory or a relative `PATH` entry), closing a gap where
   Python 3.9's `shutil.which` could still return such a path even with the
@@ -100,11 +119,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of ordinary unquoted text (as in a URL-shaped value) rather than a
   comment could each let a real `include file(...)`/`url(...)` reach
   pyhocon's own include machinery. `include` inside a `[...]` array is now
-  also treated as value position (raises) rather than being blanked into a
-  shorter array. As a fail-closed backstop, pyhocon's own include-resolving
-  methods now also raise for the duration of a HOCON parse, so even an
-  undiscovered scanner gap cannot read a file or reach the network; they
-  behave normally for any other use of pyhocon in the same process.
+  also treated as value position (kept as literal text by default, raised
+  under the `hocon_includes=False` opt-in) rather than being blanked into
+  a shorter array. As a fail-closed backstop, pyhocon's own
+  include-resolving methods raise for the duration of a HOCON parse for
+  every form the active mode does not intend to resolve for real, so even
+  an undiscovered scanner gap cannot read a file or reach the network;
+  they behave normally for any other use of pyhocon in the same process.
+  This backstop now also wraps hyera's own private `pyhocon.config_parser`
+  module copy (added by `json_hocon_loaders` for Ruby-hocon-compatible
+  duration parsing) -- previously it wrapped only the shared `pyhocon`
+  module, which `HOCONBackend` never actually parses through, leaving the
+  backstop installed but inert for every real `HOCONBackend` call; found
+  and fixed while widening the default's own capability, which makes the
+  backstop's guarantee matter more, not less.
 
 ### Added
 
