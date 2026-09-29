@@ -15,26 +15,21 @@ import pytest
 from pyera import Hiera
 
 
-def _make_hiera(tmp_path, use_path: bool):
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.yaml").write_text("k: v\n", encoding="utf-8")
+def _make_hiera(make_tree, use_path: bool):
     config = {
         "version": 5,
-        "defaults": {"data_hash": "yaml_data", "data_dir": "data"},
+        "defaults": {"data_hash": "yaml_data", "datadir": "data"},
         "hierarchy": [{"name": "c", "path": "common.yaml"}],
     }
+    root = make_tree(config, files={"data/common.yaml": "k: v\n"})
     if not use_path:
-        return Hiera(config, base_path=str(tmp_path))
-    config_path = tmp_path / "hiera.yaml"
-    import yaml
-
-    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
-    return Hiera(str(config_path))
+        return Hiera(config, base_path=str(root))
+    return Hiera(str(root / "hiera.yaml"))
 
 
 @pytest.mark.parametrize("use_path", [False, True], ids=["dict", "path"])
-def test_scoped_copies_and_pickles(use_path, tmp_path):
-    h = _make_hiera(tmp_path, use_path)
+def test_scoped_copies_and_pickles(use_path, make_tree):
+    h = _make_hiera(make_tree, use_path)
     s = h.scoped(environment="production")
 
     for clone in (
@@ -46,8 +41,8 @@ def test_scoped_copies_and_pickles(use_path, tmp_path):
         assert clone.get("k") == s.get("k")
 
 
-def test_scoped_missing_attribute_raises_attribute_error(tmp_path):
-    h = _make_hiera(tmp_path, use_path=False)
+def test_scoped_missing_attribute_raises_attribute_error(make_tree):
+    h = _make_hiera(make_tree, use_path=False)
     s = h.scoped(environment="production")
 
     assert getattr(s, "nope", "d") == "d"

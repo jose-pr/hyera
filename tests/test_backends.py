@@ -1,14 +1,18 @@
 """Backend behavior, including the hardened sops backend and error paths."""
 
 import json
+import subprocess
+import sys
 
 import pytest
 
-from pyera import BackendError, ConfigError, Hiera
+from pyera import BackendError, ConfigError, Hiera, default_backends
 from pyera.backends import (
+    HOCONBackend,
     JSONBackend,
     SopsYAMLBackend,
     YAMLBackend,
+    has_hocon,
 )
 
 
@@ -33,26 +37,28 @@ def test_json_parse_error_is_backend_error():
         JSONBackend().load(b"{not json}")
 
 
-def test_json_backend_loads(tmp_path):
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.json").write_text(json.dumps({"k": "v"}))
-    (tmp_path / "hiera.yaml").write_text(
-        "defaults:\n  data_hash: json_data\n  data_dir: data\n"
-        "hierarchy:\n  - name: c\n    path: common.json\n"
+def test_json_backend_loads(make_tree):
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "json_data"},
+            "hierarchy": [{"name": "c", "path": "common.json"}],
+        },
+        files={"data/common.json": json.dumps({"k": "v"}).encode("utf-8")},
     )
-    h = Hiera(str(tmp_path / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "v"
 
 
-def test_json_backend_via_alias(tmp_path):
+def test_json_backend_via_alias(make_tree):
     # The short `json` data_hash alias resolves the same backend.
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.json").write_text(json.dumps({"k": "aliased"}))
-    (tmp_path / "hiera.yaml").write_text(
-        "defaults:\n  data_hash: json\n  data_dir: data\n"
-        "hierarchy:\n  - name: c\n    path: common.json\n"
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "json"},
+            "hierarchy": [{"name": "c", "path": "common.json"}],
+        },
+        files={"data/common.json": json.dumps({"k": "aliased"}).encode("utf-8")},
     )
-    h = Hiera(str(tmp_path / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "aliased"
 
 
@@ -83,8 +89,6 @@ def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
 
 
 def test_sops_timeout(monkeypatch, tmp_path):
-    import subprocess
-
     monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
     def _raise(*a, **k):
@@ -95,38 +99,39 @@ def test_sops_timeout(monkeypatch, tmp_path):
         SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
 
 
-def test_hocon_backend(tmp_path):
+def test_hocon_backend(make_tree):
     pytest.importorskip("pyhocon")
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.conf").write_text("k = v\nn { a = 1 }\n")
-    (tmp_path / "hiera.yaml").write_text(
-        "version: 5\n"
-        "defaults:\n  data_hash: hocon_data\n  data_dir: data\n"
-        "hierarchy:\n  - name: c\n    path: common.conf\n"
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "hocon_data"},
+            "hierarchy": [{"name": "c", "path": "common.conf"}],
+        },
+        files={"data/common.conf": "k = v\nn { a = 1 }\n"},
     )
-    h = Hiera(str(tmp_path / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "v"
     assert h.get("n.a") == 1
 
 
-def test_hocon_backend_missing_dep_errors():
-    from pyera.backends import HOCONBackend, has_hocon
-
-    if has_hocon():
-        pytest.skip("pyhocon is installed")
+def test_hocon_backend_missing_dep_errors(monkeypatch):
+    monkeypatch.setitem(sys.modules, "pyhocon", None)
+    assert has_hocon() is False
+    assert HOCONBackend not in default_backends()
     with pytest.raises(BackendError, match="pyhocon"):
         HOCONBackend().load(b"k = v")
 
 
-def test_unknown_backend_raises_config_error(tmp_path):
-    (tmp_path / "hiera.yaml").write_text(
-        "hierarchy:\n  - name: c\n    data_hash: nonsense\n    path: common.yaml\n"
+def test_unknown_backend_raises_config_error(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "data_hash": "nonsense", "path": "common.yaml"}]}
     )
     with pytest.raises(ConfigError, match="Unknown backend"):
-        Hiera(str(tmp_path / "hiera.yaml"))
+        Hiera(str(root / "hiera.yaml"))
 
 
-def test_missing_hierarchy_raises_config_error(tmp_path):
-    (tmp_path / "hiera.yaml").write_text("defaults:\n  data_hash: yaml_data\n")
+def test_missing_hierarchy_raises_config_error(make_tree):
+    # `make_tree` only fills in `defaults`/`version`; it never invents a
+    # `hierarchy` key, so this still exercises the missing-hierarchy path.
+    root = make_tree({"defaults": {"data_hash": "yaml_data"}})
     with pytest.raises(ConfigError, match="hierarchy"):
-        Hiera(str(tmp_path / "hiera.yaml"))
+        Hiera(str(root / "hiera.yaml"))

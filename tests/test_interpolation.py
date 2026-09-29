@@ -5,24 +5,21 @@ import pytest
 from pyera import Hiera, InterpolationError
 
 
-def _hiera(tmp_path, common):
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.yaml").write_text(common, encoding="utf-8")
-    (tmp_path / "hiera.yaml").write_text(
-        "defaults:\n  data_hash: yaml_data\n  data_dir: data\n"
-        "hierarchy:\n  - name: c\n    path: common.yaml\n",
-        encoding="utf-8",
+def _hiera(make_tree, common):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": common},
     )
-    return Hiera(str(tmp_path / "hiera.yaml"))
+    return Hiera(str(root / "hiera.yaml"))
 
 
-def test_value_with_backslash_is_literal(tmp_path):
+def test_value_with_backslash_is_literal(make_tree):
     # Regression: re.sub treated the resolved value as a replacement template,
     # so a backslash (e.g. a Windows path) raised or was mangled. Use a YAML
     # double-quoted scalar so the stored value has exactly ONE backslash per
     # separator: C:\data\sub
     h = _hiera(
-        tmp_path,
+        make_tree,
         'winpath: "C:\\\\data\\\\sub"\n' "ref: \"%{hiera('winpath')}\"\n",
     )
     stored = h.get("winpath")
@@ -30,24 +27,24 @@ def test_value_with_backslash_is_literal(tmp_path):
     assert h.get("ref") == stored  # interpolation preserves it verbatim
 
 
-def test_scope_value_with_group_ref_is_literal(tmp_path):
+def test_scope_value_with_group_ref_is_literal(make_tree):
     # A context value containing "\g<0>" must not be treated as a group ref.
-    h = _hiera(tmp_path, 'msg: "got %{token}"\n')
+    h = _hiera(make_tree, 'msg: "got %{token}"\n')
     assert h.get("msg", token=r"\g<0>") == r"got \g<0>"
 
 
-def test_missing_scope_interpolates_empty(tmp_path):
-    h = _hiera(tmp_path, 'msg: "[%{absent}]"\n')
+def test_missing_scope_interpolates_empty(make_tree):
+    h = _hiera(make_tree, 'msg: "[%{absent}]"\n')
     assert h.get("msg") == "[]"
 
 
-def test_alias_missing_key_raises(tmp_path):
-    h = _hiera(tmp_path, "ref: \"%{alias('does::not::exist')}\"\n")
+def test_alias_missing_key_raises(make_tree):
+    h = _hiera(make_tree, "ref: \"%{alias('does::not::exist')}\"\n")
     with pytest.raises(InterpolationError):
         h.get("ref", throw=True)
 
 
-def test_format_uses_context(tmp_path):
+def test_format_uses_context(make_tree):
     # Regression: Hiera.format passed the dict positionally instead of **ctx.
-    h = _hiera(tmp_path, "x: 1\n")
+    h = _hiera(make_tree, "x: 1\n")
     assert h.format("hi %{name}", name="bob") == "hi bob"

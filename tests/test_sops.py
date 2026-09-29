@@ -57,42 +57,32 @@ def test_sops_success_argv_and_value(monkeypatch, tmp_path):
     assert backend.load(data) == {"k": "v"}
 
 
-def test_sops_end_to_end_lookup(monkeypatch, tmp_path):
+def test_sops_end_to_end_lookup(monkeypatch, tmp_path, make_tree):
     _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
-    (tmp_path / "data").mkdir()
     # Content is irrelevant -- sops runs on the path, and subprocess.run is
     # mocked -- but the level's file must exist for it to be considered.
-    (tmp_path / "data" / "secret.yaml").write_bytes(b"")
-    config = tmp_path / "hiera.yaml"
-    config.write_text(
-        "version: 5\n"
-        "defaults:\n"
-        "  data_hash: sops\n"
-        "  data_dir: data\n"
-        "hierarchy:\n"
-        "  - name: secret\n"
-        "    path: secret.yaml\n",
-        encoding="utf-8",
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "sops"},
+            "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
+        },
+        files={"data/secret.yaml": b""},
     )
 
-    h = Hiera(str(config))
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "v"
 
 
-def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path):
+def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     calls, _which_path = _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "--output=pwned.yaml").write_bytes(b"")
-    (tmp_path / "hiera.yaml").write_text(
-        "version: 5\n"
-        "defaults:\n"
-        "  data_hash: sops\n"
-        "  data_dir: data\n"
-        "hierarchy:\n"
-        '  - name: node\n    path: "%{node}.yaml"\n',
-        encoding="utf-8",
+    make_tree(
+        {
+            "defaults": {"data_hash": "sops"},
+            "hierarchy": [{"name": "node", "path": "%{node}.yaml"}],
+        },
+        files={"data/--output=pwned.yaml": b""},
     )
+    monkeypatch.chdir(tmp_path)
 
     h = Hiera("hiera.yaml")
     assert h.get("k", context={"node": "--output=pwned"}) == "v"
@@ -134,23 +124,18 @@ def test_sops_parse_error_has_no_plaintext():
 
 
 def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(
-    monkeypatch, tmp_path, caplog
+    monkeypatch, tmp_path, caplog, make_tree
 ):
     stdout = b'db_user: admin\ndb_password: "hunter2-SECRET\n'
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "secret.yaml").write_bytes(b"")
-    config = tmp_path / "hiera.yaml"
-    config.write_text(
-        "version: 5\n"
-        "defaults:\n"
-        "  data_hash: sops\n"
-        "  data_dir: data\n"
-        "hierarchy:\n"
-        "  - name: secret\n"
-        "    path: secret.yaml\n",
-        encoding="utf-8",
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "sops"},
+            "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
+        },
+        files={"data/secret.yaml": b""},
     )
+    config = root / "hiera.yaml"
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ConfigError) as excinfo:
@@ -166,26 +151,21 @@ def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(
 
 
 def test_sops_parse_error_plaintext_absent_from_cli(
-    monkeypatch, tmp_path, capsys, caplog
+    monkeypatch, tmp_path, capsys, caplog, make_tree
 ):
     pytest.importorskip("duho")
     from pyera.cli import main
 
     stdout = b'db_user: admin\ndb_password: "hunter2-SECRET\n'
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "secret.yaml").write_bytes(b"")
-    config = tmp_path / "hiera.yaml"
-    config.write_text(
-        "version: 5\n"
-        "defaults:\n"
-        "  data_hash: sops\n"
-        "  data_dir: data\n"
-        "hierarchy:\n"
-        "  - name: secret\n"
-        "    path: secret.yaml\n",
-        encoding="utf-8",
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "sops"},
+            "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
+        },
+        files={"data/secret.yaml": b""},
     )
+    config = root / "hiera.yaml"
 
     with caplog.at_level(logging.DEBUG):
         rc = main(["k", "-c", str(config)])

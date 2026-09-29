@@ -150,46 +150,42 @@ def test_scoped_does_not_leak_context(hiera_root):
     assert fresh.context == {}
 
 
-def test_falsy_values_are_returned(tmp_path):
+def test_falsy_values_are_returned(make_tree):
     # Regression: `%{hiera('x')}` where x is 0/""/False must resolve, not error.
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.yaml").write_text(
-        "zero: 0\n"
-        "empty: ''\n"
-        "flag: false\n"
-        "ref_zero: \"value=%{hiera('zero')}\"\n",
-        encoding="utf-8",
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={
+            "data/common.yaml": (
+                "zero: 0\n"
+                "empty: ''\n"
+                "flag: false\n"
+                "ref_zero: \"value=%{hiera('zero')}\"\n"
+            )
+        },
     )
-    (tmp_path / "hiera.yaml").write_text(
-        "defaults:\n  data_hash: yaml_data\n  data_dir: data\n"
-        "hierarchy:\n  - name: c\n    path: common.yaml\n",
-        encoding="utf-8",
-    )
-    h = Hiera(str(tmp_path / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("zero") == 0
     assert h.get("empty") == ""
     assert h.get("flag") is False
     assert h.get("ref_zero") == "value=0"
 
 
-def test_deep_hash_merge(tmp_path):
-    (tmp_path / "data" / "environments").mkdir(parents=True)
-    (tmp_path / "data" / "common.yaml").write_text(
-        "conf:\n  db:\n    host: localhost\n    port: 5432\n  cache:\n    ttl: 60\n",
-        encoding="utf-8",
+def test_deep_hash_merge(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "env", "path": "environments/%{environment}.yaml"},
+                {"name": "c", "path": "common.yaml"},
+            ]
+        },
+        files={
+            "data/common.yaml": (
+                "conf:\n  db:\n    host: localhost\n    port: 5432\n  cache:\n    ttl: 60\n"
+            ),
+            "data/environments/prod.yaml": "conf:\n  db:\n    host: prod.db\n",
+        },
     )
-    (tmp_path / "data" / "environments" / "prod.yaml").write_text(
-        "conf:\n  db:\n    host: prod.db\n",
-        encoding="utf-8",
-    )
-    (tmp_path / "hiera.yaml").write_text(
-        "defaults:\n  data_hash: yaml_data\n  data_dir: data\n"
-        "hierarchy:\n"
-        "  - name: env\n    path: environments/%{environment}.yaml\n"
-        "  - name: c\n    path: common.yaml\n",
-        encoding="utf-8",
-    )
-    h = Hiera(str(tmp_path / "hiera.yaml"), context={"environment": "prod"})
+    h = Hiera(str(root / "hiera.yaml"), context={"environment": "prod"})
     merged = h.get("conf", merge=dict, merge_deep=True)
     # prod overrides db.host but keeps db.port and the whole cache subtree.
     assert merged == {
@@ -200,7 +196,8 @@ def test_deep_hash_merge(tmp_path):
 
 def test_dict_base_config(hiera_root):
     config = {
-        "defaults": {"data_hash": "yaml_data", "data_dir": "data"},
+        "version": 5,
+        "defaults": {"data_hash": "yaml_data", "datadir": "data"},
         "hierarchy": [{"name": "Common", "path": "common.yaml"}],
     }
     h = Hiera(config, base_path=str(hiera_root))

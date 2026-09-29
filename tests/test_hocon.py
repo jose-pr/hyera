@@ -73,9 +73,9 @@ def test_plain_include_contributes_nothing(
     kind, tmp_path, monkeypatch, pyhocon_tripwire
 ):
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "inc.conf").write_text("fromcwd = yes\n")
+    (tmp_path / "inc.conf").write_bytes(b"fromcwd = yes\n")
     abs_conf = tmp_path / "abs.conf"
-    abs_conf.write_text("fromabs = yes\n")
+    abs_conf.write_bytes(b"fromabs = yes\n")
     abs_posix = abs_conf.resolve().as_posix()
 
     targets = {
@@ -112,9 +112,9 @@ def test_include_form_raises(
     kind, tmp_path, monkeypatch, pyhocon_tripwire, http_server
 ):
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "inc.conf").write_text("fromcwd = yes\n")
+    (tmp_path / "inc.conf").write_bytes(b"fromcwd = yes\n")
     abs_conf = tmp_path / "abs.conf"
-    abs_conf.write_text("fromabs = yes\n")
+    abs_conf.write_bytes(b"fromabs = yes\n")
     abs_posix = abs_conf.resolve().as_posix()
     server, hits = http_server
     base_url = "http://{}:{}".format(*server.server_address)
@@ -162,12 +162,12 @@ def test_invalid_utf8_is_backend_error():
         HOCONBackend().load(b"k = \xff\n")
 
 
-def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch):
+def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, make_tree):
     fake_pkg = tmp_path / "fake" / "pyhocon"
     fake_pkg.mkdir(parents=True)
-    (fake_pkg / "__init__.py").write_text(
-        "raise AttributeError(\"module 'collections' has no attribute "
-        "'MutableMapping'\")\n"
+    (fake_pkg / "__init__.py").write_bytes(
+        b"raise AttributeError(\"module 'collections' has no attribute "
+        b"'MutableMapping'\")\n"
     )
     monkeypatch.syspath_prepend(str(tmp_path / "fake"))
     for name in list(sys.modules):
@@ -178,14 +178,11 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch):
     assert has_hocon() is False
     assert HOCONBackend not in default_backends()
 
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "common.yaml").write_text("k: v\n")
-    config = {
-        "version": 5,
-        "defaults": {"data_hash": "yaml_data", "data_dir": "data"},
-        "hierarchy": [{"name": "c", "path": "common.yaml"}],
-    }
-    h = Hiera(config, base_path=str(tmp_path))
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "v"
 
     with pytest.raises(BackendError, match="pyhocon"):

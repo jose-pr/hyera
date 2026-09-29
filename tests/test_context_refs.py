@@ -6,25 +6,13 @@ reads ``{a.b}`` as *attribute* access, so these used to raise
 README's own lead example config.
 """
 
-import textwrap
-
 import pytest
 
 from pyera import Hiera
 
-
-def build(tmp_path, config, files):
-    (tmp_path / "hiera.yaml").write_text(textwrap.dedent(config), encoding="utf-8")
-    for rel, content in files.items():
-        p = tmp_path / rel
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(textwrap.dedent(content), encoding="utf-8")
-    return tmp_path
-
-
 CONFIG = """\
     version: 5
-    defaults: {data_hash: yaml_data, data_dir: data}
+    defaults: {data_hash: yaml_data, datadir: data}
     hierarchy:
       - {name: node, path: "nodes/%{trusted.certname}.yaml"}
       - {name: c, path: common.yaml}
@@ -49,8 +37,8 @@ NESTED = {
 
 
 @pytest.fixture
-def tree(tmp_path):
-    return build(tmp_path, CONFIG, FILES)
+def tree(make_tree):
+    return make_tree(CONFIG, FILES)
 
 
 def test_dotted_ref_in_path_selects_the_right_file(tree):
@@ -114,13 +102,12 @@ def test_format_resolves_dotted_refs(tree):
     )
 
 
-def test_list_index_segment_in_dotted_ref(tmp_path):
+def test_list_index_segment_in_dotted_ref(make_tree):
     # Numeric segments index into lists, matching LookupDict.lookup.
-    build(
-        tmp_path,
+    root = make_tree(
         """\
         version: 5
-        defaults: {data_hash: yaml_data, data_dir: data}
+        defaults: {data_hash: yaml_data, datadir: data}
         hierarchy:
           - {name: first_role, path: "roles/%{roles.0}.yaml"}
           - {name: c, path: common.yaml}
@@ -130,32 +117,30 @@ def test_list_index_segment_in_dotted_ref(tmp_path):
             "data/common.yaml": "picked: none\n",
         },
     )
-    h = Hiera(str(tmp_path / "hiera.yaml"), context={"roles": ["web", "db"]})
+    h = Hiera(str(root / "hiera.yaml"), context={"roles": ["web", "db"]})
     assert h.get("picked") == "web"
 
 
-def test_datadir_supports_dotted_refs(tmp_path):
-    # The data_dir itself is formatted against the context too.
-    build(
-        tmp_path,
+def test_datadir_supports_dotted_refs(make_tree):
+    # The data dir itself is formatted against the context too.
+    root = make_tree(
         """\
         version: 5
-        defaults: {data_hash: yaml_data, data_dir: "data/%{facts.env}"}
+        defaults: {data_hash: yaml_data, datadir: "data/%{facts.env}"}
         hierarchy:
           - {name: c, path: common.yaml}
         """,
         {"data/prod/common.yaml": "k: v\n"},
     )
-    h = Hiera(str(tmp_path / "hiera.yaml"), context={"facts": {"env": "prod"}})
+    h = Hiera(str(root / "hiera.yaml"), context={"facts": {"env": "prod"}})
     assert h.get("k") == "v"
 
 
-def test_mapped_paths_template_supports_dotted_refs(tmp_path):
-    build(
-        tmp_path,
+def test_mapped_paths_template_supports_dotted_refs(make_tree):
+    root = make_tree(
         """\
         version: 5
-        defaults: {data_hash: yaml_data, data_dir: data}
+        defaults: {data_hash: yaml_data, datadir: data}
         hierarchy:
           - name: roles
             mapped_paths: [roles, role, "roles/%{role}-%{facts.env}.yaml"]
@@ -163,7 +148,7 @@ def test_mapped_paths_template_supports_dotted_refs(tmp_path):
         {"data/roles/web-prod.yaml": "web_setting: true\n"},
     )
     h = Hiera(
-        str(tmp_path / "hiera.yaml"),
+        str(root / "hiera.yaml"),
         context={"roles": ["web"], "facts": {"env": "prod"}},
     )
     assert h.get("web_setting") is True
