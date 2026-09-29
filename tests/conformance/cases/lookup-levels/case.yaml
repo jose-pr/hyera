@@ -4,9 +4,7 @@ description: lookup_options across levels (unique/deep/hash merges, bad merge na
 origin: code-core/levels
 queries:
 - key: nil_first
-  divergence: code-core/null-value-treated-as-missing
 - key: db.port
-  divergence: code-core/dotted-key-root-semantics
 - key: db.host
 - key: unique_single
   id: unique_single_u
@@ -34,12 +32,10 @@ queries:
   merge: hash
 - key: pfx::x
 - key: lo_root.a
-  divergence: code-core/dotted-key-root-semantics
 - key: conv
 - key: conv
   id: conv_first
   merge: first
-  divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
 - key: badmerge
 - key: typo_opt
 - key: mha

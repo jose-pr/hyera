@@ -1,9 +1,10 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb,
+# data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Lookup adapters for matching lookup_options against keys.
 
-Ports Puppet's ``lookup_adapter.rb``.
+Ports Puppet's ``lookup_adapter.rb`` and the RichData check in
+``data_provider.rb``.
 """
 
 import re
@@ -12,10 +13,44 @@ import typing as _ty
 from .exceptions import HieraLookupError
 from ._new_function import new_instance
 from ._type_parser import parse_type
-from ._types import _ruby_regex
+from ._types import _ruby_regex, infer
 
 #: The reserved data key holding per-key merge/convert_to options.
 LOOKUP_OPTIONS = "lookup_options"
+
+#: ``Puppet::LookupValue`` (an alias for ``RichData``), parsed once and
+#: cached: every value found at a root key is checked against it
+#: (:func:`validate_data_value`).
+_LOOKUP_VALUE_TYPE = None
+
+
+def _lookup_value_type():
+    global _LOOKUP_VALUE_TYPE
+    if _LOOKUP_VALUE_TYPE is None:
+        _LOOKUP_VALUE_TYPE = parse_type("Puppet::LookupValue")
+    return _LOOKUP_VALUE_TYPE
+
+
+def validate_data_value(value, function_name, location, root_key) -> None:
+    """Puppet's RichData check on a value found at a root key
+    (``data_provider.rb:84-91``), run once per location before the value
+    is interpolated or enters a merge -- so one bad sibling key in a data
+    file never breaks a lookup of any other key in the same file.
+
+    ``Puppet::LookupValue`` (``RichData`` plus ``Undef``) excludes a hash
+    keyed by anything other than a ``String``/numeric (a boolean, ``nil``,
+    or a nested collection), and a Ruby symbol anywhere in the structure.
+    A found ``None`` root value itself is valid (``Undef`` is RichData).
+    """
+    t = _lookup_value_type()
+    if not t.instance(value):
+        raise HieraLookupError(
+            "Value for key '{}', in hash returned from data_hash function "
+            "'{}', when using location '{}', has wrong type, expects "
+            "Puppet::LookupValue, got {}".format(
+                root_key, function_name, location, infer(value)
+            )
+        )
 
 
 def validate_lookup_options(options):

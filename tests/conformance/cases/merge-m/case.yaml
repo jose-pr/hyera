@@ -14,7 +14,6 @@ queries:
     merge: unique
   - key: "u_nil"
     merge: unique
-    divergence: code-core/null-value-treated-as-missing
   - key: "u_single_dup"
     merge: unique
   - key: "u_single_nested"
@@ -43,7 +42,6 @@ queries:
     merge: hash
   - key: "h_nil_higher"
     merge: hash
-    divergence: code-core/null-value-treated-as-missing
   - key: "h_single_scalar"
     merge: hash
   - key: "h_single_array"
@@ -164,31 +162,24 @@ queries:
     merge: {strategy: deep, merge_hash_arrays: true}
   - key: "dot_first.b"
     id: "dot_first"
-    divergence: code-core/dotted-key-root-semantics
   - key: "dot_hash.b"
     id: "dot_hash"
     merge: hash
-    divergence: code-core/dotted-key-root-semantics
   - key: "dot_unique.l"
     id: "dot_unique"
     merge: unique
-    divergence: code-core/dotted-key-root-semantics
   - key: "dot_deep.b"
     id: "dot_deep"
     merge: deep
   - key: "f_nil"
-    divergence: code-core/null-value-treated-as-missing
   - key: "f_nil_only"
-    divergence: code-core/null-value-treated-as-missing
   - key: "f_nil_only"
     id: "f_nil_only_default"
     default: "DFLT"
-    divergence: code-core/null-value-treated-as-missing
   - key: "f_false"
   - key: "f_nil"
     id: "f_nil_unique"
     merge: unique
-    divergence: code-core/null-value-treated-as-missing
   - key: "f_nil"
     id: "f_nil_deep"
     merge: deep

@@ -14,9 +14,7 @@ queries:
   - key: alias_list
   - key: nope::key
   - key: port_msg
-    divergence: code-core/dotted-key-root-semantics
   - key: db.port
-    divergence: code-core/dotted-key-root-semantics
   - key: classes
     id: classes-unique
     merge: unique

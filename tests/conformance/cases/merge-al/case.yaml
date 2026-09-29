@@ -9,10 +9,8 @@ queries:
     id: "al_x_hash"
     merge: hash
   - key: "al_ref"
-    divergence: spec-merge/alias-lookup-merge-and-lookup-options
   - key: "al_u"
     id: "al_u_unique"
     merge: unique
   - key: "al_interp"
 
-    divergence: spec-merge/alias-lookup-merge-and-lookup-options

@@ -752,7 +752,9 @@ class PRuntimeType(PAnyType):
     """``Runtime[<runtime>, '<name>']``. Only ``Runtime['ruby', 'Symbol']``
     is meaningful here: it is the inferred type of a
     :class:`hyera.backends.RubySymbol` (never imported directly -- matched
-    by class name/module to avoid a dependency on ``backends``)."""
+    by class name/module to avoid a dependency on ``backends``). The class
+    is *defined* in ``_yaml_loader`` and re-exported through ``backends``;
+    ``__module__`` names the former, not the latter."""
 
     TYPE_NAME = "Runtime"
 
@@ -766,7 +768,7 @@ class PRuntimeType(PAnyType):
             self.runtime == "ruby"
             and self.runtime_name == "Symbol"
             and cls.__name__ == "RubySymbol"
-            and cls.__module__ == "hyera.backends"
+            and cls.__module__ == "hyera._yaml_loader"
         )
 
     def _key(self):
@@ -966,7 +968,7 @@ def infer(value):
     if isinstance(value, dict):
         return _infer_hash(value)
     cls = type(value)
-    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera.backends":
+    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera._yaml_loader":
         return PRuntimeType("ruby", "Symbol")
     raise TypeError("no Puppet type for {!r}".format(value))
 

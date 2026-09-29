@@ -34,7 +34,6 @@ queries:
     hash_inspect: true
   - key: str_arr
   - key: str_nil
-    divergence: spec-lookup-options-types/found-nil-treated-as-missing
   - key: arr_str
   - key: arr_hash
   - key: arr_wrap
@@ -79,9 +78,7 @@ queries:
   - key: int_plain
     id: int_plain-explicit-first
     merge: first
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
   - key: int_plain
     id: int_plain-explicit-unique
     merge: unique
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
     error_match: "cannot be converted to Integer"

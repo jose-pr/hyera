@@ -75,7 +75,6 @@ queries:
 - key: s_alias_int
 - key: s_alias_bool
 - key: s_alias_null
-  divergence: code-core/null-value-treated-as-missing
 - key: s_alias_missing
 - key: s_alias_embedded
   error_class: InterpolationError
@@ -130,5 +129,4 @@ queries:
 - key: via_alias
 - key: via_interp
 - key: via_alias.k
-  divergence: spec-interpolation/dotted-key-dig-before-interpolation
 - key: via_interp.inner

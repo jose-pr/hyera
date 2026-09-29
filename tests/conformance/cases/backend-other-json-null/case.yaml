@@ -2,5 +2,4 @@ description: A JSON object with an explicit null value.
 origin: code-io-security/othercases/json_null
 queries:
 - key: z
-  divergence: code-core/null-value-treated-as-missing
 - key: plain

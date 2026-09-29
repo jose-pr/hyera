@@ -4,13 +4,7 @@ description: A global/environment/module hiera.yaml (layers not supported yet --
 origin: code-core/conft
 queries:
 - key: port_msg
-  divergence:
-  - spec-layers-backends/no-config-layers
-  - code-core/dotted-key-root-semantics
 - key: db.port
-  divergence:
-  - spec-layers-backends/no-config-layers
-  - code-core/dotted-key-root-semantics
 - key: conf
   id: conf_deep_ko
   merge:

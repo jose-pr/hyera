@@ -17,7 +17,6 @@ queries:
 - key: on_v
 - key: y_v
 - key: tilde
-  divergence: code-core/null-value-treated-as-missing
 - key: plus
 - key: dot5
 - key: str_bool

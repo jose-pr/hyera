@@ -145,10 +145,12 @@ def test_aliases_and_references():
     assert "hiera does not support the Puppet type 'Iterable'" == str(exc_info.value)
 
     # infer_set of a RubySymbol-named object renders Runtime[ruby, 'Symbol'].
+    # The real class is *defined* in _yaml_loader and re-exported through
+    # backends -- matched by (name, __module__) against the former.
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera.backends"
+    RubySymbol.__module__ = "hyera._yaml_loader"
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
 
 

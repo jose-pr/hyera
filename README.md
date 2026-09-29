@@ -179,7 +179,8 @@ raises `HieraLookupError` for the whole lookup. An entry that is a string
 applies no options and stops the search (a matching pattern for the same
 key is never tried); any other non-hash, non-string entry raises.
 
-An explicit `merge=` argument overrides `lookup_options`. `convert_to` takes
+An explicit `merge=` argument overrides only the *merge* `lookup_options`
+would have picked; `convert_to` always applies. `convert_to` takes
 a Puppet type string (`Integer`, `Optional[Integer]`) or `[Type, *args]`
 (`[Integer, 16]`, `[String, '%x']`) and converts with Puppet's `new()`:
 Integer, Float, Numeric, String, Boolean, Array, Hash, Tuple, Struct,

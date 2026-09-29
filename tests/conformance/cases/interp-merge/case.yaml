@@ -7,12 +7,9 @@ queries:
 - key: lo_strat
 - key: lo_aliased
 - key: via_lo_alias
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
 - key: via_lo_lookup
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
 - key: first_interp
 - key: nested_first
-  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
 - key: m_alias
   id: m_alias_unique
   merge: unique

@@ -26,7 +26,6 @@ queries:
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_arr'\\ raised\\ error:\\ 'new'\\ Value\\ of\\ type\\ Array\\[Integer\\]\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_nil
-    divergence: spec-lookup-options-types/found-nil-treated-as-missing
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_nil'\\ raised\\ error:\\ 'new'\\ Value\\ of\\ type\\ Undef\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_range
@@ -82,7 +81,6 @@ queries:
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 's_fmt_bad'\\ raised\\ error:\\ Illegal\\ format\\ 'Q'\\ specified\\ for\\ value\\ of\\ Integer\\ type\\ \\-\\ expected\\ one\\ of\\ the\\ characters\\ 'dxXobBeEfgGaAspc'"
   - key: s_float_s
   - key: s_undef_fmt
-    divergence: spec-lookup-options-types/found-nil-treated-as-missing
   - key: a_float
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_float'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Float\\ cannot\\ be\\ converted\\ to\\ Array"
@@ -90,7 +88,6 @@ queries:
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_true'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Boolean\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_nil
-    divergence: spec-lookup-options-types/found-nil-treated-as-missing
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_nil'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Undef\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_zero

@@ -2,5 +2,4 @@ description: A Ruby-symbol-style YAML value (:foo).
 origin: code-io-security/yamlcases/symval
 queries:
 - key: symval
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: plain

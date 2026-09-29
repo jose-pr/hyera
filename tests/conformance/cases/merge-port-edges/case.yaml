@@ -63,7 +63,6 @@ queries:
   - key: "u_nil_lower"
     id: "u_nil_lower"
     merge: unique
-    divergence: code-core/null-value-treated-as-missing
   - key: "u_nondata_elem"
     id: "u_nondata_elem"
     merge: unique

@@ -19,9 +19,7 @@ queries:
 - key: notanumber
 - key: sexa
 - key: symv
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: symq
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: untag1
 - key: untag2
 - key: strtag
@@ -29,7 +27,6 @@ queries:
 - key: floattag
 - key: booltag
 - key: nulltag
-  divergence: code-core/null-value-treated-as-missing
 - key: valuetag
 - key: binary
 - key: omap
@@ -38,7 +35,6 @@ queries:
 - key: boolyes
 - key: booloff
 - key: nullval
-  divergence: code-core/null-value-treated-as-missing
 - key: lookalikeoct
 - key: lookalikefloat
 - key: strbool

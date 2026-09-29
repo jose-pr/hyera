@@ -3,5 +3,4 @@ description: >-
 origin: code-io-security/yamlcases/symval
 queries:
   - key: s
-    divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
   - key: plain

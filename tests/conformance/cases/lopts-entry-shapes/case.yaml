@@ -17,9 +17,5 @@ queries:
   - key: lbkey
   - key: kneg
   - key: lookup_options
-    divergence: spec-lookup-options-types/lookup-options-key-not-reserved
   - key: nk.a
-    divergence:
-      - code-core/null-value-treated-as-missing
-      - code-core/dotted-key-root-semantics
   - key: ns.x

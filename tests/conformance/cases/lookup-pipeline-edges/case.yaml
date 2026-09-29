@@ -12,12 +12,9 @@ queries:
     merge: unique
     error_class: HieraLookupError
     error_match: "The convert_to lookup_option for key 'cvk' raised error: "
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
   - id: cvk-first
     key: cvk
     merge: first
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
   - id: cvk-deep
     key: cvk
     merge: deep
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to

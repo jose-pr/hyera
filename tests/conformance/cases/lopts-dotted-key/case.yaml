@@ -5,4 +5,3 @@ description: >-
 origin: tests/D_twolevel
 queries:
   - key: db.port
-    divergence: code-core/dotted-key-root-semantics

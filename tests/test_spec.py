@@ -169,13 +169,13 @@ def test_lookup_options_merged_once_per_context(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
 
     calls = []
-    real_get_key = h._get_key
+    real_lookup_levels = h._lookup_levels
 
-    def counting_get_key(key, paths, context, merge):
-        calls.append(key)
-        return real_get_key(key, paths, context, merge)
+    def counting_lookup_levels(root, *args, **kwargs):
+        calls.append(root)
+        return real_lookup_levels(root, *args, **kwargs)
 
-    h._get_key = counting_get_key
+    h._lookup_levels = counting_lookup_levels
     assert h.get("classes") == ["web", "base"]
     assert h.get("other") == ["x"]
     assert h.get("classes") == ["web", "base"]

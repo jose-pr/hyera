@@ -695,9 +695,17 @@ re-exports it too).
   packaged Ruby 3.2 prints), `Sensitive [value redacted]`.
 - `%{lookup(...)}`/`%{hiera(...)}`/`%{alias(...)}` of a missing key resolve
   to `""` (Puppet's own rule) rather than raising — same as a missing
-  `%{var}`/`%{scope(...)}` reference, so the two are symmetric. Neither ever
-  sees `lookup_options`, and neither ever inherits the caller's `merge=` —
-  accumulation happens exactly once per lookup, at the top level.
+  `%{var}`/`%{scope(...)}` reference, so the two are symmetric. Each runs a
+  **full lookup** of its own target key: that key's own `lookup_options`
+  (merge and `convert_to`), a `default_hierarchy` fallback on a main miss,
+  everything a top-level `.get()` would do — never only the hierarchy
+  currently being walked. The one thing it never inherits is the *caller's*
+  `merge=`/`lookup_options` accumulator: a sub-lookup always resolves with
+  `merge=None` (first-match, or its own `lookup_options`' merge), so nesting
+  `%{lookup(...)}` inside a `merge="deep"` lookup never pulls the caller's
+  strategy into the nested one. `lookup_options` and `lookup_options.<x>`
+  are reserved and never resolve, from any caller (interpolation, `.get()`,
+  a nested `%{lookup(...)}`) alike.
 - `%{x}` and `%{scope('x')}` follow the same rule for an undefined root: it
   is governed by the bound `Scope`'s `strict` (`"off"`/`"warning"`/`"error"`,
   default `"warning"`) exactly as `Scope.lookupvar` documents, while a
@@ -746,7 +754,18 @@ re-exports it too).
   entry that is a string applies no options and blocks a matching pattern
   from being tried at all (same key, both an exact and a pattern entry); any
   other non-hash, non-string entry (a list, an integer, a boolean, ...)
-  raises `HieraLookupError` too.
+  raises `HieraLookupError` too. `lookup_options` is matched by a key's
+  *root* only, never a dotted key as written, and is fetched **always** —
+  even under an explicit `merge=` — because an explicit `merge=` replaces
+  only the *merge* `lookup_options` would have picked; its `convert_to`
+  still runs on the result either way.
+- A found root value that is not Puppet RichData — a hash keyed by anything
+  other than a `String`/numeric (a boolean, `~`, or a nested collection), or
+  a Ruby symbol (`hyera.backends.RubySymbol`) anywhere in the structure —
+  raises `HieraLookupError` naming the key, the `data_hash` function and the
+  file, the moment that value is found (before interpolation or a merge), so
+  a bad value at one key never breaks a lookup of any other key in the same
+  file.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
   **dotted lookup key** (`h.get("a.b.0")`) both follow Puppet's own
   `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `datadir`,
@@ -755,7 +774,18 @@ re-exports it too).
   embedded `.` literal and are trimmed off; whitespace around an unquoted
   segment or the dots themselves is trimmed too, e.g. `%{ a . b }`), and a
   segment made only of optionally-signed digits indexes a list (out of
-  range, or a negative index, is a miss, never Python's wraparound).
+  range, or a negative index, is a miss, never Python's wraparound). A
+  dotted **lookup key** specifically resolves its *root* segment (`a`)
+  first — through the full provider/level/location merge, with the root's
+  own `lookup_options` applied — and digs the remaining segments (`.b.0`)
+  out of that single merged value exactly once; a level whose root value
+  lacks the dug segment is a miss, it never falls through to dig a
+  different level's value instead. A root key set to `~` is *found*, with
+  the value `None`: it stops a first-found lookup at that level (never
+  falls through to a lower one) and beats a `default=`, same as any other
+  found value — only an absent root key, or a segment a dig cannot reach
+  (an out-of-range index, a key a dict lacks, a `None` met mid-dig), is a
+  miss.
   A Puppet variable name cannot contain `.`, so there is **no flat-key
   fallback**: `%{a.b}` always means "navigate `.b` into the value of `a`",
   never a literal scope/data key named `"a.b"` — quote the whole

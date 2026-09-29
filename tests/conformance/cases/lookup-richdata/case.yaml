@@ -4,11 +4,8 @@ description: Non-string YAML hash keys (boolean, null, nested, integer, float) a
 origin: critic-puppet-coverage/richdata
 queries:
 - key: k_boolkey
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: k_nullkey
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: k_nested
-  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: k_intkey
 - key: k_floatkey
 - key: k_ok

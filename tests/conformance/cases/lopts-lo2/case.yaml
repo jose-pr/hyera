@@ -5,4 +5,3 @@ origin: spec-lookup-options-types/lo2
 queries:
   - key: exk
   - key: db.port
-    divergence: spec-lookup-options-types/lookup-options-root-key-and-dig

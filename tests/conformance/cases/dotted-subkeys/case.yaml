@@ -16,7 +16,6 @@ queries:
     id: nil-segment
   - key: n
     id: nil-value
-    divergence: spec-lookup-options-types/found-nil-treated-as-missing
   - key: lst.x
     id: list-nonint-segment
   - key: lst.-1

@@ -29,10 +29,8 @@ queries:
     merge: first
   - key: items2
   - key: db.port
-    divergence: code-core/dotted-key-root-semantics
   - key: port
   - key: port
     id: port-explicit-first
     merge: first
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
   - key: secret

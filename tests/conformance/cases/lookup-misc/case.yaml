@@ -4,7 +4,6 @@ description: A flat key literally named with a dot, an undefined variable throug
 origin: code-core/misc
 queries:
 - key: lookup_options
-  divergence: spec-lookup-options-types/lookup-options-key-not-reserved
 - key: dotted.key
   id: dotted_key
 - key: s_undef

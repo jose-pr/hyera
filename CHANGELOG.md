@@ -87,6 +87,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lower-priority levels' patterns tried first. An invalid pattern, a
   `lookup_options` value that is not a hash, and an entry that is neither a
   hash nor a string now raise `HieraLookupError` instead of being skipped.
+- Dotted keys follow Puppet: `db.port` looks up `db`, merges or takes the
+  first level that has it, then reads `port`, so it is not found when that
+  level's `db` lacks `port`. Quoted segments work, and `lookup_options`
+  match the root key.
+- A key set to `~` (null) is found and returns `None`; it no longer falls
+  through to lower levels or the default.
+- `lookup_options` and `lookup_options.<x>` can no longer be looked up.
+- An explicit `merge=` overrides only the merge from `lookup_options`;
+  `convert_to` is always applied.
+- `%{lookup()}`, `%{hiera()}` and `%{alias()}` run full lookups, with the
+  target key's own `lookup_options` and the `default_hierarchy` fallback;
+  `%{alias()}` no longer merges with the caller's strategy.
+- A found value that is not Puppet RichData (a hash key that is a boolean,
+  a null or a collection; a Ruby symbol) raises `HieraLookupError` naming
+  the key, the data_hash function and the file.
 
 ### Removed
 

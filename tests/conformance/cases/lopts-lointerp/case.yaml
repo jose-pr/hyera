@@ -4,7 +4,5 @@ description: >-
 origin: spec-lookup-options-types/lointerp
 queries:
   - key: ref_k
-    divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
   - key: ref_n
-    divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
   - key: ref_n2

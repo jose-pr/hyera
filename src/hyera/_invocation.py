@@ -8,7 +8,6 @@ callable, and the recursion-detection name stack.
 import contextlib
 import contextvars
 
-from ._navigation import _MISSING
 from .exceptions import InterpolationError
 
 #: The call-time ``strict`` default for a data file's non-hash rule
@@ -58,13 +57,12 @@ class Invocation:
     def lookup(self, key):
         """Resolve ``key`` through the host's sub-lookup callable.
 
-        ``key == "lookup_options"`` or a ``"lookup_options."``-prefixed key
-        always misses (:data:`~hyera._navigation._MISSING`) without
-        reaching the host at all -- ``lookup_options`` is never visible to
-        interpolation (``lookup_adapter.rb:46-52``).
+        ``lookup_options`` and a ``"lookup_options."``-prefixed key are
+        never visible to interpolation (``lookup_adapter.rb:46-52``); the
+        host callable (``core.Hiera._sub_lookup``, via ``_search_and_
+        merge``) is the single place that check is made, so it applies
+        the same way to every caller, not only interpolation.
         """
-        if key == "lookup_options" or key.startswith("lookup_options."):
-            return _MISSING
         return self._lookup(key, self)
 
     def derive(self, lookup) -> "Invocation":

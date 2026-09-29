@@ -53,7 +53,6 @@ queries:
   error_class: InterpolationError
   error_match: 'Recursive lookup detected in \[self_ref\]'
 - key: nilv
-  divergence: code-core/null-value-treated-as-missing
 - key: lookup_options
 - key: arr.-1
 - key: plain.x

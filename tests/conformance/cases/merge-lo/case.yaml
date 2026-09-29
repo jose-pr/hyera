@@ -12,14 +12,11 @@ queries:
   - key: "lo_conv"
   - key: "lo_dotted.port"
     id: "lo_dotted_port"
-    divergence: code-core/dotted-key-root-semantics
   - key: "lo_dotkey.port"
     id: "lo_dotkey_port"
-    divergence: code-core/dotted-key-root-semantics
   - key: "lo_conv"
     id: "lo_conv_explicit_first"
     merge: first
-    divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
   - key: "lo_unique"
     id: "lo_unique_explicit_first"
     merge: first

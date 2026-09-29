@@ -3,4 +3,3 @@ description: An explicit null at a higher-priority level should be a found value
 origin: code-io-security/nullshadow
 queries:
 - key: k
-  divergence: code-core/null-value-treated-as-missing
