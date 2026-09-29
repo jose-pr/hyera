@@ -170,7 +170,7 @@ def test_alias_registry_matches_module():
 # ------------------------------------------------------- mismatch describer
 
 #: convert-value-type queries whose golden status is a parse error, not an
-#: instance mismatch -- Phase 1's, already proved by test_parse_matches_golden.
+#: instance mismatch -- already proved by test_parse_matches_golden.
 _PARSE_ERROR_TNN = {"t62", "t63", "t69"}
 
 

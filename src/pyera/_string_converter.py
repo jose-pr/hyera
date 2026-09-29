@@ -236,8 +236,8 @@ def _render(value, directive, flags, width, prec):
         return (
             "{"
             + ", ".join(
-                # D10 item 4: the AIO/Ruby-3.2 form ("k"=>"v"), not this
-                # box's Ruby oracle ("k" => "v").
+                # The AIO/Ruby-3.2 form ("k"=>"v"), not this box's Ruby
+                # oracle ("k" => "v").
                 "{}=>{}".format(
                     _render(k, "p", "", None, None), _render(v, "p", "", None, None)
                 )
