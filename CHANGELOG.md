@@ -20,6 +20,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Hiera()` or `.get()`. The documented example config crashed at
   construction when `data/modules` was absent, and a per-node glob
   directory crashed lookups for any node without one.
+- A HOCON file that is not valid UTF-8 now raises `BackendError` instead of
+  a raw `UnicodeDecodeError`.
 
 ### Security
 
@@ -29,6 +31,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   literal `--`, so a name starting with `-` can never become a `sops`
   option; the `sops` found on `PATH` is executed by its full resolved
   path, and a `sops.bat`/`sops.cmd` shim is refused.
+- HOCON data files no longer read files or fetch URLs through `include`.
+  A plain `include "file"` contributes nothing, as in Puppet;
+  `include file(...)`, `url(...)`, `classpath(...)`, `required(...)` and
+  other forms raise `BackendError`. Previously pyhocon resolved plain and
+  `file()` includes against the process working directory and fetched
+  `http(s)` URLs named in a data file.
 
 ### Added
 

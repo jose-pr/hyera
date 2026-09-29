@@ -122,7 +122,18 @@ Install and import as `pyera` (`pip install pyera`, extras
   `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
   optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
-  `BackendError` naming the extra if it's not installed.
+  `BackendError` naming the extra if it's not installed. Invalid UTF-8
+  raises `BackendError` rather than a raw `UnicodeDecodeError`. `include`
+  directives are sanitized before pyhocon ever parses the text, so
+  pyhocon's own include machinery (file reads relative to the process cwd,
+  `http(s)`/`file` URL fetches) never runs: a plain `include "..."`
+  contributes nothing, matching Puppet; every other form — `file(...)`,
+  `url(...)`, `classpath(...)`, `required(...)`, `package(...)`, any other
+  `name(...)`, a case-mismatched keyword (`INCLUDE ...`), a bare `include`
+  with nothing valid after it, or an `include` directive in value position
+  — raises `BackendError` instead (two of these, `file()` and value
+  position, differ from what Puppet itself does; see the gotcha below).
+  `${VAR}` substitutions fall back to environment variables, as in Puppet.
 - **`has_hocon() -> bool`** — `True` iff `pyhocon` is importable.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
@@ -187,3 +198,12 @@ paths work since `__init__` re-exports it too).
   literally contains dots takes precedence over the nested walk. An
   unresolvable reference skips the hierarchy level (in a path) or
   interpolates as `""` (in a value) — it never raises.
+- `HOCONBackend`'s include handling differs from Puppet in two deliberate
+  places, both erring toward raising rather than silently doing what Puppet
+  does: Puppet's `include file(...)` reads the named file (cwd-relative or
+  absolute); pyera always raises `BackendError` instead, since reading a
+  file a data file names, from wherever the process happens to run, is
+  exactly the exposure being closed. Puppet keeps an `include` directive
+  written in value position (`msg = please include "x"`) as literal text;
+  pyera raises there too. Tracked as a project finding for
+  `backend_registry_and_data_loading` to weigh.

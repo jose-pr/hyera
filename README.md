@@ -79,6 +79,11 @@ Backends (by `data_hash` name):
 | `SopsYAMLBackend` | `yaml.enc`, `sops`      | decrypts via the `sops` CLI on the fly  |
 | `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install pyera[hocon]`     |
 
+`HOCONBackend` sanitizes `include` directives before parsing, matching
+Puppet: a plain `include "file"` contributes nothing. `include file(…)`,
+`url(…)`, `classpath(…)` and `required(…)` all raise `BackendError`
+instead of reading a file or fetching a URL.
+
 ### Merging and `lookup_options`
 
 Pass `merge=` to `get()` — a strategy name, a legacy type, or a hash of deep
@@ -167,7 +172,8 @@ subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 
 Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
-`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
+`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive` ·
+HOCON `include file()` (Puppet reads the file; pyera always raises instead).
 
 ## Notes
 

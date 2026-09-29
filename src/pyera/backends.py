@@ -4,6 +4,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -195,8 +196,159 @@ class JSONBackend(Backend):
             raise BackendError("Failed to parse JSON: {}".format(e)) from e
 
 
+_URL_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*://")
+
+
+def _find_hocon_string_end(text: str, start: int) -> "tuple[int, str]":
+    """``text[start]`` is a double quote. Return ``(end, content)`` for a
+    plain or triple-quoted HOCON string: ``end`` is the index just past the
+    closing quote(s), ``content`` is the (still escaped) text between them.
+    """
+    n = len(text)
+    if text.startswith('"""', start):
+        content_start = start + 3
+        close = text.find('"""', content_start)
+        if close == -1:
+            return n, text[content_start:n]
+        return close + 3, text[content_start:close]
+    i = start + 1
+    while i < n and text[i] != '"':
+        if text[i] == "\\" and i + 1 < n:
+            i += 2
+            continue
+        i += 1
+    content = text[start + 1 : i]
+    return (i + 1 if i < n else n), content
+
+
+def _skip_hocon_blanks(text: str, i: int) -> int:
+    """Advance past spaces/tabs only (not newlines) from ``i``."""
+    n = len(text)
+    while i < n and text[i] in " \t":
+        i += 1
+    return i
+
+
+def _hocon_directive_follows(text: str, i: int) -> bool:
+    """True if, starting at ``i``, the text looks like an attempted include
+    argument -- a quoted string, or an identifier possibly followed by
+    spaces/tabs and then ``(`` -- valid or not.
+    """
+    n = len(text)
+    j = _skip_hocon_blanks(text, i)
+    if j < n and text[j] == '"':
+        return True
+    if j < n and text[j].isalpha():
+        k = j
+        while k < n and (text[k].isalnum() or text[k] == "_"):
+            k += 1
+        k = _skip_hocon_blanks(text, k)
+        return k < n and text[k] == "("
+    return False
+
+
+def _strip_hocon_includes(text: str) -> str:
+    """Blank the plain HOCON ``include "..."`` directives Puppet ignores,
+    and raise :class:`BackendError` for every other include form --
+    ``include file(...)``, ``url(...)``, ``classpath(...)``,
+    ``required(...)``, ``package(...)``, any other ``name(...)``, a
+    directive in value position, a case-mismatched keyword, or a bare
+    ``include`` with nothing valid after it -- before pyhocon ever parses
+    the text. This keeps pyhocon's own include machinery (which reads
+    files off the process cwd and fetches ``http(s)``/``file`` URLs) from
+    ever running. See ``AGENTS.md`` for the exact rule and its two
+    deliberate divergences from Puppet (``file()``, value position).
+
+    Blanked spans replace every non-newline character with a space, so
+    line/column numbers in any later pyhocon parse error still line up
+    with the original file.
+    """
+    n = len(text)
+    out = list(text)
+    i = 0
+    last_sig = None  # last significant (non-space/tab) char seen so far
+    while i < n:
+        c = text[i]
+        if c == '"':
+            end, _content = _find_hocon_string_end(text, i)
+            i = end
+            last_sig = '"'
+            continue
+        if c == "#" or (c == "/" and i + 1 < n and text[i + 1] == "/"):
+            j = text.find("\n", i)
+            i = j if j != -1 else n
+            continue
+        if c == "$" and i + 1 < n and text[i + 1] == "{":
+            j = text.find("}", i + 2)
+            i = (j + 1) if j != -1 else n
+            last_sig = "}"
+            continue
+        if c in " \t":
+            i += 1
+            continue
+        if c == "\n":
+            last_sig = "\n"
+            i += 1
+            continue
+        if c.isalpha():
+            j = i
+            while j < n and (text[j].isalnum() or text[j] == "_"):
+                j += 1
+            word = text[i:j]
+            if word.lower() != "include":
+                last_sig = word[-1]
+                i = j
+                continue
+
+            key_position = last_sig in (None, "\n", "{", ",")
+            line = text.count("\n", 0, i) + 1
+
+            if key_position and word == "include":
+                after = _skip_hocon_blanks(text, j)
+                if after < n and text[after] == '"':
+                    end, content = _find_hocon_string_end(text, after)
+                    scheme = _URL_SCHEME_RE.match(content)
+                    if scheme and scheme.group(0)[:-3].lower() != "file":
+                        raise BackendError(
+                            "HOCON include of a non-file URL is not "
+                            "supported (line {})".format(line)
+                        )
+                    for k in range(i, end):
+                        if out[k] != "\n":
+                            out[k] = " "
+                    i = end
+                    last_sig = " "
+                    continue
+                raise BackendError(
+                    "HOCON include is only supported as a plain quoted "
+                    "string; file()/url()/classpath()/required()/package() "
+                    "and similar forms are not supported (line {})".format(line)
+                )
+
+            if _hocon_directive_follows(text, j):
+                raise BackendError(
+                    "HOCON include directive is not supported here "
+                    "(line {})".format(line)
+                )
+
+            last_sig = word[-1]
+            i = j
+            continue
+
+        last_sig = c
+        i += 1
+
+    return "".join(out)
+
+
 class HOCONBackend(Backend):
-    """HOCON (``.conf``) data via the optional ``pyhocon`` package."""
+    """HOCON (``.conf``) data via the optional ``pyhocon`` package.
+
+    ``include`` directives are sanitized before pyhocon ever sees the text
+    (see :func:`_strip_hocon_includes`): pyhocon's own include machinery
+    (file reads relative to the process cwd, ``http(s)``/``file`` URL
+    fetches) never runs.
+    """
 
     NAMES = ("hocon_data", "hocon")
 
@@ -208,10 +360,16 @@ class HOCONBackend(Backend):
                 "hocon_data backend requires the 'pyhocon' package "
                 "(pip install pyera[hocon])"
             ) from e
-        if isinstance(data, bytes):
-            data = data.decode("utf-8")
         try:
-            parsed = ConfigFactory.parse_string(data)
+            if isinstance(data, bytes):
+                data = data.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise BackendError("Failed to parse HOCON: {}".format(e)) from e
+        text = _strip_hocon_includes(data)
+        try:
+            parsed = ConfigFactory.parse_string(text)
+        except BackendError:
+            raise
         except Exception as e:
             raise BackendError("Failed to parse HOCON: {}".format(e)) from e
         return _as_lookupdict(parsed)
