@@ -60,6 +60,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the raised error, the log, or the CLI's output. A sops timeout also no
   longer chains the underlying `TimeoutExpired` (which carries any partial
   decrypted stdout).
+- Closed several remaining gaps in the HOCON `include` text scanner: a
+  caselessly-matched keyword using a non-ASCII look-alike character (e.g. a
+  dotless "ı"), a triple-quoted string ending in extra quote characters, a
+  backslash-escaped `"`/`#`/`${` in unquoted text, and a `//` that is part
+  of ordinary unquoted text (as in a URL-shaped value) rather than a
+  comment could each let a real `include file(...)`/`url(...)` reach
+  pyhocon's own include machinery. `include` inside a `[...]` array is now
+  also treated as value position (raises) rather than being blanked into a
+  shorter array. As a fail-closed backstop, pyhocon's own include-resolving
+  methods now also raise for the duration of a HOCON parse, so even an
+  undiscovered scanner gap cannot read a file or reach the network; they
+  behave normally for any other use of pyhocon in the same process.
 
 ### Added
 

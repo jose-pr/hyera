@@ -187,3 +187,85 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
 
     with pytest.raises(BackendError, match="pyhocon"):
         HOCONBackend().load(b"k = v")
+
+
+# Independent security review, round 2: 17 adversarial inputs where the text
+# scanner missed a directive pyhocon's own grammar honours caselessly, across
+# a triple-quoted string, a comment, or a substitution -- each proven (before
+# the fix) by the pyhocon include machinery actually running (the tripwire
+# firing). Every one must now raise before pyhocon ever parses the text, with
+# an empty tripwire; most report line 1, but a few genuinely start their
+# "include" on line 2, either because the source literally has a newline
+# first, or because a scanner fix (closing a run-away triple-quoted string,
+# or no longer treating an escaped "${" as a real substitution) now lets the
+# scan continue past what used to swallow the rest of the line.
+_ADVERSARIAL_INCLUDE_FORMS = [
+    ('ınclude "inc.conf"\nplain = p\n', 1, "dotless-i-plain"),
+    ('ınclude file("inc.conf")\nplain = p\n', 1, "dotless-i-file"),
+    ('msg = x ınclude file("inc.conf")\n', 1, "dotless-i-in-value"),
+    ('a = """x""""\ninclude file("inc.conf")\nb = "c"\n', 2, "quote-run-4"),
+    ('a = """""""\ninclude file("inc.conf")\nb = "c"\n', 2, "quote-run-7"),
+    (
+        'a = x\\"\ninclude file("inc.conf")\nb = "y"\n',
+        2,
+        "escaped-quote-unquoted",
+    ),
+    ('a = x//y include file("inc.conf")\n', 1, "double-slash-unquoted"),
+    ('a = http://h include file("inc.conf")\n', 1, "url-like-unquoted-value"),
+    ('# c\rinclude file("inc.conf")\nplain = p\n', 2, "lone-cr-ends-hash-comment"),
+    (
+        '// c\rinclude file("inc.conf")\nplain = p\n',
+        2,
+        "lone-cr-ends-slash-comment",
+    ),
+    ('a = x\\# include file("inc.conf")\n', 1, "escaped-hash"),
+    ('a = x\\${\ninclude file("inc.conf")\nb = }\n', 2, "escaped-substitution"),
+    (
+        '"""k\\"""" = 1\ninclude file("inc.conf")\nz = "q"\n',
+        2,
+        "triple-quote-key-escape",
+    ),
+    ('a = 1x//y include file("inc.conf")\n', 1, "double-slash-after-digit"),
+    (
+        'a = 1 // c\rinclude file("inc.conf")\n',
+        2,
+        "lone-cr-inside-slash-comment",
+    ),
+    ('o {\n ınclude file("inc.conf")\n}\n', 2, "dotless-i-in-object"),
+    ('ınclude required(file("inc.conf"))\n', 1, "dotless-i-required"),
+]
+
+
+@pytest.mark.parametrize(
+    "content,line",
+    [(content, line) for content, line, _id in _ADVERSARIAL_INCLUDE_FORMS],
+    ids=[id_ for _content, _line, id_ in _ADVERSARIAL_INCLUDE_FORMS],
+)
+def test_adversarial_include_forms_raise(content, line, pyhocon_tripwire, http_server):
+    _server, hits = http_server
+
+    with pytest.raises(BackendError, match="line {}".format(line)):
+        HOCONBackend().load(content.encode("utf-8"))
+
+    assert pyhocon_tripwire == []
+    assert hits == []
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        'l = [\n include "inc.conf"\n]\n',
+        'l = [\n 1,\n include "inc.conf"\n]\n',
+    ],
+    ids=["sole-element", "after-a-value"],
+)
+def test_include_in_array_value_position_raises(content, pyhocon_tripwire):
+    # A key-position plain include contributes nothing (blanked) at the top
+    # level or inside an object, but the same directive inside a `[...]`
+    # array is a value, not a key -- Puppet keeps it as literal text, and
+    # pyera (which always raises for value position) must not silently blank
+    # it into an empty/short array instead.
+    with pytest.raises(BackendError):
+        HOCONBackend().load(content.encode("utf-8"))
+
+    assert pyhocon_tripwire == []

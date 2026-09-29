@@ -2,6 +2,7 @@
 # Apache-2.0. Modified by jose-pr. See NOTICE.
 """Data backends: load a hiera data file (YAML, JSON, sops-encrypted YAML)."""
 
+import contextvars
 import json
 import logging
 import os
@@ -247,7 +248,18 @@ def _find_hocon_string_end(text: str, start: int) -> "tuple[int, str]":
         close = text.find('"""', content_start)
         if close == -1:
             return n, text[content_start:n]
-        return close + 3, text[content_start:close]
+        # HOCON's own triple-quoted string ends at the LAST quote of a
+        # run of 3+ consecutive quotes, not the first matching triple --
+        # ``"""x""""`` (4 trailing quotes) is the 1-character string "x"
+        # followed by a stray closing quote that pyhocon folds into the
+        # same terminator, not "x" followed by a bare `"` that starts a
+        # new string. Extending over every extra trailing quote keeps our
+        # notion of "end of string" in sync with pyhocon's, so scanning
+        # resumes at the same place pyhocon would.
+        end = close + 3
+        while end < n and text[end] == '"':
+            end += 1
+        return end, text[content_start:close]
     i = start + 1
     while i < n and text[i] != '"':
         if text[i] == "\\" and i + 1 < n:
@@ -284,17 +296,42 @@ def _hocon_directive_follows(text: str, i: int) -> bool:
     return False
 
 
+def _preceded_by_odd_backslashes(text: str, i: int) -> bool:
+    """True if an odd number of consecutive ``\\`` immediately precede
+    ``text[i]`` -- i.e. ``text[i]`` is itself escaped (``\\"``: escaped,
+    ``\\\\"``: not, the first backslash is what's escaped). Mirrors
+    pyhocon's own unquoted-value regex (``(?:[^...]|\\.)+``), which accepts
+    a backslash-escaped ``"``, ``#``/``//`` or ``${`` as an ordinary
+    character rather than the start of a string/comment/substitution.
+    """
+    count = 0
+    j = i - 1
+    while j >= 0 and text[j] == "\\":
+        count += 1
+        j -= 1
+    return count % 2 == 1
+
+
 def _strip_hocon_includes(text: str) -> str:
     """Blank the plain HOCON ``include "..."`` directives Puppet ignores,
     and raise :class:`BackendError` for every other include form --
     ``include file(...)``, ``url(...)``, ``classpath(...)``,
     ``required(...)``, ``package(...)``, any other ``name(...)``, a
-    directive in value position, a case-mismatched keyword, or a bare
+    directive in value position (including inside a ``[...]`` array), a
+    case-mismatched or code-point-mismatched keyword (pyhocon's own
+    ``Keyword("include", caseless=True)`` matches by ``.upper()``, which
+    also folds a dotless-i ``ınclude`` to ``INCLUDE``), or a bare
     ``include`` with nothing valid after it -- before pyhocon ever parses
     the text. This keeps pyhocon's own include machinery (which reads
     files off the process cwd and fetches ``http(s)``/``file`` URLs) from
     ever running. See ``AGENTS.md`` for the exact rule and its two
     deliberate divergences from Puppet (``file()``, value position).
+
+    A :func:`_install_hocon_include_guard`-installed backstop still applies
+    even if this scanner has a gap: pyhocon's own include-resolution
+    entry points raise unconditionally for the duration of
+    :meth:`HOCONBackend.load`, so a missed directive fails closed instead
+    of silently reading a file or reaching the network.
 
     Blanked spans replace every non-newline character with a space, so
     line/column numbers in any later pyhocon parse error still line up
@@ -304,16 +341,55 @@ def _strip_hocon_includes(text: str) -> str:
     out = list(text)
     i = 0
     last_sig = None  # last significant (non-space/tab) char seen so far
+    brackets = []  # stack of open '{'/'[' seen so far
     while i < n:
         c = text[i]
+        if c in ('"', "#", "$") and _preceded_by_odd_backslashes(text, i):
+            # An escaped quote/hash/substitution-start in unquoted text
+            # (``x\"``, ``x\#``, ``x\${``) is an ordinary character to
+            # pyhocon, not the start of a string, comment or substitution.
+            # (``"``, ``#`` and ``$`` are all excluded from pyhocon's
+            # unquoted-value character class, so unescaped they are always
+            # significant, unlike a lone ``/`` below.)
+            last_sig = c
+            i += 1
+            continue
         if c == '"':
             end, _content = _find_hocon_string_end(text, i)
             i = end
             last_sig = '"'
             continue
-        if c == "#" or (c == "/" and i + 1 < n and text[i + 1] == "/"):
-            j = text.find("\n", i)
-            i = j if j != -1 else n
+        if c == "#":
+            j = i
+            while j < n and text[j] not in "\r\n":
+                j += 1
+            i = j
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            # Unlike ``#``, a lone ``/`` is NOT excluded from pyhocon's
+            # unquoted-value character class, so ``//`` only starts a
+            # comment at a token boundary (start of text, whitespace, or a
+            # structural character) -- ``http://h`` and ``x//y`` are
+            # ordinary unquoted text, since the value token already
+            # in progress simply continues through the slashes and pyhocon
+            # never gets a chance to try matching a comment there. An
+            # escaped ``\//`` (odd backslashes) is never a comment either.
+            # NOTE: ``:`` is deliberately not a boundary character here --
+            # unlike every other separator below, a lone ``:`` is NOT
+            # excluded from pyhocon's unquoted-value character class, so it
+            # can appear literally inside a continuous token (``http://h``)
+            # as well as as a key/value separator; treating it as always a
+            # boundary would make ``//`` in ``http://h`` a comment again.
+            prev = text[i - 1] if i > 0 else None
+            at_boundary = prev is None or prev in ' \t\r\n{}[],="'
+            if at_boundary and not _preceded_by_odd_backslashes(text, i):
+                j = i
+                while j < n and text[j] not in "\r\n":
+                    j += 1
+                i = j
+                continue
+            last_sig = c
+            i += 1
             continue
         if c == "$" and i + 1 < n and text[i + 1] == "{":
             j = text.find("}", i + 2)
@@ -323,8 +399,23 @@ def _strip_hocon_includes(text: str) -> str:
         if c in " \t":
             i += 1
             continue
-        if c == "\n":
+        if c == "\n" or c == "\r":
+            # HOCON's own line-ending token is any run of ``\n``/``\r``
+            # (pyhocon: ``eol = Word('\n\r')``) -- a lone ``\r`` (no ``\n``)
+            # ends a ``#``/``//`` comment and starts a new key-position
+            # line exactly as a real newline would.
             last_sig = "\n"
+            i += 1
+            continue
+        if c in "{[":
+            brackets.append(c)
+            last_sig = c
+            i += 1
+            continue
+        if c in "}]":
+            if brackets:
+                brackets.pop()
+            last_sig = c
             i += 1
             continue
         if c.isalpha():
@@ -332,13 +423,23 @@ def _strip_hocon_includes(text: str) -> str:
             while j < n and (text[j].isalnum() or text[j] == "_"):
                 j += 1
             word = text[i:j]
-            if word.lower() != "include":
+            if word.upper() != "INCLUDE":
                 last_sig = word[-1]
                 i = j
                 continue
 
-            key_position = last_sig in (None, "\n", "{", ",")
-            line = text.count("\n", 0, i) + 1
+            # Inside a `[...]` array, every position is a value, never a
+            # key -- Puppet keeps a value-position include as literal text,
+            # and pyera (which always raises for value position) must not
+            # blank it away into an empty/short array instead.
+            in_array = bool(brackets) and brackets[-1] == "["
+            key_position = (not in_array) and last_sig in (None, "\n", "{", ",")
+            line = text.count("\n", 0, i) + text.count("\r", 0, i) + 1
+            # A lone `\r` and a `\n` from the same CRLF pair would both be
+            # counted above; CRLF is normalized to a single logical
+            # newline everywhere else in this scanner, so undo the double
+            # count for every CRLF pair before this position.
+            line -= text.count("\r\n", 0, i)
 
             if key_position and word == "include":
                 after = _skip_hocon_blanks(text, j)
@@ -351,7 +452,7 @@ def _strip_hocon_includes(text: str) -> str:
                             "supported (line {})".format(line)
                         )
                     for k in range(i, end):
-                        if out[k] != "\n":
+                        if out[k] not in ("\n", "\r"):
                             out[k] = " "
                     i = end
                     last_sig = " "
@@ -378,13 +479,106 @@ def _strip_hocon_includes(text: str) -> str:
     return "".join(out)
 
 
+#: Set (only for the duration of a `HOCONBackend.load` call) so the
+#: `_install_hocon_include_guard`-wrapped pyhocon entry points raise instead
+#: of running. Context-local (per thread/task), so a concurrent `load()` on
+#: another thread and every other pyhocon caller in the process, at any
+#: point in time, are unaffected -- only the call(s) that set it see it fire.
+_HOCON_INCLUDE_GUARD: "contextvars.ContextVar[bool]" = contextvars.ContextVar(
+    "_hocon_include_guard", default=False
+)
+
+_HOCON_GUARD_INSTALLED = False
+
+
+def _guarded_hocon_classmethod(original, label):
+    """Wrap a pyhocon include-resolution classmethod's underlying function
+    (``original``, still taking ``cls`` first) so it raises
+    :class:`BackendError` while :data:`_HOCON_INCLUDE_GUARD` is set, and
+    behaves exactly as pyhocon shipped it otherwise.
+    """
+
+    def _guarded(cls, *args, **kwargs):
+        if _HOCON_INCLUDE_GUARD.get():
+            raise BackendError(
+                "HOCON include resolution ({}) ran despite the text "
+                "scanner having sanitized the input first; refusing to "
+                "read a file or fetch a URL".format(label)
+            )
+        return original(cls, *args, **kwargs)
+
+    return classmethod(_guarded)
+
+
+def _install_hocon_include_guard() -> None:
+    """Make pyhocon's own include-resolution entry points --
+    ``ConfigFactory.parse_file``, ``ConfigFactory.parse_URL`` and
+    ``ConfigParser.resolve_package_path``, the three methods its
+    ``include`` machinery actually calls to read a file or fetch a URL --
+    raise :class:`BackendError` for the duration of a
+    :meth:`HOCONBackend.load` call, and run exactly as pyhocon shipped them
+    at every other time.
+
+    Installed once: eagerly at import time if pyhocon is already
+    importable (before any other code -- a test fixture included -- gets a
+    chance to monkeypatch these same three methods first), and again,
+    idempotently, from :meth:`HOCONBackend.load` for the rarer case where
+    pyhocon only becomes importable afterwards. The wrapping itself is a
+    permanent, process-wide monkeypatch -- there is no per-call hook to
+    attach to instead -- but the raising it adds is gated by a
+    :class:`contextvars.ContextVar`, which is context-local (per
+    thread/task): only the ``load()`` call that set the guard ever sees it
+    fire, and every other pyhocon caller in the same process, at any point
+    before, during or after that call, keeps pyhocon's normal behavior.
+
+    This is a fail-closed backstop for :func:`_strip_hocon_includes`: if
+    that text scanner ever has a gap (misses a directive form pyhocon's own
+    grammar accepts), the include still cannot read a file or reach the
+    network -- it raises instead.
+    """
+    global _HOCON_GUARD_INSTALLED
+    if _HOCON_GUARD_INSTALLED:
+        return
+    from pyhocon.config_parser import ConfigFactory, ConfigParser
+
+    for cls, attr, label in (
+        (ConfigFactory, "parse_file", "file include"),
+        (ConfigFactory, "parse_URL", "URL include"),
+        (ConfigParser, "resolve_package_path", "package include"),
+    ):
+        current = cls.__dict__.get(attr)
+        # Ordinarily a `classmethod` object (pyhocon's own definition);
+        # tolerate anything else (e.g. a test's own monkeypatch installed
+        # ahead of this call) by wrapping it as-is instead of unwrapping a
+        # `.__func__` that may not exist, so installation never crashes on
+        # already-patched state -- it just guards whatever is there.
+        original = current.__func__ if hasattr(current, "__func__") else current
+        setattr(cls, attr, _guarded_hocon_classmethod(original, label))
+    _HOCON_GUARD_INSTALLED = True
+
+
+# Installed eagerly, at import time, if pyhocon is already importable -- so
+# the guard is in place before any test fixture (or other code) gets a
+# chance to monkeypatch these same three methods for its own purposes.
+# Harmless no-op if pyhocon is missing or broken: HOCONBackend.load's own
+# import-time error handling covers that case, and load() also calls this
+# (idempotent) for the rarer case where pyhocon becomes importable only
+# after this module was first imported.
+try:
+    _install_hocon_include_guard()
+except Exception:  # pragma: no cover - optional dependency, best-effort
+    pass
+
+
 class HOCONBackend(Backend):
     """HOCON (``.conf``) data via the optional ``pyhocon`` package.
 
     ``include`` directives are sanitized before pyhocon ever sees the text
     (see :func:`_strip_hocon_includes`): pyhocon's own include machinery
     (file reads relative to the process cwd, ``http(s)``/``file`` URL
-    fetches) never runs.
+    fetches) never runs. As a fail-closed backstop, pyhocon's own include
+    entry points are also wrapped (see :func:`_install_hocon_include_guard`)
+    to raise if the scanner ever has a gap.
     """
 
     NAMES = ("hocon_data", "hocon")
@@ -402,18 +596,22 @@ class HOCONBackend(Backend):
                 "hocon_data backend could not import 'pyhocon' ({}: {}); "
                 "pip install 'pyera[hocon]'".format(type(e).__name__, e)
             ) from e
+        _install_hocon_include_guard()
         try:
             if isinstance(data, bytes):
                 data = data.decode("utf-8")
         except UnicodeDecodeError as e:
             raise BackendError("Failed to parse HOCON: {}".format(e)) from e
         text = _strip_hocon_includes(data)
+        token = _HOCON_INCLUDE_GUARD.set(True)
         try:
             parsed = ConfigFactory.parse_string(text)
         except BackendError:
             raise
         except Exception as e:
             raise BackendError("Failed to parse HOCON: {}".format(e)) from e
+        finally:
+            _HOCON_INCLUDE_GUARD.reset(token)
         return _as_lookupdict(parsed)
 
 

@@ -137,7 +137,12 @@ Install and import as `pyera` (`pip install pyera`, extras
   `include` directive in value position — raises `BackendError` instead
   (two of these, `file()` and value position, differ from what Puppet
   itself does; see the gotcha below). `${VAR}` substitutions fall back to
-  environment variables, as in Puppet.
+  environment variables, as in Puppet. As a fail-closed backstop, pyhocon's
+  own include-resolving methods (`parse_file`/`parse_URL`/
+  `resolve_package_path`) also raise for the duration of `.load()`, so an
+  undiscovered gap in the text scanner still cannot read a file or reach
+  the network; they behave normally for any other pyhocon use in the same
+  process, before or after.
 - **`has_hocon() -> bool`** — `True` iff `pyhocon` imports without error; any
   import-time exception (not just `ImportError`) is caught, logged at
   debug, and returns `False` — an installed but broken `pyhocon` leaves
