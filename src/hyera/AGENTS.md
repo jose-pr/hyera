@@ -254,6 +254,48 @@ Puppet's top scope, as one immutable, hashable value, bound to every
     is this scope's own copy, shared by every caller. `repr()` shows
     `environment`, `strict` and variable/fact counts, never values.
 
+## Facts (`_facts.py`)
+
+Two sources for `Scope(facts=...)`: a Puppet-compatible `--facts` file, and
+bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
+
+- **`load_facts(path) -> dict`** — `path` is a `str` or `os.PathLike`; every
+  message uses `str(path)` as given (`puppet lookup --facts` rules,
+  `application/lookup.rb:349-371`). The parser is chosen by extension:
+  `.json` → JSON; `.yml`/`.yaml` → YAML; anything else tries JSON, then
+  YAML, and a failure of *either* there just means "no result" (not an
+  error). For a `.json`/`.yml`/`.yaml` file specifically, a parse failure
+  **does** raise. JSON is parsed with Ruby `json`-gem rules: UTF-8 only (a
+  BOM fails), `NaN`/`Infinity`/`-Infinity` rejected. YAML goes through
+  `hyera._yaml_loader.safe_load` (decoded `utf-8-sig` first, so a BOM is
+  stripped, unlike a hiera.yaml/data file) — but
+  `Puppet::Util::Yaml.safe_load` permits **no** classes at all, unlike the
+  data-file loader, which permits `Symbol`: a `RubySymbol` anywhere in the
+  parsed result (key or value, from an explicit `!ruby/sym` tag or a plain
+  `:name` scalar alike) raises `BackendError("Tried to load unspecified
+  class: Symbol")` the same way a Date/Time already does. The result must be
+  a `dict` — anything else (a list, a scalar, an empty file, or "no
+  result" from the lenient any-extension path) raises `BackendError`
+  ("Incorrectly formatted data in `<path>` given via the --facts flag (only
+  accepts yaml and json files)"). `hostname`/`domain`/`fqdn`/`clientcert`
+  are all-or-nothing: any one present without the other three raises
+  `BackendError` ("When overriding any of the hostname,domain,fqdn,clientcert
+  facts with `<path>` given via the --facts flag, they must all be
+  overridden."). Every error is a `BackendError` with `.path` set, chained
+  from its cause where there is one.
+- **`facts_from_facter(*, timeout: int = 30) -> dict`** — runs a bare
+  `facter -j` (no queries, no `--show-legacy`: a queried `facter -j a b`
+  returns flat dotted keys `$facts` cannot navigate) and returns its JSON
+  output as a `dict`. Does **not** add `clientcert`/`clientversion`/
+  `clientnoop` — those come from Puppet's agent, not facter; pass
+  `clientcert` yourself (e.g. via `Scope(variables={"clientcert": ...})`)
+  if `$trusted.certname` should be set. Hardened like `SopsBackend`'s own
+  subprocess call: `timeout` (default 30s) bounds it; a missing `facter`
+  binary, a timeout, a non-zero exit (stderr captured), or output that
+  isn't a JSON object all raise `BackendError` — a timeout is recorded
+  inside its `except` and raised after, so `__context__` never carries
+  the (possibly partial) output, matching the sops runner's own hardening.
+
 ## Backends (`backends.py`)
 
 A self-registering registry: every format or provider

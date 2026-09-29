@@ -52,11 +52,22 @@ from a `clientcert` variable/fact, else empty). Facts are also reachable as
 a whole through `$facts`, and `server_facts` through `$server_facts`.
 
 ```python
-from hyera import Hiera, Scope
+from hyera import Hiera, Scope, load_facts
 
-scope = Scope(facts={"os": {"family": "Debian"}}, environment="production", strict="error")
+scope = Scope(facts=load_facts("facts.yaml"), environment="production", strict="error")
 h = Hiera("hiera.yaml", scope=scope)
 h.get("ntp::servers")
+```
+
+`load_facts(path)` reads a `puppet lookup --facts`-style file (JSON for
+`.json`, YAML for `.yaml`/`.yml`, otherwise JSON then YAML); the result
+must be a mapping, and `hostname`/`domain`/`fqdn`/`clientcert` are
+all-or-nothing. `facts_from_facter()` runs a bare `facter -j` instead:
+
+```python
+from hyera import facts_from_facter
+
+scope = Scope(facts=facts_from_facter())
 ```
 
 `h.scoped(**derive_args)` returns a `ScopedHiera` bound to

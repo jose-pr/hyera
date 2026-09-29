@@ -21,6 +21,7 @@ from .core import (
     Hiera,
     ScopedHiera,
 )
+from ._facts import facts_from_facter, load_facts
 from ._hiera_config import HieraLevel
 from ._merge_strategy import Merge, make_merge
 from ._scope import Scope
@@ -35,6 +36,8 @@ __all__ = [
     "Merge",
     "Scope",
     "Sensitive",
+    "load_facts",
+    "facts_from_facter",
     "make_merge",
     "default_backends",
     "Backend",

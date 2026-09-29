@@ -7,4 +7,3 @@ queries:
     id: v1
     error_class: BackendError
     error_match: "Tried to load unspecified class: Date"
-    divergence: spec-context-facts/no-facts-loader-or-facter

@@ -43,6 +43,7 @@ The files ported from Puppet are:
     src/hyera/_new_function.py    (from puppet/functions/new.rb)
     src/hyera/_scope.py           (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
                                     context/trusted_information.rb, node/facts.rb)
+    src/hyera/_facts.py           (from puppet/application/lookup.rb, util/yaml.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 

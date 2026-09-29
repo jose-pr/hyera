@@ -493,4 +493,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [Psych](https://github.com/ruby/psych), the Apache-2.0 and MIT projects
   several modules port translated code from, alongside phiera; `NOTICE` lists
   each ported file.
+- `load_facts(path)` reads a facts file with `puppet lookup --facts` rules
+  (JSON for `.json`, YAML for `.yaml`/`.yml`, otherwise JSON then YAML; the
+  result must be a mapping; YAML dates, times and `:symbols` are rejected;
+  `hostname`/`domain`/`fqdn`/`clientcert` all or none). `facts_from_facter(timeout=30)`
+  runs `facter -j` and returns its facts. Both raise `BackendError`.
 

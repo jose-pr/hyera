@@ -22,6 +22,7 @@ src/hyera/
 ├── _merge_strategy.py      # Merge, make_merge: merge strategies (merge_strategy.rb)
 ├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
 ├── _scope.py                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
+├── _facts.py                # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
 ├── _lookup_adapter.py      # lookup_options matching + convert_result (lookup_adapter.rb)
 ├── _types.py               # type model, Sensitive (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
 ├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)

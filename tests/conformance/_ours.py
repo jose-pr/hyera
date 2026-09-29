@@ -10,9 +10,7 @@ import contextlib
 import io
 import json
 
-import yaml
-
-from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive
+from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive, load_facts
 from hyera.cli import main as _cli_main
 
 import _golden
@@ -69,7 +67,12 @@ def _unrecognized_flags(args: list) -> list:
 
 
 def _load_facts(case_dir) -> dict:
-    return yaml.safe_load((case_dir / "facts.yaml").read_text(encoding="utf-8")) or {}
+    """Puppet's own ``--facts`` path: a ``BackendError`` here (a malformed
+    facts file, a disallowed YAML class, the hostname/domain/fqdn/clientcert
+    all-or-none rule) is an ``error`` outcome like any other
+    :class:`~hyera.HieraError`, so this is called from inside ``run_api``'s
+    try/except, not before it."""
+    return load_facts(case_dir / "facts.yaml")
 
 
 def as_puppet_json(value):
@@ -139,16 +142,16 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     not a hyera-behavior one, so only that call is guarded.
     """
     key, env, strict = _check_common(case_dir, case, query)
-    facts = _load_facts(case_dir)
-    scope = Scope(
-        facts=facts,
-        environment=env,
-        server_facts={"serverversion": golden["puppet_version"]},
-        strict=strict,
-        node_name=golden["node"],
-    )
     merge = query.get("merge")
     try:
+        facts = _load_facts(case_dir)
+        scope = Scope(
+            facts=facts,
+            environment=env,
+            server_facts={"serverversion": golden["puppet_version"]},
+            strict=strict,
+            node_name=golden["node"],
+        )
         hiera = Hiera(str(case_dir / "hiera.yaml"), scope=scope)
         if query.get("default") is not None:
             value = hiera.get(key, default=query["default"], merge=merge)
