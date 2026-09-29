@@ -1,0 +1,6 @@
+description: >-
+  mapped_paths with a "::"-qualified collection var.
+origin: spec-config/cases/mapped_colon
+queries:
+  - key: k
+    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

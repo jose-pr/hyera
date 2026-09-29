@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "29ced9b1fdaa29ee3722ed45367af3662e60aa4ff195e5dcbcaab3be31086e19",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "found",
+      "value": "redhat"
+    }
+  }
+}

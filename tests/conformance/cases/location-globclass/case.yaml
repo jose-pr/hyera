@@ -1,0 +1,6 @@
+description: >-
+  Glob character-class and single-char wildcard patterns (c[ab].yaml,
+  q?.yaml).
+origin: critic-puppet-coverage/globclass
+queries:
+  - key: k

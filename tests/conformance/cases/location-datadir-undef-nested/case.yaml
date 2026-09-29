@@ -1,0 +1,6 @@
+description: >-
+  An undefined dotted fact reference (%{facts.nosuch}) inside a level's own
+  "datadir" template.
+origin: critic-puppet-coverage/datadir_undef_nested
+queries:
+  - key: k

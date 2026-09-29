@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "5ebadcac79abe898ba25eebe3f732692e751bd4026f6d3687367b358e5cb34ef",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Interpolation using method syntax is not allowed in this context (file: <case>/hiera.yaml)"
+    }
+  }
+}

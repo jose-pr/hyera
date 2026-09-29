@@ -1,0 +1,6 @@
+description: >-
+  mapped_paths over a non-iterable Integer collection var.
+origin: spec-config/cases/mapped_int
+queries:
+  - key: k
+    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

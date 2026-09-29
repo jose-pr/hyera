@@ -1,0 +1,7 @@
+description: >-
+  mapped_paths over a Hash collection var: Puppet stringifies the whole
+  [key, value] pair as the item, we iterate values.
+origin: spec-config/cases/mapped_hash
+queries:
+  - key: k
+    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

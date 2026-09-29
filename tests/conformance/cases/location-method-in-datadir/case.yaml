@@ -1,0 +1,6 @@
+description: >-
+  A datadir template using %{literal(...)} method-call syntax.
+origin: spec-config/cases/method_in_datadir
+queries:
+  - key: k
+    divergence: spec-config/method-syntax-in-locations-silently-skipped

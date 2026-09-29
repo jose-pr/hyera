@@ -1,0 +1,6 @@
+description: >-
+  mapped_paths with a dotted collection var (facts.roles).
+origin: spec-config/cases/mapped_dotted
+queries:
+  - key: k
+    divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

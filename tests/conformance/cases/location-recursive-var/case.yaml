@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy path variable (%{role}) whose own fact value is itself an
+  unresolved %{...} template.
+origin: spec-config/cases/recursive_var
+queries:
+  - key: k
+    divergence: spec-config/location-interpolation-grammar

@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy path referencing a quoted, dotted fact name %{facts."a.b"}.
+origin: spec-config/cases/quoted_segment
+queries:
+  - key: k
+    divergence: spec-config/location-interpolation-grammar

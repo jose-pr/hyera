@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "540d8ff9a6632366c35b42bcbb0dabb52c6a0d9634bc7324f885cce393a5acb7",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "undefined method 'empty?' for an instance of Integer"
+    }
+  }
+}

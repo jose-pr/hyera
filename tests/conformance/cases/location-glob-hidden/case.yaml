@@ -1,0 +1,5 @@
+description: >-
+  A glob "*.yaml" over a directory containing a dotfile.
+origin: spec-config/cases/glob_hidden
+queries:
+  - key: k

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "bb71af77d5cd2cc8608f86c3663230fa0f5b831d2070acdb7b9fbd48d3ed3f2a",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Is a directory @ io_fread - <case>/data/confd"
+    }
+  }
+}

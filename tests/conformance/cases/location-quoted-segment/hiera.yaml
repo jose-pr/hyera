@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: q, path: "q/%{facts.\"a.b\"}.yaml"}
+  - {name: common, path: common.yaml}
