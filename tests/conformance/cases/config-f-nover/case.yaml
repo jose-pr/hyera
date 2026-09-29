@@ -3,4 +3,3 @@ description: 'docs-accuracy: a v5-shaped file with no `version:` key is version 
 origin: docs-accuracy/f_nover
 queries:
 - key: k
-  divergence: spec-config/hiera-v3-config-unsupported

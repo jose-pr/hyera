@@ -486,7 +486,7 @@ def test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key(tmp_pat
     config.write_bytes(
         "﻿version: 5\ndefaults: {data_hash: yaml_data}\n".encode("utf-8")
     )
-    base, _base_path = _read_base_config(str(config), None)
+    _source, base = _read_base_config(str(config), None)
     assert base == {"version": 5}
 
 
@@ -498,7 +498,7 @@ def test_hiera_yaml_symbol_keys_normalize(tmp_path):
             "  - :name: c\n    :path: common.yaml\n"
         ).encode("utf-8")
     )
-    base, _base_path = _read_base_config(str(config), None)
+    _source, base = _read_base_config(str(config), None)
     assert base["version"] == 5
     assert base["hierarchy"][0]["name"] == "c"
 

@@ -8,9 +8,8 @@ from ._hiera_config import (
     DEFAULT_DATA_DIR,
     HieraLevel,
     _build_hierarchies,
-    _config_origin,
-    _config_path,
     _read_base_config,
+    _select_version,
 )
 from ._interpolation import Interpolation, _format_source, _normalize_source
 from ._location_resolver import _resolve_level_paths
@@ -161,26 +160,26 @@ class Hiera(Interpolation):
         #: ``_hiera_config._build_levels``).
         self.backends: "list[type]" = list(backends)
 
-        self.base, self.base_path = _read_base_config(self.base_config, base_path)
+        source, self.base = _read_base_config(self.base_config, base_path)
+        self.base_path = source.root
+        _select_version(self.base, source)
 
         if not self.backends:
             raise ConfigError("No backends could be loaded")
 
-        origin = _config_origin(self.base_config)
-        path = _config_path(self.base_config)
         try:
             self.hierarchy, self.default_hierarchy = _build_hierarchies(
                 self.base, self.backends
             )
         except HieraError as e:  # keep the class and text, add the file
-            e.path = e.path or path
+            e.path = e.path or source.path
             raise
         except Exception as e:
             raise ConfigError(
                 "The Lookup Configuration at '{}' is invalid: {}: {}".format(
-                    origin, type(e).__name__, _one_line(e)
+                    source.label, type(e).__name__, _one_line(e)
                 ),
-                path=path,
+                path=source.path,
             ) from e
 
         # Pre-load/cache global (context-free) data.

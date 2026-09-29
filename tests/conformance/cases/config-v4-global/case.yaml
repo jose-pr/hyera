@@ -5,4 +5,3 @@ queries:
   - key: k
     error_class: ConfigError
     error_match: 'version 4 cannot be used in the global layer'
-    divergence: spec-config/schema-validation-missing

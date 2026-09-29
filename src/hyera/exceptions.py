@@ -18,7 +18,15 @@ class HieraError(Exception):
 
 
 class ConfigError(HieraError):
-    """The base hiera configuration (``hiera.yaml``) is missing or invalid."""
+    """The base hiera configuration (``hiera.yaml``) is missing or invalid.
+
+    ``line``, when known, is the 1-based line in ``.path`` the problem was
+    found at (e.g. a malformed hierarchy entry).
+    """
+
+    def __init__(self, *args, path=None, line=None):
+        super().__init__(*args, path=path)
+        self.line = line
 
 
 class BackendError(HieraError):

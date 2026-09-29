@@ -5,4 +5,3 @@ queries:
     note: Puppet 8.10 probe
     error_class: ConfigError
     error_match: "entry 'version' expects an Integer value, got Float"
-    divergence: spec-config/schema-validation-missing

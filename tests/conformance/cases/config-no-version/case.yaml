@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/no_version
 queries:
   - key: k
-    divergence: spec-config/hiera-v3-config-unsupported
