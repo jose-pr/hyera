@@ -34,11 +34,8 @@ queries:
 - key: s_bigfloat
   divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_zero
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: s_false
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: s_true
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_emptystr
 - key: s_arr
   divergence: spec-interpolation/ruby-to_s-formatting
@@ -46,9 +43,7 @@ queries:
   divergence: spec-interpolation/ruby-to_s-formatting
   hash_inspect: true
 - key: s_facts_false
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: s_facts_zero
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: s_whole_int
 - key: s_whole_arr_scope
   divergence: spec-interpolation/method-result-type-and-nonscalar
@@ -58,7 +53,6 @@ queries:
 - key: s_scope_fn_dq
   divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_scope_fn_false
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: s_scope_fn_missing
   divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_hiera_fn
@@ -67,7 +61,6 @@ queries:
   divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_int_emb
 - key: s_lookup_bool_emb
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_lookup_float_emb
 - key: s_lookup_arr
   divergence: spec-interpolation/method-result-type-and-nonscalar

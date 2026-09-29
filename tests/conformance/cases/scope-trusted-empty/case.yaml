@@ -3,4 +3,3 @@ description: In lookup-mode, trusted.certname interpolates as '' (not skipped), 
 origin: spec-config/cases/trusted_empty
 queries:
 - key: k
-  divergence: spec-context-facts/path-missing-var-skips-level

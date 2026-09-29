@@ -38,7 +38,7 @@ def test_scoped_copies_and_pickles(use_path, make_tree):
         copy.deepcopy(s),
         pickle.loads(pickle.dumps(s)),
     ):
-        assert clone.context == s.context
+        assert clone.scope == s.scope
         assert clone.get("k") == s.get("k")
 
 

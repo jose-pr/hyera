@@ -5,4 +5,3 @@ origin: spec-context-facts/fulltrust
 queries:
   - key: v1
     id: v1
-    divergence: spec-context-facts/no-puppet-scope-model

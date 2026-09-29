@@ -8,28 +8,31 @@ Ports Puppet's ``location_resolver.rb``.
 import logging
 
 from ._interpolation import _format_source
+from ._navigation import _MISSING
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _resolve_level_paths(level, base_path, context):
-    """Yield the candidate source paths for a level in a given context.
+def _resolve_level_paths(level, base_path, scope):
+    """Yield the candidate source paths for a level in a given bound
+    :class:`~hyera.Scope`.
 
     Glob levels expand their patterns against the filesystem (sorted for
-    determinism); mapped_paths bind each element of a context collection to
-    the item var and format the template; literal levels format each source
-    with the context. Sources referencing an absent context var are skipped.
+    determinism); mapped_paths bind each element of a scope collection to
+    the item var (as one local variable layer) and format the template;
+    literal levels format each source against the scope. A source
+    referencing an unbound/undefined variable is skipped.
     """
     try:
-        datadir = _format_source(level.backend.datadir, context)
+        datadir = _format_source(level.backend.datadir, scope)
     except (KeyError, IndexError, TypeError, AttributeError):
         return
     root = base_path / datadir
 
     if level.mapped:
         collection_var, item_var, template = level.mapped
-        collection = context.get(collection_var)
-        if collection is None:
+        collection = scope.lookup(collection_var)
+        if collection is _MISSING or collection is None:
             return
         if isinstance(collection, dict):
             items = list(collection.values())
@@ -38,17 +41,16 @@ def _resolve_level_paths(level, base_path, context):
         else:
             items = [collection]
         for item in items:
-            mapped_ctx = dict(context)
-            mapped_ctx[item_var] = item
+            item_scope = scope.with_local_scope({item_var: item})
             try:
-                yield root / _format_source(template, mapped_ctx)
+                yield root / _format_source(template, item_scope)
             except (KeyError, IndexError, TypeError, AttributeError):
                 continue
         return
 
     for source in level.sources:
         try:
-            rel = _format_source(source, context)
+            rel = _format_source(source, scope)
         except (KeyError, IndexError, TypeError, AttributeError):
             continue
         if level.glob:

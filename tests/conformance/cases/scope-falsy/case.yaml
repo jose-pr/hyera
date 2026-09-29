@@ -4,12 +4,8 @@ description: 'A falsy fact (is_virtual: false) used in a location path still res
 origin: standards-python/falsy
 queries:
 - key: from_virtual_false
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: from_spaced_env
   divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: msg_bool
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: msg_zero
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: msg_fact
-  divergence: spec-context-facts/falsy-scope-values-dropped

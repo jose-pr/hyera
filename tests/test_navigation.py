@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from hyera import Hiera
+from hyera import Hiera, Scope
 from hyera.exceptions import HieraLookupError
 from hyera._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
 
@@ -187,10 +187,10 @@ def test_default_does_not_hide_syntax_error(make_tree):
 
 
 def test_format_raises_on_type_mismatch(make_tree):
-    # format() resolves %{...} references through the same _ctx_lookup, so
+    # format() resolves %{...} references through the same _scope_ref, so
     # a mismatch there raises too, not just for data-file interpolation.
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "a: 1\n"})
-    h = Hiera(str(root / "hiera.yaml"), context={"s": "hello"})
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"s": "hello"}))
     with pytest.raises(HieraLookupError, match="Got String"):
         h.format("%{s.x}")
 

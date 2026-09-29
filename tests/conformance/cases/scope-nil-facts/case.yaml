@@ -9,15 +9,13 @@ queries:
   - key: v1
     id: v1-strict-error
     puppet_args: ["--strict", "error"]
-    divergence: spec-context-facts/undefined-variable-semantics
   - key: v2
     id: v2
-    divergence: spec-context-facts/no-puppet-scope-model
   - key: v3
     id: v3
   - key: v4
     id: v4
     hash_inspect: true
-    divergence: [spec-interpolation/ruby-to_s-formatting, spec-context-facts/no-puppet-scope-model]
+    divergence: spec-interpolation/ruby-to_s-formatting
   - key: v5
     id: v5

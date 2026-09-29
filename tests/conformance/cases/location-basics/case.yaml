@@ -6,9 +6,7 @@ origin: tests/conformance/cases/hierarchy
 queries:
   - key: common_key
   - key: from_count
-    divergence: spec-context-facts/falsy-scope-values-dropped
   - key: from_flag
-    divergence: spec-context-facts/falsy-scope-values-dropped
   - key: extra_key
   - key: web_setting
     divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

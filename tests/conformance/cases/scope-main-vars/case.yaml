@@ -6,10 +6,8 @@ origin: critic-puppet-coverage/builtins
 queries:
   - key: v1
     id: v1
-    divergence: spec-context-facts/no-puppet-scope-model
   - key: v2
     id: v2
-    divergence: spec-context-facts/no-puppet-scope-model
   - key: v3
     id: v3
   - key: v4

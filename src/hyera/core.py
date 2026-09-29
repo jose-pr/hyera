@@ -17,6 +17,7 @@ from ._location_resolver import _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import make_merge
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
+from ._scope import Scope
 from .backends import default_backends
 
 __all__ = ["Hiera", "ScopedHiera"]
@@ -60,43 +61,60 @@ def _validate_data_hash(data, name, path) -> None:
 
 
 class ScopedHiera:
-    def __init__(self, hiera, context=None):
+    """A ``Hiera`` with a bound (derived) :class:`~hyera.Scope`.
+
+    Every method has ``Hiera``'s own signature and uses this scope instead
+    of ``hiera.scope``. Unknown attributes proxy to the wrapped ``Hiera``.
+    """
+
+    def __init__(self, hiera, scope: Scope):
         self.hiera = hiera
-        self.context = context or {}
+        self.scope = scope
 
-    def has(self, key, context=None, **kwargs):
-        # Same layering as .get(): the bound context goes *under* per-call
-        # overrides, so a scoped .has() always agrees with the equivalent
-        # .get().
-        new_context = {}
-        new_context.update(self.context)
-        new_context.update(context or {})
-        new_context.update(kwargs)
-        return self.hiera.has(key, context=new_context)
+    def get(self, key: str, default=None, merge=None, merge_deep=False, throw=False):
+        return self.hiera._get(key, default, merge, merge_deep, throw, self.scope)
 
-    def get(
+    def has(self, key: str) -> bool:
+        return self.hiera._has(key, self.scope)
+
+    def sources(self):
+        return self.hiera._sources(self.scope)
+
+    def format(self, text: str) -> str:
+        return self.hiera._format(text, self.scope)
+
+    def scoped(
         self,
-        key,
-        default=None,
-        merge=None,
-        merge_deep=False,
-        throw=False,
-        context=None,
-        **kwargs,
-    ):
-        new_context = {}
-        new_context.update(self.context)
-        new_context.update(context or {})
-        new_context.update(kwargs)
-        return self.hiera.get(key, default, merge, merge_deep, throw, new_context)
+        *,
+        variables=None,
+        facts=None,
+        trusted=None,
+        server_facts=None,
+        environment=None,
+        strict=None,
+        node_name=None,
+    ) -> "ScopedHiera":
+        return ScopedHiera(
+            self.hiera,
+            self.scope.derive(
+                variables=variables,
+                facts=facts,
+                trusted=trusted,
+                server_facts=server_facts,
+                environment=environment,
+                strict=strict,
+                node_name=node_name,
+            ),
+        )
 
     def __getattr__(self, name):
         # Copying/pickling rebuilds the instance without __init__ and then
         # probes it for state/dunder methods; without this guard that probe
         # reaches ``self.hiera`` -- itself an attribute lookup on the same
         # not-yet-initialized instance -- recursing until the stack
-        # overflows. ``hiera`` and any dunder name are never proxied.
-        if name == "hiera" or name.startswith("__"):
+        # overflows. ``hiera``/``scope`` and any dunder name are never
+        # proxied.
+        if name in ("hiera", "scope") or name.startswith("__"):
             raise AttributeError(name)
         return getattr(self.hiera, name)
 
@@ -114,41 +132,42 @@ class Hiera(Interpolation):
         registered in the ``function`` namespace (``YAMLBackend``,
         ``JSONBackend``, ``HOCONBackend``, ``SopsBackend``).
     :param base_path: root that relative data dirs/paths resolve against.
-    :param context: default format/context variables for this instance's
-        lifetime.
-    :param kwargs: additional context variables (merged into ``context``).
+    :param scope: the bound :class:`~hyera.Scope` for this instance's
+        lifetime (facts, trusted data, variables, ``strict``). Defaults to
+        ``Scope()`` (Puppet's defaults: no facts, environment
+        ``"production"``, the local trusted hash). Anything other than a
+        ``Scope`` (or ``None``) raises ``TypeError``.
     """
 
     def __init__(
-        self, base_config, backends=None, base_path=None, context: dict = None, **kwargs
+        self, base_config, backends=None, base_path=None, *, scope: Scope = None
     ):
         self.base_config = base_config
-        self.context = dict(context or {})
-        self.context.update(kwargs)
+        if scope is None:
+            scope = Scope()
+        elif not isinstance(scope, Scope):
+            raise TypeError("scope must be a hyera.Scope")
+        self.scope = scope
 
         self.hierarchy: "list[HieraLevel]" = []
         self.default_hierarchy: "list[HieraLevel]" = []
         self.cache: dict = {}
-        #: Per-context cache of resolved source path lists (see ``sources``).
+        #: Per-scope cache of resolved source path lists (see ``sources``).
         self._source_cache: dict = {}
-        #: Per-context cache of the merged ``lookup_options`` mapping.
+        #: Per-scope cache of the merged ``lookup_options`` mapping.
         self._lookup_options_cache: dict = {}
 
         self._load_config(
             default_backends() if backends is None else backends, base_path
         )
 
-    def _build_context(self, context: dict = None, **kwargs) -> dict:
-        new_context = {}
-        new_context.update(self.context)
-        new_context.update(context or {})
-        new_context.update(kwargs)
-        # Filter out empty/None values so they don't satisfy a format field.
-        return {k: v for k, v in new_context.items() if v}
+    def format(self, text: str) -> str:
+        """Resolve ``%{var}`` references in ``text`` against this instance's
+        bound scope."""
+        return self._format(text, self.scope)
 
-    def format(self, text: str, context: dict = None, **kwargs) -> str:
-        context = self._build_context(context, **kwargs)
-        return _format_source(_normalize_source(text), context)
+    def _format(self, text: str, scope: Scope) -> str:
+        return _format_source(_normalize_source(text), scope)
 
     def _load_config(self, backends, base_path=None):
         """Load and validate the base configuration, building hierarchy state.
@@ -184,18 +203,17 @@ class Hiera(Interpolation):
                 path=source.path,
             ) from e
 
-        # Pre-load/cache the instance's own default-context data.
+        # Pre-load/cache the bound scope's own data.
         self._prewarm()
 
     def _prewarm(self) -> None:
-        """Load and cache the source files for the instance's default
-        context up front, built from the constructor's ``context``/
-        ``**kwargs`` (``_build_context()``), same as ``sources()`` would.
+        """Load and cache the source files for the bound scope up front,
+        same as ``sources()`` would.
 
         Mirrors the source-resolution side effects of a ``get(None)`` call
         without going through the public API's key-type check.
 
-        A malformed dotted context reference or a navigation type mismatch
+        A malformed dotted reference or a navigation type mismatch
         reachable while resolving a hierarchy path (``%{...}`` in a
         ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
         here and logged at debug level, not raised out of the constructor:
@@ -205,11 +223,10 @@ class Hiera(Interpolation):
         only caches a *completed* walk), so the first real lookup retries it
         in full and raises the same error again, now at the right time.
         """
-        ctx = self._build_context()
         try:
-            self.sources(ctx)
+            self._sources(self.scope)
             if self.default_hierarchy:
-                self._default_files(ctx)
+                self._default_files(self.scope)
         except (HieraLookupError, InterpolationError) as e:
             _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
 
@@ -256,7 +273,7 @@ class Hiera(Interpolation):
             self.cache[path] = data
         return path
 
-    def _get_key(self, key, paths, context, merge):
+    def _get_key(self, key, paths, scope, merge):
         """Get the value of ``key``, resolving it, walking ``paths`` in order.
 
         ``merge`` is a :class:`Merge` accumulator or ``None`` (first wins).
@@ -281,7 +298,7 @@ class Hiera(Interpolation):
             if value is _MISSING or value is None:
                 continue
 
-            value = self._resolve(value, paths, context, merge)
+            value = self._resolve(value, paths, scope, merge)
             if merge is None:
                 return value
             merge.merge_value(value)
@@ -298,103 +315,115 @@ class Hiera(Interpolation):
             )
         raise KeyError(key)
 
-    def scoped(self, context=None, **kwargs):
-        context = dict(context or {})
-        context.update(kwargs)
-        return ScopedHiera(self, context)
+    def scoped(
+        self,
+        *,
+        variables=None,
+        facts=None,
+        trusted=None,
+        server_facts=None,
+        environment=None,
+        strict=None,
+        node_name=None,
+    ) -> ScopedHiera:
+        """A :class:`ScopedHiera` bound to ``self.scope.derive(...)``."""
+        return ScopedHiera(
+            self,
+            self.scope.derive(
+                variables=variables,
+                facts=facts,
+                trusted=trusted,
+                server_facts=server_facts,
+                environment=environment,
+                strict=strict,
+                node_name=node_name,
+            ),
+        )
 
-    def has(self, key, context=None, **kwargs) -> bool:
-        """Return True if ``key`` exists in hiera, False otherwise.
+    def has(self, key: str) -> bool:
+        """Return True if ``key`` exists in hiera, False otherwise."""
+        return self._has(key, self.scope)
 
-        ``context``/``kwargs`` layer over the instance context exactly as in
-        :meth:`get`.
-        """
+    def _has(self, key, scope) -> bool:
         try:
-            self.get(key, throw=True, context=context, **kwargs)
+            self._get(key, None, None, False, True, scope)
             return True
         except KeyNotFoundError:
             return False
 
-    def sources(self, context=None, **kwargs):
-        """Resolve the ordered list of source paths for a context.
+    def sources(self):
+        """Resolve the ordered list of source paths for this instance's
+        bound scope.
 
         Existing files are parsed and cached and their cache-key paths
         returned.
 
-        The filesystem walk (glob/iterdir/stat) is cached per resolved context
-        so a merge lookup across many keys does not re-walk the tree for each
-        key. This shares the staleness assumption of the parsed-content cache:
-        a single instance reflects the tree as first seen for a given context.
+        The filesystem walk (glob/iterdir/stat) is cached per scope value so
+        a merge lookup across many keys does not re-walk the tree for each
+        key. This shares the staleness assumption of the parsed-content
+        cache: a single instance reflects the tree as first seen for a
+        given scope.
         """
-        context = self._build_context(context, **kwargs)
-        return self._files_for(self.hierarchy, context, "main")
+        return self._sources(self.scope)
 
-    def _files_for(self, hierarchy, context, tag):
-        try:
-            cache_key = (tag, frozenset(context.items()))
-        except TypeError:
-            # An unhashable context value (e.g. a list) — skip caching.
-            cache_key = None
-        if cache_key is not None:
-            cached = self._source_cache.get(cache_key)
-            if cached is not None:
-                return list(cached)
+    def _sources(self, scope):
+        return self._files_for(self.hierarchy, scope, "main")
+
+    def _files_for(self, hierarchy, scope, tag):
+        # A Scope value always hashes (it is immutable by construction), so
+        # there is no "unhashable context value" fallback to skip caching.
+        cache_key = (tag, scope)
+        cached = self._source_cache.get(cache_key)
+        if cached is not None:
+            return list(cached)
 
         files = []
         for level in hierarchy:
-            for path in _resolve_level_paths(level, self.base_path, context):
+            for path in _resolve_level_paths(level, self.base_path, scope):
                 paths = path.iterdir() if path.is_dir() else [path]
                 for path in paths:
                     if path.exists() and path.is_file():
                         files.append(self._load_file(path, level.backend))
-        if cache_key is not None:
-            self._source_cache[cache_key] = list(files)
+        self._source_cache[cache_key] = list(files)
         return files
 
-    def _default_files(self, context):
-        return self._files_for(self.default_hierarchy, context, "default")
+    def _default_files(self, scope):
+        return self._files_for(self.default_hierarchy, scope, "default")
 
-    def _lookup_options_map(self, files, context, tag="main"):
-        """The merged ``lookup_options`` mapping for a context, or ``None``.
+    def _lookup_options_map(self, files, scope, tag="main"):
+        """The merged ``lookup_options`` mapping for a scope, or ``None``.
 
         Merging it walks every file in the hierarchy, and a default-merge
         ``get()`` needs it for every key — so the result is cached per
-        resolved context alongside ``_source_cache``, sharing the same
+        scope value alongside ``_source_cache``, sharing the same
         instance-lifetime staleness contract.
         """
-        try:
-            cache_key = (tag, frozenset(context.items()))
-        except TypeError:
-            # An unhashable context value (e.g. a list) — skip caching.
-            cache_key = None
-        if cache_key is not None and cache_key in self._lookup_options_cache:
+        cache_key = (tag, scope)
+        if cache_key in self._lookup_options_cache:
             return self._lookup_options_cache[cache_key]
 
         try:
-            options = self._get_key(
-                "lookup_options", files, context, make_merge("hash")
-            )
+            options = self._get_key("lookup_options", files, scope, make_merge("hash"))
         except KeyError:
             options = None
         if not isinstance(options, dict):
             options = None
-        if cache_key is not None:
-            self._lookup_options_cache[cache_key] = options
+        self._lookup_options_cache[cache_key] = options
         return options
 
-    def _lookup_adapter(self, key, files, context):
+    def _lookup_adapter(self, key, files, scope):
         """Delegate to the lookup options adapter."""
-        options = self._lookup_options_map(files, context)
+        options = self._lookup_options_map(files, scope)
         return _extract_lookup_options_for_key(key, options)
 
-    def _lookup_options_for(self, key, files, context):
+    def _lookup_options_for(self, key, files, scope):
         """Return the merged ``lookup_options`` entry matching ``key``, or None.
 
         ``lookup_options`` is a reserved data key: ``{pattern: {merge, convert_to}}``.
         Higher-priority (earlier) levels win per pattern. An exact key match
         wins over a regex pattern match; the first regex match otherwise wins.
         """
-        return self._lookup_adapter(key, files, context)
+        return self._lookup_adapter(key, files, scope)
 
     def get(
         self,
@@ -403,10 +432,9 @@ class Hiera(Interpolation):
         merge=None,
         merge_deep=False,
         throw=False,
-        context=None,
-        **kwargs,
     ):
-        """Retrieve a hiera value by fully resolving its location.
+        """Retrieve a hiera value by fully resolving its location, against
+        this instance's bound scope.
 
         :param key: the hiera key to retrieve.
         :param default: returned when the key is missing (unless ``throw``).
@@ -419,20 +447,15 @@ class Hiera(Interpolation):
             merge to a deep merge.
         :param throw: raise ``KeyError`` on a missing key instead of returning
             ``default``.
-        :param context: per-call context variables.
-        :param kwargs: override context variables.
         """
+        return self._get(key, default, merge, merge_deep, throw, self.scope)
+
+    def _get(self, key, default, merge, merge_deep, throw, scope):
         if not isinstance(key, str):
             raise TypeError(
                 "lookup key must be a str, not {}".format(type(key).__name__)
             )
-        new_context = self._build_context(context, **kwargs)
-        # Resolve sources against the *built* context: per-call **kwargs are
-        # documented context overrides, so they must reach hierarchy path
-        # resolution too, not just interpolation and lookup_options. The
-        # default_hierarchy retry below uses this same new_context, so both
-        # hierarchies always agree on which sources a per-call override picks.
-        files = self.sources(new_context)
+        files = self._files_for(self.hierarchy, scope, "main")
 
         explicit = merge is not None
         if merge_deep and merge in (dict, "hash"):
@@ -441,21 +464,21 @@ class Hiera(Interpolation):
 
         convert_to = None
         if not explicit and key is not None:
-            opts = self._lookup_options_for(key, files, new_context)
+            opts = self._lookup_options_for(key, files, scope)
             if opts is not None:
                 if opts.get("merge") is not None:
                     merge_obj = make_merge(opts["merge"])
                 convert_to = opts.get("convert_to")
 
         try:
-            value = self._get_key(key, files, new_context, merge=merge_obj)
+            value = self._get_key(key, files, scope, merge=merge_obj)
         except KeyError:
             if self.default_hierarchy:
                 try:
                     value = self._get_key(
                         key,
-                        self._default_files(new_context),
-                        new_context,
+                        self._default_files(scope),
+                        scope,
                         merge=make_merge(merge) if explicit else merge_obj,
                     )
                 except KeyError:

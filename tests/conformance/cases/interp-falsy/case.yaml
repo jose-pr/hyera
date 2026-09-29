@@ -3,13 +3,8 @@ description: Falsy fact values (false, 0) through plain %{facts.x} and %{scope('
 origin: spec-interpolation/falsy
 queries:
 - key: f1
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: f2
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: f3
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: f4
 - key: f5
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: f6
-  divergence: spec-interpolation/ruby-to_s-formatting

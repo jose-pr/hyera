@@ -58,8 +58,8 @@ classes:
 ```
 
 ```pycon
->>> from hyera import Hiera
->>> h = Hiera("hiera.yaml", context={"environment": "production"})
+>>> from hyera import Hiera, Scope
+>>> h = Hiera("hiera.yaml", scope=Scope(environment="production"))
 >>> h.get("ntp::servers")
 ['ntp1.prod.example.com']
 >>> h.get("classes", merge="unique")

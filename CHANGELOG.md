@@ -439,8 +439,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   key, a missing or duplicate `name`, or two location keys on one entry
   used to load (silently misreading the config) and now raises; fix the
   config.
-
-### Removed
+- `context=`/`**kwargs` are gone from `Hiera()`, `.get()`, `.has()`,
+  `.sources()`, `.format()` and `.scoped()`; every one of them now binds a
+  `hyera.Scope` instead (`Hiera(..., scope=Scope(...))`), and an unknown
+  keyword raises `TypeError`. Migration: `Hiera(cfg, context={"role":
+  "web"})` → `Hiera(cfg, scope=Scope(variables={"role": "web"}))`;
+  `h.get(k, role="web")` → `h.scoped(variables={"role": "web"}).get(k)`.
+- `ScopedHiera(hiera, scope)` — its `.get`/`.has`/`.sources`/`.format` use
+  the bound scope, and `.scoped(...)` derives from it (nesting composes
+  instead of each call restarting from the instance's own scope).
+- A `False`/`0`/`""`/`[]`/`{}` variable or fact is kept, no longer dropped:
+  `%{flag}` renders `false` (not empty) when `flag` is the boolean `false`,
+  and a `virtual/%{is_virtual}.yaml` hierarchy level loads
+  `virtual/false.yaml` instead of being skipped. `None`/`null` still
+  renders as the empty string. `%{environment}` is always defined
+  (`"production"` unless set) and `%{trusted}` defaults to Puppet's local
+  hash, in both values and hierarchy paths.
 
 - The non-Puppet `data_hash` names `yaml`, `json`, `hocon` and `yaml.enc`
   (strict Puppet only). Use `yaml_data`, `json_data` and `hocon_data`;

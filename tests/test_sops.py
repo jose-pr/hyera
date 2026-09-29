@@ -13,7 +13,7 @@ import subprocess
 
 import pytest
 
-from hyera import ConfigError, Hiera
+from hyera import ConfigError, Hiera, Scope
 from hyera.backends import SOPS_TIMEOUT, Backend, BackendError, RubySymbol, SopsBackend
 
 
@@ -99,8 +99,8 @@ def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     )
     monkeypatch.chdir(tmp_path)
 
-    h = Hiera("hiera.yaml")
-    assert h.get("k", context={"node": "--output=pwned"}) == "v"
+    h = Hiera("hiera.yaml", scope=Scope(variables={"node": "--output=pwned"}))
+    assert h.get("k") == "v"
 
     assert calls, "sops was never invoked for the per-node file"
     args, _kwargs = calls[-1]

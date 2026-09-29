@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "a1f29994fe101b4beb2808d5f7c38c63ab56363e35d1764ab69b1118efb7f360",
+  "inputs_sha256": "362a5e634562e259cbf7799fc7c64b7dc2460cc247e94359ddbb24266d222581",
   "results": {
     "v_clientcert": {
       "argv": [
@@ -21,7 +21,8 @@
         "v_trusted"
       ],
       "status": "found",
-      "value": "{\"authenticated\" => \"local\", \"certname\" => \"web01.example.com\", \"extensions\" => {}, \"hostname\" => \"web01\", \"domain\" => \"example.com\", \"external\" => {}}"
+      "value": "{\"authenticated\"=>\"local\", \"certname\"=>\"web01.example.com\", \"extensions\"=>{}, \"hostname\"=>\"web01\", \"domain\"=>\"example.com\", \"external\"=>{}}",
+      "raw_value": "{\"authenticated\" => \"local\", \"certname\" => \"web01.example.com\", \"extensions\" => {}, \"hostname\" => \"web01\", \"domain\" => \"example.com\", \"external\" => {}}"
     },
     "v_fqdn": {
       "argv": [

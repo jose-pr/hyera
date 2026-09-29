@@ -12,7 +12,7 @@ private engine internals with no stability contract.
 
 ## Engine
 
-- **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
+- **`Hiera(base_config, backends=None, base_path=None, *, scope=None)`**
   — the main entry point. `base_config`: a file path, a file-like object, a
   pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
   `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
@@ -28,8 +28,14 @@ private engine internals with no stability contract.
   `default_backends()`. `base_path`: root that relative `datadir`/paths
   resolve against (defaults to the config file's directory, or `os.getcwd()`
   for a `dict`/file-like/`None` config); also made absolute at construction.
-  `context`/`kwargs`: default format variables merged into every call's
-  context. A missing or `null`/`false` `defaults`/`hierarchy` is filled
+  `scope`: the bound `hyera.Scope` for this instance's lifetime (keyword-only);
+  `None` (the default) means `Scope()` — Puppet's own defaults (no facts,
+  `$environment` `"production"`, the local `$trusted` hash). Anything other
+  than a `Scope`/`None` raises `TypeError("scope must be a hyera.Scope")`.
+  `self.scope` is set before the config loads, so a hierarchy path template
+  referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
+  it from the first, context-free pre-warm onward. A missing or `null`/`false`
+  `defaults`/`hierarchy` is filled
   with Puppet's own defaults (`{datadir: data, data_hash: yaml_data}` /
   `[{name: Common, path: common.yaml}]`) rather than raising; a hierarchy
   entry's own `datadir` wins, else `defaults.datadir`, else the literal
@@ -58,57 +64,60 @@ private engine internals with no stability contract.
   `BackendError` (`.path` names it) for a data file that cannot be read or
   parsed. Context-free hierarchy levels are loaded by the constructor, so a
   `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
-  - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
-    — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
-    A dotted `key` follows Puppet's sub-key grammar (see the dotted
-    reference gotcha below) and can itself raise `HieraLookupError` (a
-    malformed key, or a type mismatch during the walk) — **even when a
-    `default` was given**; only a genuine miss falls back to it.
-    `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`), a
-    legacy type (`list`/`set`/`dict`), or a dict `{"strategy": "deep",
-    "knockout_prefix": ..., "sort_merged_arrays": ..., "merge_hash_arrays":
-    ...}`. Omitted → the data's `lookup_options` key decides, else
-    first-match-wins. `merge_deep`: legacy flag, promotes a `dict`/`"hash"`
-    merge to `"deep"`. `throw=True` raises `KeyNotFoundError` (a `KeyError`)
-    instead of returning `default` on a miss. Falls back to
-    `default_hierarchy` when the main hierarchy misses. `context`/`kwargs`
-    layer over the instance's default context for this call only.
-  - **`.has(key, context=None, **kwargs) -> bool`** — `True` iff
-    `.get(key, throw=True, context=context, **kwargs)` would not raise
-    `KeyNotFoundError`. `context`/`kwargs` layer over the instance context
-    exactly as in `.get`, and reach hierarchy path resolution as well as
-    interpolation. A non-`str` `key` still raises `TypeError`; a dotted
-    `key`'s own `HieraLookupError`/`InterpolationError` propagates too — only
-    a genuine miss becomes `False`.
-  - **`.scoped(context=None, **kwargs) -> ScopedHiera`** — bind context
-    variables once for reuse.
-  - **`.sources(context=None, **kwargs) -> list`** — resolve+load the
-    ordered candidate source paths for a context (cached per resolved
-    context; a fresh `Hiera` instance if the on-disk tree may have changed).
-  - **`.format(text, context=None, **kwargs) -> str`** — resolve `%{var}`
-    references in an arbitrary string against the instance context. A
-    dotted reference follows the same grammar and can raise the same way.
+  - **`.get(key, default=None, merge=None, merge_deep=False, throw=False)`**
+    — resolve `key` against the instance's bound scope. `key` must be a
+    `str`; anything else raises `TypeError`. A dotted `key` follows Puppet's
+    sub-key grammar (see the dotted reference gotcha below) and can itself
+    raise `HieraLookupError` (a malformed key, or a type mismatch during the
+    walk) — **even when a `default` was given**; only a genuine miss falls
+    back to it. `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/
+    `"deep"`), a legacy type (`list`/`set`/`dict`), or a dict `{"strategy":
+    "deep", "knockout_prefix": ..., "sort_merged_arrays": ...,
+    "merge_hash_arrays": ...}`. Omitted → the data's `lookup_options` key
+    decides, else first-match-wins. `merge_deep`: legacy flag, promotes a
+    `dict`/`"hash"` merge to `"deep"`. `throw=True` raises `KeyNotFoundError`
+    (a `KeyError`) instead of returning `default` on a miss. Falls back to
+    `default_hierarchy` when the main hierarchy misses.
+  - **`.has(key) -> bool`** — `True` iff `.get(key, throw=True)` would not
+    raise `KeyNotFoundError`, against the same bound scope. A non-`str`
+    `key` still raises `TypeError`; a dotted `key`'s own
+    `HieraLookupError`/`InterpolationError` propagates too — only a genuine
+    miss becomes `False`.
+  - **`.scoped(*, variables=None, facts=None, trusted=None,
+    server_facts=None, environment=None, strict=None, node_name=None) ->
+    ScopedHiera`** — `ScopedHiera(self, self.scope.derive(...))`: a view
+    bound to a scope derived from this instance's own (see `Scope.derive`).
+  - **`.sources() -> list`** — resolve+load the ordered candidate source
+    paths for the bound scope (cached per scope value; a fresh `Hiera`
+    instance if the on-disk tree may have changed).
+  - **`.format(text) -> str`** — resolve `%{var}` references in an
+    arbitrary string against the bound scope. A dotted reference follows
+    the same grammar and can raise the same way.
   - Gotcha: a single `Hiera` instance caches parsed file contents
     (`.cache`), resolved source-path lists (`._source_cache`) and the merged
-    `lookup_options` mapping (`._lookup_options_cache`), all per resolved
-    context — it does not notice on-disk changes after first load for a
-    given context.
+    `lookup_options` mapping (`._lookup_options_cache`), all keyed per
+    `Scope` value — it does not notice on-disk changes after first load for
+    a given scope.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
     what it read at construction). `Hiera` and `ScopedHiera` survive
     `copy.deepcopy` and `pickle` (a spawn-start process pool can receive
     one; a relative config path stays relative to the receiving process's
     working directory), which copies the parsed-data cache too,
-    sops-decrypted values included.
+    sops-decrypted values included (`Scope`'s own warning-dedup state is
+    NOT carried over verbatim — its internal lock cannot be pickled, so a
+    copy starts with the same dedup keys but a fresh, unlocked mutex).
     Concurrent `.get()` calls on one instance from multiple threads are safe
     on GIL builds, where they only mutate that instance's own caches
     (untested on free-threaded builds).
-- **`ScopedHiera(hiera, context=None)`** — wraps a `Hiera` with a bound
-  context; `.get(key, ..., context=None, **kwargs)` and
-  `.has(key, context=None, **kwargs)` merge the bound context *under*
-  per-call overrides, so a per-call value always wins. Unknown attributes
-  proxy to the wrapped `Hiera` (dunder names and `hiera` itself excepted);
-  instances survive `copy`, `copy.deepcopy` and `pickle`.
+- **`ScopedHiera(hiera, scope)`** — a `Hiera` with a bound (derived)
+  `Scope`; every method (`.get`/`.has`/`.sources`/`.format`/`.scoped`) has
+  `Hiera`'s own signature and uses `self.scope` instead of `hiera.scope`.
+  `.scoped(...)` layers: it derives from `self.scope`, not `hiera.scope`, so
+  nested `scoped()` calls compose instead of each restarting from the
+  instance's own scope. Unknown attributes proxy to the wrapped `Hiera`
+  (dunder names, `hiera` and `scope` themselves excepted); instances survive
+  `copy`, `copy.deepcopy` and `pickle`.
 - **`make_merge(spec) -> Merge | None`** — normalize a `merge=` spec (name,
   legacy type, or options dict) into a `Merge` accumulator, or `None` for
   first-match. Raises `MergeError` on an unrecognized strategy/type.
@@ -126,8 +135,8 @@ private engine internals with no stability contract.
 - **`HieraLevel`** (`NamedTuple`: `backend`, `sources`, `glob`, `mapped`) —
   one hierarchy entry. `.new(conf, backend)` builds one from a hierarchy
   dict (`path`/`paths`/`glob`/`globs`/`mapped_paths`). `.paths(base_path,
-  context)` yields candidate source paths for a context; a source
-  referencing an absent context var is silently skipped. A glob whose
+  scope)` yields candidate source paths for a bound `Scope`; a source
+  referencing an unbound/undefined variable is silently skipped. A glob whose
   directory does not exist yields nothing (matches Puppet), instead of
   raising from the underlying filesystem glob.
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
@@ -141,10 +150,9 @@ private engine internals with no stability contract.
 
 ## Scope (`_scope.py`)
 
-Puppet's top scope, as one immutable, hashable value — not yet bound to
-`Hiera` (its own constructor still takes `context=`/`**kwargs`; binding a
-`Scope` to `Hiera` and threading it through lookups is later work). Logger
-`hyera._scope`.
+Puppet's top scope, as one immutable, hashable value, bound to every
+`Hiera`/`ScopedHiera` instance (`Hiera(..., scope=...)`, `.scope`,
+`.scoped(...)`). Logger `hyera._scope`.
 
 - **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None,
   environment=None, strict="warning", node_name=None)`** — every argument
@@ -612,7 +620,7 @@ re-exports it too).
   range, or a negative index, is a miss, never Python's wraparound).
   A Puppet variable name cannot contain `.`, so there is **no flat-key
   fallback**: `%{a.b}` always means "navigate `.b` into the value of `a`",
-  never a literal context/data key named `"a.b"` — quote the whole
+  never a literal scope/data key named `"a.b"` — quote the whole
   reference (`%{'a.b'}`, `h.get("'a.b'")`) to reach that key instead.
   A malformed key (an empty/unbalanced quoted segment, a stray leading,
   trailing or doubled `.`) raises `HieraLookupError` with Puppet's "Syntax
@@ -626,6 +634,15 @@ re-exports it too).
   skips the level rather than raising (hierarchy paths do not follow
   Puppet's location rules yet) — but a well-formed one that hits a type
   mismatch raises there too, same as in a value.
+- References resolve against the bound `Scope`, so a value or path
+  reference means the same thing everywhere: `%{environment}`/
+  `%{trusted...}` are always defined (`Scope`'s own defaults, never a
+  level skip); a defined `False`/`0`/`""`/`[]`/`{}` variable or fact is
+  never dropped (kept, unlike a genuinely unbound one); a bare embedded
+  `False`/`True` renders `false`/`true` and `None` renders `` (the empty
+  string) — a *standalone* `%{scope(...)}`/`%{hiera(...)}`/`%{lookup(...)}`
+  call still stringifies a scalar result the same way (only `%{alias(...)}`
+  preserves a non-scalar result's native type when it is the entire value).
 - `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
   by default (2026-09-29 — see the API section above): `include
   file(...)` really reads the named file (cwd-relative or absolute), and

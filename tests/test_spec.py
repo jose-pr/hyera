@@ -3,7 +3,7 @@ mapped_paths, default_hierarchy, convert_to."""
 
 import pytest
 
-from hyera import ConfigError, Hiera, Sensitive, make_merge
+from hyera import ConfigError, Hiera, Scope, Sensitive, make_merge
 
 # --- version ---------------------------------------------------------
 
@@ -206,12 +206,14 @@ def test_lookup_options_cache_is_per_context(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"))
-    # Context a declares a unique merge; context b declares nothing.
-    assert h.get("vals", environment="a") == [1, 2]
-    assert h.get("vals", environment="b") == [1]
-    # Re-run in the opposite order to catch a cache that ignores context.
-    assert h.get("vals", environment="b") == [1]
-    assert h.get("vals", environment="a") == [1, 2]
+    # Scope a declares a unique merge; scope b declares nothing.
+    a = h.scoped(environment="a")
+    b = h.scoped(environment="b")
+    assert a.get("vals") == [1, 2]
+    assert b.get("vals") == [1]
+    # Re-run in the opposite order to catch a cache that ignores scope.
+    assert b.get("vals") == [1]
+    assert a.get("vals") == [1, 2]
 
 
 def test_convert_to_integer(make_tree):
@@ -259,7 +261,7 @@ def test_mapped_paths(make_tree):
             "data/roles/db.yaml": "db_setting: on\n",
         },
     )
-    h = Hiera(str(root / "hiera.yaml"), context={"roles": ["web", "db"]})
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"roles": ["web", "db"]}))
     assert h.get("web_setting") is True
     assert h.get("db_setting") is True
 

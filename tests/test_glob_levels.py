@@ -6,7 +6,7 @@ nothing, instead of ``Hiera()``/``.get()`` raising ``FileNotFoundError``
 import re
 from pathlib import Path as StdPath
 
-from hyera import Hiera
+from hyera import Hiera, Scope
 
 REPO_ROOT = StdPath(__file__).resolve().parents[1]
 
@@ -38,9 +38,11 @@ def test_glob_over_missing_per_node_dir(make_tree):
             "data/common.yaml": "k: common\n",
         },
     )
-    h = Hiera(str(root / "hiera.yaml"), context={"facts": {"node_id": "db7"}})
-    assert h.get("k", context={"facts": {"node_id": "web1"}}) == "web1"
-    assert h.get("k", context={"facts": {"node_id": "db7"}}) == "common"
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"node_id": "db7"}))
+    web1 = h.scoped(facts={"node_id": "web1"})
+    assert web1.get("k") == "web1"
+    db7 = h.scoped(facts={"node_id": "db7"})
+    assert db7.get("k") == "common"
 
 
 def test_glob_level_with_missing_datadir(make_tree):

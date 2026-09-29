@@ -5,13 +5,11 @@ origin: spec-context-facts/trustfact
 queries:
   - key: v1
     id: v1
-    divergence: spec-context-facts/no-puppet-scope-model
   - key: v2
     id: v2
-    divergence: spec-context-facts/no-puppet-scope-model
   - key: v3
     id: v3
   - key: v4
     id: v4
     hash_inspect: true
-    divergence: [spec-interpolation/ruby-to_s-formatting, spec-context-facts/no-puppet-scope-model]
+    divergence: spec-interpolation/ruby-to_s-formatting

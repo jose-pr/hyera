@@ -8,9 +8,7 @@ queries:
 - key: p_q
   divergence: spec-config/location-interpolation-grammar
 - key: p_false
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: p_zero
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: p_num
 - key: p_top
 - key: p_idx

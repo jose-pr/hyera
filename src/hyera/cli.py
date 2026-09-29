@@ -24,6 +24,7 @@ except ModuleNotFoundError as _e:
 from . import __version__
 from .exceptions import HieraError, KeyNotFoundError, _one_line
 from .core import Hiera
+from ._scope import Scope
 from ._types import Sensitive
 
 _LOGGER = _logging.getLogger("hyera")
@@ -173,7 +174,7 @@ if duho is not None:
 
             merge = self._merge_spec()
             try:
-                hiera = Hiera(self.config, context=context)
+                hiera = Hiera(self.config, scope=Scope(variables=context))
                 value = hiera.get(self.key, merge=merge, throw=True)
             except KeyNotFoundError:
                 if self.default is not None:

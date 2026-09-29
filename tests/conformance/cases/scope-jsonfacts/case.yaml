@@ -6,4 +6,3 @@ origin: spec-context-facts/jsonfacts
 queries:
 - key: v_family
 - key: v_flag
-  divergence: spec-interpolation/ruby-to_s-formatting

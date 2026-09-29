@@ -19,11 +19,8 @@ queries:
 - key: spaces
   divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: falsy_flag
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: falsy_zero
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: scope_flag
-  divergence: spec-context-facts/falsy-scope-values-dropped
 - key: unknown_fn
   divergence: spec-interpolation/method-call-syntax-validation
 - key: empty_interp

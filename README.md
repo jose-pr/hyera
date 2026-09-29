@@ -20,9 +20,9 @@ The PyPI distribution, the import package and the command are all named
 ## Library
 
 ```python
-from hyera import Hiera
+from hyera import Hiera, Scope
 
-h = Hiera("hiera.yaml", context={"environment": "production"})
+h = Hiera("hiera.yaml", scope=Scope(facts={"os": {"family": "Debian"}}, environment="production"))
 
 # First match wins:
 h.get("ntp::servers")
@@ -35,10 +35,35 @@ h.get("users", merge=dict, merge_deep=True)  # deep hash merge
 h.get("missing", default="fallback")
 h.has("some::key")
 
-# Bind a context once and reuse:
+# Bind a derived scope once and reuse:
 prod = h.scoped(environment="production")
 prod.get("ntp::servers")
 ```
+
+### Scope and facts
+
+`Scope` is Puppet's top scope: it holds `variables` (node parameters),
+`facts`, `trusted` data, `server_facts`, `environment` and `strict`, and is
+what every `Hiera` lookup runs against. Precedence for a top-scope
+variable name: an explicit `variables` entry wins over a fact of the same
+name, which wins over a `server_facts` entry; `$environment` defaults to
+`"production"`; `$trusted` defaults to Puppet's local hash (certname taken
+from a `clientcert` variable/fact, else empty). Facts are also reachable as
+a whole through `$facts`, and `server_facts` through `$server_facts`.
+
+```python
+from hyera import Hiera, Scope
+
+scope = Scope(facts={"os": {"family": "Debian"}}, environment="production", strict="error")
+h = Hiera("hiera.yaml", scope=scope)
+h.get("ntp::servers")
+```
+
+`h.scoped(**derive_args)` returns a `ScopedHiera` bound to
+`h.scope.derive(**derive_args)`: `variables`/`facts`/`server_facts`
+shallow-update the parent scope's own (new values win, nothing goes
+stale); `environment`/`strict`/`trusted`/`node_name` replace the parent's
+when given.
 
 ### Base config
 

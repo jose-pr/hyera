@@ -3,4 +3,4 @@ description: With only fqdn set (not hostname/domain/clientcert), 'fqdn' is not 
 origin: spec-context-facts/partialtrust
 queries:
 - key: v_fqdn
-  divergence: spec-context-facts/no-puppet-scope-model
+  divergence: spec-context-facts/no-facts-loader-or-facter

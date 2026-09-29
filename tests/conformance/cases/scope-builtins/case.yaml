@@ -8,4 +8,3 @@ queries:
 - key: cmn
 - key: mn
 - key: sc
-  divergence: spec-interpolation/missing-inline-lookup-raises

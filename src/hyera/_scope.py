@@ -162,6 +162,23 @@ class _WarnState:
         self._variable_keys = set()
         self._messages = set()
 
+    def __getstate__(self):
+        # A threading.Lock cannot be pickled/deepcopied; a copy starts with
+        # a fresh, unlocked one (harmless -- dedup state itself still
+        # carries over, and a lock is never held across a copy/pickle
+        # boundary anyway). Keeps `Hiera`/`ScopedHiera` (holding a `Scope`,
+        # holding this) picklable and deep-copyable, as documented.
+        with self._lock:
+            return {
+                "_variable_keys": set(self._variable_keys),
+                "_messages": set(self._messages),
+            }
+
+    def __setstate__(self, state):
+        self._lock = threading.Lock()
+        self._variable_keys = state["_variable_keys"]
+        self._messages = state["_messages"]
+
     def variable_once(self, name) -> bool:
         """True the first time an undefined-variable warning for ``name`` is
         due (up to 100 distinct keys tracked, matching Puppet's own cap);
@@ -303,15 +320,23 @@ class Scope:
                 params[name] = value
         params["environment"] = resolved_env
 
-        # Step 4: server_facts hash (environment goes last and wins), merged
-        # into params without overriding.
-        server_facts_hash = dict(server_facts_checked)
-        server_facts_hash["environment"] = resolved_env
-        for name, value in server_facts_hash.items():
+        # Step 4: the *given* server_facts merge into params without
+        # overriding, same as facts. $environment is forced into the
+        # exposed $server_facts hash afterwards, last, so it always wins
+        # there -- but it is never itself re-merged into params through
+        # this collision-checked path: $environment already has its own
+        # authoritative resolution (step 2) and storage (step 6), and
+        # re-merging the same, already-resolved value here would warn a
+        # spurious "already set to 'production'. It could not be set to
+        # 'production'" on every construction, even with no server_facts
+        # given at all.
+        for name, value in server_facts_checked.items():
             if name in params:
                 _warn_collision(warn_state, name, node_name, params[name], value)
             else:
                 params[name] = value
+        server_facts_hash = dict(server_facts_checked)
+        server_facts_hash["environment"] = resolved_env
 
         # Step 5: trusted data.
         tp = None

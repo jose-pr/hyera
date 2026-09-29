@@ -4,5 +4,6 @@ origin: spec-context-facts/fulltrust
 queries:
 - key: v_clientcert
 - key: v_trusted
-  divergence: spec-context-facts/no-puppet-scope-model
+  hash_inspect: true
+  divergence: spec-interpolation/ruby-to_s-formatting
 - key: v_fqdn

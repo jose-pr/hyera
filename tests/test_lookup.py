@@ -2,11 +2,11 @@
 
 import pytest
 
-from hyera import Hiera
+from hyera import Hiera, Scope
 
 
-def make(hiera_root, **context):
-    return Hiera(str(hiera_root / "hiera.yaml"), context=context)
+def make(hiera_root, **variables):
+    return Hiera(str(hiera_root / "hiera.yaml"), scope=Scope(variables=variables))
 
 
 def test_first_match_wins(hiera_root):
@@ -83,32 +83,6 @@ def test_scoped_reuses_context(hiera_root):
     assert prod.get("ntp::servers") == ["prod.pool.ntp.org"]
 
 
-def test_get_kwargs_context_reaches_source_resolution(hiera_root):
-    # Per-call **kwargs are documented context overrides, and they reach
-    # source resolution: `environment=` as a kwarg selects the
-    # environments/%{environment}.yaml level instead of falling through to
-    # common.yaml.
-    h = make(hiera_root)  # no instance context at all
-    assert h.get("ntp::servers", environment="production") == ["prod.pool.ntp.org"]
-
-
-def test_get_context_arg_and_kwargs_agree(hiera_root):
-    # The positional context= path already worked; kwargs must match it.
-    h = make(hiera_root)
-    assert h.get("ntp::servers", context={"environment": "production"}) == h.get(
-        "ntp::servers", environment="production"
-    )
-
-
-def test_has_kwargs_context_reaches_source_resolution(hiera_root):
-    # has() funnels context through kwargs exactly like get(), reaching
-    # source resolution the same way.
-    h = make(hiera_root)
-    assert h.has("lookup_greeting", environment="production") is True
-    # Absent the environment, that key exists only in the production level.
-    assert h.has("lookup_greeting") is False
-
-
 def test_scoped_has_uses_bound_context(hiera_root):
     # ScopedHiera.has uses its own bound scope for path resolution too, not
     # just for interpolation.
@@ -116,29 +90,14 @@ def test_scoped_has_uses_bound_context(hiera_root):
     assert h.scoped(environment="production").has("lookup_greeting") is True
 
 
-def test_scoped_has_per_call_override_wins(hiera_root):
-    # A per-call override always wins over the bound context -- the same
-    # precedence as .get() -- so the two agree.
-    # Bind an environment with no data file, then override it per call with
-    # the real one. Only correct precedence (per-call over bound) consults
-    # the production level.
-    staging = make(hiera_root).scoped(environment="staging")
-    assert staging.has("lookup_greeting", environment="production") is True
-    assert staging.get("lookup_greeting", environment="production") == "myapp in prod"
-    # Without the override, the bound scope stands and the key is absent.
-    assert staging.has("lookup_greeting") is False
-    # .has and .get agree on the overridden value, not just on existence.
-    assert staging.get("ntp::servers", environment="production") == [
-        "prod.pool.ntp.org"
-    ]
-
-
 def test_scoped_does_not_leak_context(hiera_root):
-    # Each scoped() call gets its own independent context dict.
+    # Each scoped() call derives its own scope; the instance's own scope
+    # (and a later scoped() call with no overrides) never sees it.
     h = make(hiera_root)
-    h.scoped(environment="production")
+    h.scoped(environment="staging")
+    assert h.scope.environment == "production"
     fresh = h.scoped()
-    assert fresh.context == {}
+    assert fresh.scope.environment == "production"
 
 
 def test_falsy_values_are_returned(make_tree):
@@ -180,7 +139,7 @@ def test_legacy_merge_deep_flag_extension(make_tree):
             "data/environments/prod.yaml": "conf:\n  db:\n    host: prod.db\n",
         },
     )
-    h = Hiera(str(root / "hiera.yaml"), context={"environment": "prod"})
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"environment": "prod"}))
     merged = h.get("conf", merge=dict, merge_deep=True)
     # prod overrides db.host but keeps db.port and the whole cache subtree.
     assert merged == {

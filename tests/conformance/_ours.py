@@ -12,7 +12,7 @@ import json
 
 import yaml
 
-from hyera import Hiera, HieraError, KeyNotFoundError, Sensitive
+from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive
 from hyera.cli import main as _cli_main
 
 import _golden
@@ -29,30 +29,6 @@ _KNOWN_PUPPET_FLAGS = ("--strict", "--environment")
 
 class AdapterUnsupported(Exception):
     """A query needs a feature neither channel exercises yet."""
-
-
-def puppet_scope(facts: dict, env: str, puppet_version: str) -> dict:
-    """The scope ``puppet lookup --node N --facts facts.yaml`` builds.
-
-    Re-measured 2026-09-29 against the real oracle: every fact is also a
-    top-scope variable, ``trusted`` carries lookup-mode's empty identity,
-    and ``server_facts`` carries only the portable version/environment
-    fields (never the recording host's name/IPs).
-    """
-    return {
-        **facts,
-        "facts": facts,
-        "environment": env,
-        "trusted": {
-            "authenticated": "local",
-            "certname": None,
-            "extensions": {},
-            "hostname": None,
-            "domain": None,
-            "external": {},
-        },
-        "server_facts": {"serverversion": puppet_version, "environment": env},
-    }
 
 
 def _puppet_args(case: dict, query: dict) -> list:
@@ -132,12 +108,10 @@ def _check_common(case_dir, case, query):
     if bad:
         raise AdapterUnsupported("unrecognized puppet flag(s): {}".format(bad))
     strict = _flag_value(args, "--strict") or "warning"
-    if strict == "error":
-        raise AdapterUnsupported("spec-context-facts/undefined-variable-semantics")
     if (case_dir / "environments").is_dir() or (case_dir / "modules").is_dir():
         raise AdapterUnsupported("spec-layers-backends/no-config-layers")
     env = _flag_value(args, "--environment") or "production"
-    return key, env
+    return key, env, strict
 
 
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
@@ -164,12 +138,18 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     same way ``allow_nan=False`` does here) is a harness-projection concern,
     not a hyera-behavior one, so only that call is guarded.
     """
-    key, env = _check_common(case_dir, case, query)
+    key, env, strict = _check_common(case_dir, case, query)
     facts = _load_facts(case_dir)
-    scope = puppet_scope(facts, env, golden["puppet_version"])
+    scope = Scope(
+        facts=facts,
+        environment=env,
+        server_facts={"serverversion": golden["puppet_version"]},
+        strict=strict,
+        node_name=golden["node"],
+    )
     merge = query.get("merge")
     try:
-        hiera = Hiera(str(case_dir / "hiera.yaml"), context=scope)
+        hiera = Hiera(str(case_dir / "hiera.yaml"), scope=scope)
         if query.get("default") is not None:
             value = hiera.get(key, default=query["default"], merge=merge)
         else:
