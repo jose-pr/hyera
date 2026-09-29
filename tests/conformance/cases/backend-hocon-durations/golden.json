@@ -1,0 +1,93 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "cf8655ee7771550f9a195b25a9de3d88ca9e60ac40127f7d9562bd1112d0399b",
+  "results": {
+    "dur": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dur"
+      ],
+      "status": "found",
+      "value": "10s"
+    },
+    "x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "x"
+      ],
+      "status": "found",
+      "value": "10 s"
+    },
+    "mix": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mix"
+      ],
+      "status": "found",
+      "value": "10s foo"
+    },
+    "d2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "d2"
+      ],
+      "status": "found",
+      "value": "5 minutes"
+    },
+    "n": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n"
+      ],
+      "status": "found",
+      "value": 10
+    },
+    "f": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f"
+      ],
+      "status": "found",
+      "value": 1.5
+    },
+    "sz": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sz"
+      ],
+      "status": "found",
+      "value": "10MB"
+    },
+    "nested.a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested.a"
+      ],
+      "status": "found",
+      "value": "3 weeks"
+    },
+    "lst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst"
+      ],
+      "status": "found",
+      "value": [
+        "1s",
+        2
+      ]
+    }
+  }
+}

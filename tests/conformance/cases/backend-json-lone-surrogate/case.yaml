@@ -1,0 +1,9 @@
+description: >-
+  The higher-priority level's JSON data file contains an unescaped
+  lone (unpaired) surrogate code point in a string value, which Ruby's
+  json gem refuses to decode; the level's parse failure is fatal (no
+  fallthrough to the lower-priority level).
+origin: code-io-security/othercases/json_bom
+queries:
+  - key: k
+    error_match: Unable to parse

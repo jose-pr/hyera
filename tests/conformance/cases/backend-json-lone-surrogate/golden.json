@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "dd3d6bd416f21224a64d68a11a34264da4af0df64d1ca054b3e1d26244f85935",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/bad.json): incomplete surrogate pair at '\\ud800\"}' at line 1 column 8"
+    }
+  }
+}

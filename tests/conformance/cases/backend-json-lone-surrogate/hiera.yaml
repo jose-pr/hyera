@@ -1,0 +1,9 @@
+version: 5
+defaults:
+  datadir: data
+  data_hash: json_data
+hierarchy:
+  - name: bad
+    path: bad.json
+  - name: common
+    path: common.json

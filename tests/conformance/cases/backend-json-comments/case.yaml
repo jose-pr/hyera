@@ -1,0 +1,7 @@
+description: >-
+  A JSON data file with both a block comment and a line comment; both
+  are accepted, matching Ruby's json gem (Puppet's own JSON parser).
+origin: code-io-security/othercases/json_trailing
+queries:
+  - key: a
+  - key: b
