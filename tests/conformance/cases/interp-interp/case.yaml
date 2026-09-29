@@ -4,7 +4,6 @@ description: 'The interpolation engine''s full form catalogue (97 keys): var/top
 origin: interp
 queries:
 - key: lit_holder
-  divergence: spec-interpolation/literal-escape-reinterpolated
 - key: s_var
 - key: s_topvar
 - key: s_topfacts
@@ -12,9 +11,7 @@ queries:
 - key: s_facts_deep
 - key: s_ws
 - key: s_ws_topvar
-  divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_ws_func
-  divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_empty
 - key: s_empty_colons
 - key: s_empty_dq
@@ -26,7 +23,11 @@ queries:
 - key: s_index_neg
 - key: s_index_oob
 - key: s_str_walk
+  error_class: HieraLookupError
+  error_match: "Data Provider type mismatch: Got String when a hash-like object was expected"
 - key: s_arr_key
+  error_class: HieraLookupError
+  error_match: "Data Provider type mismatch: Got Array when a hash-like object was expected"
 - key: s_undef
 - key: s_undef_nested
 - key: s_int
@@ -43,76 +44,69 @@ queries:
 - key: s_facts_zero
 - key: s_whole_int
 - key: s_whole_arr_scope
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_whole_arr_var
 - key: s_scope_fn
 - key: s_scope_fn_dq
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_scope_fn_false
 - key: s_scope_fn_missing
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_hiera_fn
 - key: s_lookup_fn
 - key: s_lookup_int
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_int_emb
 - key: s_lookup_bool_emb
 - key: s_lookup_float_emb
 - key: s_lookup_arr
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_arr_emb
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_hash_emb
-  divergence: spec-interpolation/method-result-type-and-nonscalar
   hash_inspect: true
 - key: s_lookup_null_emb
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_missing
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_missing_whole
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_dotted
 - key: s_lookup_quoted
-  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_lookup_colons
-  divergence: new/lookup-key-arg-topscope-prefix-stripped
 - key: s_lookup_lo
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_strwalk
+  error_class: HieraLookupError
+  error_match: "from key 'base.x'"
 - key: s_alias_str
 - key: s_alias_arr
 - key: s_alias_hash
 - key: s_alias_int
 - key: s_alias_bool
 - key: s_alias_null
-  divergence: spec-interpolation/missing-inline-lookup-raises
+  divergence: code-core/null-value-treated-as-missing
 - key: s_alias_missing
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_alias_embedded
+  error_class: InterpolationError
+  error_match: "'alias' interpolation is only permitted if the expression is equal to the entire string"
 - key: s_alias_ws_inside
-  divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_alias_trailing_space
+  error_class: InterpolationError
+  error_match: "'alias' interpolation is only permitted if the expression is equal to the entire string"
 - key: s_alias_two
+  error_class: InterpolationError
+  error_match: "'alias' interpolation is only permitted if the expression is equal to the entire string"
 - key: s_alias_dotted
 - key: s_literal
 - key: s_literal_escape
-  divergence: spec-interpolation/literal-escape-reinterpolated
 - key: s_literal_dq
-  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_literal_brace
 - key: s_unknown_fn
-  divergence: spec-interpolation/method-call-syntax-validation
+  error_class: InterpolationError
+  error_match: "Unknown interpolation method 'foo'"
 - key: s_mixed_quotes
-  divergence: spec-interpolation/method-call-syntax-validation
+  error_class: HieraLookupError
+  error_match: "Syntax error in string"
 - key: s_fn_ws_args
-  divergence: spec-interpolation/method-call-syntax-validation
+  error_class: HieraLookupError
+  error_match: "Syntax error in string"
 - key: s_noquote_fn
-  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_fn_empty_arg
+  error_class: HieraLookupError
+  error_match: "Syntax error in string"
 - key: s_scope_tmpl
-  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_scope_tmpl_top
-  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_lookup_reinterp
 - key: s_chain
 - key: s_recursive_a
@@ -126,7 +120,6 @@ queries:
 - key: s_multi
 - key: s_fn_then_var
 - key: key_interp
-  divergence: spec-interpolation/hash-keys-not-interpolated
 - key: arr_interp
 - key: alias_in_list
 - key: alias_in_hash

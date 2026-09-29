@@ -15,4 +15,4 @@ queries:
     merge: unique
   - key: "al_interp"
 
-    divergence: spec-interpolation/method-result-type-and-nonscalar
+    divergence: spec-merge/alias-lookup-merge-and-lookup-options

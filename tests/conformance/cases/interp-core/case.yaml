@@ -13,50 +13,36 @@ queries:
   hash_inspect: true
 - key: s_ws
 - key: s_ws_fn
-  divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_lit
-  divergence: spec-interpolation/literal-escape-reinterpolated
 - key: s_lit2
-  divergence: spec-interpolation/literal-escape-reinterpolated
 - key: s_hiera_missing
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_alias_missing
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_alone_int
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_alone_arr
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_alone_hsh
   hash_inspect: true
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_bool
 - key: s_lookup_bool_alone
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lookup_nil
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_order
-  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_scope_reinterp
-  divergence: spec-interpolation/scope-values-not-reinterpolated-and-garbled
 - key: s_unknown_fn
-  divergence: spec-interpolation/method-call-syntax-validation
+  error_class: InterpolationError
+  error_match: "Unknown interpolation method 'foo'"
 - key: s_mismatch_quote
-  divergence: spec-interpolation/method-call-syntax-validation
+  error_class: HieraLookupError
+  error_match: "Syntax error in string"
 - key: s_empty
 - key: s_colons
 - key: s_scope_false
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: s_lit_colons
-  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_float
 - key: s_bigfloat
 - key: s_paren_var
-  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_dq_fn
 - key: s_neg_idx
 - key: s_idx
 - key: hkey
-  divergence: spec-interpolation/hash-keys-not-interpolated
 - key: cyc_a
   divergence: spec-interpolation/no-recursion-detection
 - key: self_alias
@@ -68,6 +54,12 @@ queries:
 - key: lookup_options
 - key: arr.-1
 - key: plain.x
+  error_class: HieraLookupError
+  error_match: "Data Provider type mismatch: Got String when a hash-like object was expected"
 - key: arr.x
+  error_class: HieraLookupError
+  error_match: "Data Provider type mismatch: Got Array when a hash-like object was expected"
 - key: nilv.x
 - key: int.x
+
+  error_class: HieraLookupError

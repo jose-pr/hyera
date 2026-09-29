@@ -121,19 +121,23 @@ def test_internal_keyerror_is_not_chained(make_tree):
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__suppress_context__ is True
 
-    alias_root = make_tree(
+    # A missing inline `%{alias()}`/`%{hiera()}`/`%{lookup()}` now resolves
+    # to "" (interpolation.rb:77-86 -- Puppet's own behavior), so it no
+    # longer triggers InterpolationError; an unknown interpolation method
+    # does, with no internal exception chained onto it.
+    unknown_method_root = make_tree(
         {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
         files={
             "data/one.yaml": """\
-                k: "%{alias('missing::key')}"
+                k: "%{bogus('x')}"
                 """,
         },
     )
-    hiera = Hiera(str(alias_root / "hiera.yaml"))
+    hiera = Hiera(str(unknown_method_root / "hiera.yaml"))
     with pytest.raises(InterpolationError) as excinfo2:
         hiera.get("k", throw=True)
     assert excinfo2.value.__cause__ is None
-    assert excinfo2.value.__suppress_context__ is True
+    assert excinfo2.value.__context__ is None
 
 
 def test_missing_config_raises_config_error(tmp_path):

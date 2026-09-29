@@ -634,16 +634,40 @@ re-exports it too).
 
 ## Gotchas
 
-- A `%{hiera(...)}`/`%{lookup(...)}` call embedded inside a larger string
-  must resolve to a scalar; interpolating a non-scalar (list/dict) into a
-  string raises `InterpolationError`. A function call standing alone as the
-  *entire* value keeps its native (possibly non-scalar) type.
+- Interpolation is a single left-to-right pass over each `%{...}` occurrence
+  in the original text: text inserted in its place is never re-scanned, only
+  a method's own resolved result is interpolated again (so a variable whose
+  *value* itself contains `%{...}` is interpolated, but text a call just
+  produced is not scanned a second time for new `%{...}` occurrences).
+  Whitespace inside `%{ }` is ignored (`%{ x }` is `%{x}`), and hash keys are
+  interpolated the same as values.
+- A `%{hiera(...)}`/`%{lookup(...)}`/`%{scope(...)}` call embedded inside a
+  larger string must resolve to a scalar; interpolating a non-scalar
+  (list/dict) into a string raises `InterpolationError`. Only a **whole**
+  `%{alias(...)}` (the entire value, not embedded in more text) keeps the
+  resolved value's native, possibly non-scalar type; an alias embedded in a
+  larger string is a different error (below).
 - An interpolated non-string renders as Puppet renders it: `true`/`false`,
   `""` for null, `1.0e+20`, `["a", "b"]`, `{"k"=>"v"}` (the form Puppet 8's
   packaged Ruby 3.2 prints), `Sensitive [value redacted]`.
-- Nested/inline lookups (function calls resolving other keys) never inherit
-  the caller's `merge=` — accumulation happens exactly once per lookup, at
-  the top level.
+- `%{lookup(...)}`/`%{hiera(...)}`/`%{alias(...)}` of a missing key resolve
+  to `""` (Puppet's own rule) rather than raising — same as a missing
+  `%{var}`/`%{scope(...)}` reference, so the two are symmetric. Neither ever
+  sees `lookup_options`, and neither ever inherits the caller's `merge=` —
+  accumulation happens exactly once per lookup, at the top level.
+- `%{x}` and `%{scope('x')}` follow the same rule for an undefined root: it
+  is governed by the bound `Scope`'s `strict` (`"off"`/`"warning"`/`"error"`,
+  default `"warning"`) exactly as `Scope.lookupvar` documents, while a
+  *missing nested segment* off an otherwise-defined value always resolves to
+  `""` regardless of `strict`.
+- Errors: an unknown interpolation method (`%{nosuch('x')}`), a misplaced
+  `%{alias(...)}` (embedded in a larger string instead of being the whole
+  value) and a non-hashable interpolated hash key all raise
+  `InterpolationError`. A malformed `%{...}` expression (an unbalanced quote,
+  a stray dot) raises `HieraLookupError` "Syntax error in string: `<text>`".
+  Indexing a dotted reference into a scalar (or any value that is not the
+  collection type the next segment needs) raises the same type-mismatch
+  `HieraLookupError` a dotted lookup key raises.
 - **Merges follow Puppet exactly, including its quirks:** `unique` is
   first-found's higher-priority sibling — it flattens nested arrays and
   wraps a scalar into a one-element list, and only ever dedupes (`uniq`)
@@ -667,9 +691,6 @@ re-exports it too).
   Invalid `merge=` input (an unknown strategy name, a strategy hash with no
   `strategy` key, an unrecognized or mistyped option) raises
   `hyera.MergeError`, never a bare `ValueError`/`TypeError`.
-- A missing bare `%{var}` interpolation resolves to `""` (matches Ruby
-  Hiera); a missing function-call argument raises `InterpolationError`
-  instead — the two failure modes are not symmetric.
 - A `lookup_options` key is a **regex only when it starts with `^`**
   (Hiera 5's rule); anything else is matched literally, so a key containing
   `.` cannot shadow-match unrelated keys. An exact key match wins over a

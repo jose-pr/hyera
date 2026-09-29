@@ -9,4 +9,3 @@ queries:
   id: dotted_key
 - key: s_undef
 - key: s_undef_scope
-  divergence: spec-interpolation/missing-inline-lookup-raises

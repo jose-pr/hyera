@@ -15,7 +15,8 @@ from ._hiera_config import (
     _select_version,
     _validate_v5,
 )
-from ._interpolation import Interpolation
+from ._interpolation import interpolate
+from ._invocation import _STRICT, Invocation
 from ._location_resolver import _format_source, _normalize_source, _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import MergeStrategy
@@ -128,7 +129,7 @@ class ScopedHiera:
         return getattr(self.hiera, name)
 
 
-class Hiera(Interpolation):
+class Hiera:
     """A first-class Python interface to Hiera data.
 
     It takes a base hiera config (YAML file path, file-like object, or dict)
@@ -160,7 +161,12 @@ class Hiera(Interpolation):
 
         self.hierarchy: "list[HieraLevel]" = []
         self.default_hierarchy: "list[HieraLevel]" = []
+        #: ``(path, backend.strict) -> loaded data``. See ``_load_file``.
         self.cache: dict = {}
+        #: Every plain path ever loaded successfully into ``self.cache``,
+        #: under any ``strict`` variant -- what ``_files_for`` consults to
+        #: tell a loaded location from a missing/unattempted one.
+        self._loaded_paths: set = set()
         #: Per-scope cache of resolved source path lists (see ``sources``).
         self._source_cache: dict = {}
         #: Per-scope cache of the merged ``lookup_options`` mapping.
@@ -231,13 +237,29 @@ class Hiera(Interpolation):
         here also means the walk this aborts was never cached (``_files_for``
         only caches a *completed* walk), so the first real lookup retries it
         in full and raises the same error again, now at the right time.
+
+        Runs under ``self.scope.strict`` (the ``_STRICT`` ContextVar, same as
+        ``_get``): a genuinely non-hash data file under ``strict="error"``
+        raises here as :class:`~hyera.BackendError` and is NOT caught by the
+        except clause above (matching the documented constructor contract --
+        a data file that cannot be read or parsed can fail construction
+        itself). This also keeps ``self.cache``'s ``(path, strict)`` entries
+        consistent with what a later ``.get()`` call on the same, unscoped
+        instance will look for: ``Hiera.get``/``.has``/``.sources`` all reuse
+        this same ``self.scope`` object, whose resolved source-path list
+        ``_levels_for`` caches per scope value -- without this, that cache
+        hit would skip ``_load_file`` entirely on a later call, leaving
+        ``self.cache`` holding only the pre-warm's own strict variant.
         """
+        strict_token = _STRICT.set(self.scope.strict)
         try:
             self._sources(self.scope)
             if self.default_hierarchy:
                 self._default_levels(self.scope)
         except (HieraLookupError, InterpolationError) as e:
             _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
+        finally:
+            _STRICT.reset(strict_token)
 
     def _load_file(self, path, backend):
         """Load ``path`` via ``backend.data_hash(...)``, caching the result.
@@ -254,8 +276,19 @@ class Hiera(Interpolation):
         Puppet's own Hash check on the result
         (``data_hash_function_provider.rb:70-76``) runs here too, so every
         backend -- third-party ones included -- gets it.
+
+        Cached per ``(path, backend.strict)``, not per bare ``path``: a data
+        file's own non-hash rule (``YAMLBackend._as_data_hash``'s
+        ``strict``-sensitive raise-or-warn) must run again for a call whose
+        effective ``strict`` differs from a previous one, never reuse a
+        result computed under a different strictness
+        (``puppet_fidelity_program`` Design Q4). ``self._loaded_paths``
+        separately tracks which plain paths were ever read successfully, for
+        :meth:`_files_for`'s "was this location loaded" check, independent
+        of which ``strict`` variant did the loading.
         """
-        if path not in self.cache:
+        cache_key = (path, backend.strict)
+        if cache_key not in self.cache:
             try:
                 data = backend.data_hash(path, dict(backend.conf.get("options") or {}))
             except BackendError as e:
@@ -279,10 +312,11 @@ class Hiera(Interpolation):
                 ) from e
 
             _validate_data_hash(data, backend.name, path)
-            self.cache[path] = data
+            self.cache[cache_key] = data
+            self._loaded_paths.add(path)
         return path
 
-    def _lookup_levels(self, key, levels, scope, strategy):
+    def _lookup_levels(self, key, levels, invocation, strategy):
         """Puppet's per-location/per-level reduce (``data_hash_function_
         provider.rb:26-33`` over a level's locations,
         ``configured_data_provider.rb:49-61`` over the hierarchy's levels).
@@ -304,36 +338,31 @@ class Hiera(Interpolation):
         root, segments = (None, ()) if key is None else parse_lookup_key(key)
 
         def at_location(entry):
-            data = self.cache.get(entry, _MISSING)
+            data = self.cache.get((entry, _STRICT.get()), _MISSING)
             if data is _MISSING or not isinstance(data, dict) or root not in data:
                 return _MISSING
             value = sub_lookup(key, segments, data[root]) if segments else data[root]
             if value is _MISSING or value is None:
                 return _MISSING
-            # A sub-lookup (``%{hiera()}``/``%{lookup()}``/``%{alias()}``)
-            # never inherits the caller's merge strategy -- accumulation
-            # happens exactly once, at the top level (``interpolation.rb:84``
-            # passes merge ``nil``); ``levels`` is threaded through unchanged
-            # so a sub-lookup still searches the full hierarchy.
-            return self._resolve(value, levels, scope, None)
+            return interpolate(value, invocation)
 
         def at_level(locations):
             return strategy.lookup(locations, at_location)
 
         return strategy.lookup(levels, at_level)
 
-    def _lookup_layers(self, key, levels, scope, strategy):
+    def _lookup_layers(self, key, levels, invocation, strategy):
         """Puppet's provider stack (``lookup_adapter.rb:332-340``): reduce
         ``_LAYERS`` the same way, with only ``"global"`` populated."""
 
         def at_layer(layer):
             if layer != "global":
                 return _MISSING
-            return self._lookup_levels(key, levels, scope, strategy)
+            return self._lookup_levels(key, levels, invocation, strategy)
 
         return strategy.lookup(_LAYERS, at_layer)
 
-    def _get_key(self, key, levels, scope, merge):
+    def _get_key(self, key, levels, invocation, merge):
         """Get the value of ``key``, resolving it against ``levels``.
 
         ``merge`` is a raw ``merge=`` spec (name, options hash, a
@@ -341,13 +370,13 @@ class Hiera(Interpolation):
         for first-match), normalized here via
         :meth:`~hyera._merge_strategy.MergeStrategy.strategy`. Used for a
         function-call sub-lookup (``%{hiera()}``/``%{lookup()}``/
-        ``%{alias()}``, always with ``merge=None``) and for merging
-        ``lookup_options`` (``merge="hash"``, without the layer stack) --
-        never for the main lookup, which goes through :meth:`_lookup_layers`
-        directly (see ``.get``/``._get``).
+        ``%{alias()}``, always with ``merge=None``, via :meth:`_sub_lookup`)
+        and for merging ``lookup_options`` (``merge="hash"``, without the
+        layer stack) -- never for the main lookup, which goes through
+        :meth:`_lookup_layers` directly (see ``.get``/``._get``).
         """
         strategy = MergeStrategy.strategy(merge)
-        value = self._lookup_levels(key, levels, scope, strategy)
+        value = self._lookup_levels(key, levels, invocation, strategy)
         if value is _MISSING:
             if key is not None and parse_lookup_key(key)[1]:
                 _LOGGER.debug(
@@ -357,6 +386,19 @@ class Hiera(Interpolation):
                 )
             raise KeyError(key)
         return value
+
+    def _sub_lookup(self, key, files, invocation):
+        """The host callable behind an :class:`~hyera._invocation.Invocation`
+        (``%{hiera()}``/``%{lookup()}``/``%{alias()}``): a first-match lookup
+        of ``key`` over ``files`` (the hierarchy currently being walked --
+        never the caller's own accumulated ``merge``, matching
+        ``interpolation.rb:84``, which always passes ``nil``). Returns
+        :data:`~hyera._navigation._MISSING` on a miss instead of raising.
+        """
+        try:
+            return self._get_key(key, files, invocation, None)
+        except KeyError:
+            return _MISSING
 
     def scoped(
         self,
@@ -461,7 +503,7 @@ class Hiera(Interpolation):
             path
             for locations in self._levels_for(hierarchy, scope, tag)
             for path in locations
-            if path in self.cache
+            if path in self._loaded_paths
         ]
 
     def _default_levels(self, scope):
@@ -480,8 +522,9 @@ class Hiera(Interpolation):
         if cache_key in self._lookup_options_cache:
             return self._lookup_options_cache[cache_key]
 
+        inv = Invocation(scope, lambda k, i: self._sub_lookup(k, levels, i))
         try:
-            options = self._get_key("lookup_options", levels, scope, "hash")
+            options = self._get_key("lookup_options", levels, inv, "hash")
         except KeyError:
             options = None
         if not isinstance(options, dict):
@@ -532,31 +575,44 @@ class Hiera(Interpolation):
             raise TypeError(
                 "lookup key must be a str, not {}".format(type(key).__name__)
             )
-        levels = self._levels_for(self.hierarchy, scope, "main")
+        # Puppet reads `Puppet[:strict]` at call time inside a data-file
+        # backend's own non-hash rule (``yaml_data.rb:31``), not at
+        # construction -- a level's backend is shared across scopes. Bind
+        # the ContextVar for the whole call: computing `levels` itself can
+        # load and validate data files, same as the lookups below.
+        strict_token = _STRICT.set(scope.strict)
+        try:
+            levels = self._levels_for(self.hierarchy, scope, "main")
 
-        explicit = merge is not None
-        strategy = MergeStrategy.strategy(merge)
+            explicit = merge is not None
+            strategy = MergeStrategy.strategy(merge)
 
-        convert_to = None
-        if not explicit and key is not None:
-            opts = self._lookup_options_for(key, levels, scope)
-            if opts is not None:
-                if opts.get("merge") is not None:
-                    strategy = MergeStrategy.strategy(opts["merge"])
-                convert_to = opts.get("convert_to")
+            convert_to = None
+            if not explicit and key is not None:
+                opts = self._lookup_options_for(key, levels, scope)
+                if opts is not None:
+                    if opts.get("merge") is not None:
+                        strategy = MergeStrategy.strategy(opts["merge"])
+                    convert_to = opts.get("convert_to")
 
-        # Main lookup: the full provider stack (only "global" populated).
-        value = self._lookup_layers(key, levels, scope, strategy)
-        if value is _MISSING and self.default_hierarchy:
-            # default_hierarchy is consulted only on a main-hierarchy miss,
-            # with the same strategy and no layer wrap
-            # (``lookup_adapter.rb``'s ``lookup_default_in_module``); an
-            # explicit caller ``merge=`` still applies even when
-            # ``lookup_options`` picked the main strategy above.
-            fallback = MergeStrategy.strategy(merge) if explicit else strategy
-            value = self._lookup_levels(
-                key, self._default_levels(scope), scope, fallback
-            )
+            inv = Invocation(scope, lambda k, i: self._sub_lookup(k, levels, i))
+
+            # Main lookup: the full provider stack (only "global" populated).
+            value = self._lookup_layers(key, levels, inv, strategy)
+            if value is _MISSING and self.default_hierarchy:
+                # default_hierarchy is consulted only on a main-hierarchy
+                # miss, with the same strategy and no layer wrap
+                # (``lookup_adapter.rb``'s ``lookup_default_in_module``); an
+                # explicit caller ``merge=`` still applies even when
+                # ``lookup_options`` picked the main strategy above.
+                fallback = MergeStrategy.strategy(merge) if explicit else strategy
+                default_levels = self._default_levels(scope)
+                default_inv = inv.derive(
+                    lambda k, i: self._sub_lookup(k, default_levels, i)
+                )
+                value = self._lookup_levels(key, default_levels, default_inv, fallback)
+        finally:
+            _STRICT.reset(strict_token)
 
         if value is _MISSING:
             if throw:

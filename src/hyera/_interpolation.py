@@ -1,11 +1,11 @@
-# Derived from phiera/phiera.py (https://github.com/Nike-Inc/phiera),
-# Apache-2.0. Modified by jose-pr. See NOTICE.
 # Ported from Puppet 8 lib/puppet/pops/lookup/interpolation.rb
 # (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
 # See NOTICE.
 """Interpolation engine: resolving functions and variable references.
 
-Ports Puppet's ``interpolation.rb``.
+Ports Puppet's ``interpolation.rb``: a single left-to-right pass over each
+``%{...}`` occurrence, never re-scanning inserted text -- only a method's
+own result is interpolated again.
 """
 
 import re
@@ -15,13 +15,20 @@ from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, su
 from ._types import Sensitive
 from .exceptions import HieraLookupError, InterpolationError
 
-_FUNCTION_RE = re.compile(
-    r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
+#: One ``%{...}`` occurrence (``interpolation.rb:51``'s
+#: ``/%\{([^}]*)\}/``). Takes any text up to the first ``}``, stripped
+#: verbatim -- unlike a plain ``str.format`` field, this admits an empty
+#: expression, embedded quotes, and anything else the grammar below rejects
+#: with its own error.
+_EXPR_RE = re.compile(r"%\{([^}]*)\}")
+#: A method call: a bare word, then a single- or double-quoted argument in
+#: parentheses, with nothing else -- no whitespace around the parentheses or
+#: the argument (``interpolation.rb:146``). ``re.ASCII`` matches Ruby's
+#: ASCII-only ``\w``; ``re.MULTILINE`` (with ``.search``, not ``.match``)
+#: matches Ruby's line-anchored ``^``/``$``.
+_METHOD_RE = re.compile(
+    r"""^(\w+)\((?:"([^"]+)"|'([^']+)')\)$""", re.ASCII | re.MULTILINE
 )
-# A bare ``%{var}`` reference. Excludes ``(`` so it does not also match a
-# function-style ``%{hiera('x')}`` token (those are handled by ``_FUNCTION_RE``);
-# without this, an unresolved function leftover would be blanked here.
-_INTERP_RE = re.compile(r"""%\{(?:::|)([^(}]*)\}""")
 #: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a bare ``%{...}`` whose
 #: (stripped) content is exactly one of these tokens always resolves to the
 #: empty string, without going through scope lookup at all -- notably, an
@@ -177,6 +184,11 @@ def _scope_ref(scope, ref: str, subject: str = None):
     for that case), or :class:`~hyera.HieraLookupError` for a navigation
     type mismatch -- ``subject`` is what an error quotes as "in string:
     <subject>", defaulting to ``%{<ref>}`` (the plain interpolation form).
+
+    Used only by the ``str.format``-style location/datadir/format helpers in
+    :mod:`hyera._location_resolver`, which have no strict routing of their
+    own; the engine below (:func:`interpolate`) resolves a bare ``%{var}``
+    through :meth:`~hyera.Scope.lookupvar` instead, via :func:`_scope_lookup`.
     """
     if subject is None:
         subject = "%{" + ref + "}"
@@ -199,134 +211,160 @@ def _scope_ref(scope, ref: str, subject: str = None):
     return _MISSING if result is _MISSING else result
 
 
-class Interpolation:
-    """Mixin for interpolation: resolving functions and variable references.
+def interpolate(value, invocation, allow_methods=True):
+    """Fully resolve every ``%{...}`` in ``value`` (``interpolation.rb:19-32``).
 
-    The host class must define ``_get_key(key, paths, scope, merge)``.
+    A ``str`` with no ``"%{"`` is returned unchanged; any other ``str`` is
+    scanned once, left to right (:func:`_interpolate_string`). A ``list``
+    interpolates each element into a new list; a ``dict`` interpolates each
+    key and value into a new dict (``out[interpolate(k)] = interpolate(v)``,
+    so a later duplicate key overwrites, as Ruby ``Hash#[]=`` does) -- an
+    interpolated key that is not hashable raises :class:`~hyera.
+    InterpolationError`. Anything else (``None``, ``bool``, ``int``,
+    ``float``, already-native structures with no string inside) passes
+    through unchanged.
+
+    ``invocation`` is a :class:`~hyera._invocation.Invocation`.
+    ``allow_methods=False`` (used for hierarchy locations) still allows a
+    plain ``%{var}``/``%{scope('var')}`` reference; only an explicit method
+    call (``%{lookup(...)}``, ``%{hiera(...)}``, ``%{alias(...)}``,
+    ``%{literal(...)}``) raises.
     """
-
-    def _can_resolve(self, s) -> bool:
-        """True if any function call or interpolation is present in ``s``."""
-        return isinstance(s, str) and bool(
-            _FUNCTION_RE.findall(s) or _INTERP_RE.findall(s)
-        )
-
-    def _resolve_function(self, s, paths, scope, merge):
-        """Fully resolve hiera function calls (``%{hiera(...)}`` etc.) in ``s``."""
-        # Captured before the loop rebinds `s`: a %{...} syntax error names
-        # the whole, original, unsubstituted value in its message, as
-        # Puppet's own `interpolation.rb` does.
-        subject = s
-        calls = _FUNCTION_RE.findall(s)
-        # An alias replaces the whole value (no string interpolation).
-        if len(calls) == 1 and calls[0][0] == "alias":
-            if _FUNCTION_RE.sub("", s) != "":
-                raise InterpolationError(
-                    "Alias cannot be used for string interpolation: `{}`".format(s)
-                )
+    if isinstance(value, str):
+        if "%{" not in value:
+            return value
+        return _interpolate_string(value, invocation, allow_methods)
+    if isinstance(value, list):
+        return [interpolate(v, invocation, allow_methods) for v in value]
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            new_key = interpolate(k, invocation, allow_methods)
             try:
-                return self._get_key(calls[0][1], paths, scope, merge)
-            except KeyError:
+                hash(new_key)
+            except TypeError:
                 raise InterpolationError(
-                    "Alias lookup failed: key '{}' does not exist".format(calls[0][1])
+                    "Interpolated hash key {!r} is not hashable".format(new_key)
                 ) from None
+            out[new_key] = interpolate(v, invocation, allow_methods)
+        return out
+    return value
 
-        for call, arg in calls:
-            replace = None
-            if call == "hiera" or call == "lookup":
-                # Inline interpolation needs a single value; do not thread the
-                # parent's array/hash merge into the referenced key.
-                try:
-                    replace = self._get_key(arg, paths, scope, None)
-                except KeyError:
-                    replace = None
-                # Reject only a genuinely absent value; falsy results (0,
-                # "", False) are legitimate and must interpolate as
-                # themselves.
-                if replace is None:
-                    raise InterpolationError(
-                        "Could not resolve value for function call: `{}`".format(s)
-                    )
-            elif call == "scope":
-                # Dotted names resolve as nested lookups here too, so
-                # %{scope('facts.os')} agrees with %{facts.os}. A
-                # defined-nil value is legitimate (renders as "" below);
-                # only a genuine miss raises.
-                replace = _scope_ref(scope, arg, subject=subject)
-                if replace is _MISSING:
-                    raise InterpolationError(
-                        "Could not resolve value for function call: `{}`".format(s)
-                    )
-            elif call == "literal":
-                replace = arg
-            elif call == "alias":
-                raise InterpolationError("Invalid alias function call: `{}`".format(s))
-            else:  # pragma: no cover - guarded by the `function` regex
-                raise InterpolationError(
-                    "Unknown function call {!r} in: `{}`".format(call, s)
-                )
 
-            # A function call standing alone as the whole value keeps the
-            # resolved value's native type (so `%{alias(...)}`-style single
-            # calls to a list/dict pass through). When it is embedded in a
-            # larger string, the resolved value is stringified (``None``
-            # and booleans through ``_to_puppet_str``, matching a plain
-            # ``%{var}`` reference).
-            if _FUNCTION_RE.sub("", s) == "" and len(calls) == 1:
-                s = replace
-            elif replace is None or isinstance(replace, (str, int, float, bool)):
-                text = _to_puppet_str(replace)
-                s = _FUNCTION_RE.sub(lambda _m, r=text: r, s, 1)
-            else:
-                raise InterpolationError(
-                    "Cannot interpolate non-scalar value {!r} into string: "
-                    "`{}`".format(replace, s)
-                )
+def _interpolate_string(subject, inv, allow_methods):
+    """One left-to-right pass over every ``%{...}`` in ``subject``
+    (``interpolation.rb:48-73``). Inserted text is never re-scanned by this
+    pass; only a resolved method result is interpolated again, through a
+    fresh call to :func:`interpolate`.
+    """
+    out = []
+    pos = 0
+    for m in _EXPR_RE.finditer(subject):
+        out.append(subject[pos : m.start()])
+        pos = m.end()
+        expr = m.group(1).strip(_RUBY_STRIP_CHARS)
+        if expr in _EMPTY_INTERPOLATIONS:
+            out.append("")
+            continue
+        method, key = _get_method_and_data(expr, allow_methods)
+        if method == "alias" and m.group(0) != subject:
+            raise InterpolationError(
+                "'alias' interpolation is only permitted if the expression "
+                "is equal to the entire string"
+            )
+        resolver = _METHODS.get(method)
+        if resolver is None:
+            raise InterpolationError("Unknown interpolation method '{}'".format(method))
+        value = resolver(key, inv, subject)
+        if method == "alias":
+            # The whole result, returned immediately: an alias replaces the
+            # entire value (already asserted equal to `subject` above), with
+            # no re-interpolation and no stringification.
+            return value
+        value = interpolate(value, inv, allow_methods)
+        out.append(_to_puppet_str(value))
+    out.append(subject[pos:])
+    return "".join(out)
 
-        return s
 
-    def _resolve_interpolates(self, s, scope):
-        """Resolve scope-based ``%{var}`` string interpolation."""
-        # Captured before the loop rebinds `s`, same reasoning as
-        # `_resolve_function`.
-        subject = s
-        for i in _INTERP_RE.findall(s):
-            if i.strip(_RUBY_STRIP_CHARS) in _EMPTY_INTERPOLATIONS:
-                replacement = ""
-            else:
-                # A genuine miss interpolates to empty string (matches ruby
-                # hiera). Dotted names are nested lookups here too, so a
-                # reference means the same thing in a value as in a path.
-                value = _scope_ref(scope, i, subject=subject)
-                replacement = "" if value is _MISSING else _to_puppet_str(value)
-            s = _INTERP_RE.sub(lambda _m, r=str(replacement): r, s, 1)
-        return s
+def _get_method_and_data(expr, allow_methods):
+    """Split a stripped ``%{...}`` expression into its method name and raw
+    argument (``interpolation.rb:146-157``).
 
-    def _resolve(self, s, paths, scope, merge):
-        """Fully resolve ``s``: functions, interpolation, and nested structures.
+    A method-call shape (``_METHOD_RE``) needs ``allow_methods``, whichever
+    method it names; anything else is always a plain scope reference
+    (``"scope", expr``), argument passed through verbatim (a leading
+    ``::`` and any embedded ``.`` stay exactly as written).
+    """
+    m = _METHOD_RE.search(expr)
+    if m:
+        if not allow_methods:
+            raise InterpolationError(
+                "Interpolation using method syntax is not allowed in this context"
+            )
+        return m.group(1), m.group(2) if m.group(2) is not None else m.group(3)
+    return "scope", expr
 
-        ``merge`` is only meaningful for a top-level ``%{alias(key)}`` (which
-        may carry the caller's merge onto the aliased key). Nested structure
-        elements resolve without it — accumulation happens once, in ``_get_key``.
-        """
-        if isinstance(s, dict):
-            return self._resolve_dict(s, paths, scope, None)
-        elif isinstance(s, list):
-            return list(self._resolve_list(s, paths, scope, None))
-        elif not self._can_resolve(s):
-            return s
 
-        base = self._resolve_function(s, paths, scope, merge)
-        if isinstance(base, str):
-            base = self._resolve_interpolates(base, scope)
-        return base
+def _global_lookup(key, inv, subject):
+    """``%{lookup(...)}``/``%{hiera(...)}``/``%{alias(...)}``
+    (``interpolation.rb:77-86``): a sub-lookup through the invocation's host
+    callable. A miss becomes ``""`` here (the *caller*, ``_interpolate_string``,
+    returns an alias's result raw before this ever stringifies it)."""
+    value = inv.lookup(key)
+    return "" if value is _MISSING else value
 
-    def _resolve_dict(self, obj, paths, scope, merge):
-        new_obj = {}
-        for k, v in obj.items():
-            new_obj[k] = self._resolve(v, paths, scope, merge)
-        return new_obj
 
-    def _resolve_list(self, obj, paths, scope, merge):
-        for item in obj:
-            yield self._resolve(item, paths, scope, merge)
+def _scope_lookup(key, inv, subject):
+    """``%{scope(...)}``/a plain ``%{var}`` reference
+    (``interpolation.rb:87-121``): resolve ``key``'s root against
+    ``inv.scope``, then any dotted sub-navigation via
+    :func:`~hyera._navigation.sub_lookup`.
+
+    A root present in ``inv.override_values`` wins outright. A root present
+    in ``inv.default_values`` is looked up leniently (Puppet's
+    ``catch(:undefined_variable)`` form: an undefined root reads as ``None``
+    here, with no strict side effect); any other root goes through
+    :meth:`~hyera.Scope.lookupvar`, which *does* apply ``inv.scope.strict``.
+    Either way, an undefined root (``None`` and genuinely unbound, per
+    :meth:`~hyera.Scope.exist`) then falls back to ``inv.default_values``
+    when the root is there, else stays ``None``.
+    """
+    segments = split_key(
+        key, lambda p: HieraLookupError("{} in string: {}".format(p, subject))
+    )
+    root, rest = segments[0], segments[1:]
+    if not isinstance(root, str):
+        raise InterpolationError(
+            "Scope variable name {} is a {}, not a string".format(
+                root, _ruby_class(root)
+            )
+        )
+    scope = inv.scope
+    if root in inv.override_values:
+        value = inv.override_values[root]
+    elif root in inv.default_values:
+        looked = scope.lookup(root)
+        value = None if looked is _MISSING else looked
+    else:
+        value = scope.lookupvar(root, lenient=inv.lenient)
+    if value is None and not scope.exist(root):
+        value = inv.default_values.get(root)
+    if value is not None and rest:
+        result = sub_lookup(key, rest, value)
+        value = None if result is _MISSING else result
+    return value
+
+
+#: Each interpolation method's resolver, keyed by name
+#: (``interpolation.rb:132-145``). ``lookup``/``hiera``/``alias`` share one
+#: implementation (a sub-lookup through the invocation); only
+#: ``_interpolate_string`` treats ``alias`` differently (whole-result,
+#: never stringified/re-scanned).
+_METHODS = {
+    "lookup": _global_lookup,
+    "hiera": _global_lookup,
+    "alias": _global_lookup,
+    "scope": _scope_lookup,
+    "literal": lambda key, inv, subject: key,
+}

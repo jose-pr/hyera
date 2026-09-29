@@ -1,9 +1,13 @@
 """Interpolation edge cases: literal backslashes, regex-special values, format()."""
 
+import logging
+
 import pytest
 
-from hyera import Hiera, Scope, Sensitive
-from hyera._interpolation import _float_to_s, _ruby_inspect, _to_puppet_str
+from hyera import Hiera, InterpolationError, Scope, Sensitive
+from hyera._interpolation import _float_to_s, _ruby_inspect, _to_puppet_str, interpolate
+from hyera._invocation import Invocation
+from hyera._navigation import _MISSING
 
 
 def _hiera(make_tree, common, **variables):
@@ -116,3 +120,37 @@ def test_render_values():
     assert _to_puppet_str(None) == ""
     assert _to_puppet_str(Sensitive("x")) == "Sensitive [value redacted]"
     assert _to_puppet_str([Sensitive("x")]) == "[#<Sensitive [value redacted]>]"
+
+
+def test_method_syntax_not_allowed():
+    # allow_methods=False (used for hierarchy locations) still allows a
+    # plain %{var} reference; only an explicit method call raises.
+    inv = Invocation(Scope(), lambda k, i: _MISSING)
+    with pytest.raises(InterpolationError, match="method syntax is not allowed"):
+        interpolate("%{lookup('x')}", inv, allow_methods=False)
+
+
+def test_undefined_variable_same_for_both_forms(make_tree, caplog):
+    h = _hiera(make_tree, 'a: "[%{nosuch}]"\nb: "[%{scope(\'nosuch\')}]"\n')
+
+    with caplog.at_level(logging.WARNING):
+        assert h.get("a") == "[]"
+        assert h.get("b") == "[]"
+    assert any("Undefined variable 'nosuch'" in r.getMessage() for r in caplog.records)
+
+    strict_h = h.scoped(strict="error")
+    with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
+        strict_h.get("a", throw=True)
+    with pytest.raises(InterpolationError, match="Undefined variable 'nosuch'"):
+        strict_h.get("b", throw=True)
+
+
+def test_lenient_invocation_warns(caplog):
+    inv = Invocation(Scope(strict="error"), lambda k, i: _MISSING, lenient=True)
+    with caplog.at_level(logging.WARNING):
+        assert interpolate("[%{nosuch}]", inv) == "[]"
+    assert any(
+        "Interpolation failed with 'nosuch', but compilation continuing"
+        in r.getMessage()
+        for r in caplog.records
+    )

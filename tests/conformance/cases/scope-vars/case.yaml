@@ -17,11 +17,8 @@ queries:
 - key: v_num
 - key: v_float
 - key: v_scope_num
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: v_scope_bool
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: v_scope_list
-  divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: v_list_embed
 - key: v_hash_embed
   hash_inspect: true
@@ -33,7 +30,6 @@ queries:
 - key: v_facts_clientcert
 - key: v_undef
 - key: v_scope_undef
-  divergence: spec-interpolation/missing-inline-lookup-raises
 - key: v_facts_undef
 - key: v_neg_idx
 - key: v_hash_numkey
@@ -45,5 +41,4 @@ queries:
 - key: v_calling_module
 - key: v_calling_class
 - key: v_facts_whole_type
-  divergence: spec-interpolation/method-result-type-and-nonscalar
   hash_inspect: true

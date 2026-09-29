@@ -17,6 +17,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Interpolation in data values follows Puppet's rules: one left-to-right
+  pass (`%{literal('%')}{x}` yields the literal `%{x}`, and a substituted
+  value is never scanned again); whitespace inside `%{ }` is ignored; hash
+  keys are interpolated; a variable whose value contains `%{...}` is
+  interpolated; `%{lookup()}`, `%{hiera()}` and `%{scope()}` always produce
+  a string; a missing key in `%{lookup()}`/`%{hiera()}`/`%{alias()}` gives
+  `""`; `%{scope('x')}` treats an undefined `x` exactly like `%{x}` under
+  the scope's `strict`; an unknown method or a malformed method call is an
+  error. Data that used a stand-alone `%{lookup('k')}` to copy a list or
+  hash must use `%{alias('k')}`.
 - Non-string values interpolated into strings, hierarchy paths and
   `format()` render as Puppet renders them: floats in Ruby's form
   (`1.0e+20`), arrays as `["a", "b"]`, hashes as `{"k"=>"v"}`, and

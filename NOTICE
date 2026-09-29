@@ -15,7 +15,6 @@ The files derived from phiera are:
     src/hyera/core.py                (from phiera/phiera.py)
     src/hyera/_hiera_config.py       (from phiera/phiera.py)
     src/hyera/_location_resolver.py  (from phiera/phiera.py)
-    src/hyera/_interpolation.py      (from phiera/phiera.py)
 
 Each was modified by jose-pr and carries a notice saying so.
 

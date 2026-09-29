@@ -52,12 +52,16 @@ def _default_strict() -> str:
     explicitly on the instance -- mirrors how ``yaml_data.rb`` reads
     ``Puppet[:strict]`` at call time rather than at construction.
 
-    Returns ``"warning"`` until the lookup scope's ``strict`` setting is
-    threaded through to backends. There is no ``Hiera(strict=)``:
-    a level's backend is shared across scopes, so it never stores a scope's
-    strictness itself.
+    Reads ``hyera._invocation._STRICT`` (a ``ContextVar``, default
+    ``"warning"``), set from ``invocation.scope.strict`` around the
+    top-level lookup entry (``core.Hiera._get``) and reset in ``finally``.
+    A level's backend is shared across scopes, so it never stores a scope's
+    strictness itself; imported lazily to avoid a hard import-time
+    dependency from this module onto ``_invocation``.
     """
-    return "warning"
+    from ._invocation import _STRICT
+
+    return _STRICT.get()
 
 
 class NamePattern(NamedTuple):
