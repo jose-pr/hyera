@@ -1,0 +1,45 @@
+description: >-
+  The public lookup() call forms: value_type assertions on a found value,
+  a default, an override-free default_values_hash-style default=, a name
+  list (first found, and the "any of the names" miss message), an
+  Optional value_type accepting a found null, the reserved lookup_options
+  key treated like any other (only its default= is special elsewhere),
+  and merge= working the same as it does through the plain lookup.
+queries:
+  - key: s
+    type: Integer
+    error_class: HieraLookupError
+    error_match: "Found value has wrong type, expects an Integer value, got String"
+  - key: missing
+    type: Integer
+    default: "x"
+    error_class: HieraLookupError
+    error_match: "Default value has wrong type, expects an Integer value, got String"
+  - key: [missing1, k]
+  - key: [missing1, missing2]
+  - id: nilk-string
+    key: nilk
+    type: String
+    error_class: HieraLookupError
+    error_match: "Found value has wrong type, expects a String value, got Undef"
+  - id: nilk-optional
+    key: nilk
+    type: "Optional[String]"
+  - id: nilk-default
+    key: nilk
+    default: "dflt"
+  - id: cv-first
+    key: cv
+    merge: first
+  - id: lookup_options-default
+    key: lookup_options
+    default: "dlo"
+  - id: hsi-hash
+    key: hsi
+    type: "Hash[String, Integer]"
+  - id: h-hash
+    key: h
+    merge: hash
+  - id: u-unique
+    key: u
+    merge: unique

@@ -1,0 +1,152 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a88b9e8609c03447c02ec0da5b97d39077ab2e343fff1577ff697e7a546a3ad1",
+  "results": {
+    "s": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer",
+        "s"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got String"
+    },
+    "missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer",
+        "--default",
+        "x",
+        "missing"
+      ],
+      "status": "error",
+      "message": "Default value has wrong type, expects an Integer value, got String"
+    },
+    "missing1|k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "missing1",
+        "k"
+      ],
+      "status": "found",
+      "value": "kv"
+    },
+    "missing1|missing2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "missing1",
+        "missing2"
+      ],
+      "status": "error",
+      "message": "Function lookup() did not find a value for any of the names ['missing1', 'missing2']"
+    },
+    "nilk-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "String",
+        "nilk"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects a String value, got Undef"
+    },
+    "nilk-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[String]",
+        "nilk"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "nilk-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "dflt",
+        "nilk"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "cv-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "cv"
+      ],
+      "status": "found",
+      "value": 7
+    },
+    "lookup_options-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "dlo",
+        "lookup_options"
+      ],
+      "status": "found",
+      "value": "dlo"
+    },
+    "hsi-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[String, Integer]",
+        "hsi"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "h-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h"
+      ],
+      "status": "found",
+      "value": {
+        "x": {
+          "p": 1
+        },
+        "y": 3
+      }
+    },
+    "u-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    }
+  }
+}
