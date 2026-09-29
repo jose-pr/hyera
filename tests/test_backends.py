@@ -358,3 +358,42 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
     monkeypatch.setitem(sys.modules, "pyhocon", None)
     with pytest.raises(BackendError, match="pyera\\[hocon\\]"):
         HOCONBackend().loads("k = v")
+
+
+# ---------------------------------------------------------------------------
+# IniBackend / DotenvBackend: reachable only through SopsBackend (see
+# tests/test_sops.py for the recorded-pair tests against real sops output);
+# these cover the two error paths directly.
+# ---------------------------------------------------------------------------
+
+
+def test_ini_backend_no_equals_sign_raises():
+    from pyera.backends import IniBackend
+
+    with pytest.raises(BackendError, match="invalid ini line 2"):
+        IniBackend().loads("[s]\nno equals here\n")
+
+
+def test_ini_backend_unclosed_triple_quote_raises():
+    from pyera.backends import IniBackend
+
+    with pytest.raises(BackendError, match="invalid ini line"):
+        IniBackend().loads('[s]\nk = """never closed\n')
+
+
+def test_dotenv_backend_no_equals_sign_raises():
+    from pyera.backends import DotenvBackend
+
+    with pytest.raises(BackendError, match="invalid dotenv line 1"):
+        DotenvBackend().loads("no equals here\n")
+
+
+def test_ini_and_dotenv_registered_only_in_format_namespace():
+    from pyera.backends import DotenvBackend, IniBackend
+
+    assert "ini" in Backend.names("format")
+    assert "dotenv" in Backend.names("format")
+    assert Backend.find("ini", kind="function") is None
+    assert Backend.find("dotenv", kind="function") is None
+    assert Backend.find("ini", kind="format") is IniBackend
+    assert Backend.find("dotenv", kind="format") is DotenvBackend

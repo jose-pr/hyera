@@ -14,7 +14,7 @@ import subprocess
 import pytest
 
 from pyera import ConfigError, Hiera
-from pyera.backends import SOPS_TIMEOUT, BackendError, SopsBackend
+from pyera.backends import SOPS_TIMEOUT, Backend, BackendError, RubySymbol, SopsBackend
 
 
 def _install_recorder(
@@ -296,3 +296,151 @@ def test_sops_parse_error_plaintext_absent_from_cli(
     assert "hunter2-SECRET" not in captured.out
     assert "hunter2-SECRET" not in captured.err
     assert not any("hunter2-SECRET" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Format inference (sops's own case-sensitive extension rule,
+# `cmd/sops/formats/formats.go`, verified against the real v3.13.3 binary
+# and source 2026-09-29 -- see the sub-plan's own Progress for the WSL
+# capture). Each recorded (format, native stdout) pair below is the exact
+# bytes a real `sops -d --input-type=<f> --output-type=<f>` printed for a
+# matching input file, captured the same day.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name,expected_format",
+    [
+        ("a.yaml", "yaml"),
+        ("a.yml", "yaml"),
+        ("a.json", "json"),
+        ("a.env", "dotenv"),
+        (".env", "dotenv"),
+        ("a.ini", "ini"),
+    ],
+)
+def test_sops_data_format_inference_accepted(
+    monkeypatch, tmp_path, name, expected_format
+):
+    calls, _which = _install_recorder(
+        monkeypatch, tmp_path, stdout=b"{}\n" if expected_format == "json" else b""
+    )
+    path = tmp_path / name
+    try:
+        SopsBackend({}).data_hash(path, {})
+    except BackendError:
+        pass  # empty/garbage stdout may fail to parse; only the argv matters here
+    assert calls, "sops should have been invoked"
+    args, _kwargs = calls[-1]
+    assert "--input-type={}".format(expected_format) in args
+    assert "--output-type={}".format(expected_format) in args
+
+
+@pytest.mark.parametrize("name", ["a.YAML", "a.enc", "a.conf", "a.yaml.bak"])
+def test_sops_data_format_inference_rejected(monkeypatch, tmp_path, name):
+    calls, _which = _install_recorder(monkeypatch, tmp_path)
+    path = tmp_path / name
+    with pytest.raises(ConfigError, match="has no .yaml/.yml/.json/.env/.ini suffix"):
+        SopsBackend({}).data_hash(path, {})
+    assert not calls, "sops must not be invoked when the format can't be inferred"
+
+
+# Recorded (format, real sops-re-emitted native stdout, expected parsed
+# value) triples, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2
+# in WSL, decrypting a fixed age key's own encrypted copies of the inputs
+# named in the sub-plan.
+_YAML_NATIVE_NO_DATE = (
+    b'a: 1\nb:\n    c:\n        - x\n        - "y"\ne: bar\nsym: :foo\n'
+    b':q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'
+)
+_YAML_NATIVE_WITH_DATE = (
+    b'a: 1\nb:\n    c:\n        - x\n        - "y"\nd: 2024-01-15T00:00:00Z\n'
+    b'e: bar\nsym: :foo\n:q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'
+)
+_JSON_NATIVE = b'{"a": 1, "b": {"c": ["x", "y"]}, "n": null, "f": 1.5}\n'
+_INI_NATIVE = (
+    b"top = 1\n\n[sec1]\nk   = v\nnum = 42\n; c\nq   = quoted value\nsp  = lead\n\n"
+    b"[sec2]\nx = has=eq\nK = upper\n"
+)
+_ENV_NATIVE = (
+    b'# top comment\nK1=v1\nK2=has=eq\nK3=line1\\nline2\nK4= spaced \nK5="quoted"\n'
+)
+
+
+def test_sops_data_yaml_recorded_pair(monkeypatch, tmp_path):
+    _install_recorder(monkeypatch, tmp_path, stdout=_YAML_NATIVE_NO_DATE)
+    result = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert result == {
+        "a": 1,
+        "b": {"c": ["x", "y"]},
+        "e": "bar",
+        "sym": RubySymbol("foo"),
+        "q": 1,
+        "bin": "hello",
+        "nul": None,
+        "t": "yes",
+        "oct": 493,
+    }
+
+
+def test_sops_data_yaml_date_shaped_value_is_disallowed(monkeypatch, tmp_path):
+    _install_recorder(monkeypatch, tmp_path, stdout=_YAML_NATIVE_WITH_DATE)
+    with pytest.raises(BackendError, match="unspecified class: Time"):
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+
+
+def test_sops_data_json_recorded_pair(monkeypatch, tmp_path):
+    _install_recorder(monkeypatch, tmp_path, stdout=_JSON_NATIVE)
+    result = SopsBackend({}).data_hash(tmp_path / "secret.json", {})
+    assert result == {"a": 1, "b": {"c": ["x", "y"]}, "n": None, "f": 1.5}
+
+
+def test_sops_data_ini_recorded_pair(monkeypatch, tmp_path):
+    _install_recorder(monkeypatch, tmp_path, stdout=_INI_NATIVE)
+    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {})
+    assert result == {
+        "DEFAULT": {"top": "1"},
+        "sec1": {"k": "v", "num": "42", "q": "quoted value", "sp": "lead"},
+        "sec2": {"x": "has=eq", "K": "upper"},
+    }
+
+
+def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
+    _install_recorder(monkeypatch, tmp_path, stdout=_ENV_NATIVE)
+    result = SopsBackend({}).data_hash(tmp_path / "secret.env", {})
+    assert result == {
+        "K1": "v1",
+        "K2": "has=eq",
+        "K3": "line1\nline2",
+        "K4": " spaced ",
+        "K5": '"quoted"',
+    }
+
+
+@pytest.mark.parametrize(
+    "ext,stdout,match",
+    [
+        ("json", b'{"a": HUNTER2}\n', "Unable to parse"),
+        ("ini", b"HUNTER2_no_equals_sign\n", "invalid ini line 1"),
+        ("env", b"HUNTER2_no_equals_sign\n", "invalid dotenv line 1"),
+    ],
+)
+def test_sops_data_secret_free_for_json_ini_dotenv(
+    monkeypatch, tmp_path, caplog, ext, stdout, match
+):
+    # A malformed decrypted payload that genuinely fails to parse for each
+    # of the three non-YAML formats. INI/dotenv line-error messages never
+    # embed the line's own text at all (by construction -- only the line
+    # number); JSON's parse-error path goes through the same chain-free
+    # "Unable to parse" wrapping YAML already had covered above.
+    _install_recorder(monkeypatch, tmp_path, stdout=stdout)
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(BackendError, match=match) as excinfo:
+            SopsBackend({}).data_hash(tmp_path / "secret.{}".format(ext), {})
+    exc = excinfo.value
+    seen = []
+    while exc is not None:
+        seen.append(str(exc))
+        exc = exc.__cause__ or exc.__context__
+    assert not any("HUNTER2" in s for s in seen)
+    assert not any("HUNTER2" in r.getMessage() for r in caplog.records)

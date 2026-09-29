@@ -308,3 +308,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The non-Puppet `data_hash` names `yaml`, `json`, `hocon` and `yaml.enc`
   (strict Puppet only). Use `yaml_data`, `json_data` and `hocon_data`;
   `sops_data` (see Changed) is the one intentionally kept non-Puppet name.
+
+### Added
+
+- `sops_data` decrypts YAML, JSON, INI and dotenv files, choosing the
+  format from the file extension the same way the `sops` CLI itself does
+  (`.yaml`/`.yml`/`.json`/`.env`/`.ini`, case-sensitive; any other
+  extension is a clear error naming the file instead of a raw or
+  misleading failure). `IniBackend`/`DotenvBackend` parse sops's own
+  output shape for those two formats; neither has a Puppet `data_hash`
+  equivalent, so both are reachable only through `sops_data`.

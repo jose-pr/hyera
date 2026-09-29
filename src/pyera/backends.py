@@ -18,7 +18,7 @@ from typing import NamedTuple
 
 import yaml
 
-from .exceptions import BackendError, _one_line
+from .exceptions import BackendError, ConfigError, _one_line
 from ._yaml_loader import RubySymbol, safe_load, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +30,8 @@ __all__ = [
     "JSONBackend",
     "HOCONBackend",
     "SopsBackend",
+    "IniBackend",
+    "DotenvBackend",
     "BackendError",
     "RubySymbol",
     "has_hocon",
@@ -951,6 +953,112 @@ class HOCONBackend(Backend):
         return _as_plain(parsed)
 
 
+class IniBackend(Backend):
+    """INI, in exactly the shape the ``sops`` CLI's go-ini writer emits it
+    (``stores/ini/store.go``) -- reachable only through :class:`SopsBackend`
+    (Puppet has no ``ini_data`` of its own).
+    """
+
+    NAMES = {"format": ("ini",)}
+    EXTENSIONS = (".ini",)
+
+    def loads(self, text):
+        result = {"DEFAULT": {}}
+        current = result["DEFAULT"]
+        lines = text.split("\n")
+        n = len(lines)
+        i = 0
+        lineno = 0
+        while i < n:
+            line = lines[i]
+            i += 1
+            lineno += 1
+            stripped = line.strip()
+            if stripped == "" or stripped[:1] in (";", "#"):
+                continue
+            if stripped[:1] == "[" and stripped[-1:] == "]" and len(stripped) >= 2:
+                name = stripped[1:-1]
+                result[name] = {}
+                current = result[name]
+                continue
+
+            if line[:1] == "`":
+                end = line.find("`", 1)
+                if end == -1:
+                    raise BackendError("invalid ini line {}".format(lineno))
+                key = line[1:end]
+                remainder = line[end + 1 :]
+            else:
+                key_end = line.find("=")
+                if key_end == -1:
+                    raise BackendError("invalid ini line {}".format(lineno))
+                key = line[:key_end].strip()
+                remainder = line[key_end:]
+
+            eq = remainder.find("=")
+            if eq == -1:
+                raise BackendError("invalid ini line {}".format(lineno))
+            value_part = remainder[eq + 1 :].strip()
+
+            if value_part.startswith('"""'):
+                body = value_part[3:]
+                if body.endswith('"""') and len(body) >= 3:
+                    value = body[:-3]
+                else:
+                    parts = [body]
+                    closed = False
+                    while i < n:
+                        nxt = lines[i]
+                        i += 1
+                        lineno += 1
+                        if nxt.endswith('"""'):
+                            parts.append(nxt[:-3])
+                            closed = True
+                            break
+                        parts.append(nxt)
+                    if not closed:
+                        raise BackendError("invalid ini line {}".format(lineno))
+                    value = "\n".join(parts)
+            elif (
+                len(value_part) >= 2
+                and value_part[:1] == "`"
+                and value_part[-1:] == "`"
+            ):
+                value = value_part[1:-1]
+            elif (
+                len(value_part) >= 2
+                and value_part[:1] == '"'
+                and value_part[-1:] == '"'
+            ):
+                value = value_part[1:-1]
+            else:
+                value = value_part
+
+            current[key] = value
+        return result
+
+
+class DotenvBackend(Backend):
+    """dotenv, in exactly the shape the ``sops`` CLI's writer emits it
+    (``stores/dotenv/store.go``) -- reachable only through
+    :class:`SopsBackend`.
+    """
+
+    NAMES = {"format": ("dotenv",)}
+    EXTENSIONS = (".env",)
+
+    def loads(self, text):
+        result = {}
+        for lineno, line in enumerate(text.split("\n"), start=1):
+            if line == "" or line.startswith("#"):
+                continue
+            if "=" not in line:
+                raise BackendError("invalid dotenv line {}".format(lineno))
+            key, _sep, value = line.partition("=")
+            result[key] = value.replace("\\n", "\n")
+        return result
+
+
 def _refuse_batch_shim(exe: str) -> None:
     """Raise if *exe* is a ``.bat``/``.cmd`` shim, in any letter case."""
     if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
@@ -1039,8 +1147,29 @@ def _run_sops(path, input_type: str) -> bytes:
     return proc.stdout
 
 
+#: sops's own ``FormatForPath`` rule (``cmd/sops/formats/formats.go``,
+#: verified against the real v3.13.3 binary and source, 2026-09-29):
+#: case-sensitive ``strings.HasSuffix``, checked in this order. Anything
+#: else is binary to sops -- not a data hash.
+_SOPS_SUFFIXES = (
+    (".yaml", "yaml"),
+    (".yml", "yaml"),
+    (".json", "json"),
+    (".env", "dotenv"),
+    (".ini", "ini"),
+)
+
+
+def _sops_format(path_str: str):
+    for suffix, fmt in _SOPS_SUFFIXES:
+        if path_str.endswith(suffix):
+            return fmt
+    return None
+
+
 class SopsBackend(Backend):
-    """YAML decrypted on the fly via the ``sops`` CLI (``sops_data``).
+    """Decrypted on the fly via the ``sops`` CLI (``sops_data``; the
+    one kept non-Puppet deviation).
 
     Hardened for unattended use: the subprocess has a finite timeout, its
     stderr is captured and surfaced, a missing ``sops`` binary raises a
@@ -1048,26 +1177,40 @@ class SopsBackend(Backend):
     and a decrypted file that fails to parse reports only the problem and
     its line/column -- never the decrypted plaintext.
 
-    Only YAML in this phase; ``sops_formats`` generalizes it to sops's own
-    format inference (JSON/INI/dotenv) and the ``sops``/``sops_<format>``
-    names).
+    ``sops_data`` and ``sops`` infer the format from the file extension
+    with sops's own rule (:data:`_SOPS_SUFFIXES`); the ``sops_<format>``
+    name (a :class:`NamePattern`, added in a later commit alongside the
+    ``sops`` alias) forces one regardless of extension via the ``format``
+    constructor keyword.
     """
 
     NAMES = {"function": ("sops_data",)}
 
+    def __init__(self, conf=None, *, strict=None, format=None):
+        super().__init__(conf, strict=strict)
+        self.format = format
+
     def data_hash(self, path, options):
-        raw = _run_sops(path, "yaml")
-        yaml_backend = YAMLBackend(strict=self.strict)
+        fmt = self.format or _sops_format(str(path))
+        if fmt is None:
+            raise ConfigError(
+                "sops_data: '{}' has no .yaml/.yml/.json/.env/.ini suffix, "
+                "so sops reads it as binary, which is not a data hash; use "
+                "data_hash: sops_<yaml|json|ini|dotenv> to choose a format"
+                "".format(path)
+            )
+        raw = _run_sops(path, fmt)
+        format_backend = Backend.new(fmt, kind="format", strict=self.strict)
         problem = None
         try:
             text = raw.decode("utf-8")
-            parsed = yaml_backend.loads(text)
+            parsed = format_backend.loads(text)
         except UnicodeDecodeError as e:
             problem = str(e)
         except BackendError as e:
             problem = str(e)
         else:
-            return yaml_backend._as_data_hash(parsed, path)
+            return format_backend._as_data_hash(parsed, path)
         raise BackendError(
             "Unable to parse ({}): {}".format(path, problem), path=str(path)
         )
