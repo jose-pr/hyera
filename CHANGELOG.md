@@ -62,6 +62,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Puppet's own message, instead of a raw `ValueError`, `TypeError` or
   `AttributeError`. A string `paths`/`globs`/`uris` value is rejected
   outright instead of being silently split into one source per character.
+- A hierarchy entry with `lookup_key`, `data_dig`, `hiera3_backend` or
+  `v4_data_hash` no longer falls back to `defaults.data_hash` and reads
+  its file as plain YAML; eyaml ciphertext used to be returned as the
+  value. An unknown function name now raises Puppet's own "Unable to
+  find '<kind>' function named '<name>'"; a known `lookup_key`/`data_dig`
+  function raises `ConfigError` ("not supported yet") instead.
 
 ### Security
 

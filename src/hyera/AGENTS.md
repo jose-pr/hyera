@@ -36,7 +36,15 @@ private engine internals with no stability contract.
   `data`, always resolved next to hiera.yaml (or under `base_path`) — never
   the Hiera 3 absolute `/etc/puppetlabs/...` path. `default_hierarchy` is
   accepted in a single (non-layered) config, and its entries are schema-
-  validated exactly like `hierarchy`'s. Raises `ConfigError` for anything
+  validated exactly like `hierarchy`'s. Each entry uses its own function
+  key (`data_hash`/`lookup_key`/`data_dig`/`hiera3_backend`/
+  `v4_data_hash`), falling back to `defaults` only when the entry names
+  none (`defaults` is never merged into an entry wholesale); `lookup_key`
+  and `data_dig` entries raise `ConfigError` for now ("not supported yet"
+  for a registered function name, "Unable to find" for an unregistered
+  one) — a level that used a `lookup_key` function under `data_hash:
+  yaml_data` defaults used to silently read its file as plain YAML,
+  returning eyaml ciphertext as the value. Raises `ConfigError` for anything
   about `hiera.yaml` — missing, unreadable, a directory, unparsable,
   non-mapping (naming the Hiera 3 fallback this runtime does not support
   yet), an unsupported `version` (only a literal Integer `5` is accepted; a

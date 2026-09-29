@@ -217,7 +217,8 @@ subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 `lookup_options` (per-key/regex merge strategy + `convert_to`).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
-3) · `lookup_key`/`data_dig` provider backends · `uri`/`uris`
+3) · `lookup_key`/`data_dig` provider backends (such entries raise
+`ConfigError`) · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
 `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
 
