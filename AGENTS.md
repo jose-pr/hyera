@@ -22,7 +22,8 @@ src/pyera/
 ├── _merge_strategy.py      # Merge, make_merge: merge strategies (merge_strategy.rb)
 ├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
 ├── _lookup_adapter.py      # lookup_options matching (lookup_adapter.rb)
-├── _types.py               # Sensitive, convert_to (pops/types)
+├── _types.py               # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)
 ├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
 ├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
