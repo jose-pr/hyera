@@ -489,24 +489,55 @@ def _ko_pattern(prefix):
     return compiled
 
 
-def _overwrite_unmergeables(source, knockout_prefix):
-    """deep_merge_core.rb:212-236 -- ``overwrite_unmergeables``, called with
-    ``overwrite_unmergeable`` always true (``preserve_unmergeables`` is never
-    set in this subset, so ``dest`` itself is never read: it always loses)."""
-    if knockout_prefix is None:
+def _overwrite_unmergeables(source, dest, options):
+    """deep_merge_core.rb:212-236 -- ``overwrite_unmergeables``.
+
+    With ``preserve_unmergeables`` true (``overwrite_unmergeable`` false)
+    and no knockout prefix, neither branch below fires and ``dest`` is
+    returned unchanged -- the caller keeps its own (unmergeable) value.
+    """
+    overwrite_unmergeable = not _rb_truthy(options.get("preserve_unmergeables"))
+    raw_prefix = options.get("knockout_prefix")
+    knockout_prefix = raw_prefix if _rb_truthy(raw_prefix) else None
+    if knockout_prefix is not None and overwrite_unmergeable:
+        if isinstance(source, str):
+            pattern = _ko_pattern(knockout_prefix)
+            stripped = pattern.sub("", source)
+            return stripped if stripped == source else ""
+        if isinstance(source, list):
+            pattern = _ko_pattern(knockout_prefix)
+            _ruby_delete_if(
+                source,
+                lambda item: isinstance(item, str) and pattern.match(item) is not None,
+            )
+            return source
         return source
-    if isinstance(source, str):
-        pattern = _ko_pattern(knockout_prefix)
-        stripped = pattern.sub("", source)
-        return stripped if stripped == source else ""
-    if isinstance(source, list):
-        pattern = _ko_pattern(knockout_prefix)
-        _ruby_delete_if(
-            source,
-            lambda item: isinstance(item, str) and pattern.match(item) is not None,
-        )
+    if overwrite_unmergeable:
         return source
-    return source
+    return dest
+
+
+def _ruby_join(value, sep):
+    """``Array#join(sep)`` -- ``to_s`` per element, recursing into a nested
+    list; a scalar (used when ``value`` is not itself a list) is just
+    ``to_s``'d."""
+    if isinstance(value, list):
+        return sep.join(_ruby_join(item, sep) for item in value)
+    return _ruby_to_s(value)
+
+
+def _ruby_split(text, sep):
+    """``String#split(sep)`` -- drops trailing empty fields; a single-space
+    ``sep`` splits on whitespace runs and drops leading empties too
+    (Ruby's documented special case); an empty string splits to ``[]``."""
+    if text == "":
+        return []
+    if sep == " ":
+        return text.split()
+    parts = text.split(sep)
+    while parts and parts[-1] == "":
+        parts.pop()
+    return parts
 
 
 def _ruby_cmp(a, b):
@@ -569,51 +600,98 @@ def deep_merge(source, dest, options):
     and ``dest`` in a recursive call (via ``_ruby_dup``'s shallow copy), and
     the knockout-prefix step below relies on that when it happens.
 
-    Reads only what Puppet's ``deep`` merge can pass: ``knockout_prefix``,
+    Puppet's ``deep`` strategy only ever passes ``knockout_prefix``,
     ``sort_merged_arrays``, ``merge_hash_arrays``, ``merge_debug`` (read,
-    prints nothing). ``preserve_unmergeables`` is always false here, so
-    "overwrite unmergeables" is always on.
+    prints nothing) and a hardcoded false ``preserve_unmergeables``.
+    ``unconstrained_deep``/``reverse_deep`` may also pass
+    ``preserve_unmergeables``, ``overwrite_arrays``, ``unpack_arrays``,
+    ``extend_existing_arrays``, ``keep_array_duplicates`` and
+    ``merge_nil_values`` -- read here unconditionally (Puppet's own
+    ``deep_merge!`` does too; nothing guards them by strategy, only by
+    which options happen to be present).
     """
+    overwrite_unmergeable = not _rb_truthy(options.get("preserve_unmergeables"))
     raw_prefix = options.get("knockout_prefix")
     knockout_prefix = raw_prefix if _rb_truthy(raw_prefix) else None
     if knockout_prefix == "":
         # deep_merge_core.rb:83.
         raise MergeError("knockout_prefix cannot be an empty string in deep_merge!")
+    if knockout_prefix is not None and not overwrite_unmergeable:
+        # deep_merge_core.rb:84.
+        raise MergeError(
+            "overwrite_unmergeable must be true if knockout_prefix is "
+            "specified in deep_merge!"
+        )
+    array_split_char = options.get("unpack_arrays")
+    if not _rb_truthy(array_split_char):
+        array_split_char = None
+    overwrite_arrays = _rb_truthy(options.get("overwrite_arrays"))
     sort_merged_arrays = _rb_truthy(options.get("sort_merged_arrays"))
     merge_hash_arrays = _rb_truthy(options.get("merge_hash_arrays"))
+    extend_existing_arrays = _rb_truthy(options.get("extend_existing_arrays"))
+    keep_array_duplicates = _rb_truthy(options.get("keep_array_duplicates"))
+    merge_nil_values = _rb_truthy(options.get("merge_nil_values"))
 
     # deep_merge_core.rb:102.
-    if source is None:
+    if source is None and not merge_nil_values:
         return dest
-    # deep_merge_core.rb:104-106 (overwrite_unmergeable is always true here).
-    if not _rb_truthy(dest):
+    # deep_merge_core.rb:104-106.
+    if not _rb_truthy(dest) and overwrite_unmergeable:
         return source
 
     if isinstance(source, dict):
         # deep_merge_core.rb:109-140.
         for src_key, src_value in list(source.items()):
-            if not isinstance(dest, dict):
-                # :134-138 -- dest isn't a Hash: the entire value is
-                # overwritten by source (not just this one key). Real Ruby
-                # re-checks this every iteration; since a Hash source with
-                # no knockout prefix always "wins as is", one overwrite
-                # already reaches that fixed point, so this stops here.
-                dest = _overwrite_unmergeables(source, knockout_prefix)
-                break
-            dest_value = dest.get(src_key)
-            if _rb_truthy(dest_value):
-                # :114-116.
-                dest[src_key] = deep_merge(src_value, dest_value, options)
+            if isinstance(dest, dict):
+                dest_value = dest.get(src_key)
+                if _rb_truthy(dest_value):
+                    # :114-116.
+                    dest[src_key] = deep_merge(src_value, dest_value, options)
+                else:
+                    # :117-130 -- dest doesn't have this key (or it's
+                    # falsy): merge src_value with its own shallow dup. A
+                    # nested container can end up aliased between source
+                    # and dest one level down because of this.
+                    src_dup = _ruby_dup(src_value)
+                    if isinstance(src_dup, list) and keep_array_duplicates:
+                        # :127-129 -- the merge is additive (concat, not a
+                        # bounded union) below, so start empty instead of
+                        # merging src_value with itself.
+                        src_dup = []
+                    dest[src_key] = deep_merge(src_value, src_dup, options)
+            elif isinstance(dest, list) and extend_existing_arrays:
+                # :132-133 -- pushes the whole (Hash) ``source``, once per
+                # source key (Ruby re-evaluates this every iteration; dest
+                # stays an Array so it never reaches a fixed point the way
+                # the other two branches do -- faithfully reproduced, not
+                # a bug to "optimize" into a single push).
+                dest.append(source)
             else:
-                # :117-130 -- dest doesn't have this key (or it's falsy):
-                # merge src_value with its own shallow dup. A nested
-                # container can end up aliased between source and dest one
-                # level down because of this.
-                dest[src_key] = deep_merge(src_value, _ruby_dup(src_value), options)
+                # :134-138 -- dest isn't a Hash (or Array to extend): the
+                # entire value is overwritten by source (not just this one
+                # key). Real Ruby re-checks this every iteration; with
+                # ``overwrite_unmergeable`` and no knockout, one overwrite
+                # already reaches that fixed point (dest becomes source
+                # itself, a Hash, so every later key hits the ``isinstance
+                # (dest, dict)`` branch instead and re-derives the same
+                # value) -- and with it false, or a knockout_prefix
+                # stripping every source key down to "", nothing further
+                # changes either. Either way this stops here.
+                dest = _overwrite_unmergeables(source, dest, options)
+                break
         return dest
 
     if isinstance(source, list):
         # deep_merge_core.rb:141-198.
+        if overwrite_arrays:
+            # :143-145.
+            return source
+        if array_split_char is not None:
+            # :148-154 -- join then split source (and dest, if it is also
+            # an Array) on the same separator before anything else.
+            source = _ruby_split(_ruby_join(source, array_split_char), array_split_char)
+            if isinstance(dest, list):
+                dest = _ruby_split(_ruby_join(dest, array_split_char), array_split_char)
         if (
             knockout_prefix is not None
             and _ruby_index(source, knockout_prefix) is not None
@@ -655,19 +733,26 @@ def deep_merge(source, dest, options):
                 if len(source) > len(dest):
                     merged.extend(source[len(dest) :])
                 dest = merged
+            elif keep_array_duplicates:
+                # :188-189 -- ``concat``: every element of source, in
+                # order, duplicates included.
+                dest = list(dest) + list(source)
             else:
                 # :190-191 -- ``dest | source``: dest's elements come
-                # first, source's new ones are appended.
+                # first, source's new ones are appended, both deduped.
                 dest = _ruby_or(dest, source)
             if sort_merged_arrays:
                 # :193.
                 dest = _ruby_sort(dest)
             return dest
         # :194-197.
-        return _overwrite_unmergeables(source, knockout_prefix)
+        return _overwrite_unmergeables(source, dest, options)
 
-    # :199-206 -- any other (scalar) source.
-    return _overwrite_unmergeables(source, knockout_prefix)
+    # :199-206 -- any other (scalar, or nil with merge_nil_values) source.
+    if isinstance(dest, list) and extend_existing_arrays:
+        dest.append(source)
+        return dest
+    return _overwrite_unmergeables(source, dest, options)
 
 
 class DeepMergeStrategy(MergeStrategy):
@@ -676,10 +761,15 @@ class DeepMergeStrategy(MergeStrategy):
     KEY = "deep"
 
     def checked_merge(self, e1, e2):
-        """merge_strategy.rb:372-377 -- ``deep_merge!(e1, deep_clone(e2))``."""
-        options = {k: v for k, v in self.options.items() if k != "strategy"}
-        merge_options = dict(options)
-        merge_options["preserve_unmergeables"] = False
+        """merge_strategy.rb:372-377 -- ``deep_merge!(e1, deep_clone(e2))``.
+
+        ``preserve_unmergeables`` defaults false -- ``deep`` itself can
+        never set it (``_options_problems`` below rejects the key), so this
+        only ever matters for a subclass (``unconstrained_deep``/
+        ``reverse_deep``) whose own options may set it explicitly.
+        """
+        merge_options = {k: v for k, v in self.options.items() if k != "strategy"}
+        merge_options.setdefault("preserve_unmergeables", False)
         return deep_merge(e1, _deep_clone(e2), merge_options)
 
     def _value_problem(self, value):
@@ -709,3 +799,43 @@ class DeepMergeStrategy(MergeStrategy):
             else:
                 problems.append("unrecognized key '{}'".format(key))
         return problems
+
+
+class UnconstrainedDeepMergeStrategy(DeepMergeStrategy):
+    """merge_strategy.rb:419-430 -- ``deep``, but accepting any of
+    deep_merge's options (``preserve_unmergeables``, ``overwrite_arrays``,
+    ``unpack_arrays``, ``extend_existing_arrays``, ``keep_array_duplicates``,
+    ``merge_nil_values``, on top of ``deep``'s own four) under any
+    non-empty string key -- unrecognized keys pass through to
+    :func:`deep_merge`, which simply ignores whatever it doesn't read.
+    With no options at all, ``INSTANCE`` behaves exactly like ``deep``'s
+    own (inherited ``checked_merge``/``_value_problem``)."""
+
+    KEY = "unconstrained_deep"
+
+    @classmethod
+    def _options_problems(cls, options):
+        """merge_strategy.rb:426-428 -- ``Hash[String[1], Any]``: one
+        problem for the whole options hash on the first bad key, not one
+        per key (Puppet reports the hash type mismatch once)."""
+        for key in options:
+            if key == "strategy":
+                continue
+            if not isinstance(key, str) or key == "":
+                return [
+                    "expects a Hash[String[1], Any] value, got Hash",
+                ]
+        return []
+
+
+class ReverseDeepMergeStrategy(UnconstrainedDeepMergeStrategy):
+    """merge_strategy.rb:434-446 -- ``unconstrained_deep`` with the two
+    sides swapped: the lower-priority value is merged as deep_merge's
+    ``source`` (so it wins ties/collisions), the higher-priority one is
+    what gets cloned into ``dest``."""
+
+    KEY = "reverse_deep"
+
+    def checked_merge(self, e1, e2):
+        """merge_strategy.rb:442-444."""
+        return super().checked_merge(e2, e1)

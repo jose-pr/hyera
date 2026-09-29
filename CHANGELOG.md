@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - The `default` merge strategy (first match, as in Puppet).
+- The `reverse_deep` and `unconstrained_deep` merge strategies, which
+  Puppet accepts for Hiera 3 data. `unconstrained_deep` also takes
+  deep_merge's `keep_array_duplicates`, `overwrite_arrays`,
+  `unpack_arrays`, `extend_existing_arrays`, `merge_nil_values` and
+  `preserve_unmergeables`.
 
 ### Changed
 

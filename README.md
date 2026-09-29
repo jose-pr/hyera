@@ -249,7 +249,8 @@ next to hiera.yaml) ·
 non-Puppet `sops_data`) · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted
 subkeys and alias native-type preservation · merges `first`/`default`/`unique`/
-`hash`/`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
+`hash`/`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`,
+plus the Hiera-3-era `reverse_deep`/`unconstrained_deep` ·
 `lookup_options` (per-key/regex merge strategy + `convert_to`).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version

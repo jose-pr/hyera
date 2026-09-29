@@ -453,3 +453,112 @@ def test_invalid_merge_raises_merge_error(make_tree):
     legacy_type_spelling = list
     with pytest.raises(MergeError):
         h.get("k", merge=legacy_type_spelling)
+
+
+# --- hiera3_deep_strategies: reverse_deep, unconstrained_deep ---------
+
+
+def test_hidden_strategy_keys():
+    # merge_strategy.rb:49-51 -- both are reachable but never advertised.
+    assert "unconstrained_deep" not in MergeStrategy.strategy_keys()
+    assert "reverse_deep" not in MergeStrategy.strategy_keys()
+    assert MergeStrategy.strategy("unconstrained_deep") is not None
+    assert MergeStrategy.strategy("reverse_deep") is not None
+
+
+def test_ruby_join_split():
+    from hyera._merge_strategy import _ruby_join, _ruby_split
+
+    assert _ruby_join(["a", "b"], ",") == "a,b"
+    assert _ruby_join([["a", "b"], "c"], ",") == "a,b,c"  # nested, recursive
+    assert _ruby_join([None, 1, True], ",") == ",1,true"
+
+    assert _ruby_split("a,b,c", ",") == ["a", "b", "c"]
+    assert _ruby_split("a,b,", ",") == ["a", "b"]  # trailing empties dropped
+    assert _ruby_split("", ",") == []
+    assert _ruby_split("  a   b  ", " ") == ["a", "b"]  # whitespace-run rule
+
+
+def test_unconstrained_deep_options():
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "merge_nil_values": True}
+    )
+    assert strategy.merge({"k": None, "l": [1]}, {"k": 1, "l": [2]}) == {
+        "k": None,
+        "l": [2, 1],
+    }
+
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "overwrite_arrays": True}
+    )
+    assert strategy.merge({"l": [1]}, {"l": [2]}) == {"l": [1]}
+
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "unpack_arrays": ","}
+    )
+    assert strategy.merge({"l": ["a,b"]}, {"l": ["c,d"]}) == {"l": ["c", "d", "a", "b"]}
+
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "extend_existing_arrays": True}
+    )
+    assert strategy.merge({"l": [1], "s": "x"}, {"l": [2], "s": ["y"]}) == {
+        "l": [2, 1],
+        "s": ["y", "x"],
+    }
+
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "preserve_unmergeables": True}
+    )
+    assert strategy.merge({"l": [1], "s": "x"}, {"l": [2], "s": ["y"]}) == {
+        "l": [2, 1],
+        "s": ["y"],
+    }
+
+    with pytest.raises(MergeError) as excinfo:
+        MergeStrategy.strategy(
+            {
+                "strategy": "unconstrained_deep",
+                "preserve_unmergeables": True,
+                "knockout_prefix": "--",
+            }
+        ).merge({"l": [1]}, {"l": [2]})
+    assert "overwrite_unmergeable must be true" in str(excinfo.value)
+
+    # An unrecognized key is accepted and simply ignored (deep_merge never
+    # reads it).
+    strategy = MergeStrategy.strategy({"strategy": "unconstrained_deep", "bogus": 1})
+    assert strategy.merge({"l": [1]}, {"l": [2]}) == {"l": [2, 1]}
+
+    with pytest.raises(MergeError):
+        MergeStrategy.strategy({"strategy": "unconstrained_deep", "": 1})
+
+    # No options at all behaves exactly like plain `deep` (source dedupes
+    # its own duplicates through the union too).
+    plain = MergeStrategy.strategy("unconstrained_deep")
+    assert plain.merge({"l": [1, 1]}, {"l": [2]}) == {"l": [2, 1]}
+
+
+def test_keep_array_duplicates():
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "keep_array_duplicates": True}
+    )
+    assert strategy.merge({"l": ["a", "a"]}, {"l": ["b", "a"]}) == {
+        "l": ["b", "a", "a", "a"]
+    }
+
+
+def test_reverse_deep_lower_wins():
+    # The lower-priority value is deep_merge's source (wins ties); the
+    # higher-priority one is cloned into dest.
+    strategy = MergeStrategy.strategy("reverse_deep")
+    assert strategy.merge({"a": {"x": 1}, "s": "hi"}, {"a": {"y": 2}, "s": "lo"}) == {
+        "a": {"x": 1, "y": 2},
+        "s": "lo",
+    }
+
+    strategy = MergeStrategy.strategy(
+        {"strategy": "reverse_deep", "knockout_prefix": "--"}
+    )
+    assert strategy.merge({"l": ["--z", "a"]}, {"l": ["z", "b"]}) == {
+        "l": ["--z", "a", "z", "b"]
+    }

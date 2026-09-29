@@ -6,9 +6,7 @@ queries:
   - key: "b_no_strategy"
   - key: "b_deep_unknown"
   - key: "b_reverse"
-    divergence: spec-merge/strategy-aliases-missing
   - key: "b_unconstrained"
-    divergence: spec-merge/strategy-aliases-missing
   - key: "b_bad_name"
   - key: "b_empty_ko"
   - key: "b_hash_opts"

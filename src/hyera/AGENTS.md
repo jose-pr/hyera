@@ -71,12 +71,21 @@ private engine internals with no stability contract.
     raise `HieraLookupError` (a malformed key, or a type mismatch during the
     walk) — **even when a `default` was given**; only a genuine miss falls
     back to it. `merge`: one of Puppet's strategy names (`"first"`/
-    `"default"`/`"unique"`/`"hash"`/`"deep"`) or a dict `{"strategy":
-    "deep", "knockout_prefix": ..., "sort_merged_arrays": ...,
-    "merge_hash_arrays": ...}`. Omitted → the data's `lookup_options` key
-    decides, else first-match-wins. Invalid input (an unknown strategy, a
-    strategy hash with no `strategy` key, an unrecognized or mistyped
-    option, a `hash`/`unique` merge of a value the strategy rejects) raises
+    `"default"`/`"unique"`/`"hash"`/`"deep"`/`"reverse_deep"`/
+    `"unconstrained_deep"`) or a dict `{"strategy": "deep",
+    "knockout_prefix": ..., "sort_merged_arrays": ..., "merge_hash_arrays":
+    ...}`. `reverse_deep`/`unconstrained_deep` are Hiera-3-era strategies
+    Puppet still accepts from `lookup_options`/`merge=`; `unconstrained_deep`
+    is `deep` with no fixed option set — it also takes `preserve_unmergeables`,
+    `overwrite_arrays`, `unpack_arrays`, `extend_existing_arrays`,
+    `keep_array_duplicates` and `merge_nil_values` (deep_merge's own
+    options, plain `deep` never reads them), and `reverse_deep` is
+    `unconstrained_deep` with the two merged values swapped (the
+    lower-priority one wins ties). Neither name is listed by anything
+    CLI-facing. Omitted → the data's `lookup_options` key decides, else
+    first-match-wins. Invalid input (an unknown strategy, a strategy hash
+    with no `strategy` key, an unrecognized or mistyped option, a
+    `hash`/`unique` merge of a value the strategy rejects) raises
     `hyera.MergeError`. `throw=True` raises `KeyNotFoundError`
     (a `KeyError`) instead of returning `default` on a miss. Falls back to
     `default_hierarchy` when the main hierarchy misses.
