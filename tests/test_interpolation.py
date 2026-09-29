@@ -8,6 +8,13 @@ from hyera import Hiera, InterpolationError, Scope, Sensitive
 from hyera._interpolation import _float_to_s, _ruby_inspect, _to_puppet_str, interpolate
 from hyera._invocation import Invocation
 from hyera._navigation import _MISSING
+from hyera.cli import main as _cli_main
+
+
+def _error_records(caplog):
+    return [
+        r for r in caplog.records if r.name == "hyera" and r.levelno == logging.ERROR
+    ]
 
 
 def _hiera(make_tree, common, **variables):
@@ -153,4 +160,16 @@ def test_lenient_invocation_warns(caplog):
         "Interpolation failed with 'nosuch', but compilation continuing"
         in r.getMessage()
         for r in caplog.records
+    )
+
+
+def test_cli_recursion_exits_2(make_tree, caplog):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "rec: \"%{lookup('rec')}\"\n"},
+    )
+    rc = _cli_main(["rec", "-c", str(root / "hiera.yaml")])
+    assert rc == 2
+    assert (
+        "Recursive lookup detected in [rec]" in _error_records(caplog)[-1].getMessage()
     )

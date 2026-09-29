@@ -634,6 +634,11 @@ re-exports it too).
 
 ## Gotchas
 
+- A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
+  `a`; a variable whose value refers to itself; a chain `a` -> `b` -> `a`)
+  raises `InterpolationError` "Recursive lookup detected in [a, b]" (the
+  keys/scope-references visited, in the order first reached) instead of
+  Python's own `RecursionError`.
 - Interpolation is a single left-to-right pass over each `%{...}` occurrence
   in the original text: text inserted in its place is never re-scanned, only
   a method's own resolved result is interpolated again (so a variable whose

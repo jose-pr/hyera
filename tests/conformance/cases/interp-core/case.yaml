@@ -44,11 +44,14 @@ queries:
 - key: s_idx
 - key: hkey
 - key: cyc_a
-  divergence: spec-interpolation/no-recursion-detection
+  error_class: InterpolationError
+  error_match: 'Recursive lookup detected in \[cyc_a, cyc_b\]'
 - key: self_alias
-  divergence: spec-interpolation/no-recursion-detection
+  error_class: InterpolationError
+  error_match: 'Recursive lookup detected in \[self_alias\]'
 - key: self_ref
-  divergence: spec-interpolation/no-recursion-detection
+  error_class: InterpolationError
+  error_match: 'Recursive lookup detected in \[self_ref\]'
 - key: nilv
   divergence: code-core/null-value-treated-as-missing
 - key: lookup_options

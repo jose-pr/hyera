@@ -53,6 +53,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `sort_merged_arrays` with `unique`, `merge` as an alias of `strategy` in a
   merge hash, and lenient sorting of arrays that cannot be ordered.
 
+### Fixed
+
+- A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
+  `a`, or a variable whose value refers to itself) raises
+  `InterpolationError` "Recursive lookup detected in [a, b]" instead of
+  Python's own `RecursionError`.
+
 ## [0.0.0a0] - 2026-09-29
 
 ### Added

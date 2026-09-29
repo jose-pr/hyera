@@ -5,8 +5,8 @@ description: Measured probes for recursion detection, hash-key interpolation,
 queries:
 - key: k
   note: Puppet 8.10 probe
+  error_class: InterpolationError
   error_match: 'Recursive lookup detected in \[k, scope:tmpl\]'
-  divergence: spec-interpolation/no-recursion-detection
 - key: h
   note: Puppet 8.10 probe
 - key: fl

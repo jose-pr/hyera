@@ -281,7 +281,13 @@ def _interpolate_string(subject, inv, allow_methods):
             # entire value (already asserted equal to `subject` above), with
             # no re-interpolation and no stringification.
             return value
-        value = interpolate(value, inv, allow_methods)
+        # Re-interpolating a method's own result can recurse (a fact whose
+        # value is itself "%{that same fact}", or mutual recursion through
+        # two chained values) -- guard it with the same name-stack check the
+        # sub-lookup path already applies to a whole key (`interpolation.rb:68`).
+        check_name = "scope:" + key if method == "scope" else key
+        with inv.check(check_name):
+            value = interpolate(value, inv, allow_methods)
         out.append(_to_puppet_str(value))
     out.append(subject[pos:])
     return "".join(out)

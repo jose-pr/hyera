@@ -374,9 +374,19 @@ class Hiera:
         and for merging ``lookup_options`` (``merge="hash"``, without the
         layer stack) -- never for the main lookup, which goes through
         :meth:`_lookup_layers` directly (see ``.get``/``._get``).
+
+        The whole level walk runs inside ``invocation.check(key)`` when
+        ``key`` is given (``data_provider.rb:28,43``): a self- or
+        mutually-referencing sub-lookup raises :class:`~hyera.
+        InterpolationError` ("Recursive lookup detected in [...]") instead
+        of recursing until the interpreter's own stack gives out.
         """
         strategy = MergeStrategy.strategy(merge)
-        value = self._lookup_levels(key, levels, invocation, strategy)
+        if key is not None:
+            with invocation.check(key):
+                value = self._lookup_levels(key, levels, invocation, strategy)
+        else:
+            value = self._lookup_levels(key, levels, invocation, strategy)
         if value is _MISSING:
             if key is not None and parse_lookup_key(key)[1]:
                 _LOGGER.debug(
@@ -598,7 +608,16 @@ class Hiera:
             inv = Invocation(scope, lambda k, i: self._sub_lookup(k, levels, i))
 
             # Main lookup: the full provider stack (only "global" populated).
-            value = self._lookup_layers(key, levels, inv, strategy)
+            # Wrapped in the same recursion-detection ``check(key)`` a
+            # sub-lookup's own walk uses (``core._get_key``) -- Puppet's own
+            # top-level entry pushes the requested key too
+            # (``data_provider.rb:28,43`` wraps every provider lookup, not
+            # only a nested one), which is what puts the *original* key
+            # first in a cycle's reported stack (oracle: `%{lookup('a')}`
+            # inside `a`, whose value is `%{lookup('b')}` inside `b`, whose
+            # value refers back to `a`, reports "[a, b]", not "[b, a]").
+            with inv.check(key):
+                value = self._lookup_layers(key, levels, inv, strategy)
             if value is _MISSING and self.default_hierarchy:
                 # default_hierarchy is consulted only on a main-hierarchy
                 # miss, with the same strategy and no layer wrap
@@ -610,7 +629,10 @@ class Hiera:
                 default_inv = inv.derive(
                     lambda k, i: self._sub_lookup(k, default_levels, i)
                 )
-                value = self._lookup_levels(key, default_levels, default_inv, fallback)
+                with default_inv.check(key):
+                    value = self._lookup_levels(
+                        key, default_levels, default_inv, fallback
+                    )
         finally:
             _STRICT.reset(strict_token)
 
