@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy entry with no location key at all (no path/paths/glob/globs/mapped_paths) is a Puppet config error; ours silently skips the level.
+origin: spec-config/cases/no_location
+queries:
+  - key: k
+    divergence: spec-layers-backends/uri-and-locationless-levels-skipped

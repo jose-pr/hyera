@@ -1,0 +1,5 @@
+env: prod
+flag: false
+zero: 0
+empty: ''
+os: {family: RedHat}

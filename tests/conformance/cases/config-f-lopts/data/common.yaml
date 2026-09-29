@@ -1,0 +1,22 @@
+lookup_options:
+  "^prof::":
+    merge: unique
+  cfg:
+    convert_to: Integer
+  arrc:
+    convert_to: Array
+  hashc:
+    convert_to: Array
+  hexi:
+    convert_to: Integer
+  boolg:
+    convert_to: Boolean
+  dotted:
+    merge: unique
+prof::list: [c]
+cfg: "42"
+arrc: "abc"
+hashc: {a: 1}
+hexi: "0x10"
+boolg: "garbage"
+dotted: {sub: [z]}

@@ -1,0 +1,243 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "b12736ef594f241ed874fee0e144473c32d87004d752103eec7aa4181c2e3d79",
+  "results": {
+    "lk_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lk_int"
+      ],
+      "status": "found",
+      "value": "8080"
+    },
+    "lk_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lk_arr"
+      ],
+      "status": "found",
+      "value": "[\"a\", \"b\"]"
+    },
+    "hiera_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hiera_int"
+      ],
+      "status": "found",
+      "value": "8080"
+    },
+    "alias_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_arr"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "alias_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_int"
+      ],
+      "status": "found",
+      "value": 8080
+    },
+    "lk_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lk_missing"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "sc_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sc_missing"
+      ],
+      "warnings": [
+        "Undefined variable 'nope';"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "lit_escape": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lit_escape"
+      ],
+      "status": "found",
+      "value": "%{env}"
+    },
+    "spaces": {
+      "argv": [
+        "--strict",
+        "warning",
+        "spaces"
+      ],
+      "status": "found",
+      "value": "prod"
+    },
+    "falsy_flag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "falsy_flag"
+      ],
+      "status": "found",
+      "value": "f=false"
+    },
+    "falsy_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "falsy_zero"
+      ],
+      "status": "found",
+      "value": "z=0"
+    },
+    "scope_flag": {
+      "argv": [
+        "--strict",
+        "warning",
+        "scope_flag"
+      ],
+      "status": "found",
+      "value": "s=false"
+    },
+    "unknown_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unknown_fn"
+      ],
+      "status": "error",
+      "message": "Unknown interpolation method 'foo'"
+    },
+    "empty_interp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "empty_interp"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "keyinterp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "keyinterp"
+      ],
+      "status": "found",
+      "value": {
+        "prod_k": "v"
+      }
+    },
+    "nested_lookup": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested_lookup"
+      ],
+      "status": "found",
+      "value": "1"
+    },
+    "dq_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dq_fn"
+      ],
+      "status": "found",
+      "value": "8080"
+    },
+    "dotted_fact": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotted_fact"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "arr.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'arr.x'"
+    },
+    "port.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "port.x"
+      ],
+      "status": "error",
+      "message": "undefined method 'include?' for an instance of Integer"
+    },
+    "arr.5": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr.5"
+      ],
+      "status": "not_found"
+    },
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "status": "not_found"
+    },
+    "bare_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bare_missing"
+      ],
+      "warnings": [
+        "Undefined variable 'nope';"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "fact_sub_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fact_sub_missing"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "fact_sub_missing2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fact_sub_missing2"
+      ],
+      "status": "found",
+      "value": "xy"
+    }
+  }
+}

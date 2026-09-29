@@ -1,0 +1,5 @@
+description: 'docs-accuracy: with no `hierarchy:`, Puppet uses the default hierarchy.'
+origin: docs-accuracy/f_nohier
+queries:
+- key: k
+  divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted

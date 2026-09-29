@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "34247fee4f102cba914ddfeaebb69e563a397d3f2d9077db2690e57e32a11a5d",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in hierarchy 'both' (file: <case>/hiera.yaml)"
+    }
+  }
+}

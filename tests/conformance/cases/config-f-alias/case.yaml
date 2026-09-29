@@ -1,0 +1,19 @@
+description: 'docs-accuracy: the README''s alias() examples (embedded alias rejected,
+  boolean/scope substitution).'
+origin: docs-accuracy/f_alias
+queries:
+- key: a
+  id: a_unique
+  merge: unique
+  divergence: spec-merge/alias-lookup-merge-and-lookup-options
+- key: a
+  id: a_deep
+  merge: deep
+  divergence: spec-merge/alias-lookup-merge-and-lookup-options
+- key: a
+- key: bool_embed
+  divergence: spec-interpolation/ruby-to_s-formatting
+- key: bool_bare
+  divergence: spec-interpolation/ruby-to_s-formatting
+- key: scope_sub_missing
+  divergence: spec-interpolation/missing-inline-lookup-raises

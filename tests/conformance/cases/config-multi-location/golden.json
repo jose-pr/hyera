@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "03046b3841142f5bf490944bb08bcf6a99fd40634e9b8248bf601119b81d1971",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'both' (file: <case>/hiera.yaml)"
+    }
+  }
+}

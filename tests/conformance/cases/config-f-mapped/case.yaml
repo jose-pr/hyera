@@ -1,0 +1,5 @@
+description: 'docs-accuracy: `mapped_paths` over a top-level array fact.'
+origin: docs-accuracy/f_mapped
+queries:
+- key: role_key
+  divergence: spec-config/mapped-paths-collection-var-not-scope-lookup

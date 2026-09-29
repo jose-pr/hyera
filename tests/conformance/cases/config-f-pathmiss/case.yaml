@@ -1,0 +1,7 @@
+description: 'docs-accuracy: an unresolvable variable in a hierarchy path.'
+origin: docs-accuracy/f_pathmiss
+queries:
+- key: extra_key
+  divergence: spec-context-facts/path-missing-var-skips-level
+- key: other_key
+  divergence: spec-context-facts/path-missing-var-skips-level

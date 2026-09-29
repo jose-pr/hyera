@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy entry with no `name` key is a Puppet config error.
+origin: spec-config/cases/missing_name
+queries:
+  - key: k
+    divergence: spec-config/schema-validation-missing

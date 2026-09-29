@@ -1,0 +1,25 @@
+port: 8080
+arr: [a, b]
+h: {x: 1}
+lk_int: "%{lookup('port')}"
+lk_arr: "%{lookup('arr')}"
+hiera_int: "%{hiera('port')}"
+alias_arr: "%{alias('arr')}"
+alias_int: "%{alias('port')}"
+lk_missing: "x%{lookup('nope')}y"
+sc_missing: "x%{scope('nope')}y"
+lit_escape: "%{literal('%')}{env}"
+spaces: "%{ env }"
+falsy_flag: "f=%{flag}"
+falsy_zero: "z=%{zero}"
+scope_flag: "s=%{scope('flag')}"
+unknown_fn: "%{foo('x')}"
+empty_interp: "a%{}b"
+keyinterp:
+  "%{env}_k": v
+nested_lookup: "%{lookup('h.x')}"
+dq_fn: '%{lookup("port")}'
+dotted_fact: "%{facts.os.family}"
+bare_missing: "x%{nope}y"
+fact_sub_missing: "x%{facts.nope}y"
+fact_sub_missing2: "x%{facts.os.nope}y"

@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy entry using `uri:` (not a location key any data_hash function accepts) is a Puppet config error; ours silently skips the level.
+origin: spec-layers-backends/uri_level
+queries:
+  - key: k
+    divergence: spec-layers-backends/uri-and-locationless-levels-skipped

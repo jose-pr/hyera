@@ -1,0 +1,28 @@
+description: 'docs-accuracy: the README''s lookup_options examples (regex merge, convert_to,
+  dotted key).'
+origin: docs-accuracy/f_lopts
+queries:
+- key: prof::list
+  id: prof_list
+  divergence: code-core/dotted-key-root-semantics
+- key: prof::list
+  id: prof_list_first
+  merge: first
+- key: cfg
+- key: cfg
+  id: cfg_first
+  merge: first
+  divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+- key: arrc
+  divergence: new/convert-array-splits-string
+- key: hashc
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: hexi
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: boolg
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: dotted
+  divergence: spec-merge/merge-value-type-validation
+- key: dotted.sub
+  id: dotted_sub
+  divergence: spec-merge/merge-value-type-validation

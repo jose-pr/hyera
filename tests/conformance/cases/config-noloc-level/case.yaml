@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy entry with only a `name` (no location key) is a Puppet config error; ours silently skips the level.
+origin: spec-layers-backends/noloc_level
+queries:
+  - key: k
+    divergence: spec-layers-backends/uri-and-locationless-levels-skipped

@@ -1,0 +1,6 @@
+description: >-
+  With no datadir anywhere, Puppet's v5 default is 'data' next to hiera.yaml (not the Hiera 3 absolute path).
+origin: spec-config/cases/no_datadir
+queries:
+  - key: k
+    divergence: spec-config/default-datadir-is-hiera3-absolute

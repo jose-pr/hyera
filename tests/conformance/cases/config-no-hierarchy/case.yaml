@@ -1,0 +1,6 @@
+description: >-
+  With no `hierarchy:` key at all, Puppet uses the default hierarchy [Common: common.yaml].
+origin: spec-config/cases/no_hierarchy
+queries:
+  - key: k
+    divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted

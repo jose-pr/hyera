@@ -1,0 +1,8 @@
+description: 'docs-accuracy: `default_hierarchy` at the global layer is a Puppet config
+  error (module layer only).'
+origin: docs-accuracy/f_defhier
+queries:
+- key: k
+  divergence: spec-layers-backends/default-hierarchy-semantics
+- key: only_default
+  divergence: spec-layers-backends/default-hierarchy-semantics

@@ -1,0 +1,205 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "012121ba427fdb8063deb013118485342f206207a582004238c8588bcea047a1",
+  "results": {
+    "u_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ]
+    },
+    "single_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "single"
+      ],
+      "status": "found",
+      "value": [
+        "z",
+        "a"
+      ]
+    },
+    "d_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "d"
+      ],
+      "status": "found",
+      "value": {
+        "arr": [
+          "x",
+          "y"
+        ],
+        "s": "high",
+        "ko": [
+          "--p",
+          "q"
+        ],
+        "gone": 2,
+        "keep": 1,
+        "nilv": null,
+        "--gone": 1
+      }
+    },
+    "d_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "d"
+      ],
+      "status": "found",
+      "value": {
+        "arr": [
+          "y",
+          "z",
+          "x"
+        ],
+        "s": "high",
+        "ko": [
+          "p",
+          "r",
+          "--p",
+          "q"
+        ],
+        "gone": 2,
+        "keep": 1,
+        "nilv": "lowval",
+        "--gone": 1
+      }
+    },
+    "d_deep_sort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "d"
+      ],
+      "status": "found",
+      "value": {
+        "arr": [
+          "x",
+          "y",
+          "z"
+        ],
+        "s": "high",
+        "ko": [
+          "--p",
+          "p",
+          "q",
+          "r"
+        ],
+        "gone": 2,
+        "keep": 1,
+        "nilv": "lowval",
+        "--gone": 1
+      }
+    },
+    "single_deep_sort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "single"
+      ],
+      "status": "found",
+      "value": [
+        "z",
+        "a"
+      ]
+    },
+    "mh_deep_hasharr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mh"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "b": 2,
+          "a": 1
+        },
+        {
+          "c": 3
+        }
+      ]
+    },
+    "mh_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "mh"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "b": 2
+        },
+        {
+          "c": 3
+        },
+        {
+          "a": 1
+        }
+      ]
+    },
+    "d_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "d"
+      ],
+      "status": "found",
+      "value": {
+        "arr": [
+          "y",
+          "z",
+          "x"
+        ],
+        "s": "high",
+        "ko": [
+          "r",
+          "q"
+        ],
+        "gone": 2,
+        "keep": 1,
+        "nilv": "lowval",
+        "--gone": 1
+      }
+    }
+  }
+}

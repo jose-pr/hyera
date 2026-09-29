@@ -1,0 +1,6 @@
+description: >-
+  With no `defaults:` at all, Puppet fills in the built-in v5 defaults (datadir: data, data_hash: yaml_data).
+origin: spec-config/cases/no_defaults
+queries:
+  - key: k
+    divergence: spec-config/missing-defaults-and-hierarchy-not-defaulted

@@ -1,0 +1,22 @@
+---
+version: 5
+defaults:
+  data_hash: yaml_data
+  datadir: data
+
+hierarchy:
+  - name: "Per-node"
+    path: "nodes/%{trusted.certname}.yaml"
+  - name: "Per-environment"
+    path: "environments/%{environment}.yaml"
+  - name: "Per-role"
+    mapped_paths: [roles, role, "roles/%{role}.yaml"]
+  - name: "Modules"
+    globs:
+      - "modules/*.yaml"
+  - name: "Common"
+    path: "common.yaml"
+
+default_hierarchy:            # consulted only when the hierarchy above misses
+  - name: "Module defaults"
+    path: "module_defaults.yaml"

@@ -1,0 +1,45 @@
+description: 'docs-accuracy: the README''s interpolation examples (lookup/hiera/alias/scope/literal,
+  falsy facts, dotted facts, missing references).'
+origin: docs-accuracy/f_interp
+queries:
+- key: lk_int
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: lk_arr
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: hiera_int
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: alias_arr
+- key: alias_int
+- key: lk_missing
+  divergence: spec-interpolation/missing-inline-lookup-raises
+- key: sc_missing
+  divergence: spec-interpolation/missing-inline-lookup-raises
+- key: lit_escape
+  divergence: spec-interpolation/literal-escape-reinterpolated
+- key: spaces
+  divergence: spec-interpolation/whitespace-in-expression-ignored
+- key: falsy_flag
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: falsy_zero
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: scope_flag
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: unknown_fn
+  divergence: spec-interpolation/method-call-syntax-validation
+- key: empty_interp
+- key: keyinterp
+  divergence: spec-interpolation/hash-keys-not-interpolated
+- key: nested_lookup
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: dq_fn
+  divergence: spec-interpolation/method-result-type-and-nonscalar
+- key: dotted_fact
+- key: arr.x
+  divergence: code-io-security/dotted-subkey-raw-exceptions
+- key: port.x
+  divergence: code-io-security/dotted-subkey-raw-exceptions
+- key: arr.5
+- key: lookup_options
+- key: bare_missing
+- key: fact_sub_missing
+- key: fact_sub_missing2

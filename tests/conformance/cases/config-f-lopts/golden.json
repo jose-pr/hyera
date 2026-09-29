@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "af7dc79faa361852f9bba95c74d405821ac56367c03dba217f59b97057a6ec3d",
+  "results": {
+    "prof_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "prof::list"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "c"
+      ]
+    },
+    "prof_list_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "prof::list"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "cfg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "cfg"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "cfg_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "cfg"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "arrc": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arrc"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "hashc": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hashc"
+      ],
+      "status": "found",
+      "value": [
+        [
+          "a",
+          1
+        ]
+      ]
+    },
+    "hexi": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hexi"
+      ],
+      "status": "found",
+      "value": 16
+    },
+    "boolg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "boolg"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'boolg' raised error: 'new_boolean' The string 'garbage' cannot be converted to Boolean"
+    },
+    "dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotted"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'dotted' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
+    },
+    "dotted_sub": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotted.sub"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'dotted.sub' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
+    }
+  }
+}

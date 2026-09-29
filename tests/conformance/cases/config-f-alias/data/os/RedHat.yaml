@@ -1,0 +1,5 @@
+a: "%{alias('b')}"
+b: [x]
+bool_embed: "x%{lookup('flag')}"
+bool_bare: "x%{bt}"
+scope_sub_missing: "x%{scope('facts.nope')}y"

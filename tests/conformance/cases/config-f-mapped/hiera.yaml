@@ -1,0 +1,10 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: dotted-mapped
+    mapped_paths: [facts.net.roles, r, "roles/%{r}.yaml"]
+  - name: common
+    path: common.yaml

@@ -1,0 +1,10 @@
+u: [[a, [b]], c]
+d:
+  arr: [x, y]
+  s: high
+  ko: ["--p", q]
+  "--gone": 1
+  keep: 1
+  nilv: ~
+mh: [{a: 1}]
+single: [z, a]

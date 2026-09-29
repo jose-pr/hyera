@@ -1,0 +1,5 @@
+description: >-
+  A hierarchy level's own `data_hash` overrides the top-level `defaults.data_hash` for that level only.
+origin: spec-config/cases/level_function_overrides_default
+queries:
+  - key: k

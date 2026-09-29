@@ -1,0 +1,6 @@
+description: 'docs-accuracy: with no datadir, Puppet''s v5 default is ''data'' next
+  to hiera.yaml.'
+origin: docs-accuracy/f_nodatadir
+queries:
+- key: k
+  divergence: spec-config/default-datadir-is-hiera3-absolute

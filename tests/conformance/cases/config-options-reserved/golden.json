@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7f43c29cbe784b1ca31f59e892a15cdff630ff1cf97c90dea9a4663b6d6f37c8",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Option key 'path' used in hierarchy 'common' is reserved by Puppet (file: <case>/hiera.yaml)"
+    }
+  }
+}

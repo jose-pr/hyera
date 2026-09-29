@@ -1,0 +1,7 @@
+version: 5
+defaults: {datadir: data}
+hierarchy:
+  - name: both
+    data_hash: yaml_data
+    lookup_key: eyaml_lookup_key
+    path: common.yaml

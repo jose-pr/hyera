@@ -1,0 +1,6 @@
+description: >-
+  A hierarchy entry's `options:` may not reuse a location key (`path`) Puppet already reserves.
+origin: spec-config/cases/options_reserved
+queries:
+  - key: k
+    divergence: spec-config/schema-validation-missing
