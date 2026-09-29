@@ -139,6 +139,113 @@ private engine internals with no stability contract.
   values, but a list or dict payload compares/hashes by content (in any key
   order for a dict) despite being unhashable in plain Python.
 
+## Scope (`_scope.py`)
+
+Puppet's top scope, as one immutable, hashable value — not yet bound to
+`Hiera` (its own constructor still takes `context=`/`**kwargs`; binding a
+`Scope` to `Hiera` and threading it through lookups is later work). Logger
+`hyera._scope`.
+
+- **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None,
+  environment=None, strict="warning", node_name=None)`** — every argument
+  keyword-only. `variables`/`facts`/`server_facts`/`trusted` are each `None`
+  or a mapping with `str` keys; `variables`/`server_facts`/`trusted` values
+  must additionally be Puppet Data (`None`, `bool`, `int`, `float`, `str`,
+  a list/tuple — stored as a list — or a `str`-keyed dict of Data, recursively)
+  or construction raises `TypeError("Unsupported data type: '<type
+  name>'")`; every input is deep-copied. `strict` must be `"off"`,
+  `"warning"` or `"error"`, else `ValueError`. `environment` must be `None`
+  or a non-empty `str`; `node_name` must be `None` or a `str` — otherwise
+  `TypeError`/`ValueError`.
+
+  Built in Puppet's own precedence order (`compiler.rb`'s
+  `set_node_parameters`, `node.rb`, `trusted_information.rb`,
+  `node/facts.rb`'s `sanitize_fact`, `parser/scope.rb`):
+  1. `variables` become the node parameters, in order.
+  2. `$environment` resolves to the explicit argument, else a `str`
+     `variables["environment"]`, else `"production"`.
+  3. `facts` are *sanitized*, not validated (recursively: dicts and
+     lists/tuples recurse — tuples become lists — `bool`/`int`/`float`/`str`
+     are kept, `None` becomes `""`, anything else becomes `str(value)`; a
+     list/tuple used as a fact *key* raises `TypeError`), then merged into
+     the parameters without overriding an existing one of the same name — a
+     collision keeps the old value and logs one warning: "The node
+     parameter '\<name>' for node '\<node_name>' was already set to
+     '\<old>'. It could not be set to '\<new>'." (the `for node '...'`
+     clause is omitted when `node_name` is `None`).
+  4. `server_facts` (plus `environment` forced in last, so it always wins)
+     merge into the parameters the same collision-safe way.
+  5. `$trusted` resolves to the explicit `trusted` argument, as given; else
+     a `trusted` parameter/fact is "resurrected" as-is only when it is a
+     dict holding `authenticated`, `certname` and `extensions` (a `None`/
+     `False` `trusted` parameter is left in place, so step 6 below rejects
+     it as reserved); else Puppet's local hash, in this key order:
+     `authenticated: "local"`, `certname: <the "clientcert" parameter>`,
+     `extensions: {}`, `hostname`, `domain` (from `certname.split(".", 1)`
+     Ruby-style: no dot → `domain=None`; falsy `certname` → both `None`),
+     `external: {}`. A non-`str` `clientcert` raises `TypeError` ("undefined
+     method 'split' for an instance of \<Ruby class>", matching what real
+     Puppet crashes with).
+  6. Every remaining parameter becomes a top-scope variable, **except**: a
+     name matching `^[0-9]+$` raises `ValueError("Cannot assign to a
+     numeric match result variable '$<name>'")`; a name of `trusted`,
+     `facts` or `server_facts` raises `ValueError("Attempt to assign to a
+     reserved variable name: '<name>'")`. Then `$environment`, `$trusted`,
+     `$server_facts` (the whole merged hash) and `$facts` (the whole
+     sanitized facts mapping, unmerged) are stored under those reserved
+     names.
+  7. `module_name` (`""`), `title` and `name` (both `"main"`, matching
+     `puppet lookup`'s evaluated `main` class) are stored last; any of the
+     three already present (from a variable/fact) raises
+     `ValueError("Cannot reassign variable '$<name>'")`.
+  - **`.environment`/`.strict`/`.node_name`** — read-only properties for the
+    resolved values above.
+  - **`.lookup(name) -> value | Scope.UNDEFINED`** — no strict side effects
+    (Puppet's `catch(:undefined_variable)` form). A leading `::` is
+    stripped; a remaining `::` marks the name qualified, but the local
+    layers and top table are still checked for a literal match either way
+    (there are no class scopes, so a qualified name is undefined unless a
+    variable is literally named that way). Only for an unqualified miss:
+    `"caller_module_name"` returns `None`, and a bare non-negative integer
+    name (`^(?:0|[1-9][0-9]*)$`) returns `None`; anything else unmatched is
+    `Scope.UNDEFINED`. A non-`str` `name` raises `TypeError`.
+  - **`.exist(name) -> bool`** — `True` iff bound in a local layer or the
+    top table, or `name == "caller_module_name"`; a still-qualified name
+    (after stripping one leading `::`) or a numeric name is always `False`.
+  - **`.lookupvar(name, *, lenient=False) -> value`** — `.lookup(name)`,
+    with `.strict` applied to `Scope.UNDEFINED`: `"off"` returns `None`
+    silently; `"warning"` warns once per name ("Undefined variable
+    '\<name>'", `"; class <X> could not be found"` appended for a
+    qualified name) and returns `None`; `"error"` raises
+    `InterpolationError` with that same text, **unless** `lenient=True`
+    (Puppet's `avoid_hiera_interpolation_errors`, for hierarchy locations),
+    which instead warns once ("Interpolation failed with '\<name>', but
+    compilation continuing...") and returns `None`. Warnings dedupe per
+    root `Scope` (shared by every scope `with_local_scope`/`derive`
+    produces from it), up to 100 distinct names tracked, matching Puppet's
+    own cap.
+  - **`.with_local_scope(variables) -> Scope`** — a child sharing this
+    scope's table and warning state, adding one local variable layer
+    (`variables`'s keys/values checked the same way as the constructor's
+    `variables`). This scope is unchanged; layers are functional, not
+    push/pop, since one `Hiera` can serve many concurrent lookups.
+  - **`.derive(*, variables=None, facts=None, trusted=None,
+    server_facts=None, environment=None, strict=None, node_name=None) ->
+    Scope`** — a new root scope, fully rebuilt from this scope's own
+    constructor inputs: `variables`/`facts`/`server_facts` shallow-update
+    the parent's (new values win, so an unrelated fact never goes stale);
+    the rest replace the parent's when given (`environment`/`strict`
+    default to *this scope's already-resolved* value, not to their own
+    defaults). Local layers are not carried; the warning state is shared.
+  - **`Scope.UNDEFINED`** — the lookup-miss sentinel (the same object as
+    `hyera._navigation._MISSING`).
+  - **Value semantics** — immutable and hashable; `==`/`hash` compare a
+    type-tagged rendering of the top table, local layers, `strict` and
+    `node_name` (so `True`, `1` and `1.0` are distinct, unlike plain Python
+    equality). Do not mutate a value returned by `.lookup`/`.lookupvar`: it
+    is this scope's own copy, shared by every caller. `repr()` shows
+    `environment`, `strict` and variable/fact counts, never values.
+
 ## Backends (`backends.py`)
 
 A self-registering registry: every format or provider

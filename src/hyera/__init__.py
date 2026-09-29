@@ -23,6 +23,7 @@ from .core import (
 )
 from ._hiera_config import HieraLevel
 from ._merge_strategy import Merge, make_merge
+from ._scope import Scope
 from ._types import Sensitive
 
 __version__ = "0.1.0"
@@ -32,6 +33,7 @@ __all__ = [
     "ScopedHiera",
     "HieraLevel",
     "Merge",
+    "Scope",
     "Sensitive",
     "make_merge",
     "default_backends",

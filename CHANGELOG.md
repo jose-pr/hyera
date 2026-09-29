@@ -469,4 +469,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   view instead of a dedicated ini parser (see Security). `sops` is
   another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
   `sops_dotenv` force that format regardless of the file's own extension.
+- `Scope`: Puppet's top scope for lookups. `variables` are node parameters;
+  facts become top-scope variables without overriding them, and `$facts`;
+  `server_facts` merge under both; `$environment` defaults to `production`;
+  `$trusted` defaults to Puppet's local hash (certname from the `clientcert`
+  variable or fact); `strict` is `off`, `warning` (default) or `error`.
 
