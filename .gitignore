@@ -1,14 +1,27 @@
-# Build/dist output
-dist/
-build/
-site/
+# Category rule: nothing dot-prefixed at the repo root gets tracked except the
+# git config files re-included below (a category beats a list). Root-anchored
+# on purpose; nested dotfiles are governed by the specific rules below. CI
+# exists, so .github/ is also re-included.
+/.*
+!/.gitignore
+!/.gitattributes
+!/.github/
 
-# Agent/harness tooling
+# Private agent config (always excluded). No trailing slash on purpose:
+# `dotagents link-project` makes .agents a symlink, which git treats as a
+# file, so a directory-only `.agents/` would NOT ignore it. These stay even
+# though /.* already covers them at the root: they also catch nested copies.
+# *.local.* is the unshared override (machine- or user-specific) -- it takes
+# precedence over its non-local sibling and must never be committed.
 .agents
 *.local.*
-CLAUDE.md
-CLAUDE.local.md
-.claude/
+CLAUDE*
+.claude
+
+# Build/dist output and generated docs site
+build/
+dist/
+site/
 
 # Python
 __pycache__/
@@ -21,9 +34,14 @@ __pycache__/
 htmlcov/
 *.egg-info/
 .venv/
+.pyvenv/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
 
 # Project-specific
-/.pyenv
-/.env
 /_*
 /src/_*
