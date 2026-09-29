@@ -1,0 +1,4 @@
+version: 5
+defaults: {data_hash: yaml_data, datadir: data}
+hierarchy: [{name: main, path: main.yaml}]
+default_hierarchy: [{name: fallback, path: module_defaults.yaml}]

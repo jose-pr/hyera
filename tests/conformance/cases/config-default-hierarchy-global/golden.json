@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "27516c94db57f8365ed8f148f67196f4d2ea474d60ec709a76ad840f5cbecbae",
+  "results": {
+    "from_default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "from_default"
+      ],
+      "status": "error",
+      "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/hiera.yaml, line: 4)"
+    },
+    "from_main": {
+      "argv": [
+        "--strict",
+        "warning",
+        "from_main"
+      ],
+      "status": "error",
+      "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/hiera.yaml, line: 4)"
+    }
+  }
+}

@@ -63,29 +63,18 @@ def test_standalone_alias_preserves_list_type(hiera_root):
     assert h.get("alias_list") == ["prod.pool.ntp.org"]
 
 
-def test_numeric_value_stringified_in_interpolation(hiera_root):
-    # An int resolved by %{hiera(...)} embedded in a string is stringified.
-    h = make(hiera_root, environment="production")
-    assert h.get("port_msg") == "listening on 5432"
-
-
 def test_array_merge_includes_glob_level(hiera_root):
     h = make(hiera_root, environment="production")
-    merged = h.get("classes", merge=list)
+    merged = h.get("classes", merge="unique")
     # production + web (glob) + common, in hierarchy order
     assert merged == ["prod", "web", "base"]
 
 
 def test_hash_merge_shallow(hiera_root):
     h = make(hiera_root, environment="production")
-    db = h.get("db", merge=dict)
+    db = h.get("db", merge="hash")
     # production wins for host; port comes from common
     assert db == {"host": "db.prod.internal", "port": 5432}
-
-
-def test_dotted_lookup(hiera_root):
-    h = make(hiera_root, environment="production")
-    assert h.get("db.port") == 5432
 
 
 def test_scoped_reuses_context(hiera_root):
@@ -170,7 +159,10 @@ def test_falsy_values_are_returned(make_tree):
     assert h.get("ref_zero") == "value=0"
 
 
-def test_deep_hash_merge(make_tree):
+def test_legacy_merge_deep_flag_extension(make_tree):
+    # Non-Puppet extension; this test goes with the feature: `merge=dict,
+    # merge_deep=True` is our own legacy convenience spelling, not part of
+    # Puppet's lookup() call forms.
     root = make_tree(
         {
             "hierarchy": [

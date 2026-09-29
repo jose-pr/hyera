@@ -1,0 +1,25 @@
+description: >-
+  The repo's own former test-fixture tree (per-environment + glob + common),
+  written as valid Hiera 5. Confirms the behaviours already matching Puppet
+  that the unit suite exercised, plus the two the unit suite got backwards
+  (a dotted lookup key, and a numeric value stringified through hiera()).
+origin: tests/B_conftest_v5
+queries:
+  - key: ntp::servers
+  - key: app::name
+  - key: greeting
+  - key: lookup_greeting
+  - key: alias_target
+  - key: literal_pct
+  - key: alias_list
+  - key: nope::key
+  - key: port_msg
+    divergence: code-core/dotted-key-root-semantics
+  - key: db.port
+    divergence: code-core/dotted-key-root-semantics
+  - key: classes
+    id: classes-unique
+    merge: unique
+  - key: db
+    id: db-hash
+    merge: hash

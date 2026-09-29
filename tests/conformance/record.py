@@ -174,15 +174,26 @@ def record_query(
             # Exit 1 with no output is ambiguous: a genuine miss AND a
             # swallowed LookupError (unknown interpolation method, an
             # embedded alias, default_hierarchy outside a module) look the
-            # same. Only the last line of --explain tells them apart.
+            # same. Only the last line of --explain tells them apart -- but
+            # a benign Warning: (e.g. an `environment` fact colliding with
+            # the node parameter) is emitted to stderr on every call, so it
+            # must never be allowed to shadow the real conclusion. Check
+            # stdout's own last line first; only fall back to stderr's last
+            # line when stdout is empty.
             _, out2, err2 = _run(runner, case_dir, base + ["--explain"] + tail)
-            lines = [l for l in (out2 + "\n" + err2).splitlines() if l.strip()]
-            last = lines[-1] if lines else ""
+            out2_lines = [l for l in out2.splitlines() if l.strip()]
+            err2_lines = [l for l in err2.splitlines() if l.strip()]
+            last = (
+                out2_lines[-1] if out2_lines else (err2_lines[-1] if err2_lines else "")
+            )
             if _NOT_FOUND.search(last):
                 result["status"] = "not_found"
             else:
                 result["status"] = "error"
-                result["message"] = normalize_message(last, case_dir, root)
+                errors2 = [l for l in err2_lines if l.startswith("Error:")]
+                result["message"] = normalize_message(
+                    errors2[-1] if errors2 else last, case_dir, root
+                )
 
     if query.get("hash_inspect") and result.get("status") == "found":
         normalized = aio_inspect(result["value"])

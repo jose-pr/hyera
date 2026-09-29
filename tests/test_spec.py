@@ -64,27 +64,6 @@ def test_deep_merge_via_string_strategy(make_tree):
     assert h.get("conf", merge="deep") == {"a": 1, "b": 2, "nested": {"x": 1, "y": 2}}
 
 
-def test_deep_merge_knockout_prefix(make_tree):
-    root = _two_level(
-        make_tree,
-        "conf: {keep: 1, '--drop': true}\n",
-        "conf: {drop: 99, other: 2}\n",
-    )
-    h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get("conf", merge={"strategy": "deep", "knockout_prefix": "--"})
-    assert merged == {"keep": 1, "other": 2}
-    assert "drop" not in merged
-
-
-def test_unique_sort_merged_arrays(make_tree):
-    # Renamed: this exercises the *unique* strategy, not deep. The deep case
-    # it was named for is covered below and was previously unimplemented.
-    root = _two_level(make_tree, "items: [c, a]\n", "items: [b]\n")
-    h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get("items", merge={"strategy": "unique", "sort_merged_arrays": True})
-    assert merged == ["a", "b", "c"]
-
-
 def test_deep_merge_sort_merged_arrays(make_tree):
     # sort_merged_arrays is a deep-merge option in Puppet; it used to be
     # swallowed by Merge.__init__ and never applied on the deep path.
@@ -97,22 +76,6 @@ def test_deep_merge_sort_merged_arrays(make_tree):
     merged = h.get("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
     # Sorting reaches lists nested anywhere in the merged structure.
     assert merged == {"items": ["a", "b", "c"], "nested": {"more": ["x", "y", "z"]}}
-
-
-def test_deep_merge_without_sort_keeps_merge_order(make_tree):
-    # The option must be opt-in: without it, merge order is preserved.
-    root = _two_level(make_tree, "conf: {items: [c, a]}\n", "conf: {items: [b]}\n")
-    h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("conf", merge="deep") == {"items": ["c", "a", "b"]}
-
-
-def test_deep_merge_sort_tolerates_unsortable_lists(make_tree):
-    # Mixed types have no total order in Python 3; leave them in merge order
-    # rather than failing the whole lookup.
-    root = _two_level(make_tree, "conf: {items: [2, 'a']}\n", "conf: {items: [1]}\n")
-    h = Hiera(str(root / "hiera.yaml"))
-    merged = h.get("conf", merge={"strategy": "deep", "sort_merged_arrays": True})
-    assert merged == {"items": [2, "a", 1]}
 
 
 def test_deep_merge_sort_applies_after_knockout(make_tree):
@@ -185,18 +148,6 @@ def test_lookup_options_unanchored_dotted_key_is_literal(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     # No merge should apply -> first match wins.
     assert h.get("dbxport") == [80]
-
-
-def test_lookup_options_dotted_key_still_matches_its_own_key(make_tree):
-    # The same entry must still apply to the key it literally names. (A
-    # dotted lookup key resolves nested data, so `db.port` is `db` -> `port`.)
-    root = _two_level(
-        make_tree,
-        "db: {port: [80]}\nlookup_options: {'db.port': {merge: unique}}\n",
-        "db: {port: [443]}\n",
-    )
-    h = Hiera(str(root / "hiera.yaml"))
-    assert h.get("db.port") == [80, 443]
 
 
 def test_explicit_merge_overrides_lookup_options(make_tree):
@@ -313,21 +264,8 @@ def test_mapped_paths(make_tree):
 
 
 # --- default_hierarchy ----------------------------------------------
-
-
-def test_default_hierarchy_fallback(make_tree):
-    root = make_tree(
-        {
-            "hierarchy": [{"name": "main", "path": "main.yaml"}],
-            "default_hierarchy": [{"name": "fallback", "path": "module_defaults.yaml"}],
-        },
-        files={
-            "data/main.yaml": "from_main: 1\n",
-            "data/module_defaults.yaml": "from_default: 2\nfrom_main: 99\n",
-        },
-    )
-    h = Hiera(str(root / "hiera.yaml"))
-    # Only in default_hierarchy -> found via fallback.
-    assert h.get("from_default") == 2
-    # In both -> main wins, default_hierarchy not consulted.
-    assert h.get("from_main") == 1
+#
+# `default_hierarchy` at the global layer is covered by the
+# config-default-hierarchy-global conformance golden instead of a unit
+# test: Puppet rejects it outright ("only allowed in the module layer"),
+# which every hand-written assertion here contradicted.

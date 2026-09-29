@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3360810943cca3237e7f538210ddf76ec484bfcd11b5680eb868ddbcf5ae3913",
+  "results": {
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "status": "found",
+      "value": [
+        80
+      ]
+    }
+  }
+}

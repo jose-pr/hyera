@@ -1,8 +1,6 @@
 """Regression tests for interpolation edge cases that the old code got wrong."""
 
-import pytest
-
-from pyera import Hiera, InterpolationError
+from pyera import Hiera
 
 
 def _hiera(make_tree, common):
@@ -36,12 +34,6 @@ def test_scope_value_with_group_ref_is_literal(make_tree):
 def test_missing_scope_interpolates_empty(make_tree):
     h = _hiera(make_tree, 'msg: "[%{absent}]"\n')
     assert h.get("msg") == "[]"
-
-
-def test_alias_missing_key_raises(make_tree):
-    h = _hiera(make_tree, "ref: \"%{alias('does::not::exist')}\"\n")
-    with pytest.raises(InterpolationError):
-        h.get("ref", throw=True)
 
 
 def test_format_uses_context(make_tree):

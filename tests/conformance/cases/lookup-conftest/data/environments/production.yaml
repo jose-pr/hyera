@@ -1,0 +1,8 @@
+---
+ntp::servers:
+  - prod.pool.ntp.org
+classes:
+  - prod
+db:
+  host: db.prod.internal
+lookup_greeting: "%{hiera('app::name')} in prod"

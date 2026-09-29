@@ -1,0 +1,166 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "de77b5636dd32f938adc9b78687aff82a057948b890a2dc758b5784a1697cc06",
+  "results": {
+    "ntp::servers": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ntp::servers"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": [
+        "prod.pool.ntp.org"
+      ]
+    },
+    "app::name": {
+      "argv": [
+        "--strict",
+        "warning",
+        "app::name"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "myapp"
+    },
+    "greeting": {
+      "argv": [
+        "--strict",
+        "warning",
+        "greeting"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "hello production"
+    },
+    "lookup_greeting": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_greeting"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "myapp in prod"
+    },
+    "alias_target": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_target"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "myapp"
+    },
+    "literal_pct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "literal_pct"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "100% done"
+    },
+    "alias_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_list"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": [
+        "prod.pool.ntp.org"
+      ]
+    },
+    "nope::key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nope::key"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "not_found"
+    },
+    "port_msg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "port_msg"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "listening on "
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "not_found"
+    },
+    "classes-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "classes"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": [
+        "prod",
+        "web",
+        "base"
+      ]
+    },
+    "db-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "db"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": {
+        "host": "db.prod.internal",
+        "port": 5432
+      }
+    }
+  }
+}
