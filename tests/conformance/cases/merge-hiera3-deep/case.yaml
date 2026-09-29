@@ -1,0 +1,29 @@
+description: >-
+  The Hiera-3-era unconstrained_deep/reverse_deep merge strategies and
+  deep_merge's remaining options (preserve_unmergeables, overwrite_arrays,
+  unpack_arrays, extend_existing_arrays, keep_array_duplicates,
+  merge_nil_values), all lookup_options-driven.
+origin: new/merge-hiera3-deep
+queries:
+  - key: "o_uc_nil"
+    id: "o_uc_nil"
+  - key: "o_uc_ow"
+    id: "o_uc_ow"
+  - key: "o_uc_unpack"
+    id: "o_uc_unpack"
+  - key: "o_uc_ext"
+    id: "o_uc_ext"
+  - key: "o_uc_pres"
+    id: "o_uc_pres"
+  - key: "o_uc_pres_ko"
+    id: "o_uc_pres_ko"
+    error_match: "overwrite_unmergeable must be true if knockout_prefix is specified in deep_merge!"
+  - key: "o_uc_bogus"
+    id: "o_uc_bogus"
+  - key: "o_uc_empty_key"
+    id: "o_uc_empty_key"
+    error_match: "expects a Hash\\[String\\[1\\], Any\\] value"
+  - key: "o_uc_plain"
+    id: "o_uc_plain"
+  - key: "o_rev_opts"
+    id: "o_rev_opts"

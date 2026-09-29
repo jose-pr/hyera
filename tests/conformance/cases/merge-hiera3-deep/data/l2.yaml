@@ -1,0 +1,10 @@
+o_uc_nil: {k: 1, l: [2]}
+o_uc_ow: {l: [2]}
+o_uc_unpack: {l: ["c,d"]}
+o_uc_ext: {l: [2], s: [y]}
+o_uc_pres: {l: [2], s: [y]}
+o_uc_pres_ko: {l: [2]}
+o_uc_bogus: {l: [2]}
+o_uc_empty_key: {l: [2]}
+o_uc_plain: {l: [2]}
+o_rev_opts: {l: [z, b]}

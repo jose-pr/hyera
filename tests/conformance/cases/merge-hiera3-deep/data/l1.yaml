@@ -1,0 +1,21 @@
+o_uc_nil: {k: ~, l: [1]}
+o_uc_ow: {l: [1]}
+o_uc_unpack: {l: ["a,b"]}
+o_uc_ext: {l: [1], s: x}
+o_uc_pres: {l: [1], s: x}
+o_uc_pres_ko: {l: [1]}
+o_uc_bogus: {l: [1]}
+o_uc_empty_key: {l: [1]}
+o_uc_plain: {l: [1, 1]}
+o_rev_opts: {l: ["--z", a]}
+lookup_options:
+  o_uc_nil: {merge: {strategy: unconstrained_deep, merge_nil_values: true}}
+  o_uc_ow: {merge: {strategy: unconstrained_deep, overwrite_arrays: true}}
+  o_uc_unpack: {merge: {strategy: unconstrained_deep, unpack_arrays: ","}}
+  o_uc_ext: {merge: {strategy: unconstrained_deep, extend_existing_arrays: true}}
+  o_uc_pres: {merge: {strategy: unconstrained_deep, preserve_unmergeables: true}}
+  o_uc_pres_ko: {merge: {strategy: unconstrained_deep, preserve_unmergeables: true, knockout_prefix: "--"}}
+  o_uc_bogus: {merge: {strategy: unconstrained_deep, bogus: 1}}
+  o_uc_empty_key: {merge: {strategy: unconstrained_deep, "": 1}}
+  o_uc_plain: {merge: unconstrained_deep}
+  o_rev_opts: {merge: {strategy: reverse_deep, knockout_prefix: "--"}}
