@@ -1,0 +1,409 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "fd0ed2a73cb542ab25a72fad804e4995b2efd56eb8bd9ae813871a13ead1d465",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "P"
+    },
+    "s_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_false"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "s_true": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_true"
+      ],
+      "status": "found",
+      "value": "true"
+    },
+    "s_zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_zero"
+      ],
+      "status": "found",
+      "value": "0"
+    },
+    "s_nested_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_nested_false"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "s_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_list"
+      ],
+      "status": "found",
+      "value": "x[\"a\", \"b\"]"
+    },
+    "s_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_hash"
+      ],
+      "status": "found",
+      "value": "x{\"family\"=>\"RedHat\"}",
+      "raw_value": "x{\"family\" => \"RedHat\"}"
+    },
+    "s_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_ws"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "s_ws_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_ws_fn"
+      ],
+      "status": "found",
+      "value": "P"
+    },
+    "s_lit": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lit"
+      ],
+      "status": "found",
+      "value": "%{c_var}"
+    },
+    "s_lit2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lit2"
+      ],
+      "status": "found",
+      "value": "%{c_var} and P"
+    },
+    "s_hiera_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_hiera_missing"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "s_alias_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_alias_missing"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "s_lookup_alone_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_alone_int"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "s_lookup_alone_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_alone_arr"
+      ],
+      "status": "found",
+      "value": "[1, 2]"
+    },
+    "s_lookup_alone_hsh": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_alone_hsh"
+      ],
+      "status": "found",
+      "value": "{\"k\"=>\"v\"}",
+      "raw_value": "{\"k\" => \"v\"}"
+    },
+    "s_lookup_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_bool"
+      ],
+      "status": "found",
+      "value": "v=false"
+    },
+    "s_lookup_bool_alone": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_bool_alone"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "s_lookup_nil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lookup_nil"
+      ],
+      "status": "found",
+      "value": "v="
+    },
+    "s_order": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_order"
+      ],
+      "status": "found",
+      "value": "C-B"
+    },
+    "s_scope_reinterp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_reinterp"
+      ],
+      "status": "found",
+      "value": "C"
+    },
+    "s_unknown_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_unknown_fn"
+      ],
+      "status": "error",
+      "message": "Unknown interpolation method 'foo'"
+    },
+    "s_mismatch_quote": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_mismatch_quote"
+      ],
+      "status": "error",
+      "message": "Lookup of key 's_mismatch_quote' failed: Syntax error in string: %{hiera('plain\")}"
+    },
+    "s_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_empty"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "s_colons": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_colons"
+      ],
+      "status": "found",
+      "value": "true"
+    },
+    "s_scope_false": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_scope_false"
+      ],
+      "status": "found",
+      "value": "false"
+    },
+    "s_lit_colons": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_lit_colons"
+      ],
+      "status": "found",
+      "value": "::x"
+    },
+    "s_float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_float"
+      ],
+      "status": "found",
+      "value": "1.5"
+    },
+    "s_bigfloat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_bigfloat"
+      ],
+      "status": "found",
+      "value": "1.0e+20"
+    },
+    "s_paren_var": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_paren_var"
+      ],
+      "warnings": [
+        "Undefined variable 'foo(bar)';"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "s_dq_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_dq_fn"
+      ],
+      "status": "found",
+      "value": "P"
+    },
+    "s_neg_idx": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_neg_idx"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "s_idx": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_idx"
+      ],
+      "status": "found",
+      "value": "b"
+    },
+    "hkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hkey"
+      ],
+      "status": "found",
+      "value": {
+        "RedHat_key": 1
+      }
+    },
+    "cyc_a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "cyc_a"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'cyc_a' failed: Lookup of key 'cyc_b' failed: Lookup of key 'cyc_a' failed: Recursive lookup detected in [cyc_a, cyc_b]"
+    },
+    "self_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "self_alias"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'self_alias' failed: Lookup of key 'self_alias' failed: Recursive lookup detected in [self_alias]"
+    },
+    "self_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "self_ref"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'self_ref' failed: Lookup of key 'self_ref' failed: Recursive lookup detected in [self_ref]"
+    },
+    "nilv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nilv"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "status": "not_found"
+    },
+    "arr.-1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr.-1"
+      ],
+      "status": "not_found"
+    },
+    "plain.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'plain.x'"
+    },
+    "arr.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "arr.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'arr.x'"
+    },
+    "nilv.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nilv.x"
+      ],
+      "status": "not_found"
+    },
+    "int.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "int.x"
+      ],
+      "status": "error",
+      "message": "undefined method 'include?' for an instance of Integer"
+    }
+  }
+}

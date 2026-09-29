@@ -1,0 +1,53 @@
+description: Measured probes for recursion detection, hash-key interpolation,
+  scientific-float embedding and the handful of built-in variable names
+  (module_name, caller_module_name, a bare numeric capture) that a bare
+  %{...} may reference without ever being a Scope-bound fact or parameter.
+queries:
+- key: k
+  note: Puppet 8.10 probe
+  error_match: 'Recursive lookup detected in \[k, scope:tmpl\]'
+  divergence: [spec-interpolation/scope-values-not-reinterpolated-and-garbled, spec-interpolation/no-recursion-detection]
+- key: h
+  note: Puppet 8.10 probe
+  divergence: spec-interpolation/hash-keys-not-interpolated
+- key: fl
+  note: Puppet 8.10 probe
+  divergence: spec-interpolation/ruby-to_s-formatting
+- key: undef_ws
+  note: Puppet 8.10 probe
+- key: colon_undef
+  note: Puppet 8.10 probe
+- key: m5
+  note: Puppet 8.10 probe
+- key: undef_ws
+  id: undef_ws-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable 'nosuch'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: colon_undef
+  id: colon_undef-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable '::nosuch'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: m1
+  id: m1-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+- key: m2
+  id: m2-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+- key: m3
+  id: m3-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+- key: m4
+  id: m4-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]
+- key: m6
+  id: m6-error
+  note: Puppet 8.10 probe
+  puppet_args: ["--strict", "error"]

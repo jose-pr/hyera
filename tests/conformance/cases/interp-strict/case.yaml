@@ -1,0 +1,41 @@
+description: The undefined-variable strictness rule (--strict error/off) over
+  the vars fixture -- the warning-strictness form of this same data is
+  covered by interp-vars; this case fills the error and off channels.
+origin: spec-context-facts/vars
+queries:
+- key: v_undef
+  id: v_undef-error
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable 'no_such_var'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: v_scope_undef
+  id: v_scope_undef-error
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable 'no_such_var'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: v_calling_module
+  id: v_calling_module-error
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable 'calling_module'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: v_clientcert
+  id: v_clientcert-error
+  puppet_args: ["--strict", "error"]
+  error_match: "Undefined variable 'clientcert'"
+  divergence: spec-context-facts/undefined-variable-semantics
+- key: v_module_name
+  id: v_module_name-error
+  puppet_args: ["--strict", "error"]
+- key: v_facts_undef
+  id: v_facts_undef-error
+  puppet_args: ["--strict", "error"]
+- key: v_trusted_certname
+  id: v_trusted_certname-error
+  puppet_args: ["--strict", "error"]
+- key: v_undef
+  id: v_undef-off
+  puppet_args: ["--strict", "off"]
+- key: v_scope_undef
+  id: v_scope_undef-off
+  puppet_args: ["--strict", "off"]
+  divergence: spec-context-facts/undefined-variable-semantics

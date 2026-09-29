@@ -1,0 +1,14 @@
+---
+k: "x%{tmpl}"
+h: {"%{num}": a, "42": b}
+fl: "%{lookup('f15')}|%{lookup('f14')}"
+f15: 1000000000000000.0
+f14: 100000000000000.0
+undef_ws: "[%{ nosuch }]"
+colon_undef: "[%{::nosuch}]"
+m1: "[%{::module_name}]"
+m2: "[%{module_name}]"
+m3: "[%{0}]"
+m4: "[%{caller_module_name}]"
+m5: "[%{::num}]"
+m6: "[%{scope('module_name')}]"

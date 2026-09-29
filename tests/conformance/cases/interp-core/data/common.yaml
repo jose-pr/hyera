@@ -1,0 +1,45 @@
+---
+plain: P
+int: 5
+arr: [1, 2]
+hsh: {k: v}
+bool: false
+nilv: ~
+s_false: "%{flag_false}"
+s_true: "%{flag_true}"
+s_zero: "%{zero}"
+s_nested_false: "%{facts.flag_false}"
+s_list: "x%{list}"
+s_hash: "x%{facts.os}"
+s_ws: "%{ facts.os.family }"
+s_ws_fn: "%{ hiera('plain') }"
+s_lit: "%{literal('%')}{c_var}"
+s_lit2: "%{literal('%')}{c_var} and %{hiera('plain')}"
+s_hiera_missing: "x%{hiera('nope')}y"
+s_alias_missing: "%{alias('nope')}"
+s_lookup_alone_int: "%{lookup('int')}"
+s_lookup_alone_arr: "%{lookup('arr')}"
+s_lookup_alone_hsh: "%{lookup('hsh')}"
+s_lookup_bool: "v=%{lookup('bool')}"
+s_lookup_bool_alone: "%{lookup('bool')}"
+s_lookup_nil: "v=%{lookup('nilv')}"
+s_order: "%{ref_a}-%{b_var}"
+s_scope_reinterp: "%{ref_a}"
+s_unknown_fn: "%{foo('x')}"
+s_mismatch_quote: '%{hiera(''plain")}'
+s_empty: "a%{}b"
+s_colons: "%{::flag_true}"
+s_scope_false: "%{scope('flag_false')}"
+s_lit_colons: "%{literal('::x')}"
+s_float: "%{fl}"
+s_bigfloat: "%{big}"
+s_paren_var: "a%{foo(bar)}b"
+s_dq_fn: '%{hiera("plain")}'
+s_neg_idx: "%{list.-1}"
+s_idx: "%{list.1}"
+hkey:
+  "%{os.family}_key": 1
+cyc_a: "%{hiera('cyc_b')}"
+cyc_b: "%{hiera('cyc_a')}"
+self_alias: "%{alias('self_alias')}"
+self_ref: "x%{lookup('self_ref')}"

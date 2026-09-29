@@ -1,0 +1,134 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "85c3f1d501b9a66abbffb25b800dc999f0b9ca24f5e7efa0f93a70594dc6a11e",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'k' failed: Recursive lookup detected in [k, scope:tmpl]"
+    },
+    "h": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h"
+      ],
+      "status": "found",
+      "value": {
+        "42": "b"
+      }
+    },
+    "fl": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fl"
+      ],
+      "status": "found",
+      "value": "1.0e+15|100000000000000.0"
+    },
+    "undef_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "undef_ws"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuch';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "colon_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "colon_undef"
+      ],
+      "warnings": [
+        "Undefined variable '::nosuch';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "m5": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m5"
+      ],
+      "status": "found",
+      "value": "[42]"
+    },
+    "undef_ws-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "undef_ws"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'nosuch';"
+    },
+    "colon_undef-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "colon_undef"
+      ],
+      "status": "error",
+      "message": "Undefined variable '::nosuch';"
+    },
+    "m1-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "m1"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "m2-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "m2"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "m3-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "m3"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "m4-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "m4"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "m6-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "m6"
+      ],
+      "status": "found",
+      "value": "[]"
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "96f644372e7f8ae405978e00d1d53aec261868232ac88dce52f622fa3abc94a6",
+  "results": {
+    "v_undef-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_undef"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'no_such_var';"
+    },
+    "v_scope_undef-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_scope_undef"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'no_such_var';"
+    },
+    "v_calling_module-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_calling_module"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'calling_module';"
+    },
+    "v_clientcert-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_clientcert"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'clientcert';"
+    },
+    "v_module_name-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_module_name"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_facts_undef-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_facts_undef"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "v_trusted_certname-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v_trusted_certname"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_undef-off": {
+      "argv": [
+        "--strict",
+        "off",
+        "v_undef"
+      ],
+      "status": "found",
+      "value": "xy"
+    },
+    "v_scope_undef-off": {
+      "argv": [
+        "--strict",
+        "off",
+        "v_scope_undef"
+      ],
+      "status": "found",
+      "value": "xy"
+    }
+  }
+}
