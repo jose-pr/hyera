@@ -75,6 +75,34 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
   `duho` for the console script, `pyera[hocon]` pulls in `pyhocon` for
   `HOCONBackend`.
 
+### Conformance goldens
+
+`tests/conformance/` replays real Puppet's `puppet lookup` output against
+this implementation, so a fidelity fix has an oracle-backed acceptance
+test instead of a hand-written expectation.
+
+- Layout: `_golden.py` (schema/digest/lint, no `pyera` import), `_ours.py`
+  (the only module that calls into `pyera`'s API/CLI), `record.py`
+  (recorder, dev-only), `test_conformance.py` / `test_conformance_cli.py`
+  (replay). Cases live under `cases/<area>-<topic>/` with a hand-written
+  `case.yaml` and a generated `golden.json`.
+- Replay needs no Puppet: `<py> -m pytest -q -rs tests/conformance`.
+- Recording needs Puppet 8.10's `puppet lookup` on `PATH` (`--runner
+  local`) or reachable inside a WSL distribution (`--runner wsl` or
+  `--runner wsl:<distro>`): `<py> tests/conformance/record.py --runner
+  local|wsl [--jobs N] [CASE ...]`. Add `--check` to re-record in memory
+  and diff against the committed goldens (exit 1 on drift, writes
+  nothing), or `--list-markers` to list every divergence id and deviation
+  without needing Puppet at all. CI only replays; it never records.
+- A query marked `divergence: <finding-id>` in `case.yaml` is a strict
+  `xfail` against Puppet's recorded result — fixing the underlying
+  behavior turns the run red (`XPASS(strict)`) until the marker is
+  removed. A `deviation:` is a different, permanent, asserted-as-passing
+  outcome (never a strict xfail).
+- **Never hand-edit `golden.json`.** It is only ever written by
+  `record.py`, keyed by query id, and lint-checked (`test_case_is_current`)
+  against a digest of everything that was asked of Puppet.
+
 ## License
 
 MIT, for this project's own code. It is derived from
