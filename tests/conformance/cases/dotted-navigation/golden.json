@@ -1,0 +1,218 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "87416537240817f0903d25090814c01e9fa280c76ac301e4509b8a634e037644",
+  "results": {
+    "list-index-plus": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.+1"
+      ],
+      "status": "found",
+      "value": "b"
+    },
+    "list-index-leading-zero": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.01"
+      ],
+      "status": "found",
+      "value": "b"
+    },
+    "list-index-colon": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.:1"
+      ],
+      "status": "found",
+      "value": "a"
+    },
+    "hash-int-key-leading-zeros": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h.00"
+      ],
+      "status": "found",
+      "value": "zero"
+    },
+    "hash-int-key-vs-string-literal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bk.1"
+      ],
+      "status": "found",
+      "value": "intkey"
+    },
+    "quoted-space-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "\" sp\".c"
+      ],
+      "status": "found",
+      "value": "space"
+    },
+    "single-quoted-tail-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.'b'"
+      ],
+      "status": "found",
+      "value": {
+        "c": "nested"
+      }
+    },
+    "nested-single-quoted-tail": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.b.'c'"
+      ],
+      "status": "found",
+      "value": "nested"
+    },
+    "sq-root": {
+      "argv": [
+        "--strict",
+        "warning",
+        "'a.b'"
+      ],
+      "status": "found",
+      "value": {
+        "c": "nested"
+      }
+    },
+    "dq-root-spaced": {
+      "argv": [
+        "--strict",
+        "warning",
+        "\"a.b\" . c"
+      ],
+      "status": "found",
+      "value": "dotted"
+    },
+    "v_quoted_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_quoted_int"
+      ],
+      "status": "found",
+      "value": "[one]"
+    },
+    "v_ws": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_ws"
+      ],
+      "status": "found",
+      "value": "[RedHat]"
+    },
+    "hash-float-key-vs-string-literal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fk.1"
+      ],
+      "status": "not_found"
+    },
+    "hash-int-key-vs-quoted-string-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h.\"0\""
+      ],
+      "status": "not_found"
+    },
+    "f.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "f.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Float when a hash-like object was expected to access value using 'x' from key 'f.x'"
+    },
+    "t.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "t.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got TrueClass when a hash-like object was expected to access value using 'x' from key 't.x'"
+    },
+    "list-quoted-index-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst.\"1\""
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using '1' from key 'lst.\"1\"'"
+    },
+    "empty-quoted-segment": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a.\"\""
+      ],
+      "status": "error",
+      "message": "Syntax error in key: 'a.\"\"'"
+    },
+    "integer-root": {
+      "argv": [
+        "--strict",
+        "warning",
+        "0.x"
+      ],
+      "status": "error",
+      "message": "undefined method 'index' for an instance of Integer"
+    },
+    "v_syntax": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_syntax"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'v_syntax' failed: Syntax error in string: [%{facts..os}]"
+    },
+    "v_scope_syntax": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_scope_syntax"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'v_scope_syntax' failed: Syntax error in string: [%{scope('facts..os')}]"
+    },
+    "v_introot": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_introot"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'v_introot' failed: Scope variable name 0 is a Integer, not a string"
+    },
+    "v_str_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_str_int"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'v_str_int' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using '0' from key 'facts.os.family.0'"
+    }
+  }
+}

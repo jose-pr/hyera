@@ -1,0 +1,3 @@
+---
+os: {family: RedHat}
+nested: {"a.b": quoted, "1": one, list: [a, b, c]}

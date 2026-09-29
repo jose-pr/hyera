@@ -1,0 +1,16 @@
+---
+lst: [a, b, c]
+h: {0: zero, x: 1}
+f: 1.5
+t: true
+bk: {1: intkey}
+fk: {1.0: floatkey}
+" sp": {c: space}
+"a.b": {c: dotted}
+a: {b: {c: nested}}
+v_quoted_int: "[%{facts.nested.'1'}]"
+v_ws: "[%{ facts . os . family }]"
+v_syntax: "[%{facts..os}]"
+v_scope_syntax: "[%{scope('facts..os')}]"
+v_introot: "[%{0.x}]"
+v_str_int: "[%{facts.os.family.0}]"

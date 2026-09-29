@@ -1,0 +1,94 @@
+description: >-
+  Puppet's split_key/sub_lookup dotted-navigation rules: Ruby to_i quirks on
+  list index segments, quoted segments (with embedded dots and internal
+  whitespace), integer vs string/float/bool hash-key eql?, an Integer or
+  scalar receiver (a type mismatch), malformed key syntax, and the same
+  rules applied to %{...} context references (including a %{ x } bareword
+  reference with internal whitespace and an Integer root).
+origin: code-io-security/subkeys
+queries:
+  - key: lst.+1
+    id: list-index-plus
+  - key: lst.01
+    id: list-index-leading-zero
+  - key: lst.:1
+    id: list-index-colon
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: h.00
+    id: hash-int-key-leading-zeros
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: bk.1
+    id: hash-int-key-vs-string-literal
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: '" sp".c'
+    id: quoted-space-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: a.'b'
+    id: single-quoted-tail-segment
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: a.b.'c'
+    id: nested-single-quoted-tail
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: "'a.b'"
+    id: sq-root
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: '"a.b" . c'
+    id: dq-root-spaced
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: v_quoted_int
+    id: v_quoted_int
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: v_ws
+    id: v_ws
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: fk.1
+    id: hash-float-key-vs-string-literal
+  - key: 'h."0"'
+    id: hash-int-key-vs-quoted-string-segment
+  - key: f.x
+    id: f.x
+    error_class: HieraLookupError
+    error_match: "Got Float"
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: t.x
+    id: t.x
+    error_class: HieraLookupError
+    error_match: "Got TrueClass"
+    divergence: code-io-security/dotted-subkey-raw-exceptions
+  - key: 'lst."1"'
+    id: list-quoted-index-segment
+    error_class: HieraLookupError
+    error_match: "Got Array.*using '1'"
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: 'a.""'
+    id: empty-quoted-segment
+    error_class: HieraLookupError
+    error_match: "Syntax error in key"
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+  - key: 0.x
+    id: integer-root
+    error_class: HieraLookupError
+    note: >-
+      Puppet crashes with a Ruby NoMethodError (Integer#index does not
+      exist); any error matches.
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: v_syntax
+    id: v_syntax
+    error_class: InterpolationError
+    error_match: "Syntax error in string"
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+  - key: v_scope_syntax
+    id: v_scope_syntax
+    error_class: InterpolationError
+    error_match: "Syntax error in string"
+    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
+  - key: v_introot
+    id: v_introot
+    error_class: InterpolationError
+    error_match: "Scope variable name 0 is a Integer"
+    divergence: code-io-security/subkey-segment-parsing-diverges
+  - key: v_str_int
+    id: v_str_int
+    error_class: HieraLookupError
+    error_match: "Got String.*using '0'"
+    divergence: code-io-security/subkey-segment-parsing-diverges
