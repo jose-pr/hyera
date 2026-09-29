@@ -17,7 +17,6 @@ queries:
   - key: keyed
     divergence: spec-interpolation/hash-keys-not-interpolated
   - key: quoted
-    divergence: code-io-security/subkey-segment-parsing-diverges
   - key: embed_missing
     divergence: spec-interpolation/missing-inline-lookup-raises
   - key: alias_missing

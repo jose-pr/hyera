@@ -9,7 +9,7 @@ reads ``{a.b}`` as *attribute* access, so a dotted reference is resolved via
 
 import pytest
 
-from hyera import Hiera
+from hyera import Hiera, HieraLookupError
 
 CONFIG = """\
     version: 5
@@ -82,19 +82,25 @@ def test_partial_nested_ref_in_path_skips_level(tree):
     assert h.get("role") == "none"
 
 
-def test_scalar_walked_as_container_skips_level(tree):
-    # `trusted` is a string, so `.certname` cannot resolve.
+def test_scalar_walked_as_container_raises(tree):
+    # `trusted` is a string: walking `.certname` into it is a Puppet type
+    # mismatch, not a silent level skip. Construction itself still succeeds
+    # (Design Q6): the error is deferred to the first real lookup.
     h = Hiera(str(tree / "hiera.yaml"), context={"trusted": "not-a-dict"})
-    assert h.get("role") == "none"
+    with pytest.raises(HieraLookupError, match="Got String"):
+        h.get("role")
 
 
-def test_flat_dotted_key_takes_precedence(tree):
-    # A context key that literally contains dots keeps working.
+def test_flat_dotted_key_does_not_shadow(tree):
+    # Puppet reads %{a.b} as nested key access only -- a context entry
+    # literally named "trusted.certname" is as unreachable here as it is in
+    # Puppet (a variable name cannot contain '.'), so the node level is
+    # skipped rather than matched by the flat key.
     h = Hiera(
         str(tree / "hiera.yaml"),
         context={"trusted.certname": "web01.example.com"},
     )
-    assert h.get("role") == "web"
+    assert h.get("role") == "none"
 
 
 def test_format_resolves_dotted_refs(tree):
@@ -105,7 +111,7 @@ def test_format_resolves_dotted_refs(tree):
 
 
 def test_list_index_segment_in_dotted_ref(make_tree):
-    # Numeric segments index into lists, matching LookupDict.lookup.
+    # Numeric segments index into lists, per Puppet's Integer-segment rule.
     root = make_tree(
         """\
         version: 5

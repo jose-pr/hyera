@@ -57,8 +57,5 @@ queries:
     merge_hash_arrays: true
   divergence: spec-merge/merge-hash-arrays-unequal-length
 - key: str_leaf.x
-  divergence: code-io-security/dotted-subkey-raw-exceptions
 - key: list_leaf.x
-  divergence: code-io-security/dotted-subkey-raw-exceptions
 - key: null_leaf.x
-  divergence: code-io-security/dotted-subkey-raw-exceptions

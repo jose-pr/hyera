@@ -8,7 +8,7 @@ Ports Puppet's ``interpolation.rb``.
 import re
 import string
 
-from ._navigation import _ctx_lookup
+from ._navigation import _RUBY_STRIP_CHARS, _ctx_lookup
 from .exceptions import InterpolationError
 from .util import LookupDict
 
@@ -22,6 +22,13 @@ _INTERP_RE = re.compile(r"""%\{(?:::|)([^(}]*)\}""")
 # A bare ``%{var}`` reference; the captured name becomes a ``{var}`` format
 # field. The character class allows the identifier chars Puppet permits.
 _FORMAT_RE = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
+#: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a bare ``%{...}`` whose
+#: (stripped) content is exactly one of these tokens always resolves to the
+#: empty string, without going through scope lookup at all -- notably, an
+#: *empty* quoted name (``%{""}``/``%{''}``) is not sub-key syntax to parse
+#: (``split_key`` requires 1+ characters inside a quoted segment and would
+#: otherwise raise a spurious "Syntax error").
+_EMPTY_INTERPOLATIONS = frozenset(["", "::", '""', "''", '"::"', "'::'"])
 
 
 def _normalize_source(source: str) -> str:
@@ -72,6 +79,10 @@ class Interpolation:
 
     def _resolve_function(self, s, paths, context, merge):
         """Fully resolve hiera function calls (``%{hiera(...)}`` etc.) in ``s``."""
+        # Captured before the loop rebinds `s`: a %{...} syntax error names
+        # the whole, original, unsubstituted value in its message, as
+        # Puppet's own `interpolation.rb` does.
+        subject = s
         calls = _FUNCTION_RE.findall(s)
         # An alias replaces the whole value (no string interpolation).
         if len(calls) == 1 and calls[0][0] == "alias":
@@ -98,7 +109,7 @@ class Interpolation:
             elif call == "scope":
                 # Dotted names resolve as nested lookups here too, so
                 # %{scope('facts.os')} agrees with %{facts.os}.
-                replace = _ctx_lookup(context, arg, None)
+                replace = _ctx_lookup(context, arg, None, subject=subject)
             elif call == "literal":
                 replace = arg
             elif call == "alias":
@@ -134,11 +145,17 @@ class Interpolation:
 
     def _resolve_interpolates(self, s, context):
         """Resolve context-based ``%{var}`` string interpolation."""
+        # Captured before the loop rebinds `s`, same reasoning as
+        # `_resolve_function`.
+        subject = s
         for i in _INTERP_RE.findall(s):
-            # Missing vars interpolate to empty string (matches ruby hiera).
-            # Dotted names are nested lookups here too, so a reference means
-            # the same thing in a value as it does in a hierarchy path.
-            replacement = _ctx_lookup(context, i, "") or ""
+            if i.strip(_RUBY_STRIP_CHARS) in _EMPTY_INTERPOLATIONS:
+                replacement = ""
+            else:
+                # Missing vars interpolate to empty string (matches ruby
+                # hiera). Dotted names are nested lookups here too, so a
+                # reference means the same thing in a value as in a path.
+                replacement = _ctx_lookup(context, i, "", subject=subject) or ""
             s = _INTERP_RE.sub(lambda _m, r=str(replacement): r, s, 1)
         return s
 

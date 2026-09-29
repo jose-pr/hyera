@@ -32,6 +32,10 @@ private engine internals with no stability contract.
   `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
     — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
+    A dotted `key` follows Puppet's sub-key grammar (see the dotted
+    reference gotcha below) and can itself raise `HieraLookupError` (a
+    malformed key, or a type mismatch during the walk) — **even when a
+    `default` was given**; only a genuine miss falls back to it.
     `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`), a
     legacy type (`list`/`set`/`dict`), or a dict `{"strategy": "deep",
     "knockout_prefix": ..., "sort_merged_arrays": ..., "merge_hash_arrays":
@@ -45,14 +49,17 @@ private engine internals with no stability contract.
     `.get(key, throw=True, context=context, **kwargs)` would not raise
     `KeyNotFoundError`. `context`/`kwargs` layer over the instance context
     exactly as in `.get`, and reach hierarchy path resolution as well as
-    interpolation. A non-`str` `key` still raises `TypeError`.
+    interpolation. A non-`str` `key` still raises `TypeError`; a dotted
+    `key`'s own `HieraLookupError`/`InterpolationError` propagates too — only
+    a genuine miss becomes `False`.
   - **`.scoped(context=None, **kwargs) -> ScopedHiera`** — bind context
     variables once for reuse.
   - **`.sources(context=None, **kwargs) -> list`** — resolve+load the
     ordered candidate source paths for a context (cached per resolved
     context; a fresh `Hiera` instance if the on-disk tree may have changed).
   - **`.format(text, context=None, **kwargs) -> str`** — resolve `%{var}`
-    references in an arbitrary string against the instance context.
+    references in an arbitrary string against the instance context. A
+    dotted reference follows the same grammar and can raise the same way.
   - Gotcha: a single `Hiera` instance caches parsed file contents
     (`.cache`), resolved source-path lists (`._source_cache`) and the merged
     `lookup_options` mapping (`._lookup_options_cache`), all per resolved
@@ -465,13 +472,31 @@ re-exports it too).
   (Hiera 5's rule); anything else is matched literally, so a key containing
   `.` cannot shadow-match unrelated keys. An exact key match wins over a
   pattern; an invalid pattern is skipped rather than raising.
-- A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) is
-  nested *mapping* access into the context, in hierarchy paths, `data_dir`,
-  `mapped_paths` templates, values, `.format()`, and `%{scope('a.b')}`
-  alike. Numeric segments index lists (`%{roles.0}`). A context key that
-  literally contains dots takes precedence over the nested walk. An
-  unresolvable reference skips the hierarchy level (in a path) or
-  interpolates as `""` (in a value) — it never raises.
+- A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
+  **dotted lookup key** (`h.get("a.b.0")`) both follow Puppet's own
+  `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `data_dir`,
+  `mapped_paths` templates, values, `.format()`, `%{scope('a.b')}` and
+  `.get()` alike: a segment may be single- or double-quoted (quotes keep any
+  embedded `.` literal and are trimmed off; whitespace around an unquoted
+  segment or the dots themselves is trimmed too, e.g. `%{ a . b }`), and a
+  segment made only of optionally-signed digits indexes a list (out of
+  range, or a negative index, is a miss, never Python's wraparound).
+  A Puppet variable name cannot contain `.`, so there is **no flat-key
+  fallback**: `%{a.b}` always means "navigate `.b` into the value of `a`",
+  never a literal context/data key named `"a.b"` — quote the whole
+  reference (`%{'a.b'}`, `h.get("'a.b'")`) to reach that key instead.
+  A malformed key (an empty/unbalanced quoted segment, a stray leading,
+  trailing or doubled `.`) raises `HieraLookupError` with Puppet's "Syntax
+  error in key/string" text, and so does navigating into (or with) the
+  wrong type — a non-collection value with a further segment, or a
+  non-string/non-`Integer[...]`-shaped root variable name (that one raises
+  `InterpolationError` instead) — **even when a `default=` was given**, or
+  through `.has()`: only a genuine miss (an absent key, a `None` value
+  walked no further, or an out-of-range/nonexistent segment) is silent.
+  In a hierarchy path specifically, a *malformed* reference still just
+  skips the level rather than raising (`hierarchy_location_resolution`'s
+  scope, not yet ported here) — but a well-formed one that hits a type
+  mismatch raises there too, same as in a value.
 - `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
   by default (2026-09-29 — see the API section above): `include
   file(...)` really reads the named file (cwd-relative or absolute), and

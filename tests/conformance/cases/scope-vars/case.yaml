@@ -44,16 +44,11 @@ queries:
   divergence: spec-interpolation/missing-inline-lookup-raises
 - key: v_facts_undef
 - key: v_neg_idx
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: v_hash_numkey
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: v_list_idx
 - key: v_quoted_seg
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: v_flat_dotted
-  divergence: new/context-ref-flat-key-fallback
 - key: v_string_walk
-  divergence: new/context-ref-type-mismatch-returns-empty
 - key: v_module_name
 - key: v_calling_module
 - key: v_calling_class

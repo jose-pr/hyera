@@ -42,14 +42,20 @@ _NO_CLI_EXTRA_HINT = (
 
 
 class _ScopeError(ValueError):
-    """A ``--scope`` entry was not in ``key=value`` form."""
+    """A ``--scope`` entry was not in ``key=value`` form, or its name is invalid."""
 
-    def __init__(self, item: str):
-        super().__init__("invalid --scope {!r} (expected key=value)".format(item))
+    def __init__(self, item: str, reason: str = "expected key=value"):
+        super().__init__("invalid --scope {!r} ({})".format(item, reason))
 
 
 def _parse_scope(items: "_ty.Iterable[str]") -> dict:
-    """Parse ``key=value`` scope entries into a context dict."""
+    """Parse ``key=value`` scope entries into a context dict.
+
+    A dotted name is rejected outright rather than stored as a flat key
+    nothing can read: Puppet variable names cannot contain ``.``, and
+    ``navigation_sub_lookup`` removed the flat-dotted-key context fallback
+    that used to make one work by accident.
+    """
     context: dict = {}
     for item in items or ():
         if not item:
@@ -57,6 +63,8 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
         if "=" not in item:
             raise _ScopeError(item)
         k, v = item.split("=", 1)
+        if "." in k:
+            raise _ScopeError(item, "a variable name cannot contain '.'")
         context[k] = v
     return context
 

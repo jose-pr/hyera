@@ -203,6 +203,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `%{scope('a.b')}` now share one nested-lookup rule; numeric segments index
   lists, a flat context key containing dots still wins, and an unresolvable
   reference skips the level or yields `""` rather than raising.
+- Dotted lookup keys and `%{...}` context references now follow Puppet's own
+  `split_key`/`sub_lookup` sub-key grammar exactly, instead of a naive
+  `str.split(".")`: a segment may be single- or double-quoted (so
+  `'a.b'.c`/`get("'a.b'".c)`-style keys reach a key that literally contains a
+  dot), a negative or out-of-range list index (`lst.-1`) is not found rather
+  than wrapping to the last item, an integer segment matches only an integer
+  hash key (`h.0` finds `{0: x}`, never `{"0": x}`), and walking further into
+  a `null` value (`n.x` where `n` is `~`) is not found rather than raising a
+  raw `TypeError`. A genuine type mismatch (`s.x`/`lst.x`/`f.x` walking into
+  a scalar, array or float) now raises `HieraLookupError` with Puppet's
+  "Data Provider type mismatch" message instead of a raw `TypeError`/
+  `ValueError`, and a malformed key (`a..b`, `a.`, `.a`, an unbalanced or
+  empty quoted segment) raises `HieraLookupError` with Puppet's "Syntax
+  error in key/string" text instead of silently returning the default. Both
+  kinds of error are raised **even with a `default=` given**, and through
+  `.has()` — only a genuine miss is silent, matching Puppet's own
+  `lookup()`, which raises both even with `default_value` set.
 - `sort_merged_arrays` now applies to `deep` merges, where Puppet defines it.
   It was honoured only on the `unique` branch and silently swallowed on
   `deep`, which both the README and the API header advertised as supported.
@@ -361,6 +378,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `hocon` extra's `pyhocon` floor comment now also records the
   `get_period_expr` reason (present since 0.3.60, already covered by the
   existing `>=0.3.62` floor).
+- A context key containing `.` no longer shadows the nested `%{a.b}` walk:
+  Puppet has no such flat-key fallback (a variable name cannot contain
+  `.`), so `%{a.b}` always means "navigate `.b` into the value of `a`" —
+  quote the whole reference (`%{'a.b'}`) to reach a context entry literally
+  named `"a.b"` instead. The CLI's `--scope` follows the same rule: a
+  dotted `--scope` name (`--scope a.b=v`) now exits `2` rather than storing
+  a variable nothing could ever read.
 
 ### Removed
 

@@ -16,6 +16,7 @@ from ._interpolation import Interpolation, _format_source, _normalize_source
 from ._location_resolver import _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import make_merge
+from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from .backends import default_backends
 from .util import LookupDict
 
@@ -203,11 +204,25 @@ class Hiera(Interpolation):
 
         Mirrors the source-resolution side effects of a ``get(None)`` call
         without going through the public API's key-type check.
+
+        A malformed dotted context reference or a navigation type mismatch
+        reachable while resolving a hierarchy path (``%{...}`` in a
+        ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
+        here and logged at debug level, not raised out of the constructor
+        (Design Q6 of ``navigation_sub_lookup/route_references``): Puppet
+        raises these at lookup time, never at construction, and a
+        constructor should fail only for configuration errors. Swallowing it
+        here also means the walk this aborts was never cached (``_files_for``
+        only caches a *completed* walk), so the first real lookup retries it
+        in full and raises the same error again, now at the right time.
         """
         ctx = self._build_context()
-        self.sources(ctx)
-        if self.default_hierarchy:
-            self._default_files(ctx)
+        try:
+            self.sources(ctx)
+            if self.default_hierarchy:
+                self._default_files(ctx)
+        except (HieraLookupError, InterpolationError) as e:
+            _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
 
     def _load_file(self, path, backend):
         """Load ``path`` via ``backend.data_hash(...)``, caching the result.
@@ -256,27 +271,36 @@ class Hiera(Interpolation):
         """Get the value of ``key``, resolving it, walking ``paths`` in order.
 
         ``merge`` is a :class:`Merge` accumulator or ``None`` (first wins).
+
+        ``key`` is parsed once, up front, into its root and Puppet sub-key
+        segments (``_navigation.parse_lookup_key``); each file is then
+        looked up by the plain root and, if there are segments, walked with
+        ``sub_lookup`` (``navigation_sub_lookup``). A ``None`` result --
+        whether the root itself is absent/null or ``sub_lookup`` misses --
+        is a miss, same as before; a type-mismatch or malformed-key error
+        from either helper propagates, it is never swallowed into a level
+        skip (D04 item 3, Design Q5).
         """
         found = False
+        root, segments = (None, ()) if key is None else parse_lookup_key(key)
         for path in paths:
-            if self.cache[path] is not None and key is not None:
-                cache = None
-                try:
-                    cache = self.cache[path].lookup(key)
-                except (KeyError, IndexError):
-                    pass
+            data = self.cache[path]
+            if not isinstance(data, dict) or root not in data:
+                continue
+            value = sub_lookup(key, segments, data[root]) if segments else data[root]
+            if value is _MISSING or value is None:
+                continue
 
-                if cache is not None:
-                    value = self._resolve(cache, paths, context, merge)
-                    if merge is None:
-                        return value
-                    merge.merge_value(value)
-                    found = True
+            value = self._resolve(value, paths, context, merge)
+            if merge is None:
+                return value
+            merge.merge_value(value)
+            found = True
 
         if merge is not None and found:
             return merge.finalize()
 
-        if key is not None and len(key.split(".")) > 1:
+        if segments:
             _LOGGER.debug(
                 "Lookup key '%s' not found; ensure it is provided in the "
                 "hiera data.",
@@ -463,6 +487,8 @@ from .exceptions import (  # noqa: E402
     BackendError,
     ConfigError,
     HieraError,
+    HieraLookupError,
+    InterpolationError,
     KeyNotFoundError,
     _one_line,
 )

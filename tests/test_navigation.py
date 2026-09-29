@@ -10,6 +10,7 @@ import re
 
 import pytest
 
+from hyera import Hiera
 from hyera.exceptions import HieraLookupError
 from hyera._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
 
@@ -156,3 +157,47 @@ def test_parse_lookup_key_syntax_error(key):
     expect = "Syntax error in key: '{}'".format(key)
     with pytest.raises(HieraLookupError, match=re.escape(expect)):
         parse_lookup_key(key)
+
+
+# --- Wiring: dotted lookup keys and %{...} references go through the port
+# (navigation_sub_lookup/route_references) --------------------------------
+
+
+_COMMON_HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
+
+
+def test_has_raises_on_type_mismatch(make_tree):
+    # has() only turns a genuine miss (KeyNotFoundError) into False; a
+    # type-mismatch HieraLookupError from the navigation walk propagates,
+    # same as get() (D04 item 3, Design Q5).
+    root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "s: hello\n"})
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(HieraLookupError, match="Got String"):
+        h.has("s.x")
+
+
+def test_default_does_not_hide_syntax_error(make_tree):
+    # A malformed key raises even with a default given -- only a genuine
+    # miss falls back to it (Puppet's lookup() raises both errors even with
+    # default_value set).
+    root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "a: 1\n"})
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(HieraLookupError, match="Syntax error"):
+        h.get("a..b", default="D")
+
+
+def test_format_raises_on_type_mismatch(make_tree):
+    # format() resolves %{...} references through the same _ctx_lookup, so
+    # a mismatch there raises too, not just for data-file interpolation.
+    root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "a: 1\n"})
+    h = Hiera(str(root / "hiera.yaml"), context={"s": "hello"})
+    with pytest.raises(HieraLookupError, match="Got String"):
+        h.format("%{s.x}")
+
+
+def test_nested_null_is_not_found(make_tree):
+    # Walking further into a null root value is a miss, not a crash or a
+    # type mismatch -- Puppet's sub_lookup treats nil the same way.
+    root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "n: ~\n"})
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.get("n.x", default="D") == "D"

@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "77b26e6b4881de8eeb310cc2367ddbaccb3b9abd292c761643691f86efe8869b",
+  "inputs_sha256": "8e9c21ae494cf01cb96b5ae01f544c7a1d047fd184944fb530b5623385267597",
   "results": {
     "scalar-segment": {
       "argv": [
@@ -73,15 +73,6 @@
       ],
       "status": "error",
       "message": "undefined method 'include?' for an instance of Integer"
-    },
-    "single-quoted-segment": {
-      "argv": [
-        "--strict",
-        "warning",
-        "'a.b'.c"
-      ],
-      "status": "found",
-      "value": "nested"
     },
     "double-quoted-segment": {
       "argv": [

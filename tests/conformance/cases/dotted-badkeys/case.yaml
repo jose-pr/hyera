@@ -12,19 +12,14 @@ queries:
     id: ab
   - key: "a..b"
     id: doubled-dot
-    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
     error_match: "Syntax error in key"
   - key: "a."
     id: trailing-dot
-    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
     error_match: "Syntax error in key"
   - key: ".a"
     id: leading-dot
-    divergence: critic-puppet-coverage/malformed-key-syntax-not-rejected
     error_match: "Syntax error in key"
   - key: 'a."b"'
     id: double-quoted-segment
-    divergence: code-io-security/subkey-segment-parsing-diverges
   - key: '"a."'
     id: quoted-whole-key
-    divergence: code-io-security/subkey-segment-parsing-diverges

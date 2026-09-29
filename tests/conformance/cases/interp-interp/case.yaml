@@ -11,7 +11,6 @@ queries:
 - key: s_facts_nested
 - key: s_facts_deep
 - key: s_ws
-  divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_ws_topvar
   divergence: spec-interpolation/whitespace-in-expression-ignored
 - key: s_ws_func
@@ -22,17 +21,12 @@ queries:
 - key: s_empty_sq
 - key: s_empty_ws
 - key: s_quoted_dq
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: s_quoted_sq
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: s_index
 - key: s_index_neg
-  divergence: code-io-security/subkey-segment-parsing-diverges
 - key: s_index_oob
 - key: s_str_walk
-  divergence: new/context-ref-type-mismatch-returns-empty
 - key: s_arr_key
-  divergence: new/context-ref-type-mismatch-returns-empty
 - key: s_undef
 - key: s_undef_nested
 - key: s_int
@@ -90,13 +84,12 @@ queries:
   divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_dotted
 - key: s_lookup_quoted
-  divergence: code-io-security/subkey-segment-parsing-diverges
+  divergence: spec-interpolation/method-call-syntax-validation
 - key: s_lookup_colons
   divergence: new/lookup-key-arg-topscope-prefix-stripped
 - key: s_lookup_lo
   divergence: spec-interpolation/missing-inline-lookup-raises
 - key: s_lookup_strwalk
-  divergence: code-io-security/dotted-subkey-raw-exceptions
 - key: s_alias_str
 - key: s_alias_arr
 - key: s_alias_hash
@@ -151,5 +144,5 @@ queries:
 - key: via_alias
 - key: via_interp
 - key: via_alias.k
-  divergence: code-io-security/dotted-subkey-raw-exceptions
+  divergence: spec-interpolation/dotted-key-dig-before-interpolation
 - key: via_interp.inner

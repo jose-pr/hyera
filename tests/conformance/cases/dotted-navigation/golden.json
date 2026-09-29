@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "87416537240817f0903d25090814c01e9fa280c76ac301e4509b8a634e037644",
+  "inputs_sha256": "f6be955869e7807bfdae4c7d755fc5764167175c766d2687b4d53e130da8d5b2",
   "results": {
     "list-index-plus": {
       "argv": [
@@ -79,15 +79,15 @@
       "status": "found",
       "value": "nested"
     },
-    "sq-root": {
+    "dq-root": {
       "argv": [
         "--strict",
         "warning",
-        "'a.b'"
+        "\"a.b\""
       ],
       "status": "found",
       "value": {
-        "c": "nested"
+        "c": "dotted"
       }
     },
     "dq-root-spaced": {

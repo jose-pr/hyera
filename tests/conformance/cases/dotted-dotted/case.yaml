@@ -5,9 +5,7 @@ origin: standards-python/dotted
 queries:
   - key: db.host.x
     id: dig-past-scalar
-    divergence: code-io-security/dotted-subkey-raw-exceptions
   - key: classes.foo
     id: list-nonint-segment
-    divergence: code-io-security/dotted-subkey-raw-exceptions
   - key: db.host
     id: nested-dig

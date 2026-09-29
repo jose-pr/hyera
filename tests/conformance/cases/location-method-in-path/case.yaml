@@ -4,4 +4,3 @@ description: >-
 origin: spec-config/cases/method_in_path
 queries:
   - key: k
-    divergence: spec-config/method-syntax-in-locations-silently-skipped

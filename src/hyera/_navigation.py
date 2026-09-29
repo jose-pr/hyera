@@ -7,7 +7,7 @@ Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and
 import functools
 import re
 
-from .exceptions import HieraLookupError
+from .exceptions import HieraLookupError, InterpolationError
 
 #: Sentinel for "no such context reference" (``None`` is a legitimate value).
 _MISSING = object()
@@ -162,33 +162,45 @@ def parse_lookup_key(key: str) -> "Tuple[str, Tuple[Union[str, int], ...]]":
     return root, rest
 
 
-def _ctx_lookup(context, name, default=_MISSING):
-    """Resolve a possibly-dotted context reference against nested containers.
+def _ctx_lookup(context, name, default=_MISSING, subject=None):
+    """Resolve a ``%{...}`` context reference following Puppet's sub-key rules.
 
-    Hiera 5 defines ``%{trusted.certname}`` as *nested key access*, so a
-    dotted name walks into nested dicts (and indexes lists with numeric
-    segments), mirroring :meth:`LookupDict.lookup`.
+    A dotted name is nested key access only -- there is no flat-key
+    precedence: a Puppet variable name cannot contain ``.``, so a context
+    entry literally named ``"a.b"`` is as unreachable here as it is in
+    Puppet. A malformed key, an ``int`` root (Puppet crashes on this with a
+    Ruby ``NoMethodError``; this raises :class:`~hyera.InterpolationError`
+    instead, matching ``parser/scope.rb``'s own message for a non-string
+    variable name), or a type mismatch during the walk all raise -- only a
+    root missing from ``context``, a ``None`` root value walked further, or
+    an ordinary :func:`sub_lookup` miss return ``default``.
 
-    A flat key that literally contains dots wins over the nested walk, so an
-    explicit ``{"a.b": 1}`` context entry keeps working.
+    ``subject`` is the text an error quotes as "in string: <subject>"; it
+    defaults to ``%{<name>}`` (the plain interpolation form), and callers
+    that already hold the original, unsubstituted source pass it through so
+    the message names the whole value being resolved, not just this one
+    reference.
     """
     if not isinstance(context, dict):
         return default
-    if name in context:
-        return context[name]
-    if "." not in name:
+    if subject is None:
+        subject = "%{" + name + "}"
+    segments = split_key(
+        name, lambda p: HieraLookupError("{} in string: {}".format(p, subject))
+    )
+    root, rest = segments[0], segments[1:]
+    if not isinstance(root, str):
+        raise InterpolationError(
+            "Scope variable name {} is a {}, not a string".format(
+                root, _ruby_class(root)
+            )
+        )
+    if root not in context:
         return default
-    obj = context
-    for segment in name.split("."):
-        if isinstance(obj, dict):
-            if segment not in obj:
-                return default
-            obj = obj[segment]
-        elif isinstance(obj, (list, tuple)):
-            try:
-                obj = obj[int(segment)]
-            except (ValueError, IndexError):
-                return default
-        else:
-            return default
-    return obj
+    value = context[root]
+    if not rest:
+        return value
+    if value is None:
+        return default
+    result = sub_lookup(name, rest, value)
+    return default if result is _MISSING else result
