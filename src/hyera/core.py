@@ -15,8 +15,8 @@ from ._hiera_config import (
     _select_version,
     _validate_v5,
 )
-from ._interpolation import Interpolation, _format_source, _normalize_source
-from ._location_resolver import _resolve_level_paths
+from ._interpolation import Interpolation
+from ._location_resolver import _format_source, _normalize_source, _resolve_level_paths
 from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup

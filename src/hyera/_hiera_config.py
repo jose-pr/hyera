@@ -18,8 +18,7 @@ from pathlib_next import Path
 
 from .backends import Backend, YAMLBackend, has_hocon
 from .exceptions import BackendError, ConfigError
-from ._interpolation import _normalize_source
-from ._location_resolver import _resolve_level_paths
+from ._location_resolver import _normalize_source, _resolve_level_paths
 from ._yaml_loader import symkeys_to_string
 
 #: Puppet's built-in default configuration, used when hiera.yaml does not

@@ -9,7 +9,6 @@ Ports Puppet's ``interpolation.rb``.
 """
 
 import re
-import string
 from decimal import Decimal
 
 from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
@@ -23,12 +22,6 @@ _FUNCTION_RE = re.compile(
 # function-style ``%{hiera('x')}`` token (those are handled by ``_FUNCTION_RE``);
 # without this, an unresolved function leftover would be blanked here.
 _INTERP_RE = re.compile(r"""%\{(?:::|)([^(}]*)\}""")
-# A bare ``%{var}`` reference; the captured name becomes a ``{var}`` format
-# field. Narrower than Puppet's own ``%{...}`` (``interpolation.rb:51-54``),
-# which takes any text up to the closing ``}`` and strips it verbatim --
-# this class is only what a var/datadir/mapped_paths reference actually
-# needs to spell, not a claim about what Puppet itself permits there.
-_FORMAT_RE = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
 #: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a bare ``%{...}`` whose
 #: (stripped) content is exactly one of these tokens always resolves to the
 #: empty string, without going through scope lookup at all -- notably, an
@@ -36,11 +29,6 @@ _FORMAT_RE = re.compile(r"""%\{(?:::|)([a-zA-Z0-9_.|-]+)\}""")
 #: (``split_key`` requires 1+ characters inside a quoted segment and would
 #: otherwise raise a spurious "Syntax error").
 _EMPTY_INTERPOLATIONS = frozenset(["", "::", '""', "''", '"::"', "'::'"])
-
-
-def _normalize_source(source: str) -> str:
-    """Convert puppet ``%{var}`` references into ``str.format`` ``{var}`` fields."""
-    return _FORMAT_RE.sub(r"{\g<1>}", source, count=0)
 
 
 #: Ruby ``String#inspect`` escapes for characters with a short mnemonic
@@ -209,40 +197,6 @@ def _scope_ref(scope, ref: str, subject: str = None):
         return value
     result = sub_lookup(ref, rest, value)
     return _MISSING if result is _MISSING else result
-
-
-class _ContextFormatter(string.Formatter):
-    """``str.format`` where a dotted field is *nested Scope lookup*, not
-    attribute access.
-
-    ``"{a.b}".format_map({"a": {"b": 1}})`` raises ``AttributeError`` because
-    ``str.format`` reads ``.b`` as an attribute. Hierarchy sources are full of
-    dotted references (``%{trusted.certname}``), so ``get_field`` routes the
-    whole dotted name through :func:`_scope_ref` instead of letting
-    ``str.format`` split it. The bound scope is threaded through as the
-    ``kwargs`` position of :meth:`vformat`/:meth:`get_field` -- it is never
-    an actual mapping, only ``get_field`` reads it.
-    """
-
-    def get_field(self, field_name, args, scope):
-        value = _scope_ref(scope, field_name)
-        if value is _MISSING:
-            # KeyError is the signal callers already use to skip a level.
-            raise KeyError(field_name)
-        return value, field_name
-
-    def format_field(self, value, spec):
-        if spec:
-            return super().format_field(value, spec)
-        return _to_puppet_str(value)
-
-
-_FORMATTER = _ContextFormatter()
-
-
-def _format_source(source: str, scope) -> str:
-    """Format a normalized source/template against a bound :class:`~hyera.Scope`."""
-    return _FORMATTER.vformat(source, (), scope)
 
 
 class Interpolation:
