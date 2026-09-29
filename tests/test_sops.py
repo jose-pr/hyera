@@ -13,7 +13,7 @@ import subprocess
 
 import pytest
 
-from pyera import ConfigError, Hiera
+from pyera import Hiera
 from pyera.backends import SOPS_TIMEOUT, BackendError, SopsYAMLBackend
 
 
@@ -179,7 +179,7 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
     )
 
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(ConfigError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             Hiera(str(config))
 
     exc = excinfo.value
@@ -243,7 +243,7 @@ def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(
     config = root / "hiera.yaml"
 
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(ConfigError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             Hiera(str(config))
 
     exc = excinfo.value

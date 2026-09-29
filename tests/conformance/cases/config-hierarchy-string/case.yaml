@@ -1,6 +1,5 @@
 description: >-
-  `hierarchy:` must be an Array; a bare String is a Puppet config error, and ours raises a raw TypeError instead of ConfigError.
+  `hierarchy:` must be an Array; a bare String is a Puppet config error, and ours now raises ConfigError too.
 origin: spec-config/cases/hierarchy_string
 queries:
   - key: k
-    divergence: code-core/config-validation-raw-errors

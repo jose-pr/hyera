@@ -11,7 +11,7 @@ import typing as _ty
 from pathlib_next import Path
 
 from .backends import Backend, YAMLBackend
-from .exceptions import ConfigError
+from .exceptions import BackendError, ConfigError
 from ._interpolation import _normalize_source
 from ._location_resolver import _resolve_level_paths
 
@@ -64,30 +64,78 @@ class HieraLevel(_ty.NamedTuple):
         return _resolve_level_paths(self, base_path, context)
 
 
+def _config_origin(base_config) -> str:
+    """A display string for a base config: its path, stream name, or ``<dict>``."""
+    if isinstance(base_config, dict):
+        return "<dict>"
+    if hasattr(base_config, "read"):
+        return getattr(base_config, "name", "<stream>")
+    return str(base_config)
+
+
+def _config_path(base_config):
+    """The ``.path`` value for a ``ConfigError`` about this base config.
+
+    The path string for a path-like config, ``None`` for a dict or a
+    file-like object (there is no real file to point at).
+    """
+    if isinstance(base_config, dict) or hasattr(base_config, "read"):
+        return None
+    return str(base_config)
+
+
 def _read_base_config(base_config, base_path):
     """Load and validate the base configuration.
 
     Returns ``(base_config_dict, base_path)`` after reading and normalizing.
+    Raises :class:`ConfigError` (``.path`` set for a path-like config) on any
+    read, parse, or top-level-shape problem.
     """
+    origin = _config_origin(base_config)
+    path = _config_path(base_config)
+
     if isinstance(base_config, dict):
         base = base_config
         base_path = Path(os.getcwd() if base_path is None else base_path)
+    elif not hasattr(base_config, "read"):
+        # Read once, as bytes, and hold no open handle: keeps the
+        # caller's path in ``self.base_config``, lets YAML's own
+        # UTF-8/UTF-16/BOM detection apply (matching Puppet's UTF-8
+        # base-config reader instead of the locale encoding), and
+        # leaves the file free to be replaced or pickled across.
+        configpath = Path(base_config)
+        base_path = configpath.parent
+        if configpath.is_dir():
+            raise ConfigError(
+                "Unable to read the Lookup Configuration at '{}': Is a "
+                "directory".format(origin),
+                path=path,
+            )
+        try:
+            raw = configpath.read_bytes()
+        except OSError as e:
+            raise ConfigError(
+                "Unable to read the Lookup Configuration at '{}': {}".format(
+                    origin, e.strerror or e
+                ),
+                path=path,
+            ) from e
+        try:
+            base = YAMLBackend.load_ordered(raw)
+        except BackendError as e:
+            raise ConfigError("({}): {}".format(origin, e), path=path) from e
     else:
-        if not hasattr(base_config, "read"):
-            # Read once, as bytes, and hold no open handle: keeps the
-            # caller's path in ``self.base_config``, lets YAML's own
-            # UTF-8/UTF-16/BOM detection apply (matching Puppet's UTF-8
-            # base-config reader instead of the locale encoding), and
-            # leaves the file free to be replaced or pickled across.
-            configpath = Path(base_config)
-            base_path = configpath.parent
-            base = YAMLBackend.load_ordered(configpath.read_bytes())
-        else:
-            base_path = Path(os.getcwd() if base_path is None else base_path)
+        base_path = Path(os.getcwd() if base_path is None else base_path)
+        try:
             base = YAMLBackend.load_ordered(base_config)
+        except BackendError as e:
+            raise ConfigError("({}): {}".format(origin, e), path=path) from e
 
-    if not base:
-        raise ConfigError("Failed to parse base Hiera configuration")
+    if not isinstance(base, dict):
+        raise ConfigError(
+            "{}: File exists but does not contain a valid YAML hash".format(origin),
+            path=path,
+        )
 
     if base_path is not None:
         base_path = Path(base_path)

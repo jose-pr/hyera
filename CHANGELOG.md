@@ -244,3 +244,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `get(..., throw=True)` raises `KeyNotFoundError`, still a `KeyError`; a
   non-string key raises `TypeError`; an unknown merge strategy raises
   `MergeError` instead of `ValueError` — catch `MergeError` or `HieraError`.
+- A data file that cannot be read or parsed raises `BackendError` (`.path`
+  names the file) instead of `ConfigError`. A missing, unreadable, a
+  directory, unparsable, non-mapping or malformed `hiera.yaml` raises
+  `ConfigError` instead of `FileNotFoundError`, `BackendError`,
+  `AttributeError`, `TypeError` or `ValueError`. Catch `ConfigError` for
+  `hiera.yaml` and `BackendError` for data files.

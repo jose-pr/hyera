@@ -23,9 +23,13 @@ private engine internals with no stability contract.
   `default_backends()`. `base_path`: root that relative `data_dir`/paths
   resolve against (defaults to the config file's directory, or
   `os.getcwd()` for a dict/file-like config). `context`/`kwargs`: default
-  format variables merged into every call's context. Raises `ConfigError` on
-  any invalid/missing configuration (bad `version`, missing `hierarchy`,
-  unknown `data_hash`, unparsable base file).
+  format variables merged into every call's context. Raises `ConfigError`
+  for anything about `hiera.yaml` — missing, unreadable, a directory,
+  unparsable, non-mapping, or wrong-shape (bad `version`, missing
+  `hierarchy`, unknown `data_hash`, a malformed hierarchy level) — and
+  `BackendError` (`.path` names it) for a data file that cannot be read or
+  parsed. Context-free hierarchy levels are loaded by the constructor, so a
+  `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
     — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
     `merge`: a strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`), a

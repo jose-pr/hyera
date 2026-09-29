@@ -6,6 +6,7 @@ import pytest
 
 import pyera
 from pyera import (
+    Backend,
     BackendError,
     ConfigError,
     Hiera,
@@ -139,3 +140,111 @@ def test_internal_keyerror_is_not_chained(make_tree):
         hiera.get("k", throw=True)
     assert excinfo2.value.__cause__ is None
     assert excinfo2.value.__suppress_context__ is True
+
+
+def test_missing_config_raises_config_error(tmp_path):
+    missing = tmp_path / "nope.yaml"
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(str(missing))
+    assert excinfo.value.path.endswith("nope.yaml")
+    assert isinstance(excinfo.value.__cause__, FileNotFoundError)
+    assert "No such file or directory" in str(excinfo.value)
+
+
+def test_directory_config_raises_config_error(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
+        files={"data/one.yaml": "k: v\n"},
+    )
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(str(root / "data"))
+    assert "Is a directory" in str(excinfo.value)
+
+
+def test_unparsable_config_raises_config_error(make_tree):
+    root = make_tree(
+        "version: 5\n"
+        "defaults: {datadir: data, data_hash: yaml_data\n"
+        "hierarchy:\n"
+        "  - {name: c, path: common.yaml}\n",
+        raw=True,
+    )
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(str(root / "hiera.yaml"))
+    assert isinstance(excinfo.value.__cause__, BackendError)
+
+
+def test_non_mapping_config_raises_config_error(make_tree):
+    root = make_tree("- a\n- b\n", raw=True)
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(str(root / "hiera.yaml"))
+    assert "does not contain a valid YAML hash" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "hiera_yaml",
+    [
+        "version: 5\nhierarchy: [common.yaml]\n",
+        "version: 5\nhierarchy: {a: 1}\n",
+        (
+            "version: 5\nhierarchy:\n"
+            "  - {name: one, data_hash: yaml_data, mapped_paths: [a, b]}\n"
+        ),
+        (
+            "version: 5\ndefaults: {datadir: 5}\nhierarchy:\n"
+            "  - {name: one, path: one.yaml, data_hash: yaml_data}\n"
+        ),
+    ],
+    ids=[
+        "hierarchy-list-of-strings",
+        "hierarchy-dict",
+        "mapped-paths-2-tuple",
+        "int-datadir",
+    ],
+)
+def test_config_shape_raises_config_error(make_tree, hiera_yaml):
+    root = make_tree(hiera_yaml)
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(str(root / "hiera.yaml"))
+    assert str(excinfo.value).startswith("The Lookup Configuration at '")
+
+
+def test_data_parse_error_raises_backend_error(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "c", "path": "common.yaml"},
+                {"name": "o", "path": "other.yaml"},
+            ],
+        },
+        files={
+            "data/common.yaml": "good: yes\n",
+            "data/other.yaml": "k: [unclosed\nz: 2\n",
+        },
+    )
+    with pytest.raises(BackendError) as excinfo:
+        Hiera(str(root / "hiera.yaml"))
+    assert not isinstance(excinfo.value, ConfigError)
+    assert excinfo.value.path.endswith("other.yaml")
+    assert str(excinfo.value).startswith("Unable to parse (")
+
+
+def test_backend_exception_wrapped_with_path(make_tree):
+    class BrokenBackend(Backend):
+        NAMES = ("broken_data",)
+
+        def load(self, data):
+            raise ValueError("boom")
+
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "one", "path": "one.yaml", "data_hash": "broken_data"}
+            ],
+        },
+        files={"data/one.yaml": "k: v\n"},
+    )
+    with pytest.raises(BackendError) as excinfo:
+        Hiera(str(root / "hiera.yaml"), backends=[BrokenBackend])
+    assert isinstance(excinfo.value.__cause__, ValueError)
+    assert excinfo.value.path is not None

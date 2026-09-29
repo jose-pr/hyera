@@ -8,6 +8,8 @@ from ._hiera_config import (
     DEFAULT_DATA_DIR,
     HieraLevel,
     _build_hierarchies,
+    _config_origin,
+    _config_path,
     _read_base_config,
 )
 from ._interpolation import Interpolation, _format_source, _normalize_source
@@ -127,9 +129,22 @@ class Hiera(Interpolation):
         if not self.backends:
             raise ConfigError("No backends could be loaded")
 
-        self.hierarchy, self.default_hierarchy = _build_hierarchies(
-            self.base, self.backends
-        )
+        origin = _config_origin(self.base_config)
+        path = _config_path(self.base_config)
+        try:
+            self.hierarchy, self.default_hierarchy = _build_hierarchies(
+                self.base, self.backends
+            )
+        except HieraError as e:  # keep the class and text, add the file
+            e.path = e.path or path
+            raise
+        except Exception as e:
+            raise ConfigError(
+                "The Lookup Configuration at '{}' is invalid: {}: {}".format(
+                    origin, type(e).__name__, _one_line(e)
+                ),
+                path=path,
+            ) from e
 
         # Pre-load/cache global (context-free) data.
         self._prewarm()
@@ -146,12 +161,48 @@ class Hiera(Interpolation):
             self._default_files(ctx)
 
     def _load_file(self, path, backend):
-        """Load ``path`` via ``backend``, caching the parsed result."""
+        """Load ``path`` via ``backend``, caching the parsed result.
+
+        A read or parse failure is normalized to a :class:`BackendError`
+        naming ``path``; an already-pathed ``BackendError`` (or any other
+        :class:`HieraError`) propagates unchanged.
+        """
         if path not in self.cache:
             try:
-                self.cache[path] = backend.load(backend.read_file(path))
+                data = backend.read_file(path)
+            except BackendError as e:
+                if e.path is None:
+                    e.path = str(path)
+                raise
+            except HieraError:
+                raise
+            except OSError as e:
+                raise BackendError(
+                    "Unable to read ({}): {}".format(path, e.strerror or e),
+                    path=str(path),
+                ) from e
             except Exception as e:
-                raise ConfigError("Failed to load file {}: `{}`".format(path, e)) from e
+                raise BackendError(
+                    "Unable to read ({}): {}: {}".format(path, type(e).__name__, e),
+                    path=str(path),
+                ) from e
+
+            try:
+                self.cache[path] = backend.load(data)
+            except BackendError as e:
+                if e.path is None:
+                    raise BackendError(
+                        "Unable to parse ({}): {}".format(path, e),
+                        path=str(path),
+                    ) from e
+                raise
+            except HieraError:
+                raise
+            except Exception as e:
+                raise BackendError(
+                    "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
+                    path=str(path),
+                ) from e
         return path
 
     def _get_key(self, key, paths, context, merge):
@@ -361,4 +412,10 @@ class Hiera(Interpolation):
 
 
 # Import after defining Hiera to avoid circular import
-from .exceptions import ConfigError, KeyNotFoundError  # noqa: E402
+from .exceptions import (  # noqa: E402
+    BackendError,
+    ConfigError,
+    HieraError,
+    KeyNotFoundError,
+    _one_line,
+)
