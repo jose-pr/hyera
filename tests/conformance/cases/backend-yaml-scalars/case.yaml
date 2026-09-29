@@ -9,7 +9,6 @@ queries:
 - key: oct2
 - key: hex
 - key: sexa
-  divergence: code-io-security/yaml-type-construction-diverges
 - key: under
 - key: exp
 - key: exp2

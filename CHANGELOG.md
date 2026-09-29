@@ -275,6 +275,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (raising only under `--strict error`); JSON/HOCON/a third-party backend's
   non-Hash result is a `BackendError` naming the backend, the file and the
   value's Puppet type.
+- YAML data and `hiera.yaml` now follow Puppet's Psych parser rules instead
+  of PyYAML's own: octal/hex/sexagesimal/comma-separated numbers, Ruby's
+  case-insensitive `yes`/`no`/`on`/`off` booleans and `null`, `:symbol`
+  scalars (`RubySymbol`, in `pyera.backends`) and `!ruby/symbol`/`!ruby/sym`
+  values, complex (list/hash) keys as hashable tuples, `<<` merge keys,
+  multi-document files (only the first is read), and a leading UTF-8 BOM
+  all resolve/parse the way Ruby does. An unrecognized YAML tag is no
+  longer a parse error — it is tokenized/listed/dict-built like an
+  untagged node of the same kind, matching Puppet. A date/timestamp-shaped
+  scalar and `!!set` are refused (`BackendError`, no lenient mode), as
+  Puppet's own safe-load refuses them. Symbol keys in `hiera.yaml` itself
+  (however written) normalize to plain strings for every config version.
+  libyaml (via PyYAML's `CSafeLoader`) is used when available; the one
+  known gap in the pure-Python fallback is a tab after `:` in a plain
+  scalar.
 
 ### Removed
 

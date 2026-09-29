@@ -3,4 +3,3 @@ description: A multi-document YAML data file at the only hierarchy level; only t
 origin: critic-puppet-coverage/multidoc
 queries:
 - key: k
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

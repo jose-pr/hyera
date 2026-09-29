@@ -14,6 +14,7 @@ from .backends import Backend, YAMLBackend
 from .exceptions import BackendError, ConfigError
 from ._interpolation import _normalize_source
 from ._location_resolver import _resolve_level_paths
+from ._yaml_loader import symkeys_to_string
 
 #: Default puppet-style data dir, used when a hierarchy omits ``datadir``.
 DEFAULT_DATA_DIR = "/etc/puppetlabs/code/environments/%{environment}/hieradata"
@@ -97,39 +98,58 @@ def _read_base_config(base_config, base_path):
     if isinstance(base_config, dict):
         base = base_config
         base_path = Path(os.getcwd() if base_path is None else base_path)
-    elif not hasattr(base_config, "read"):
-        # Read once, as bytes, and hold no open handle: keeps the
-        # caller's path in ``self.base_config``, lets YAML's own
-        # UTF-8/UTF-16/BOM detection apply (matching Puppet's UTF-8
-        # base-config reader instead of the locale encoding), and
-        # leaves the file free to be replaced or pickled across.
-        configpath = Path(base_config)
-        base_path = configpath.parent
-        if configpath.is_dir():
-            raise ConfigError(
-                "Unable to read the Lookup Configuration at '{}': Is a "
-                "directory".format(origin),
-                path=path,
-            )
-        try:
-            raw = configpath.read_bytes()
-        except OSError as e:
-            raise ConfigError(
-                "Unable to read the Lookup Configuration at '{}': {}".format(
-                    origin, e.strerror or e
-                ),
-                path=path,
-            ) from e
-        try:
-            base = YAMLBackend().loads(raw)
-        except BackendError as e:
-            raise ConfigError("({}): {}".format(origin, e), path=path) from e
     else:
-        base_path = Path(os.getcwd() if base_path is None else base_path)
+        # Read once, hold no open handle: keeps the caller's path in
+        # ``self.base_config`` and leaves the file free to be replaced or
+        # pickled across. Decoded as strict UTF-8 -- Puppet reads every
+        # data file this way (``context.rb:53``) and ``hiera_config.rb``
+        # parses ``hiera.yaml`` with the same ``safe_load`` data files use.
+        if not hasattr(base_config, "read"):
+            configpath = Path(base_config)
+            base_path = configpath.parent
+            if configpath.is_dir():
+                raise ConfigError(
+                    "Unable to read the Lookup Configuration at '{}': Is a "
+                    "directory".format(origin),
+                    path=path,
+                )
+            try:
+                raw = configpath.read_bytes()
+            except OSError as e:
+                raise ConfigError(
+                    "Unable to read the Lookup Configuration at '{}': {}".format(
+                        origin, e.strerror or e
+                    ),
+                    path=path,
+                ) from e
+        else:
+            base_path = Path(os.getcwd() if base_path is None else base_path)
+            content = base_config.read()
+            raw = content if isinstance(content, bytes) else content.encode("utf-8")
         try:
-            base = YAMLBackend().loads(base_config)
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise ConfigError("({}): {}".format(origin, e), path=path) from e
+        # `puppet lookup` reads hiera.yaml via `HieraConfig.create` ->
+        # `cached_file_data` -> `Puppet::Util::Yaml.safe_load(content, ...)`
+        # directly on the file's content -- *not* through
+        # `Puppet::Util::Yaml.safe_load_file`'s BOM-stripping
+        # `Puppet::FileSystem.read(path, encoding: "bom|utf-8")`. A leading
+        # BOM therefore reaches `YAML.safe_load` exactly as it does for a
+        # data file (`context.rb:53`), keeping a literal U+FEFF character;
+        # measured 2026-09-29 against real Puppet 8.10.0 on a
+        # `<BOM>---\nversion: 5\n...` config (`config-hiera-yaml-bom`):
+        # Puppet errors identically to a data file with the same content, so
+        # this is *not* stripped here -- `YAMLBackend.loads` (via
+        # `_yaml_loader.safe_load`'s BOM-swap) handles it the same way.
+        try:
+            base = YAMLBackend().loads(text)
         except BackendError as e:
             raise ConfigError("({}): {}".format(origin, e), path=path) from e
+        if isinstance(base, dict):
+            # hiera_config.rb:181 -- symbol keys (however written) become
+            # plain strings for every config version, not just data files.
+            base = symkeys_to_string(base)
 
     if not isinstance(base, dict):
         raise ConfigError(

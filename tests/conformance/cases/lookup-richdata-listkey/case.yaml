@@ -4,5 +4,5 @@ description: 'A YAML hash key that is itself a list/collection ([a, b]: 1) is in
 origin: critic-puppet-coverage/richdata_listkey
 queries:
 - key: k_listkey
+  divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: k_ok
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

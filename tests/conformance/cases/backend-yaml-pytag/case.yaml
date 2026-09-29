@@ -2,6 +2,4 @@ description: A Python-specific YAML tag (!!python/tuple).
 origin: code-io-security/yamlcases/pytag
 queries:
 - key: p
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts
 - key: plain
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

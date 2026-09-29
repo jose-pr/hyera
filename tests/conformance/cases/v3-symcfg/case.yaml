@@ -4,4 +4,3 @@ description: A v5-shaped hiera.yaml written entirely with Ruby-symbol-style keys
 origin: critic-puppet-coverage/symcfg
 queries:
 - key: k
-  divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported

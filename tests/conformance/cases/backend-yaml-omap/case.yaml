@@ -2,5 +2,4 @@ description: A YAML !!omap collection.
 origin: code-io-security/yamlcases/omap
 queries:
 - key: o
-  divergence: code-io-security/yaml-type-construction-diverges
 - key: plain

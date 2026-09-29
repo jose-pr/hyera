@@ -2,6 +2,4 @@ description: A bare YAML date scalar (2024-01-15, no quotes).
 origin: code-io-security/yamlcases/date
 queries:
 - key: d
-  divergence: code-io-security/yaml-type-construction-diverges
 - key: plain
-  divergence: code-io-security/yaml-type-construction-diverges

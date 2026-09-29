@@ -4,9 +4,7 @@ description: YAML-dialect edge cases (symbol keys, rich values, anchors, an unqu
 origin: spec-layers-backends/dh
 queries:
 - key: symkey
-  divergence: spec-layers-backends/yaml-symbol-keys
 - key: :symkey
-  divergence: spec-layers-backends/yaml-symbol-keys
 - key: symvalue
   divergence: critic-puppet-coverage/lookup-value-richdata-not-validated
 - key: nested

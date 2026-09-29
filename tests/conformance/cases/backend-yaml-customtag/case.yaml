@@ -2,6 +2,4 @@ description: An unknown custom YAML tag (!foo bar).
 origin: code-io-security/yamlcases/customtag
 queries:
 - key: c
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts
 - key: plain
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

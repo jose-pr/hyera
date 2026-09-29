@@ -3,4 +3,3 @@ description: A tab character used for indentation/spacing in YAML (technically i
 origin: code-io-security/yamlcases/tabs
 queries:
 - key: plain
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

@@ -139,16 +139,17 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     "bad",
     [
         b"db_password: *HUNTER2\n",
-        b"db_password: !HUNTER2\n",
         b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
     ],
-    ids=["undefined-alias", "unknown-tag", "duplicate-anchor"],
+    ids=["undefined-alias", "duplicate-anchor"],
 )
 def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
-    # These three PyYAML error shapes quote the offending scalar verbatim in
-    # ``context``/``problem`` (an undefined alias name, an unknown tag, or a
-    # duplicate anchor name) -- exactly the token an attacker-controlled or
-    # merely malformed decrypted value could carry.
+    # These two PyYAML error shapes quote the offending scalar verbatim in
+    # ``context``/``problem`` (an undefined alias name, or a duplicate
+    # anchor name) -- exactly the token an attacker-controlled or merely
+    # malformed decrypted value could carry. (An unknown *tag* is no longer
+    # a parse error under the Psych-compatible loader -- it tokenizes the
+    # node's content instead, matching Ruby.)
     _install_recorder(monkeypatch, tmp_path, stdout=bad)
     backend = SopsBackend({})
 
@@ -166,10 +167,9 @@ def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     "stdout",
     [
         b"db_password: *HUNTER2\n",
-        b"db_password: !HUNTER2\n",
         b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
     ],
-    ids=["undefined-alias", "unknown-tag", "duplicate-anchor"],
+    ids=["undefined-alias", "duplicate-anchor"],
 )
 def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
     monkeypatch, tmp_path, caplog, stdout

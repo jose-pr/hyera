@@ -1,5 +1,3 @@
-# Derived from phiera/backends.py (https://github.com/Nike-Inc/phiera),
-# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Data backends: a self-registering ``Backend`` registry.
 
 Every format or provider is a :class:`Backend` subclass. Registration is by
@@ -19,6 +17,7 @@ from typing import NamedTuple
 import yaml
 
 from .exceptions import BackendError, _one_line
+from ._yaml_loader import RubySymbol, safe_load, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +29,7 @@ __all__ = [
     "HOCONBackend",
     "SopsBackend",
     "BackendError",
+    "RubySymbol",
     "has_hocon",
     "default_backends",
 ]
@@ -366,17 +366,10 @@ class YAMLBackend(Backend):
     EXTENSIONS = (".yaml", ".yml")
 
     def loads(self, text):
-        problem = None
-        try:
-            return yaml.load(text, yaml.SafeLoader)
-        except yaml.YAMLError as e:
-            problem = _yaml_problem(e)
-        # Raised *outside* the except block on purpose: chaining "from e"
-        # (or even a bare re-raise inside the handler) would leave
-        # __cause__/__context__ holding PyYAML's own exception -- which
-        # embeds a source snippet -- reachable from a caller that walks the
-        # chain. `problem` alone carries no source text (see _yaml_problem).
-        raise BackendError(problem)
+        # Psych's rules (types, BOM, one-document, symbol keys/values),
+        # ported in ``_yaml_loader``: numbers/booleans/dates/symbols per
+        # Ruby's ScalarScanner, not PyYAML's own Python-flavored resolver.
+        return safe_load(text)
 
     def dumps(self, obj, **kw):
         kw.setdefault("sort_keys", False)
@@ -385,11 +378,12 @@ class YAMLBackend(Backend):
         return yaml.safe_dump(obj, **kw)
 
     def _as_data_hash(self, parsed, path):
-        """Port of ``yaml_data.rb:27-35``: a Hash passes through; ``nil``/
+        """Port of ``yaml_data.rb:27-35``: a Hash passes through (with any
+        ``RubySymbol`` key turned into its plain-string name); ``nil``/
         ``false`` always warn-and-empty; any other non-Hash value errors
         under ``strict == "error"``, else warns-and-empties."""
         if isinstance(parsed, dict):
-            return parsed
+            return symkeys_to_string(parsed)
         message = "{}: file does not contain a valid yaml hash".format(path)
         if parsed is None or parsed is False:
             _LOGGER.warning(message)
@@ -904,44 +898,6 @@ def _run_sops(path, input_type: str) -> bytes:
             )
         )
     return proc.stdout
-
-
-#: Matches a PyYAML error's own quoted token, e.g. the alias/tag/anchor name
-#: in "found undefined alias 'NAME'" or "found duplicate anchor 'NAME'".
-#: ``_yaml_problem`` never echoes decrypted data, but three ``problem``/
-#: ``context`` texts (undefined alias, unknown tag, duplicate anchor) quote a
-#: single scalar from the source verbatim -- redact it rather than trusting
-#: PyYAML's own message templates to never do this.
-_YAML_QUOTED_TOKEN_RE = re.compile(r"'[^']*'")
-
-
-def _yaml_problem(exc) -> str:
-    """Summarize a YAML parse error with no plaintext, in Psych's shape:
-    ``<problem> <context> at line L column C``. Never the decrypted data, a
-    source snippet (``mark.get_snippet()``), ``str(exc)`` itself, or a
-    quoted token embedded in the reason text.
-
-    ``problem``/``context`` are PyYAML's own fixed phrases (tokens and tags
-    at most, per Ruby Psych's ``[problem, context].compact.join(' ')``) --
-    joining both, when present, matches Puppet's own message text. Position
-    is the context mark when present, else the problem mark, both 1-based.
-    """
-    if isinstance(exc, yaml.MarkedYAMLError):
-        parts = [p for p in (exc.problem, exc.context) if p]
-        text = " ".join(parts)
-        mark = exc.context_mark or exc.problem_mark
-        if text:
-            text = _YAML_QUOTED_TOKEN_RE.sub("'<redacted>'", text)
-        if mark is not None:
-            return "{} at line {} column {}".format(
-                text, mark.line + 1, mark.column + 1
-            ).strip()
-        if text:
-            return text
-    elif isinstance(exc, yaml.reader.ReaderError):
-        first_line = str(exc).splitlines()[0] if str(exc) else ""
-        return "{} at position {}".format(first_line, exc.position)
-    return type(exc).__name__
 
 
 class SopsBackend(Backend):

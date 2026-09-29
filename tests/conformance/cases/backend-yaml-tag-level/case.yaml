@@ -3,6 +3,4 @@ description: A higher-priority level's YAML data file has an unknown custom tag 
 origin: spec-layers-backends/yamltag
 queries:
 - key: x
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts
 - key: other
-  divergence: code-io-security/yaml-rejects-files-puppet-accepts

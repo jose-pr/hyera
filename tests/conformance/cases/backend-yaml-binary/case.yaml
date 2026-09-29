@@ -2,5 +2,4 @@ description: A YAML !!binary scalar.
 origin: code-io-security/yamlcases/binary
 queries:
 - key: bin
-  divergence: code-io-security/yaml-type-construction-diverges
 - key: plain

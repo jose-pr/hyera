@@ -26,10 +26,13 @@ def _isolated_registry(monkeypatch):
     monkeypatch.setattr(Backend, "_REGISTRY", copy.deepcopy(Backend._REGISTRY))
 
 
-def test_yaml_safeload_rejects_python_objects():
-    # SafeLoader must not construct arbitrary Python objects.
-    with pytest.raises(BackendError):
-        YAMLBackend().loads("!!python/object/apply:os.system ['echo hi']")
+def test_yaml_safeload_never_constructs_python_objects():
+    # Psych (unlike plain PyYAML) does not error on an unrecognized tag --
+    # it tokenizes the tagged node's own content as if untagged, per
+    # to_ruby.rb's default case. Nothing but a plain list of strings is
+    # ever constructed either way.
+    result = YAMLBackend().loads("!!python/object/apply:os.system ['echo hi']")
+    assert result == ["echo hi"]
 
 
 def test_yaml_parse_error_is_backend_error():

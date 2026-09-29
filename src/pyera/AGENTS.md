@@ -159,17 +159,50 @@ is a `Backend` subclass, found by name rather than passed around directly.
   like an unknown name.
 - **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
   ("yaml",), "render": ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`.
-  `.loads` parses with `yaml.SafeLoader` (data is untrusted config) into a
-  plain `dict`/`list` (no `LookupDict` here; the engine adapts);
-  raises `BackendError` on a YAML error, one line, Psych's shape
-  (`<problem> <context> at line L column C`, 1-based; either part may be
-  absent) — never a source snippet or the underlying value, with no
+  `.loads` is `pyera._yaml_loader.safe_load` (Psych's parsing rules, not
+  PyYAML's own) into a plain `dict`/`list` (no `LookupDict` here; the
+  engine adapts); raises `BackendError` on a YAML error, one line, Psych's
+  shape (`<problem> <context> at line L column C`, 1-based; either part may
+  be absent) — never a source snippet or the underlying value, with no
   exception chain. `._as_data_hash` ports `yaml_data.rb:27-35`: a `dict`
-  passes through; `None`/`False` always warn-and-empty (`{}`, even under
+  (with any `RubySymbol` key normalized to its plain-string name) passes
+  through; `None`/`False` always warn-and-empty (`{}`, even under
   `strict="error"`); any other non-dict value raises `BackendError` under
   `strict="error"`, else warns-and-empties. `.dumps` is
   `yaml.safe_dump(sort_keys=False, allow_unicode=True,
   default_flow_style=False)`.
+- **`pyera._yaml_loader`** (private) — ports Psych 5.3.1's `safe_load` +
+  `ScalarScanner#tokenize` on top of PyYAML (`CSafeLoader`/libyaml when
+  available, else the pure `SafeLoader`; both are wired identically, so
+  results only differ on one known gap — see the gotcha below).
+  `safe_load(text) -> object`: a leading BOM (U+FEFF) is replaced with a
+  single space (reproduces every probed Psych BOM outcome without scanner
+  changes — it does *not* strip the BOM, unlike some other Ruby file-read
+  paths; see the gotcha below); only the first YAML document is read; a
+  `None` result (empty/comment-only/`~` document) becomes `False`
+  (`util/yaml.rb:28-41`). Numbers, booleans, `null`, symbols and
+  sexagesimal values are resolved by `_tokenize`, a line-by-line port of
+  `scalar_scanner.rb`, not PyYAML's own (Python-flavored) implicit
+  resolvers — a custom `resolve()` override retags every implicit plain
+  scalar with a private tag before PyYAML's own bool/int/float/null
+  resolvers ever see it (the literal `<<` merge-key scalar is the one
+  exception, so `flatten_mapping` keeps recognizing it). A YAML
+  date/timestamp-shaped scalar raises `BackendError("Tried to load
+  unspecified class: Date"/"...: Time")` — like Puppet, there is no lenient
+  mode. `RubySymbol(name)` (re-exported from `pyera.backends`, `__slots__`,
+  not a `str` subclass) represents a Ruby `:symbol`; `symkeys_to_string(obj)`
+  recursively turns `RubySymbol` **keys** (not values) into their plain
+  string names — used for both data files and `hiera.yaml`. An unknown tag
+  is tokenized (scalar), listed (sequence) or dict-built (mapping) like an
+  untagged node of the same kind, matching `to_ruby.rb`'s default case — it
+  is *not* a parse error, unlike plain PyYAML. A `!ruby/object`/`!ruby/regexp`/
+  etc. (other than `!ruby/sym(bol)`/`!ruby/string`) raises the same
+  disallowed-class `BackendError`, naming the class from the tag text.
+  `!!set`/`!!omap` follow Psych (`!!set` is always disallowed —
+  `Psych::Set` is never a permitted class; `!!omap` builds a `dict` from
+  its pairs). A duplicate mapping key: the last one wins, matching
+  `construct_mapping`'s own behavior; an unhashable key (a list/dict from a
+  complex `? ... : ...` key) is frozen into a hashable tuple, recursively.
 - **`JSONBackend`** — `NAMES = {"function": ("json_data",), "format":
   ("json",), "render": ("json",)}`, `EXTENSIONS = (".json",)`. `.loads` is
   `json.loads`; raises `BackendError` on decode failure, one line: `<msg>
@@ -334,3 +367,35 @@ re-exports it too).
   written in value position (`msg = please include "x"`) as literal text;
   pyera raises there too. Tracked as a project finding for
   `backend_registry_and_data_loading` to weigh.
+- **A BOM behaves differently in a data file than in `hiera.yaml` vs. how
+  it might look at first** — actually the *same* either way, and that is
+  itself the gotcha: `puppet lookup` reads hiera.yaml via `HieraConfig` ->
+  `cached_file_data` -> `Puppet::Util::Yaml.safe_load(content, ...)`
+  directly on the file's raw content, *not* through
+  `Puppet::Util::Yaml.safe_load_file`'s BOM-*stripping* file read. A
+  leading BOM therefore reaches the YAML parser exactly the same way for
+  both — kept, then swapped for a single space by `safe_load`'s BOM
+  handling. One real consequence: a BOM'd `hiera.yaml` (or data file) whose
+  top-level mapping has more than one key on separate lines silently keeps
+  only the *first* key (the swapped space shifts that one line's column,
+  so a same-column second key one line down no longer matches) — a real
+  Puppet limitation, reproduced faithfully rather than "fixed". A
+  flow-style (`{...}`) or single-key mapping has no such problem.
+- **libyaml (the C loader) accepts a tab after `:` in a plain scalar
+  (`plain:\tp`); the pure-Python loader does not** — the one behavioral gap
+  between `_C_LOADER` and `_PURE_LOADER`. Both venvs and every published
+  wheel ship libyaml, so this is a real fallback path (a source build
+  without it, or `PyYAML` built `--no-libyaml`), not a hidden dead branch;
+  it is tested and documented, not worked around.
+- A YAML **complex key** (`? [a, b]\n: 1`, or a Hash key) parses to a
+  hashable tuple (recursively frozen), and a **symbol value** (`:foo`,
+  `!ruby/symbol x`) parses to a `RubySymbol` — both load without error, but
+  neither is a valid Puppet lookup *value*, and `pyera` does not reject
+  them yet (`lookup_pipeline_and_api`'s RichData check does); a value keyed
+  or shaped this way currently returns successfully instead of erroring
+  like Puppet.
+- **`None`/`null`/`~` as an actual data value is indistinguishable from "key
+  not found"** in the engine's own navigation (`Hiera._get_key` treats
+  `cache is None` as "keep looking") — a pre-existing limitation, not
+  something this plan's YAML work introduced or fixes; a data file legally
+  containing `key: ~` currently makes that key un-lookupable.
