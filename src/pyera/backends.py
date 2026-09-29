@@ -145,9 +145,13 @@ def _run_sops(path, input_type: str) -> bytes:
             check=False,
         )
     except subprocess.TimeoutExpired as e:
+        # `from None`, not `from e`: a TimeoutExpired carries the
+        # subprocess's partial stdout (possibly partially-decrypted
+        # plaintext) as an attribute, which chaining would keep reachable
+        # via `__cause__.stdout` on the raised BackendError.
         raise BackendError(
             "sops timed out after {}s decrypting {}".format(SOPS_TIMEOUT, path)
-        ) from e
+        ) from None
     except OSError as e:
         raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
 
@@ -161,10 +165,20 @@ def _run_sops(path, input_type: str) -> bytes:
     return proc.stdout
 
 
+#: Matches a PyYAML error's own quoted token, e.g. the alias/tag/anchor name
+#: in "found undefined alias 'NAME'" or "found duplicate anchor 'NAME'".
+#: ``_yaml_problem`` never echoes decrypted data, but three ``problem``/
+#: ``context`` texts (undefined alias, unknown tag, duplicate anchor) quote a
+#: single scalar from the source verbatim -- redact it rather than trusting
+#: PyYAML's own message templates to never do this.
+_YAML_QUOTED_TOKEN_RE = re.compile(r"'[^']*'")
+
+
 def _yaml_problem(exc) -> str:
     """Summarize a YAML parse error with no plaintext: never the decrypted
-    data, a source snippet (``mark.get_snippet()``), or ``str(exc)`` itself
-    -- only a short reason and a 1-based line/column when available.
+    data, a source snippet (``mark.get_snippet()``), ``str(exc)`` itself, or
+    a quoted token embedded in the reason text -- only a short reason and a
+    1-based line/column when available.
 
     PyYAML's ``context`` (e.g. "while scanning a quoted scalar") together
     with ``context_mark`` pinpoints where the broken construct *starts*,
@@ -179,6 +193,7 @@ def _yaml_problem(exc) -> str:
         else:
             text = mark = None
         if mark is not None:
+            text = _YAML_QUOTED_TOKEN_RE.sub("'<redacted>'", text)
             return "{} (line {}, column {})".format(
                 text, mark.line + 1, mark.column + 1
             )

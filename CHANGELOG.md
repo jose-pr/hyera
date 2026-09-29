@@ -55,6 +55,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   current directory or a relative `PATH` entry), closing a gap where
   Python 3.9's `shutil.which` could still return such a path even with the
   Windows implicit-current-directory opt-out set.
+- Three sops-decrypted YAML parse errors (an undefined alias, an unknown
+  tag, a duplicate anchor) no longer quote the offending value verbatim in
+  the raised error, the log, or the CLI's output. A sops timeout also no
+  longer chains the underlying `TimeoutExpired` (which carries any partial
+  decrypted stdout).
 
 ### Added
 

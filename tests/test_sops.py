@@ -125,6 +125,94 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     assert not called
 
 
+@pytest.mark.parametrize(
+    "bad",
+    [
+        b"db_password: *HUNTER2\n",
+        b"db_password: !HUNTER2\n",
+        b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
+    ],
+    ids=["undefined-alias", "unknown-tag", "duplicate-anchor"],
+)
+def test_sops_parse_error_strips_quoted_tokens(bad):
+    # These three PyYAML error shapes quote the offending scalar verbatim in
+    # ``context``/``problem`` (an undefined alias name, an unknown tag, or a
+    # duplicate anchor name) -- exactly the token an attacker-controlled or
+    # merely malformed decrypted value could carry.
+    backend = SopsYAMLBackend({})
+
+    with pytest.raises(BackendError) as excinfo:
+        backend.load(bad)
+
+    e = excinfo.value
+    assert "HUNTER2" not in str(e)
+    assert "HUNTER2" not in repr(e)
+    assert e.__cause__ is None
+    assert e.__context__ is None
+
+
+@pytest.mark.parametrize(
+    "stdout",
+    [
+        b"db_password: *HUNTER2\n",
+        b"db_password: !HUNTER2\n",
+        b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
+    ],
+    ids=["undefined-alias", "unknown-tag", "duplicate-anchor"],
+)
+def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
+    monkeypatch, tmp_path, caplog, stdout
+):
+    _install_recorder(monkeypatch, tmp_path, stdout=stdout)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "secret.yaml").write_bytes(b"")
+    config = tmp_path / "hiera.yaml"
+    config.write_text(
+        "version: 5\n"
+        "defaults:\n"
+        "  data_hash: sops\n"
+        "  data_dir: data\n"
+        "hierarchy:\n"
+        "  - name: secret\n"
+        "    path: secret.yaml\n",
+        encoding="utf-8",
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ConfigError) as excinfo:
+            Hiera(str(config))
+
+    exc = excinfo.value
+    seen = []
+    while exc is not None:
+        seen.append(str(exc))
+        exc = exc.__cause__ or exc.__context__
+    assert not any("HUNTER2" in s for s in seen)
+    assert not any("HUNTER2" in r.getMessage() for r in caplog.records)
+
+
+def test_sops_timeout_chain_free(monkeypatch, tmp_path):
+    # A TimeoutExpired carries the subprocess's partial stdout as an
+    # attribute; chaining "from e" keeps that reachable via __cause__.stdout
+    # even though the BackendError's own message never echoes it.
+    def _timeout(args, **kwargs):
+        raise subprocess.TimeoutExpired(
+            cmd=args, timeout=SOPS_TIMEOUT, output=b"partial-HUNTER2", stderr=b""
+        )
+
+    monkeypatch.setattr(
+        "pyera.backends.shutil.which",
+        lambda _n: str(tmp_path / "bin" / "sops.exe"),
+    )
+    monkeypatch.setattr("pyera.backends.subprocess.run", _timeout)
+
+    with pytest.raises(BackendError) as excinfo:
+        SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
+
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__suppress_context__ is True
+
+
 def test_sops_parse_error_has_no_plaintext():
     backend = SopsYAMLBackend({})
     bad = b'db_user: admin\ndb_password: "hunter2-SECRET\n'
