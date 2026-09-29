@@ -12,4 +12,3 @@ queries:
 - key: list
 - key: obj
 - key: dur
-  divergence: spec-layers-backends/hocon-pyhocon-types

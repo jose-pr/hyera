@@ -33,7 +33,11 @@ cli = ["duho>=0.6.0,<0.7"]
 # fails to import on Python 3.10 and later; 0.3.29-0.3.61 still call
 # pyparsing's deprecated setDefaultWhitespaceChars, which fails the suite
 # under this project's filterwarnings=error. 0.3.62 is the first release
-# using the non-deprecated set_default_whitespace_chars.
+# using the non-deprecated set_default_whitespace_chars. Separately, 0.3.60
+# is the first release with config_parser.get_period_expr, which
+# HOCONBackend replaces (in a private module copy) to keep durations as
+# text instead of datetime.timedelta -- already covered by the 0.3.62 floor
+# above, so this comment records the reason, not a higher number.
 hocon = ["pyhocon>=0.3.62,<0.4"]
 # Composes every feature extra that has tests, so ranges live only in those
 # extras -- without pyhocon/duho the HOCON/CLI tests silently skip instead of

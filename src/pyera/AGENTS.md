@@ -204,10 +204,18 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `construct_mapping`'s own behavior; an unhashable key (a list/dict from a
   complex `? ... : ...` key) is frozen into a hashable tuple, recursively.
 - **`JSONBackend`** — `NAMES = {"function": ("json_data",), "format":
-  ("json",), "render": ("json",)}`, `EXTENSIONS = (".json",)`. `.loads` is
-  `json.loads`; raises `BackendError` on decode failure, one line: `<msg>
-  at line L column C` (`json.JSONDecodeError`'s own fields), no exception
-  chain. `.dumps` is `json.dumps(ensure_ascii=False)`.
+  ("json",), "render": ("json",)}`, `EXTENSIONS = (".json",)`. `.loads`
+  parses the way Ruby's `json` gem (MultiJson's `JsonGem` adapter, Puppet's
+  own JSON parser) does, not plain `json.loads`: `/* ... */` and `// ...`
+  comments outside string literals are accepted (stripped to spaces before
+  parsing, so error line/column still line up); `NaN`/`Infinity`/
+  `-Infinity` are rejected (`unexpected token '<name>'`); an unescaped lone
+  (unpaired) surrogate code point anywhere in a string, key or value, is
+  rejected (`incomplete surrogate pair`) — Python's own decoder accepts
+  both by default. Raises `BackendError` on any of these, one line: either
+  `<msg> at line L column C` (`json.JSONDecodeError`'s own fields) or the
+  comment/NaN/surrogate message above, no exception chain. `.dumps` is
+  `json.dumps(ensure_ascii=False)`.
 - **`HOCONBackend`** — `NAMES = {"function": ("hocon_data",), "format":
   ("hocon",)}`, `EXTENSIONS = (".conf",)`. Always registered (Design Q5 of
   `backend_registry_and_data_loading/registry`): a missing/broken `pyhocon`
@@ -216,11 +224,21 @@ is a `Backend` subclass, found by name rather than passed around directly.
   naming the `pyera[hocon]` extra, rather than silently vanishing from
   `default_backends()`. `has_hocon() -> bool` — `True` iff `pyhocon`
   imports without error; any import-time exception (not just
-  `ImportError`) is caught and logged at debug. `.loads` returns plain
-  `dict`/`list` (`ConfigTree`/`ConfigList` converted recursively).
-  Invalid UTF-8 (handled by the base `.load`), and any pyhocon parse
-  failure, raise `BackendError` with a one-line message (`str(e)`,
-  whitespace-collapsed), no exception chain. `include` directives are
+  `ImportError`) is caught and logged at debug. `.loads` parses through a
+  *private copy* of the `pyhocon.config_parser` module (`_hocon_parser()`,
+  built once under a lock and cached; the copy's `get_period_expr` is
+  replaced with a grammar that never matches), so a duration (`10s`,
+  `5 minutes`) or size string (`10MB`) stays literal text — matching real
+  Ruby hocon, which has no duration/size type at all — instead of becoming
+  a `datetime.timedelta` (which used to crash `-o yaml`); the *shared*
+  `pyhocon` module (what a third party importing `pyhocon` directly sees)
+  is never touched. A root value that is not an object (e.g. a top-level
+  `[1, 2]`) raises `BackendError("... has type LIST rather than object at
+  file root")`. `.loads` returns plain `dict`/`list` (`ConfigTree`/
+  `ConfigList` converted recursively). Invalid UTF-8 (handled by the base
+  `.load`), and any other pyhocon parse failure, raise `BackendError` with
+  a one-line message (`str(e)`, whitespace-collapsed), no exception chain.
+  `include` directives are
   sanitized before pyhocon ever parses the text, so pyhocon's own include
   machinery (file reads relative to the process cwd, `http(s)`/`file` URL
   fetches) never runs: a plain `include "..."` contributes nothing,

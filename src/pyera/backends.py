@@ -6,12 +6,14 @@ lookup goes through :meth:`Backend.find`/:meth:`Backend.get`/:meth:`Backend.new`
 """
 
 import contextvars
+import importlib.util
 import json
 import logging
 import os
 import re
 import shutil
 import subprocess
+import threading
 from typing import NamedTuple
 
 import yaml
@@ -394,6 +396,85 @@ class YAMLBackend(Backend):
         return {}
 
 
+def _strip_json_comments(text: str) -> str:
+    """Blank ``/* ... */`` and ``// ...`` outside string literals, the way
+    Ruby's ``json`` gem (MultiJson's ``JsonGem`` adapter) accepts them but
+    Python's ``json`` module does not. Replaces every non-newline character
+    of a comment with a space, so a later ``JSONDecodeError``'s line/column
+    still line up with the original text. Tracks ``"``/``\\`` escapes so a
+    comment-*looking* substring inside a string is left alone. An
+    unterminated ``/*`` is left in place (its own unbalanced ``/*`` then
+    fails in ``json.loads`` exactly as it would without stripping).
+    """
+    n = len(text)
+    out = list(text)
+    i = 0
+    in_string = False
+    escaped = False
+    while i < n:
+        c = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif c == "\\":
+                escaped = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            end = text.find("*/", i + 2)
+            end = (end + 2) if end != -1 else n
+            for k in range(i, end):
+                if out[k] != "\n":
+                    out[k] = " "
+            i = end
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            j = i
+            while j < n and text[j] not in "\r\n":
+                j += 1
+            for k in range(i, j):
+                out[k] = " "
+            i = j
+            continue
+        i += 1
+    return "".join(out)
+
+
+def _reject_json_constant(name: str):
+    # Ruby's json gem rejects `NaN`/`Infinity`/`-Infinity` outright, unlike
+    # Python's own `json.loads`, which accepts them by default.
+    raise ValueError("unexpected token '{}'".format(name))
+
+
+def _has_lone_surrogate(text: str) -> bool:
+    return any("\ud800" <= ch <= "\udfff" for ch in text)
+
+
+def _reject_lone_surrogates(obj) -> None:
+    """Walk a parsed JSON value and raise if any string (key or value)
+    holds a lone (unpaired) surrogate code point -- Ruby's json gem
+    rejects ``"\\ud800"`` ("incomplete surrogate pair"); Python's decoder
+    accepts it, keeping the bare surrogate in the resulting ``str``.
+    """
+    if isinstance(obj, str):
+        if _has_lone_surrogate(obj):
+            raise ValueError("incomplete surrogate pair")
+    elif isinstance(obj, dict):
+        for key, value in obj.items():
+            if isinstance(key, str) and _has_lone_surrogate(key):
+                raise ValueError("incomplete surrogate pair")
+            _reject_lone_surrogates(value)
+    elif isinstance(obj, list):
+        for item in obj:
+            _reject_lone_surrogates(item)
+
+
 class JSONBackend(Backend):
     NAMES = {"function": ("json_data",), "format": ("json",), "render": ("json",)}
     EXTENSIONS = (".json",)
@@ -401,9 +482,15 @@ class JSONBackend(Backend):
     def loads(self, text):
         problem = None
         try:
-            return json.loads(text)
+            result = json.loads(
+                _strip_json_comments(text), parse_constant=_reject_json_constant
+            )
+            _reject_lone_surrogates(result)
+            return result
         except json.JSONDecodeError as e:
             problem = "{} at line {} column {}".format(e.msg, e.lineno, e.colno)
+        except ValueError as e:
+            problem = str(e)
         # Outside the except block, matching YAMLBackend's chain-free style.
         raise BackendError(problem)
 
@@ -758,6 +845,51 @@ def _as_plain(obj):
     return obj
 
 
+_HOCON_PARSER_LOCK = threading.Lock()
+_HOCON_PARSER_MODULE = None
+
+
+def _hocon_parser():
+    """A private copy of the ``pyhocon.config_parser`` module, with its
+    ``get_period_expr`` grammar replaced by one that never matches, so a
+    HOCON duration (``10s``, ``5 minutes``) stays literal text -- matching
+    real Ruby hocon 1.4.0, which has no duration type at all -- instead of
+    becoming a ``datetime.timedelta`` (which crashes ``-o yaml``).
+
+    Built once, under a lock, and cached. The *shared* ``pyhocon`` module
+    (``import pyhocon; pyhocon.ConfigFactory...``) is never touched --
+    every other caller of pyhocon in the process keeps the real duration
+    behavior. ``get_period_expr`` has existed since pyhocon 0.3.60; the
+    ``hocon`` extra's floor is pinned there (or higher) for exactly this.
+    """
+    global _HOCON_PARSER_MODULE
+    if _HOCON_PARSER_MODULE is not None:
+        return _HOCON_PARSER_MODULE
+    with _HOCON_PARSER_LOCK:
+        if _HOCON_PARSER_MODULE is None:
+            import pyparsing
+
+            spec = importlib.util.find_spec("pyhocon.config_parser")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            if not hasattr(mod, "get_period_expr"):
+                raise BackendError(
+                    "hocon_data requires pyhocon>=0.3.60 (get_period_expr, "
+                    "used to keep durations as text): "
+                    'pip install "pyera[hocon]"'
+                )
+            mod.get_period_expr = lambda: pyparsing.NoMatch()
+            _HOCON_PARSER_MODULE = mod
+    return _HOCON_PARSER_MODULE
+
+
+_HOCON_KIND_NAMES = {"ConfigList": "LIST"}
+
+
+def _hocon_root_kind(value) -> str:
+    return _HOCON_KIND_NAMES.get(type(value).__name__, type(value).__name__.upper())
+
+
 class HOCONBackend(Backend):
     """HOCON (``.conf``) data via the optional ``pyhocon`` package.
 
@@ -772,7 +904,8 @@ class HOCONBackend(Backend):
     (file reads relative to the process cwd, ``http(s)``/``file`` URL
     fetches) never runs. As a fail-closed backstop, pyhocon's own include
     entry points are also wrapped (see :func:`_install_hocon_include_guard`)
-    to raise if the scanner ever has a gap.
+    to raise if the scanner ever has a gap. Durations are parsed via a
+    private module copy (see :func:`_hocon_parser`) so they stay text.
     """
 
     NAMES = {"function": ("hocon_data",), "format": ("hocon",)}
@@ -790,7 +923,7 @@ class HOCONBackend(Backend):
 
     def loads(self, text):
         try:
-            from pyhocon import ConfigFactory
+            from pyhocon import ConfigTree
         except ImportError:
             raise BackendError(self._MISSING_DEP_MESSAGE) from None
         except Exception as e:
@@ -802,13 +935,19 @@ class HOCONBackend(Backend):
         text = _strip_hocon_includes(text)
         token = _HOCON_INCLUDE_GUARD.set(True)
         try:
-            parsed = ConfigFactory.parse_string(text)
+            mod = _hocon_parser()
+            parsed = mod.ConfigFactory.parse_string(text)
         except BackendError:
             raise
         except Exception as e:
             raise BackendError(_one_line(str(e))) from None
         finally:
             _HOCON_INCLUDE_GUARD.reset(token)
+        if not isinstance(parsed, ConfigTree):
+            raise BackendError(
+                "hocon_data: has type {} rather than object at file "
+                "root".format(_hocon_root_kind(parsed))
+            )
         return _as_plain(parsed)
 
 

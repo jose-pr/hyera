@@ -461,3 +461,18 @@ def test_recursive_data_exits_2_without_traceback(make_tree):
     assert proc.returncode == 2
     assert "Traceback" not in proc.stderr
     assert len(proc.stderr.strip().splitlines()) == 1
+
+
+def test_hocon_duration_survives_yaml_output(make_tree, capsys):
+    pytest.importorskip("pyhocon")
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "hocon_data"},
+            "hierarchy": [{"name": "c", "path": "common.conf"}],
+        },
+        files={"data/common.conf": "dur = 10s\n"},
+    )
+    rc = main(["dur", "-c", str(root / "hiera.yaml"), "-o", "yaml"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[0] == "10s"

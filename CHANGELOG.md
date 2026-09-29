@@ -290,6 +290,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   libyaml (via PyYAML's `CSafeLoader`) is used when available; the one
   known gap in the pure-Python fallback is a tab after `:` in a plain
   scalar.
+- JSON data now follows Ruby's `json` gem, not Python's `json` module
+  directly: `/* ... */` and `// ...` comments are accepted; `NaN`/
+  `Infinity`/`-Infinity` and an unescaped lone surrogate code point in a
+  string are rejected (both are accepted by Python's decoder by default).
+  HOCON durations (`10s`, `5 minutes`) and size strings (`10MB`) now stay
+  literal text, matching real Ruby hocon (which has no such type) — they
+  used to become `datetime.timedelta`, which crashed `-o yaml`. A HOCON
+  file whose top-level value is not an object (e.g. `[1, 2]`) is now an
+  error instead of returning that value directly.
+- The `hocon` extra's `pyhocon` floor comment now also records the
+  `get_period_expr` reason (present since 0.3.60, already covered by the
+  existing `>=0.3.62` floor).
 
 ### Removed
 

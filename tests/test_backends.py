@@ -235,3 +235,126 @@ def test_json_strict_utf8_errors(tmp_path):
     path.write_bytes(b"\xef\xbb\xbf" + b'{"a": 1}')
     with pytest.raises(BackendError):
         JSONBackend().load(path)
+
+
+# ---------------------------------------------------------------------------
+# JSON: Ruby's json-gem dialect (comments in; NaN/Infinity, unpaired
+# surrogates, and a leading BOM out -- the BOM case is covered above).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ('{"a": 1 /* c */}', {"a": 1}),
+        ('{"a": 1 // c\n}', {"a": 1}),
+        ('"x"', "x"),
+        ("null", None),
+        ("123456789012345678901234567890", 123456789012345678901234567890),
+        ("1e400", float("inf")),
+        ("1E2", 100.0),
+        ("-0", 0),
+    ],
+)
+def test_json_accepted_rows(text, expected):
+    assert JSONBackend().loads(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "NaN",
+        "Infinity",
+        "-Infinity",
+        '{"a": 1,}',
+        '{"a": "\x01"}',
+        "01",
+        "",
+    ],
+)
+def test_json_rejected_rows(text):
+    with pytest.raises(BackendError):
+        JSONBackend().loads(text)
+
+
+def test_json_duplicate_key_last_wins():
+    assert JSONBackend().loads('{"a": 1, "a": 2}') == {"a": 2}
+
+
+def test_json_comment_like_text_inside_strings_is_kept():
+    result = JSONBackend().loads('{"a": "x/*y*/z", "b": "u//v"}')
+    assert result == {"a": "x/*y*/z", "b": "u//v"}
+
+
+def test_json_double_slash_on_last_line_without_newline():
+    assert JSONBackend().loads('{"a": 1} // trailing, no newline') == {"a": 1}
+
+
+def test_json_unterminated_block_comment_errors():
+    with pytest.raises(BackendError):
+        JSONBackend().loads('{"a": 1 /* never closed')
+
+
+def test_json_valid_surrogate_pair_combines_to_one_character():
+    assert JSONBackend().loads('"\\ud83d\\ude00"') == "\U0001f600"
+
+
+def test_json_lone_surrogate_in_a_list_or_key_is_rejected():
+    with pytest.raises(BackendError, match="incomplete surrogate pair"):
+        JSONBackend().loads('["\\ud800"]')
+    with pytest.raises(BackendError, match="incomplete surrogate pair"):
+        JSONBackend().loads('{"\\ud800": 1}')
+
+
+# ---------------------------------------------------------------------------
+# HOCON: durations stay text; a non-object root errors; the private parser
+# copy never touches the shared pyhocon module.
+# ---------------------------------------------------------------------------
+
+
+def test_hocon_durations_stay_text():
+    pytest.importorskip("pyhocon")
+    result = HOCONBackend().loads(
+        "dur = 10s\nx = 10 s\nmix = 10s foo\nd2 = 5 minutes\nn = 10\nf = 1.5\n"
+        "sz = 10MB\nnested { a = 3 weeks }\nlst = [1s, 2]\n"
+    )
+    assert result == {
+        "dur": "10s",
+        "x": "10 s",
+        "mix": "10s foo",
+        "d2": "5 minutes",
+        "n": 10,
+        "f": 1.5,
+        "sz": "10MB",
+        "nested": {"a": "3 weeks"},
+        "lst": ["1s", 2],
+    }
+
+
+def test_hocon_empty_file_is_empty_object():
+    pytest.importorskip("pyhocon")
+    assert HOCONBackend().loads("") == {}
+
+
+def test_hocon_non_object_root_raises():
+    pytest.importorskip("pyhocon")
+    with pytest.raises(BackendError, match="rather than object at file root"):
+        HOCONBackend().loads("[1, 2]")
+
+
+def test_hocon_private_parser_copy_leaves_shared_module_alone():
+    pytest.importorskip("pyhocon")
+    import datetime
+
+    import pyhocon
+
+    HOCONBackend().loads("d = 10s")
+    assert isinstance(
+        pyhocon.ConfigFactory.parse_string("d = 10s")["d"], datetime.timedelta
+    )
+
+
+def test_hocon_missing_dependency_names_extra(monkeypatch):
+    monkeypatch.setitem(sys.modules, "pyhocon", None)
+    with pytest.raises(BackendError, match="pyera\\[hocon\\]"):
+        HOCONBackend().loads("k = v")
