@@ -1,6 +1,6 @@
-"""Command-line interface for hiera, built on duho.
+"""Command-line interface for pyera, built on duho.
 
-``hiera KEY --config hiera.yaml --scope environment=production``
+``pyera KEY --config hiera.yaml --scope environment=production``
 
 Designed for unattended use: no interactive prompts, deterministic output,
 and meaningful exit codes (0 found, 1 missing, 2 usage/config error).
@@ -17,7 +17,7 @@ from . import __version__
 from .exceptions import HieraError
 from .core import Hiera
 
-_LOGGER = _logging.getLogger("hiera")
+_LOGGER = _logging.getLogger("pyera")
 
 #: CLI merge choice -> spec strategy name (array/set are legacy aliases).
 _MERGE_ALIASES = {"array": "unique", "set": "unique"}

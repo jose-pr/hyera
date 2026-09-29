@@ -4,7 +4,7 @@ import pytest
 
 duho = pytest.importorskip("duho")
 
-from hiera.cli import main  # noqa: E402
+from pyera.cli import main  # noqa: E402
 
 
 def test_lookup_found(hiera_root, capsys):
@@ -85,15 +85,15 @@ def test_invalid_scope_exit_2(hiera_root):
 
 
 def test_module_entrypoint_smoke():
-    # `python -m hiera` wires through to cli.main.
+    # `python -m pyera` wires through to cli.main.
     import runpy
     import sys
 
     argv = sys.argv
-    sys.argv = ["hiera", "--help"]
+    sys.argv = ["pyera", "--help"]
     try:
         with pytest.raises(SystemExit) as exc:
-            runpy.run_module("hiera", run_name="__main__")
+            runpy.run_module("pyera", run_name="__main__")
         assert exc.value.code == 0  # --help exits 0
     finally:
         sys.argv = argv

@@ -1,12 +1,12 @@
-# `hiera` — public API header
+# `pyera` — public API header
 
-Header-file-style reference for the `hiera` package: every `__all__` export
+Header-file-style reference for the `pyera` package: every `__all__` export
 with its signature, arguments, contract, and gotchas, so this module can be
 consumed without reading its source. Kept current with the public API. For
-the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/hiera>.
+the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/pyera>.
 
-Install as `hieralib` (`pip install hieralib`, extras `[cli]`/`[hocon]`);
-import as `hiera`.
+Install and import as `pyera` (`pip install pyera`, extras
+`[cli]`/`[hocon]`); the command is `pyera`.
 
 ## Engine (`core.py`)
 
@@ -98,11 +98,11 @@ import as `hiera`.
 - **`JSONBackend`** — `NAMES = ("json_data", "json")`. `json.loads` with
   `object_pairs_hook=LookupDict`; raises `BackendError` on decode failure.
 - **`HOCONBackend`** — `NAMES = ("hocon_data", "hocon")`. Requires the
-  optional `pyhocon` dependency (`pip install hieralib[hocon]`); raises
+  optional `pyhocon` dependency (`pip install pyera[hocon]`); raises
   `BackendError` naming the extra if it's not installed.
 - **`has_hocon() -> bool`** — `True` iff `pyhocon` is importable.
 - Env: none. `SOPS_TIMEOUT` is a module attribute, not an env var — set it
-  directly (`hiera.backends.SOPS_TIMEOUT = 60`) to change the sops timeout.
+  directly (`pyera.backends.SOPS_TIMEOUT = 60`) to change the sops timeout.
 
 ## Utilities (`util.py`)
 
@@ -119,13 +119,13 @@ import as `hiera`.
 `HieraError` (base) → **`ConfigError`** (invalid/missing base config),
 **`BackendError`** (a backend failed to load/decode a file), and
 **`InterpolationError`** (a `%{...}` interpolation or function call could
-not be resolved). All are also re-exported from `hiera.__init__` (except
-`BackendError`, which lives on `hiera.backends`/`hiera.BackendError` — both
+not be resolved). All are also re-exported from `pyera.__init__` (except
+`BackendError`, which lives on `pyera.backends`/`pyera.BackendError` — both
 paths work since `__init__` re-exports it too).
 
 ## CLI (`cli.py`)
 
-- **`main(argv=None) -> int`** — the `hiera` console-script entry point;
+- **`main(argv=None) -> int`** — the `pyera` console-script entry point;
   builds and dispatches the `Lookup` duho command (`duho.main`), which sets
   up `-v/-q/--loglevel` logging and returns the process exit code.
 - **`Lookup`** — the `duho.Cli` command class. Fields: `key` (positional),

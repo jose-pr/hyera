@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from hiera import ConfigError, Hiera, Sensitive, make_merge
+from pyera import ConfigError, Hiera, Sensitive, make_merge
 
 
 def build(tmp_path, config, files):

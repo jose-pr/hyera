@@ -1,8 +1,8 @@
-# hiera
+# pyera
 
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
-lookup — a `src/hiera` packaged library plus an optional `hiera` CLI, built on
+lookup — a `src/pyera` packaged library plus an optional `pyera` CLI, built on
 the `duho`/`pathlib_next` stack.
 
 It reads a Hiera 5 base config, walks a hierarchy of data sources for a given
@@ -13,13 +13,13 @@ array, hash, and deep-hash merging.
 ## Code layout
 
 ```
-src/hiera/
-├── __init__.py    # public re-exports (see src/hiera/AGENTS.md for the header)
+src/pyera/
+├── __init__.py    # public re-exports (see src/pyera/AGENTS.md for the header)
 ├── core.py         # core engine: Hiera, ScopedHiera, HieraLevel, Merge, make_merge
 ├── backends.py     # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend
 ├── util.py         # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py   # HieraError -> ConfigError, BackendError, InterpolationError
-└── cli.py          # duho-based `hiera` console script (Lookup command, main())
+└── cli.py          # duho-based `pyera` console script (Lookup command, main())
 ```
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib` (hierarchy
@@ -37,16 +37,16 @@ level via a `Merge` accumulator before fully resolving interpolation and
 hiera function calls in the result.
 
 Backends register under one or more Hiera `data_hash` names (see
-`src/hiera/AGENTS.md` for the table) and only need to implement
+`src/pyera/AGENTS.md` for the table) and only need to implement
 `read_file`/`load`; `YAMLBackend` and `JSONBackend` both parse into
 `LookupDict` so `a.b.0.c`-style dotted lookups work uniformly.
 
-The CLI (`src/hiera/cli.py`) is a thin `duho.Cli` wrapper around
+The CLI (`src/pyera/cli.py`) is a thin `duho.Cli` wrapper around
 `Hiera.get`, designed for unattended use: no interactive prompts,
 deterministic output, and exit codes `0` (found) / `1` (key missing) / `2`
 (usage or config error).
 
-See **`src/hiera/AGENTS.md`** for the header-file-style public API — every
+See **`src/pyera/AGENTS.md`** for the header-file-style public API — every
 export with its signature, arguments, and gotchas.
 
 ## Hiera 5 spec coverage
@@ -70,10 +70,10 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
 - Tests: `<py> -m pytest -q` (pytest config in `pyproject.toml` puts `src/`
   on the path).
 - Editable install: `<py> -m pip install -e ".[dev]"`.
-- Package: built with `hatchling`. The PyPI distribution is `hieralib` (the
-  name `hiera` is not available); the import package and console script stay
-  `hiera`. `hieralib[cli]` pulls in `duho` for the console script,
-  `hieralib[hocon]` pulls in `pyhocon` for `HOCONBackend`.
+- Package: built with `hatchling`. The PyPI distribution, the import
+  package and the console script are all `pyera`. `pyera[cli]` pulls in
+  `duho` for the console script, `pyera[hocon]` pulls in `pyhocon` for
+  `HOCONBackend`.
 
 ## License
 

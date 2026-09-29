@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hieralib"
+name = "pyera"
 version = "0.1.0"
 authors = [{ name = "jose-pr" }]
 description = "A Python implementation of Puppet Hiera hierarchical data lookup"
@@ -35,25 +35,25 @@ hocon = ["pyhocon"]
 dev = ["build", "twine", "hatchling", "pytest", "duho>=0.6.0,<0.7", "pyhocon", "black"]
 
 [project.scripts]
-hiera = "hiera.cli:main"
+pyera = "pyera.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/jose-pr/hiera/"
-Issues = "https://github.com/jose-pr/hiera/issues"
+Homepage = "https://github.com/jose-pr/pyera/"
+Issues = "https://github.com/jose-pr/pyera/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hiera"]
+packages = ["src/pyera"]
 # Unshared per-machine notes never ship (see the sdist exclude below).
 exclude = ["*.local.*"]
 
 
 # Ship the consumer-facing docs inside the installed package, so they are
 # readable from site-packages via importlib.resources without the repo.
-# src/hiera/AGENTS.md is included automatically by living in the package
+# src/pyera/AGENTS.md is included automatically by living in the package
 # dir; the repo-root AGENTS.md is development-only and deliberately not
 # shipped.
 [tool.hatch.build.targets.wheel.force-include]
-"README.md" = "hiera/README.md"
+"README.md" = "pyera/README.md"
 
 # `/.*` only covers dot-prefixed roots; an `AGENTS.local.md` beside the
 # shipping `AGENTS.md` has no leading dot and would otherwise be packaged.

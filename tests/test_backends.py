@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from hiera import BackendError, ConfigError, Hiera
-from hiera.backends import (
+from pyera import BackendError, ConfigError, Hiera
+from pyera.backends import (
     JSONBackend,
     SopsYAMLBackend,
     YAMLBackend,
@@ -63,21 +63,21 @@ def test_datadir_key_accepts_both_spellings():
 
 
 def test_sops_missing_binary(monkeypatch, tmp_path):
-    monkeypatch.setattr("hiera.backends.shutil.which", lambda _n: None)
+    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: None)
     backend = SopsYAMLBackend({})
     with pytest.raises(BackendError, match="sops executable not found"):
         backend.read_file(tmp_path / "secret.yaml")
 
 
 def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
-    monkeypatch.setattr("hiera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
     class _Proc:
         returncode = 1
         stdout = b""
         stderr = b"decryption failed: no key"
 
-    monkeypatch.setattr("hiera.backends.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("pyera.backends.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="decryption failed: no key"):
         SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
 
@@ -85,12 +85,12 @@ def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
 def test_sops_timeout(monkeypatch, tmp_path):
     import subprocess
 
-    monkeypatch.setattr("hiera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("pyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
     def _raise(*a, **k):
         raise subprocess.TimeoutExpired(cmd="sops", timeout=30)
 
-    monkeypatch.setattr("hiera.backends.subprocess.run", _raise)
+    monkeypatch.setattr("pyera.backends.subprocess.run", _raise)
     with pytest.raises(BackendError, match="timed out"):
         SopsYAMLBackend({}).read_file(tmp_path / "secret.yaml")
 
@@ -110,7 +110,7 @@ def test_hocon_backend(tmp_path):
 
 
 def test_hocon_backend_missing_dep_errors():
-    from hiera.backends import HOCONBackend, has_hocon
+    from pyera.backends import HOCONBackend, has_hocon
 
     if has_hocon():
         pytest.skip("pyhocon is installed")

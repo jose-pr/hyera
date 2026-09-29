@@ -1,4 +1,4 @@
-"""hiera: a Python implementation of Puppet Hiera data lookup."""
+"""pyera: a Python implementation of Puppet Hiera data lookup."""
 
 from .backends import (
     Backend,

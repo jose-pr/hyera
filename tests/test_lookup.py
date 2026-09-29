@@ -2,7 +2,7 @@
 
 import pytest
 
-from hiera import Hiera
+from pyera import Hiera
 
 
 def make(hiera_root, **context):

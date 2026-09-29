@@ -1,4 +1,4 @@
-# hiera
+# pyera
 
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
@@ -10,16 +10,17 @@ hash, and deep-hash merging.
 ## Install
 
 ```sh
-pip install hieralib          # library only
-pip install hieralib[cli]     # + the `hiera` command-line tool (via duho)
+pip install pyera          # library only
+pip install pyera[cli]     # + the `pyera` command-line tool (via duho)
 ```
 
-The distribution is named `hieralib` on PyPI; the import name is `hiera`.
+The PyPI distribution, the import package and the command are all named
+`pyera`.
 
 ## Library
 
 ```python
-from hiera import Hiera
+from pyera import Hiera
 
 h = Hiera("hiera.yaml", context={"environment": "production"})
 
@@ -76,7 +77,7 @@ Backends (by `data_hash` name):
 | `YAMLBackend`     | `yaml_data`, `yaml`     | parsed with PyYAML `SafeLoader`         |
 | `JSONBackend`     | `json_data`, `json`     |                                         |
 | `SopsYAMLBackend` | `yaml.enc`, `sops`      | decrypts via the `sops` CLI on the fly  |
-| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install hieralib[hocon]`  |
+| `HOCONBackend`    | `hocon_data`, `hocon`   | requires `pip install pyera[hocon]`     |
 
 ### Merging and `lookup_options`
 
@@ -115,16 +116,16 @@ An exact key match always wins over a pattern match.
 
 An explicit `merge=` argument overrides `lookup_options`. `convert_to`
 supports `Integer`, `Float`, `String`, `Boolean`, `Array`, and `Sensitive`
-(the last wraps the value in a redacting `hiera.Sensitive` marker).
+(the last wraps the value in a redacting `pyera.Sensitive` marker).
 
 ## Command line
 
 ```sh
-hiera KEY [options]
+pyera KEY [options]
 
-hiera ntp::servers --config hiera.yaml --scope environment=production
-hiera classes --merge unique --output json
-hiera missing::key --default '(none)'
+pyera ntp::servers --config hiera.yaml --scope environment=production
+pyera classes --merge unique --output json
+pyera missing::key --default '(none)'
 ```
 
 Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
@@ -141,7 +142,7 @@ usage/config error.
 `SopsYAMLBackend` shells out to `sops` to decrypt `*.yaml` levels. It is
 hardened so an automated lookup never hangs or dies opaquely:
 
-- a finite subprocess timeout (`hiera.backends.SOPS_TIMEOUT`, default 30 s),
+- a finite subprocess timeout (`pyera.backends.SOPS_TIMEOUT`, default 30 s),
 - captured stderr surfaced in a `BackendError`,
 - a clear error when the `sops` binary is not on `PATH`.
 

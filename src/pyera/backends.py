@@ -143,7 +143,7 @@ class HOCONBackend(Backend):
         except ImportError as e:  # pragma: no cover - optional dependency
             raise BackendError(
                 "hocon_data backend requires the 'pyhocon' package "
-                "(pip install hieralib[hocon])"
+                "(pip install pyera[hocon])"
             ) from e
         if isinstance(data, bytes):
             data = data.decode("utf-8")

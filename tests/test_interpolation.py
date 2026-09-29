@@ -2,7 +2,7 @@
 
 import pytest
 
-from hiera import Hiera, InterpolationError
+from pyera import Hiera, InterpolationError
 
 
 def _hiera(tmp_path, common):
