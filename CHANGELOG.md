@@ -210,8 +210,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Arg`/`NS`/`Append`/`Choice`, `main()`) is untouched by every documented
   0.6.0 API change.
 - `pyyaml` is now required as `>=6.0,<7` and the `hocon` extra as
-  `pyhocon>=0.3.29,<0.4`; both were unversioned. pyhocon 0.3.0-0.3.28 pin
-  pyparsing 2.0.3-2.1.1, which fails to import on Python 3.10 and later.
+  `pyhocon>=0.3.62,<0.4`; both were unversioned. pyhocon 0.3.0-0.3.28 pin
+  pyparsing 2.0.3-2.1.1, which fails to import on Python 3.10 and later;
+  0.3.29-0.3.61 call a pyparsing API that is deprecated on current
+  pyparsing releases.
 - Files named `CLAUDE*` or `.claude` are excluded from the sdist and the
   wheel, and the repository's contributor `AGENTS.md` is no longer in the
   sdist. The API reference `pyera/AGENTS.md` still ships in both.

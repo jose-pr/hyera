@@ -30,8 +30,11 @@ dependencies = ["pyyaml>=6.0,<7", "pathlib_next>=0.9.0,<0.10"]
 [project.optional-dependencies]
 cli = ["duho>=0.6.0,<0.7"]
 # 0.3.29 is the first pyhocon that does not pin pyparsing 2.0.3-2.1.1, which
-# fails to import on Python 3.10 and later.
-hocon = ["pyhocon>=0.3.29,<0.4"]
+# fails to import on Python 3.10 and later; 0.3.29-0.3.61 still call
+# pyparsing's deprecated setDefaultWhitespaceChars, which fails the suite
+# under this project's filterwarnings=error. 0.3.62 is the first release
+# using the non-deprecated set_default_whitespace_chars.
+hocon = ["pyhocon>=0.3.62,<0.4"]
 # Composes every feature extra that has tests, so ranges live only in those
 # extras -- without pyhocon/duho the HOCON/CLI tests silently skip instead of
 # running. `hatchling` is left out: build isolation supplies it.
