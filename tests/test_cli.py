@@ -150,7 +150,10 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
 
 
 def test_mcp_stdio_serves_lookup(hiera_root):
-    # PYERA_MCP=stdio runs the CLI as an MCP server exposing the Lookup tool.
+    # PYERA_MCP=stdio runs the CLI as an MCP server exposing one tool. Both
+    # the tool name and the initialize response's serverInfo.name come from
+    # duho's root tool-name resolution (Lookup._parsername_ -- see R7a),
+    # which is "pyera", not the command class's own name "Lookup".
     messages = [
         {
             "jsonrpc": "2.0",
@@ -168,7 +171,7 @@ def test_mcp_stdio_serves_lookup(hiera_root):
             "id": 2,
             "method": "tools/call",
             "params": {
-                "name": "Lookup",
+                "name": "pyera",
                 "arguments": {
                     "key": "app::name",
                     "config": str(hiera_root / "hiera.yaml"),
@@ -189,8 +192,23 @@ def test_mcp_stdio_serves_lookup(hiera_root):
 
     assert proc.returncode == 0, proc.stderr
     replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
-    assert replies[1]["result"]["serverInfo"]["name"] == "Lookup"
+    assert replies[1]["result"]["serverInfo"]["name"] == "pyera"
     assert replies[2]["result"]["content"] == [{"type": "text", "text": "myapp\n"}]
+
+
+def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, capsys):
+    # The MCP trigger env var name must come from Lookup's own declared
+    # `_parsername_`, not from sys.argv[0]'s stem -- otherwise embedding
+    # pyera's CLI in another script (or running it as `python -m pyera.cli`)
+    # silently changes which env var launches the MCP server, contradicting
+    # the documented PYERA_MCP contract.
+    monkeypatch.setattr(sys, "argv", ["/x/cli.py"])
+    monkeypatch.setenv("PYERA_MCP", "bogus")
+
+    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
+
+    assert rc == 2
+    assert "unsupported MCP transport" in capsys.readouterr().err
 
 
 def test_mcp_unknown_transport_exits_2(hiera_root, monkeypatch, capsys):

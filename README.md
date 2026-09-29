@@ -148,7 +148,7 @@ usage/config error.
 
 `PYERA_MCP=stdio pyera` runs the same command as an MCP server over
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
-`Lookup`, whose arguments are the command-line fields (`key`, `config`,
+`pyera`, whose arguments are the command-line fields (`key`, `config`,
 `scope`, `merge`, ...) and whose result is what the command would print.
 
 ## sops and unattended runs

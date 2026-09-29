@@ -91,6 +91,7 @@ if duho is not None:
 
         _version_ = __version__
         _mcp_ = True
+        _parsername_ = "pyera"
 
         key: "duho.Arg[str, duho.NS(flags=['key'], metavar='KEY', help='hiera key to look up')]"
         config: "duho.Arg[str, duho.NS(flags=['--config', '-c'], help='path to the hiera base config')]" = ("hiera.yaml")

@@ -195,11 +195,16 @@ paths work since `__init__` re-exports it too).
   found, `1` key missing (and no `--default`), `2` usage/config error (bad
   `--scope`, unreadable/invalid config, or a `HieraError`).
 - Env: `PYERA_MCP=stdio` runs the command as an MCP server over
-  stdin/stdout (duho), exposing one tool, `Lookup`, whose arguments are
-  the CLI fields (`key`, `config`, `scope`, ...); a `tools/call` returns
-  what the command would print. Any other `PYERA_MCP` value exits `2`
-  with `unsupported MCP transport`. The trigger is read before the
-  arguments, so an MCP session never performs a command-line lookup. A
+  stdin/stdout (duho), exposing one tool, `pyera` (`Lookup`'s
+  `_parsername_`, not its class name), whose arguments are the CLI fields
+  (`key`, `config`, `scope`, ...); a `tools/call` returns what the command
+  would print, and `initialize`'s `serverInfo.name` is `"pyera"` too. Any
+  other `PYERA_MCP` value exits `2` with `unsupported MCP transport`. The
+  trigger variable name itself is always `PYERA_MCP`, from that same
+  `_parsername_`, regardless of `sys.argv[0]` (so `python -m pyera.cli` or
+  embedding `Lookup` in a differently-named script never changes it). The
+  trigger is read before the arguments, so an MCP session never performs a
+  command-line lookup. A
   truthy `AGENT_HELP` or `AGENTS_HELP` makes
   `--help` print duho's JSON agent-help document instead of usage text.
 

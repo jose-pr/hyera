@@ -36,6 +36,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   crashing with a `ModuleNotFoundError` traceback.
 - `ScopedHiera` can be copied, deep-copied and pickled; each previously
   raised `RecursionError`.
+- The `PYERA_MCP` trigger env var name (and the served tool's name) no
+  longer depends on `sys.argv[0]`. Running the CLI as `python -m
+  pyera.cli` (trigger var `CLI_MCP`) or embedding `Lookup` in a
+  differently-named script previously changed which environment variable
+  launched the MCP server, silently breaking the documented `PYERA_MCP`
+  contract.
 
 ### Security
 
@@ -76,7 +82,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `PYERA_MCP=stdio pyera` serves the command over MCP (stdio): one tool,
-  `Lookup`, taking the command-line fields as arguments and returning what
+  `pyera`, taking the command-line fields as arguments and returning what
   the command prints. Any other `PYERA_MCP` value exits `2`.
 - `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits
   [phiera](https://github.com/Nike-Inc/phiera), the Apache-2.0 project this
