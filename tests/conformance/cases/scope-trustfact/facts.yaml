@@ -1,0 +1,2 @@
+trusted: {certname: fake.example.com}
+os: {family: Debian}

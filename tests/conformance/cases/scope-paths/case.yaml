@@ -1,0 +1,15 @@
+description: 'Location paths with an undefined top-scope/fact/nested reference: Puppet
+  interpolates '''' and still probes the resulting path instead of skipping the level.'
+origin: spec-context-facts/paths
+queries:
+- key: k_node_empty
+  divergence: spec-context-facts/path-missing-var-skips-level
+- key: k_undef
+  divergence: spec-context-facts/path-missing-var-skips-level
+- key: k_virt_top
+  divergence: spec-context-facts/path-missing-var-skips-level
+- key: k_virtual
+- key: k_count
+- key: k_role_web
+  divergence: spec-context-facts/path-missing-var-skips-level
+- key: k_common

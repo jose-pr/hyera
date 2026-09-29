@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "00e7095afc4b63ae4ed3c262b7a97d3e9b3840caaf05c8206eba614ee03eb6f1",
+  "results": {
+    "v_fqdn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_fqdn"
+      ],
+      "status": "error",
+      "message": "When overriding any of the hostname,domain,fqdn,clientcert facts with ./facts.yaml given via the --facts flag, they must all be overridden."
+    }
+  }
+}

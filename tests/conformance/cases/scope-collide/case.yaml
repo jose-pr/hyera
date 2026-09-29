@@ -1,0 +1,9 @@
+description: >-
+  A user-provided fact named 'environment'/'serverversion' collides with Puppet's own top-scope variables of the same name.
+origin: spec-context-facts/collide
+queries:
+  - key: 'v_env'
+  - key: 'v_facts_env'
+  - key: 'v_sv'
+  - key: 'v_sf_sv'
+  - key: 'v_sf_env'

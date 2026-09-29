@@ -1,0 +1,22 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: node
+    path: "nodes/%{trusted.certname}.yaml"
+  - name: virtual
+    path: "virtual/%{facts.is_virtual}.yaml"
+  - name: virt_top
+    path: "virt_top/%{is_virtual}.yaml"
+  - name: undef
+    path: "undef/%{no_such_var}.yaml"
+  - name: count
+    path: "count/%{facts.processors.count}.yaml"
+  - name: mapped_dotted
+    mapped_paths: [facts.roles, role, "roles/%{role}.yaml"]
+  - name: mapped_top
+    mapped_paths: [roles, r, "mroles/%{r}.yaml"]
+  - name: common
+    path: common.yaml

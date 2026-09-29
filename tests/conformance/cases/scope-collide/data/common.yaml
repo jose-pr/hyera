@@ -1,0 +1,5 @@
+v_env: "%{environment}"
+v_facts_env: "%{facts.environment}"
+v_sv: "%{serverversion}"
+v_sf_sv: "%{server_facts.serverversion}"
+v_sf_env: "%{server_facts.environment}"

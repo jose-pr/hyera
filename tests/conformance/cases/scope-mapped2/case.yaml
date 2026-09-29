@@ -1,0 +1,8 @@
+description: mapped_paths over a Hash fact (Puppet iterates stringified [key, value]
+  pairs) and over a scalar fact.
+origin: spec-context-facts/mapped2
+queries:
+- key: k_h_alpha
+  divergence: spec-config/mapped-paths-collection-var-not-scope-lookup
+- key: k_h_k1
+- key: k_s_solo

@@ -1,0 +1,4 @@
+fqdn: web01.example.com
+hostname: web01
+domain: example.com
+clientcert: web01.example.com

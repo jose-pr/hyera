@@ -1,0 +1,74 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "5fd358e82e8266699d7cd69796634e666c638a77e19101d232bec5185f7e67bd",
+  "results": {
+    "v_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_env"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
+        "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
+      ],
+      "status": "found",
+      "value": "production"
+    },
+    "v_facts_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_env"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
+        "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
+      ],
+      "status": "found",
+      "value": "fromfacts"
+    },
+    "v_sv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_sv"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
+        "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
+      ],
+      "status": "found",
+      "value": "1.0-fact"
+    },
+    "v_sf_sv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_sf_sv"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
+        "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
+      ],
+      "status": "found",
+      "value": "8.10.0"
+    },
+    "v_sf_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_sf_env"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
+        "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
+      ],
+      "status": "found",
+      "value": "production"
+    }
+  }
+}

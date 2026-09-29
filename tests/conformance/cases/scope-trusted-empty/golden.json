@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "1657c6877c56229bb1ab6d02c10927ea7babd3697bac87c607032ba49dc4d2e9",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "found",
+      "value": "empty_certname"
+    }
+  }
+}

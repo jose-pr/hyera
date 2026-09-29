@@ -1,0 +1,2 @@
+fqdn: web01.example.com
+os: {family: Debian}

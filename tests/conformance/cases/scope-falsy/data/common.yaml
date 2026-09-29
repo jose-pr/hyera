@@ -1,0 +1,3 @@
+msg_bool: "virtual=%{is_virtual}"
+msg_zero: "count=%{count}"
+msg_fact: "virtual=%{facts.is_virtual}"

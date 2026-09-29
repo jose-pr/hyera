@@ -1,0 +1,3 @@
+os: {family: Suse}
+flag: true
+n: 3

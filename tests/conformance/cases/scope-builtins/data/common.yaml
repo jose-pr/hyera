@@ -1,0 +1,5 @@
+n0: "[%{0}]"
+n1: "[%{1}]"
+cmn: "[%{caller_module_name}]"
+mn: "[%{module_name}]"
+sc: "[%{scope('caller_module_name')}]"

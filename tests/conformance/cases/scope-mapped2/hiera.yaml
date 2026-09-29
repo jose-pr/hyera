@@ -1,0 +1,14 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: mhash
+    mapped_paths: [hfact, x, "h/%{x}.yaml"]
+  - name: mscalar
+    mapped_paths: [sfact, y, "s/%{y}.yaml"]
+  - name: braceglob
+    glob: "g/{one,two}.yaml"
+  - name: common
+    path: common.yaml

@@ -1,0 +1,15 @@
+description: 'A falsy fact (is_virtual: false) used in a location path still resolves
+  that path; whitespace around a variable name in a location path is ignored; falsy
+  values (false, 0) interpolate as their Puppet string form, not dropped.'
+origin: standards-python/falsy
+queries:
+- key: from_virtual_false
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: from_spaced_env
+  divergence: spec-interpolation/whitespace-in-expression-ignored
+- key: msg_bool
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: msg_zero
+  divergence: spec-context-facts/falsy-scope-values-dropped
+- key: msg_fact
+  divergence: spec-context-facts/falsy-scope-values-dropped

@@ -1,0 +1,15 @@
+---
+os:
+  family: RedHat
+  release: {major: "9"}
+is_virtual: false
+flag_true: true
+processors: {count: 0}
+roles: [web, db]
+num: 5
+float: 1.5
+nested:
+  "1": one
+  list: [a, b, c]
+"dotted.name": dv
+kernel: Linux

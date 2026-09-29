@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "596d8338dd7db3379b3b4dc1db467416fec989c137d546d2c2ff2df48904737a",
+  "results": {
+    "v_trusted_certname": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_trusted_certname"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v_facts_trusted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v_facts_trusted"
+      ],
+      "status": "found",
+      "value": "[fake.example.com]"
+    }
+  }
+}

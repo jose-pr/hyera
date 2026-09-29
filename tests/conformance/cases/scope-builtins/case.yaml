@@ -1,0 +1,11 @@
+description: Class-context-only variables (module_name, caller_module_name, a numbered
+  regex-capture-group reference) are undefined outside any class, as `puppet lookup`
+  always is.
+origin: critic-puppet-coverage/builtins
+queries:
+- key: n0
+- key: n1
+- key: cmn
+- key: mn
+- key: sc
+  divergence: spec-interpolation/missing-inline-lookup-raises

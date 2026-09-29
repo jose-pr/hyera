@@ -1,0 +1,2 @@
+v_trusted_certname: "[%{trusted.certname}]"
+v_facts_trusted: "[%{facts.trusted.certname}]"

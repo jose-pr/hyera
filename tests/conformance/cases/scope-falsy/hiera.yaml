@@ -1,0 +1,6 @@
+version: 5
+defaults: {data_hash: yaml_data, datadir: data}
+hierarchy:
+  - {name: virt, path: "virtual/%{is_virtual}.yaml"}
+  - {name: spaced, path: "env/%{ environment }.yaml"}
+  - {name: c, path: common.yaml}

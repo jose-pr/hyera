@@ -1,0 +1,93 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c71b13be923e11bd3fadb03e2ea0eb0a8607e4c2887854bc8c15315501acc133",
+  "results": {
+    "k_node_empty": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_node_empty"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_undef"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_virt_top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_virt_top"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_virtual": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_virtual"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_count": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_count"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_role_web": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_role_web"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "k_common": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_common"
+      ],
+      "warnings": [
+        "Undefined variable 'no_such_var';"
+      ],
+      "status": "found",
+      "value": 1
+    }
+  }
+}

@@ -1,0 +1,3 @@
+v_clientcert: "%{clientcert}"
+v_trusted: "%{trusted}"
+v_fqdn: "%{facts.fqdn}"
