@@ -49,9 +49,8 @@ def _default_strict() -> str:
     explicitly on the instance -- mirrors how ``yaml_data.rb`` reads
     ``Puppet[:strict]`` at call time rather than at construction.
 
-    Returns ``"warning"`` until ``interpolation_engine/
-    single_pass_engine`` points this at the ``_invocation`` ContextVar set
-    from ``Scope.strict`` (program Design Q4). There is no ``Hiera(strict=)``:
+    Returns ``"warning"`` until the lookup scope's ``strict`` setting is
+    threaded through to backends. There is no ``Hiera(strict=)``:
     a level's backend is shared across scopes, so it never stores a scope's
     strictness itself.
     """
@@ -1198,7 +1197,7 @@ def _hocon_root_kind(value) -> str:
 class HOCONBackend(Backend):
     """HOCON (``.conf``) data via the optional ``pyhocon`` package.
 
-    Always registered (Design Q5): a missing/broken ``pyhocon`` fails at
+    Always registered: a missing/broken ``pyhocon`` fails at
     :meth:`check_available` (backend/level construction) and again in
     :meth:`loads`, both naming the ``hyera[hocon]`` extra -- so the failure
     is always reachable instead of silently disappearing from

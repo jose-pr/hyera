@@ -855,7 +855,7 @@ ALIASES = {
 ALIASES["puppet::lookupkey"] = PTypeAliasType("Puppet::LookupKey", "RichDataKey")
 ALIASES["puppet::lookupvalue"] = PTypeAliasType("Puppet::LookupValue", "RichData")
 
-#: Named-only types (parent plan Design Q5's second tier): full detail in
+#: Named-only types (second tier): full detail in
 #: ``_type_parser.TYPE_MAP``; instances are always ``False``.
 NAMED_ONLY_TYPES = (
     "default",

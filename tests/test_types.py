@@ -2,8 +2,8 @@
 
 Reads ``tests/conformance/cases/convert-type-parse`` and
 ``.../convert-value-type`` directly (Puppet-recorded ground truth), never
-through the lookup API -- ``value_type``/``--type`` wiring is a later
-plan's job (parent plan Design Q11).
+through the lookup API -- ``value_type``/``--type`` wiring is not tested
+here.
 """
 
 import json
@@ -299,7 +299,7 @@ def test_assert_nil_ok_and_reference():
 
 def _run_new(spec, value):
     """Build new()'s args from a lookup_options convert_to spec exactly as
-    the sub-plan says: a list as is, else [spec]; a str first element goes
+    the lookup engine does: a list as is, else [spec]; a str first element goes
     through parse_type, anything else (a malformed convert_to shape) is
     passed to new_instance raw."""
     args = list(spec) if isinstance(spec, list) else [spec]
@@ -334,7 +334,7 @@ def _new_params():
             )
 
 
-#: Design Q8: hiera has no new() for these (Puppet does) -- ours is a
+#: hiera has no new() for these (Puppet does) -- ours is a
 #: deliberate deviation, never the golden's recorded (Puppet-real) outcome.
 _Q8_UNSUPPORTED_QIDS = {"semver", "tspan", "re_t"}
 

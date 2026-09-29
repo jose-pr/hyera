@@ -5,8 +5,7 @@
 ``type_`` (and no ``*args``) is returned unchanged; else the type's own
 conversion runs, and the result is asserted against ``type_`` with the
 subject ``"Converted value from <type_>.new()"`` (``_type_mismatch``).
-Types outside this subset's new()-capable tier (parent plan Design Q8:
-SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type,
+Types outside this subset's new()-capable tier (SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type,
 Object) raise our own "hiera does not support new()" text -- a deliberate
 deviation, not a bug, since Puppet itself does support new() for several
 of them.
@@ -40,7 +39,7 @@ from ._types import (
 
 __all__ = ["new_instance"]
 
-#: parent plan Design Q8: Puppet has a new_function for these but this
+#: Puppet has a new_function for these but this
 #: subset deliberately does not implement one.
 _OUR_UNSUPPORTED_NAMES = frozenset(
     [
@@ -107,7 +106,7 @@ def _dispatch(type_, value, args):
             _not_supported(type_)
         if isinstance(type_.contained, str):
             # A literal string argument (``Optional['x']``/``Optional[x]``,
-            # parent plan Q3): Puppet's own new() dispatches through the
+            # as Puppet does): Puppet's own new() dispatches through the
             # literal's generalized data type (String), then the caller's
             # assert_instance_of checks the result against the literal type
             # itself -- so a value equal to the literal converts cleanly and
@@ -161,7 +160,7 @@ def _new_integer(value, *args):
         )
     radix = args[0] if args else None
     if radix is not None and (isinstance(radix, bool) or not isinstance(radix, int)):
-        # Design Q14: no signature/argument_mismatch accepts this shape;
+        # no signature/argument_mismatch accepts this shape;
         # ours, not Puppet's own multi-line dispatch listing.
         names = ", ".join(infer_generic(v).name for v in (value,) + tuple(args))
         raise HieraLookupError("'new' does not accept the arguments ({})".format(names))

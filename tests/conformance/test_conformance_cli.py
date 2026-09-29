@@ -2,9 +2,8 @@
 
 ``hyera.cli.main`` does not accept ``puppet lookup``'s own flags today, so
 every query here is a strict xfail under `_ours.CLI_CHANNEL_DIVERGENCE`
-until `cli_puppet_lookup_parity` teaches it to (that plan sets the
-constant to ``None`` in the same commit it removes this file's blanket
-marker).
+until the CLI learns them (the change that does sets the constant to
+``None`` in the same commit it removes this file's blanket marker).
 """
 
 import pytest

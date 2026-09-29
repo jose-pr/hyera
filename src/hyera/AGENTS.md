@@ -162,8 +162,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   non-Puppet key is rejected before a level's conf ever reaches a
   backend), default `""`. `.strict`
   (read-only property) is the constructor's `strict=` when given, else the
-  call-time default (`"warning"` until `interpolation_engine` points
-  it at a `Scope.strict`-backed `ContextVar`) — read at call time, never
+  call-time default (`"warning"` until the lookup scope's `strict`
+  setting is threaded through to backends) — read at call time, never
   cached, since one backend instance is shared across scopes. `.name`
   defaults to the class's first registered name; `Backend.new` sets it to
   whatever name was actually asked for.
@@ -190,8 +190,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   adapts a parsed document into hiera data (base: identity; `YAMLBackend`
   overrides it for the non-Hash rule). `.lookup_key(key, options, context)`
   / `.data_dig(key_segments, options, context)` raise `NotImplementedError`
-  in the base (no built-in implements them yet;
-  `function_providers_and_eyaml` adds one).
+  in the base (no built-in implements them yet).
 - **`default_backends() -> list[type[Backend]]`** — the distinct classes
   registered in the `function` namespace, in definition order:
   `[YAMLBackend, JSONBackend, HOCONBackend, SopsBackend]`.
@@ -259,8 +258,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   comment/NaN/surrogate message above, no exception chain. `.dumps` is
   `json.dumps(ensure_ascii=False)`.
 - **`HOCONBackend`** — `NAMES = {"function": ("hocon_data",), "format":
-  ("hocon",)}`, `EXTENSIONS = (".conf",)`. Always registered (Design Q5 of
-  `backend_registry_and_data_loading/registry`): a missing/broken `pyhocon`
+  ("hocon",)}`, `EXTENSIONS = (".conf",)`. Always registered: a missing/broken `pyhocon`
   fails at `.check_available()` (backend/level construction, so a
   `hocon_data` hierarchy level fails to build) *and* in `.loads`, both
   naming the `hyera[hocon]` extra, rather than silently vanishing from
@@ -563,13 +561,13 @@ re-exports it too).
   hashable tuple (recursively frozen), and a **symbol value** (`:foo`,
   `!ruby/symbol x`) parses to a `RubySymbol` — both load without error, but
   neither is a valid Puppet lookup *value*, and `hyera` does not reject
-  them yet (`lookup_pipeline_and_api`'s RichData check does); a value keyed
+  them yet (Puppet's RichData value check is not ported yet); a value keyed
   or shaped this way currently returns successfully instead of erroring
   like Puppet.
 - **`None`/`null`/`~` as an actual data value is indistinguishable from "key
   not found"** in the engine's own navigation (`Hiera._get_key` treats
-  `cache is None` as "keep looking") — a pre-existing limitation, not
-  something this plan's YAML work introduced or fixes; a data file legally
+  `cache is None` as "keep looking") — a known limitation, not yet
+  fixed; a data file legally
   containing `key: ~` currently makes that key un-lookupable.
 - **`convert_to` is Puppet's `new()`.** A `str` first element of the
   `convert_to` spec is parsed as a Puppet type expression first; a parse

@@ -1,10 +1,10 @@
 """Puppet's type mismatch messages and instance assertion.
 
 Ports the subset of ``type_mismatch_describer.rb`` and ``type_asserter.rb``
-the parent plan's type tiers exercise: path elements (entry/key of
+hyera's supported type tiers exercise: path elements (entry/key of
 entry/index/variant), the Array/Hash/Struct/Tuple/Variant/Optional/
 Enum/Pattern describers, and ``describe_mismatch``/``assert_instance_of``.
-Callable/signature describing is not ported (Design Q12): hiera asserts
+Callable/signature describing is not ported: hiera asserts
 values, never function signatures.
 """
 
@@ -253,7 +253,7 @@ def _describe_variant(expected, value, path):
     # deeper path), Puppet collapses them into one combined message; a
     # pattern-shaped branch set renders as "a match for Variant[...]",
     # anything else as "a value of type A, B, or C" (each rendered with
-    # its own detailed-vs-short rule -- Design Q3/short_name).
+    # its own detailed-vs-short rule).
     immediate = [
         (i, t, sub) for i, t, sub in per_branch if len(sub) == 1 and sub[0].path == path
     ]

@@ -199,7 +199,7 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
     importlib.invalidate_caches()
 
     assert has_hocon() is False
-    # Design Q5: HOCONBackend is *always* registered; other backends keep
+    # HOCONBackend is *always* registered; other backends keep
     # working regardless, and a hocon_data level fails at build time instead.
     assert HOCONBackend in default_backends()
 

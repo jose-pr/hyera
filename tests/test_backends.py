@@ -125,7 +125,7 @@ def test_hocon_backend(make_tree):
 def test_hocon_backend_missing_dep_errors(monkeypatch):
     monkeypatch.setitem(sys.modules, "pyhocon", None)
     assert has_hocon() is False
-    # Design Q5: HOCONBackend is *always* registered -- the failure is
+    # HOCONBackend is *always* registered -- the failure is
     # reachable at level-build (check_available/new) and parse time, not by
     # silently vanishing from default_backends().
     assert HOCONBackend in default_backends()

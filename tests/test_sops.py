@@ -348,8 +348,7 @@ def test_sops_parse_error_plaintext_absent_from_cli(
 # ---------------------------------------------------------------------------
 # Format inference (sops's own case-sensitive extension rule,
 # `cmd/sops/formats/formats.go`, verified against the real v3.13.3 binary
-# and source 2026-09-29 -- see the sub-plan's own Progress for the WSL
-# capture). Each recorded (format, native stdout) pair below is the exact
+# and source 2026-09-29 in WSL). Each recorded (format, native stdout) pair below is the exact
 # bytes a real `sops -d --input-type=<f> --output-type=<f>` printed for a
 # matching input file, captured the same day.
 # ---------------------------------------------------------------------------
@@ -401,8 +400,8 @@ def test_sops_data_format_inference_rejected(monkeypatch, tmp_path, name):
 
 # Recorded (format, real sops-re-emitted native stdout, expected parsed
 # value) triples, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2
-# in WSL, decrypting a fixed age key's own encrypted copies of the inputs
-# named in the sub-plan.
+# in WSL, decrypting a fixed age key's own encrypted copies of the recorded
+# inputs.
 _YAML_NATIVE_NO_DATE = (
     b'a: 1\nb:\n    c:\n        - x\n        - "y"\ne: bar\nsym: :foo\n'
     b':q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'

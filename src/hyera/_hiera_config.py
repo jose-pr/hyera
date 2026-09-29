@@ -103,7 +103,7 @@ def _select_version(data: dict, source: "_ConfigSource") -> None:
     """Puppet's version dispatch (``hiera_config.rb:153-167``).
 
     Raises :class:`ConfigError` for anything but a literal Integer ``5``.
-    Version 3/4 parsing is ``hiera_v3_v4_configs``' job; here both a missing
+    Version 3/4 parsing is not implemented yet; here both a missing
     ``version`` (Hiera 3's own signal) and an explicit ``3``/``4`` just name
     what they are, unsupported for now.
     """
@@ -495,7 +495,7 @@ def _validate_hierarchy_issues(
 
 def _check_duplicate_names(entries: list, area: str, source: "_ConfigSource") -> None:
     """Duplicate ``name`` within ``hierarchy``/``default_hierarchy`` only
-    (``plan_hierarchy`` is type-checked but never dup-checked -- Design Q13),
+    (``plan_hierarchy`` is type-checked but never dup-checked),
     at provider-creation time (``hiera_config.rb:645-655``)."""
     seen = {}
     for i, entry in enumerate(entries):
@@ -515,7 +515,7 @@ def _validate_v5(data: dict, source: "_ConfigSource") -> None:
     """Validate ``data`` against Puppet's hiera.yaml version 5 schema, in
     Puppet's own order: the whole-document type pass, then ``defaults``'
     issues, then each hierarchy's issues, then duplicate names. Reports only
-    the first mismatch (Design Q11); assumes :func:`_fill_v5_defaults`
+    the first mismatch; assumes :func:`_fill_v5_defaults`
     already ran, so ``defaults``/``hierarchy`` are present.
     """
     _check_top(data, source)
@@ -718,7 +718,7 @@ def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
 
     Each entry's conf is built explicitly -- ``name``, its one location
     key (if any), ``datadir``, ``options`` (the entry's own, else
-    ``defaults``'s, never merged -- ``hiera_config.rb:690``, Design Q19)
+    ``defaults``'s, never merged -- ``hiera_config.rb:690``)
     and, for a ``data_hash`` level, ``data_hash: <name>`` -- rather than
     merging every ``defaults`` key in wholesale.
 

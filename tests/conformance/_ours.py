@@ -19,8 +19,8 @@ import _golden
 from _golden import SENSITIVE_JSON
 
 #: Strict xfail reason for every CLI-channel query until hyera's CLI
-#: accepts puppet lookup's own flags (cli_puppet_lookup_parity fidelity
-#: plan). Set to None there, in the same commit that removes this marker.
+#: accepts puppet lookup's own flags. Set to None in the same commit that
+#: teaches the CLI those flags and removes this marker.
 CLI_CHANNEL_DIVERGENCE = "spec-layers-backends/cli-flag-parity"
 
 #: puppet_args flags this adapter understands well enough to translate.

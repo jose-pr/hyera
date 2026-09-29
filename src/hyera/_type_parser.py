@@ -3,7 +3,7 @@
 Ports the subset of ``type_parser.rb`` (``:37-46`` ``parse``, ``:101-640``
 ``interpret*``) this project's type tiers need, over a hand-written lexer
 and recursive-descent reader for the expression shapes Puppet's type
-grammar actually uses (parent plan Design Q9): access expressions
+grammar actually uses: access expressions
 (``Name[args]``), hash/array literals, quoted and bare strings, numbers,
 regex literals, and unary minus.
 """
@@ -61,7 +61,7 @@ _NEVER_PARAMETERIZED = frozenset(
     ]
 )
 
-#: Parent plan Design Q5's third tier: never modeled at all, bare or
+#: The third tier: never modeled at all, bare or
 #: parameterized.
 _UNSUPPORTED_NAMES = frozenset(["iterable", "iterator", "init", "unit"])
 
@@ -719,8 +719,8 @@ def parse_type(text):
     """Parse a Puppet type-expression string into a type instance.
 
     Raises :class:`hyera.HieraLookupError` with Puppet's own parser text on
-    a syntax error, an unsupported construct (parent plan Design Q5's
-    unsupported tier), or a top-level expression that is not type-shaped.
+    a syntax error, an unsupported construct (one of the
+    unsupported types), or a top-level expression that is not type-shaped.
     """
     global node_text
     try:

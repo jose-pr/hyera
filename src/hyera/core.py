@@ -47,8 +47,7 @@ def _puppet_type_label(value) -> str:
 def _validate_data_hash(data, name, path) -> None:
     """Puppet's Hash check on a ``data_hash`` result
     (``data_hash_function_provider.rb:56-76`` + ``data_provider.rb:76-91``),
-    applied here so every backend -- third-party ones included -- gets it
-    (Design Q9 of ``backend_registry_and_data_loading/registry``)."""
+    applied here so every backend -- third-party ones included -- gets it."""
     if isinstance(data, dict):
         return
     raise BackendError(
@@ -228,7 +227,7 @@ class Hiera(Interpolation):
 
         Puppet's own Hash check on the result
         (``data_hash_function_provider.rb:70-76``) runs here too, so every
-        backend -- third-party ones included -- gets it (Design Q9).
+        backend -- third-party ones included -- gets it.
         """
         if path not in self.cache:
             try:
