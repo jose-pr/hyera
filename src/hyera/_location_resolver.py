@@ -120,14 +120,6 @@ def _pathname_plus(base: str, rel: str) -> str:
     return anchor + "/".join(parts + rel_parts[idx:])
 
 
-#: Reparse tags :func:`_is_link` treats as a link. ``st_reparse_tag`` is a
-#: Windows-only ``os.stat_result`` attribute; the tag constants themselves
-#: are defined unconditionally by :mod:`stat` on every platform.
-_LINK_REPARSE_TAGS = frozenset(
-    {stat.IO_REPARSE_TAG_SYMLINK, stat.IO_REPARSE_TAG_MOUNT_POINT}
-)
-
-
 def _is_link(entry: "os.DirEntry") -> bool:
     """Whether ``**`` must never recurse into ``entry``: a POSIX symlink, or
     a Windows reparse point tagged as a symlink or junction (a mount point).
@@ -135,7 +127,13 @@ def _is_link(entry: "os.DirEntry") -> bool:
     a junction reports as a plain directory even without following it, so a
     dedicated reparse-tag check is the only way to tell the two apart
     (``DirEntry.is_junction()`` exists only from Python 3.12, and this
-    package's floor is 3.9).
+    package's floor is 3.9). ``st_reparse_tag`` and the ``stat.
+    IO_REPARSE_TAG_*`` constants that classify it are all Windows-only --
+    referencing them anywhere POSIX might import this module (even inside a
+    function body that runs only when ``os.name == "nt"``, since a module-
+    level ``frozenset`` would still evaluate them at import time) would
+    raise ``AttributeError`` there, so the reparse-tag check stays inside
+    this ``os.name`` branch, evaluated lazily, every call.
     """
     if entry.is_symlink():
         return True
@@ -145,7 +143,7 @@ def _is_link(entry: "os.DirEntry") -> bool:
         tag = entry.stat(follow_symlinks=False).st_reparse_tag
     except OSError:
         return False
-    return tag in _LINK_REPARSE_TAGS
+    return tag in (stat.IO_REPARSE_TAG_SYMLINK, stat.IO_REPARSE_TAG_MOUNT_POINT)
 
 
 def _entry_is_dir(entry: "os.DirEntry") -> bool:
