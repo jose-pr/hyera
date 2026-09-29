@@ -65,8 +65,8 @@ def test_deep_merge_via_string_strategy(make_tree):
 
 
 def test_deep_merge_sort_merged_arrays(make_tree):
-    # sort_merged_arrays is a deep-merge option in Puppet; it used to be
-    # swallowed by Merge.__init__ and never applied on the deep path.
+    # sort_merged_arrays is a deep-merge option in Puppet, and applies on the
+    # deep merge path too, not just unique.
     root = _two_level(
         make_tree,
         "conf: {items: [c, a], nested: {more: [z, x]}}\n",
@@ -138,8 +138,9 @@ def test_lookup_options_regex_pattern(make_tree):
 
 
 def test_lookup_options_unanchored_dotted_key_is_literal(make_tree):
-    # Regression: `db.port` was treated as a regex, so `.` matched any
-    # character and the entry also applied to `dbxport`.
+    # A lookup_options key is a regex only when `^`-anchored, so a literal
+    # dotted key like `db.port` never matches an unrelated key such as
+    # `dbxport`.
     root = _two_level(
         make_tree,
         "dbxport: [80]\nlookup_options: {'db.port': {merge: unique}}\n",

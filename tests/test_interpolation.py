@@ -1,4 +1,4 @@
-"""Regression tests for interpolation edge cases that the old code got wrong."""
+"""Interpolation edge cases: literal backslashes, regex-special values, format()."""
 
 from pyera import Hiera
 
@@ -12,10 +12,10 @@ def _hiera(make_tree, common):
 
 
 def test_value_with_backslash_is_literal(make_tree):
-    # Regression: re.sub treated the resolved value as a replacement template,
-    # so a backslash (e.g. a Windows path) raised or was mangled. Use a YAML
-    # double-quoted scalar so the stored value has exactly ONE backslash per
-    # separator: C:\data\sub
+    # An interpolated value is inserted literally, never treated as a re.sub
+    # replacement template, so a backslash (e.g. a Windows path) is preserved
+    # as-is. Use a YAML double-quoted scalar so the stored value has exactly
+    # ONE backslash per separator: C:\data\sub
     h = _hiera(
         make_tree,
         'winpath: "C:\\\\data\\\\sub"\n' "ref: \"%{hiera('winpath')}\"\n",
@@ -37,6 +37,6 @@ def test_missing_scope_interpolates_empty(make_tree):
 
 
 def test_format_uses_context(make_tree):
-    # Regression: Hiera.format passed the dict positionally instead of **ctx.
+    # Hiera.format accepts context variables as **kwargs, not just a dict.
     h = _hiera(make_tree, "x: 1\n")
     assert h.format("hi %{name}", name="bob") == "hi bob"

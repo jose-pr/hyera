@@ -1,10 +1,11 @@
 """``ScopedHiera`` survives ``copy``, ``copy.deepcopy`` and ``pickle``.
 
-``__getattr__`` used to recurse forever: copying/pickling rebuilds the
-object without ``__init__``, and the resulting attribute lookups (looking
-for dunder/state methods on the still-empty instance) reached
-``__getattr__`` again, whose own body reads ``self.hiera`` -- itself an
-attribute lookup on the same not-yet-initialized instance.
+``__getattr__`` must guard against unbounded recursion: copying/pickling
+rebuilds the object without ``__init__``, and the resulting attribute
+lookups (looking for dunder/state methods on the still-empty instance)
+would otherwise reach ``__getattr__`` again, whose own body reads
+``self.hiera`` -- itself an attribute lookup on the same not-yet-initialized
+instance.
 """
 
 import copy

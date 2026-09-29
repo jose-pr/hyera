@@ -250,8 +250,8 @@ def _versions(runner: str, root: str):
 
     Returns ``(versions, identities)``: `versions` has `puppet`/`ruby`;
     `identities` is the tuple of this recording host's fqdn/hostname/
-    domain/ip/ip6 -- never written to a golden, only used to refuse one
-    that accidentally contains them (server_facts carries these too).
+    domain/ip/ip6 -- never written to a golden, kept only to refuse a
+    golden that accidentally contains them (server_facts carries these too).
     """
     _, out, _ = _run(runner, CASES, ["--version"])
     puppet_version = out.strip()

@@ -30,8 +30,8 @@ class ScopedHiera:
 
     def has(self, key, context=None, **kwargs):
         # Same layering as .get(): the bound context goes *under* per-call
-        # overrides. The old `kwargs.update(self.context)` inverted this, so
-        # a scoped .has() disagreed with the equivalent .get().
+        # overrides, so a scoped .has() always agrees with the equivalent
+        # .get().
         new_context = {}
         new_context.update(self.context)
         new_context.update(context or {})
@@ -302,9 +302,9 @@ class Hiera(Interpolation):
         new_context = self._build_context(context, **kwargs)
         # Resolve sources against the *built* context: per-call **kwargs are
         # documented context overrides, so they must reach hierarchy path
-        # resolution too, not just interpolation and lookup_options. (The
-        # default_hierarchy retry below has always used new_context; passing
-        # the raw `context` here let the two hierarchies disagree.)
+        # resolution too, not just interpolation and lookup_options. The
+        # default_hierarchy retry below uses this same new_context, so both
+        # hierarchies always agree on which sources a per-call override picks.
         files = self.sources(new_context)
 
         explicit = merge is not None

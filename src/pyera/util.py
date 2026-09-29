@@ -16,11 +16,10 @@ def sym_lookup(obj, key, default=None):
 class LookupDict(dict):
     """A ``dict`` that supports dotted-path lookups (``a.b.0.c``).
 
-    Note: intentionally not hashable. The original implementation defined
-    ``__hash__`` over the frozenset of keys, which is unsafe for a mutable
-    mapping (equal-by-value dicts with different keys collide, and the hash
-    changes as the dict mutates). Nothing in hiera uses a LookupDict as a
-    key, so it stays unhashable like a plain ``dict``.
+    Note: intentionally not hashable, like a plain ``dict``. Hashing a mutable
+    mapping by its keys is unsafe (equal-by-value dicts with different keys
+    would collide, and the hash would change as the dict mutates). Nothing in
+    hiera uses a LookupDict as a key.
     """
 
     def lookup(self, key):

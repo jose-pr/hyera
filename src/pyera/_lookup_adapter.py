@@ -9,9 +9,8 @@ import re
 def _is_regex(pattern):
     """Hiera 5's rule: a lookup_options key is a regex only when ``^``-anchored.
 
-    The previous metacharacter heuristic made any key containing ``.``/``$``/
-    ``(`` etc. a pattern, so a literal dotted key like ``db.port`` silently
-    regex-matched unrelated keys such as ``dbxport``.
+    A key without a leading ``^`` is matched literally, so a dotted key like
+    ``db.port`` never regex-matches an unrelated key such as ``dbxport``.
     """
     return isinstance(pattern, str) and pattern.startswith("^")
 

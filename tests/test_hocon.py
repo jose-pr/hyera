@@ -193,12 +193,12 @@ def test_broken_pyhocon_leaves_other_backends_working(tmp_path, monkeypatch, mak
 # scanner missed a directive pyhocon's own grammar honours caselessly, across
 # a triple-quoted string, a comment, or a substitution -- each proven (before
 # the fix) by the pyhocon include machinery actually running (the tripwire
-# firing). Every one must now raise before pyhocon ever parses the text, with
-# an empty tripwire; most report line 1, but a few genuinely start their
+# firing). Every one must raise before pyhocon ever parses the text, with an
+# empty tripwire; most report line 1, but a few genuinely start their
 # "include" on line 2, either because the source literally has a newline
-# first, or because a scanner fix (closing a run-away triple-quoted string,
-# or no longer treating an escaped "${" as a real substitution) now lets the
-# scan continue past what used to swallow the rest of the line.
+# first, or because the scanner closes a run-away triple-quoted string and no
+# longer treats an escaped "${" as a real substitution, so the scan continues
+# past them instead of stopping there.
 _ADVERSARIAL_INCLUDE_FORMS = [
     ('ınclude "inc.conf"\nplain = p\n', 1, "dotless-i-plain"),
     ('ınclude file("inc.conf")\nplain = p\n', 1, "dotless-i-file"),

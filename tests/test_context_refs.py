@@ -1,9 +1,10 @@
 """Dotted context references (``%{trusted.certname}``) in paths and values.
 
 Hiera 5 defines a dotted reference as nested key access. ``str.format``
-reads ``{a.b}`` as *attribute* access, so these used to raise
-``AttributeError`` out of ``HieraLevel.paths()`` -- which crashed the
-README's own lead example config.
+reads ``{a.b}`` as *attribute* access, so a dotted reference is resolved via
+``_ctx_lookup``/``_ContextFormatter`` instead of plain ``str.format``/
+``format_map`` -- otherwise it would raise ``AttributeError`` out of
+``HieraLevel.paths()``, including for the README's own lead example config.
 """
 
 import pytest
@@ -42,7 +43,8 @@ def tree(make_tree):
 
 
 def test_dotted_ref_in_path_selects_the_right_file(tree):
-    # Regression: this raised AttributeError before reaching any lookup.
+    # A dotted reference in a hierarchy path resolves via nested key access,
+    # not str.format attribute access.
     h = Hiera(str(tree / "hiera.yaml"), context=NESTED)
     assert h.get("role") == "web"
 
