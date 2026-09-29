@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ImportError`, e.g. against a too-new stdlib) no longer breaks every
   `Hiera()`; `HOCONBackend` is simply left unregistered, and constructing
   one directly raises `BackendError`.
+- CLI `--output yaml` now renders hashes and redacted `Sensitive` values
+  instead of crashing with `RepresenterError` and exit 1.
 
 ### Security
 

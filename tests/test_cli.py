@@ -1,10 +1,119 @@
 """CLI behavior and exit codes (unattended-friendly)."""
 
+import json
+import textwrap
+
 import pytest
+import yaml
 
 duho = pytest.importorskip("duho")
 
 from pyera.cli import main  # noqa: E402
+
+
+def _write(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(textwrap.dedent(content), encoding="utf-8")
+
+
+@pytest.fixture
+def values_root(tmp_path):
+    """A tree exercising every CLI output type, including ``Sensitive``."""
+    _write(
+        tmp_path / "hiera.yaml",
+        """\
+        version: 5
+        defaults:
+          data_hash: yaml_data
+          data_dir: data
+        hierarchy:
+          - name: common
+            path: common.yaml
+        """,
+    )
+    _write(
+        tmp_path / "data" / "common.yaml",
+        """\
+        str: hello
+        int: 42
+        bool: true
+        flt: 1.5
+        nested:
+          b: 2
+          a:
+            - 1
+            - z: 1
+              y: 2
+        lst:
+          - 1
+          - - 2
+            - 3
+          - k: v
+        secret: hunter2
+        secret_hash:
+          user: admin
+          pass: hunter2
+        lookup_options:
+          secret: { convert_to: Sensitive }
+          secret_hash: { convert_to: Sensitive }
+        """,
+    )
+    return tmp_path
+
+
+_VALUES_EXPECTED = {
+    "str": "hello",
+    "int": 42,
+    "bool": True,
+    "flt": 1.5,
+    "nested": {"b": 2, "a": [1, {"z": 1, "y": 2}]},
+    "lst": [1, [2, 3], {"k": "v"}],
+    "secret": "Sensitive(<redacted>)",
+    "secret_hash": "Sensitive(<redacted>)",
+}
+
+
+@pytest.mark.parametrize("key", list(_VALUES_EXPECTED))
+@pytest.mark.parametrize("fmt", ["raw", "json", "yaml"])
+def test_output_formats(fmt, key, values_root, capsys):
+    rc = main(["-c", str(values_root / "hiera.yaml"), "-o", fmt, key])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "hunter2" not in out
+
+    expected = _VALUES_EXPECTED[key]
+    if fmt == "yaml":
+        assert yaml.safe_load(out) == expected
+    elif fmt == "json":
+        assert json.loads(out) == expected
+    else:  # raw
+        if isinstance(expected, (dict, list)):
+            assert json.loads(out) == expected
+        else:
+            assert out.strip() == str(expected)
+
+
+@pytest.mark.parametrize("fmt", ["raw", "json", "yaml"])
+def test_default_in_each_format(fmt, values_root, capsys):
+    rc = main(
+        [
+            "nope::key",
+            "-c",
+            str(values_root / "hiera.yaml"),
+            "--default",
+            "fallback",
+            "-o",
+            fmt,
+        ]
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    if fmt == "yaml":
+        assert yaml.safe_load(out) == "fallback"
+    elif fmt == "json":
+        assert json.loads(out) == "fallback"
+    else:
+        assert out.strip() == "fallback"
 
 
 def test_lookup_found(hiera_root, capsys):

@@ -176,9 +176,10 @@ paths work since `__init__` re-exports it too).
   legacy aliases for `unique`), `deep` (`--deep`, promotes `merge=hash` to
   `deep`), `knockout_prefix` (`--knockout-prefix`), `output` (`--output/-o`,
   choice of `raw|json|yaml`, default `"raw"`), `default` (`--default`).
-  Exit codes: `0` key found, `1` key missing (and no `--default`), `2`
-  usage/config error (bad `--scope`, unreadable/invalid config, or a
-  `HieraError`).
+  `-o yaml`/`json` (and raw for a dict/list) redact `Sensitive` values the
+  same way raw text already does. Exit codes: `0` key found, `1` key
+  missing (and no `--default`), `2` usage/config error (bad `--scope`,
+  unreadable/invalid config, or a `HieraError`).
 
 ## Gotchas
 

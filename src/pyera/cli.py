@@ -15,7 +15,7 @@ import duho
 
 from . import __version__
 from .exceptions import HieraError
-from .core import Hiera
+from .core import Hiera, Sensitive
 
 _LOGGER = _logging.getLogger("pyera")
 
@@ -43,7 +43,25 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
     return context
 
 
+def _plain(value):
+    """Convert to plain, YAML/JSON-safe types, recursively.
+
+    A :class:`~pyera.core.Sensitive` becomes its redacted text (the same
+    text raw/json output already show); any ``dict`` (a ``LookupDict``
+    included) becomes a plain ``dict``; a ``list``/``tuple`` becomes a
+    plain ``list``. Everything else passes through unchanged.
+    """
+    if isinstance(value, Sensitive):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    return value
+
+
 def _dump(value, fmt: str) -> str:
+    value = _plain(value)
     if fmt == "json":
         return _json.dumps(value, default=str, indent=2, sort_keys=True)
     if fmt == "yaml":
