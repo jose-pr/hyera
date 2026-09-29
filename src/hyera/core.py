@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Any
 
+from . import _data_functions
 from ._hiera_config import (
     HieraLevel,
     _build_hierarchies,
@@ -32,6 +33,8 @@ from ._lookup_function import lookup as _lookup_call, nested_lookup, parse_call
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from ._scope import Scope
+from ._type_mismatch import assert_instance_of
+from ._type_parser import parse_type
 from .backends import default_backends
 
 __all__ = ["Hiera"]
@@ -671,6 +674,44 @@ class Hiera:
     #: instead). A ``Hiera`` is not a sequence; ``iter(h)`` raises
     #: ``TypeError`` instead.
     __iter__ = None
+
+    def dig(
+        self,
+        *keys,
+        value_type=None,
+        merge=None,
+        default_values_hash=None,
+        override=None,
+    ):
+        """Puppet's ``dig()`` (``functions/dig.rb``): look up ``keys[0]``,
+        then dig the rest of ``keys`` out of it, Ruby ``Hash#dig``/
+        ``Array#dig`` style.
+
+        A miss on ``keys[0]`` gives ``None`` (like Puppet's ``dig(undef,
+        ...)``) -- `.lookup()` is the strict call; ``.dig()`` never raises
+        ``KeyNotFoundError``. ``merge``/``default_values_hash``/``override``
+        apply to that root lookup, exactly as they would to `.lookup()`. A
+        key after the first that is not an ``int`` against a ``list``, or
+        any key against a non-collection value, raises
+        ``HieraLookupError`` naming the path walked and the Puppet type
+        found instead. ``value_type``, when given, asserts the final result
+        with the subject "Found value". Needs at least one key, the first a
+        ``str``, else ``TypeError``.
+        """
+        if not keys or not isinstance(keys[0], str):
+            raise TypeError("dig() needs at least one key, the first a str")
+        root = self.lookup(
+            keys[0],
+            None,
+            merge,
+            None,
+            default_values_hash=default_values_hash,
+            override=override,
+        )
+        result = _data_functions.dig(root, keys[1:])
+        if value_type is not None:
+            assert_instance_of("Found value", parse_type(value_type), result)
+        return result
 
 
 # Import after defining Hiera to avoid circular import

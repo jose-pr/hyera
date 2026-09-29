@@ -203,6 +203,17 @@ Integer, Float, Numeric, String, Boolean, Array, Hash, Tuple, Struct,
 Optional, NotUndef and Sensitive (a redacting `hyera.Sensitive` wrapper). An
 invalid type or a failed conversion raises `hyera.HieraLookupError`.
 
+### Navigating values
+
+`dig` is Puppet's own navigation function, ported onto `Hiera`: it looks up
+its first argument, then walks the rest of them into the result (a `list`
+index or a `dict` key at a time), returning `None` the moment a step is
+missing rather than raising:
+
+```python
+h.dig("db", "credentials", "user")   # None if any step along the way is missing
+```
+
 ## Command line
 
 ```sh

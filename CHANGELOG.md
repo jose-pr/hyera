@@ -14,6 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   deep_merge's `keep_array_duplicates`, `overwrite_arrays`,
   `unpack_arrays`, `extend_existing_arrays`, `merge_nil_values` and
   `preserve_unmergeables`.
+- `Hiera.lookup(name, value_type=None, merge=None, default_value=<unset>,
+  *, default_values_hash=None, override=None, block=None)` with Puppet's
+  five `lookup()` call forms; option names also work as keywords. A
+  `Hiera` is callable as `lookup`, `h[...]` takes the same arguments, and
+  `name in h` tests for a value. `value_type` takes a Puppet type string;
+  a list of names returns the first one found.
+- `Hiera.dig(*keys, ...)`, Puppet's `dig()` over a looked-up value.
 
 ### Changed
 
@@ -112,6 +119,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `sort_merged_arrays` with `unique`, `merge` as an alias of `strategy` in a
   merge hash, and lenient sorting of arrays that cannot be ordered.
 - `Backend.datadir`: the entry's `datadir` is `HieraLevel.datadir`.
+- The old `Hiera.get(key, default, merge, throw)`: use
+  `lookup(key, merge=..., default_value=...)`; `get` now has Puppet's
+  `get()` meaning instead (a dotted-navigation string, not a plain key).
+- `Hiera.has(key)`: use `key in h`.
+- `ScopedHiera`: `h.scoped(...)` now returns a `Hiera` bound to the derived
+  scope.
 
 ### Fixed
 

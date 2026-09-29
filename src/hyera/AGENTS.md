@@ -117,6 +117,23 @@ private engine internals with no stability contract.
     error (a malformed key, a type mismatch) propagates, same as
     `.lookup()`. `iter(h)` raises `TypeError` (`__iter__ = None`): a `Hiera`
     is not a sequence, even though it defines `__getitem__`.
+  - **`.dig(*keys, value_type=None, merge=None, default_values_hash=None,
+    override=None) -> Any`** — Puppet's `dig()`: looks up `keys[0]` via
+    `.lookup()` (`merge`/`default_values_hash`/`override` apply to that
+    root lookup, exactly as they would to `.lookup()` itself), then digs
+    the rest of `keys` out of it Ruby `Hash#dig`/`Array#dig`-style. A miss
+    on `keys[0]` gives `None` — unlike `.lookup()`, `.dig()` never raises
+    `KeyNotFoundError`. A later key that is not an `int` against a `list`,
+    or any key against a value that is not a collection, raises
+    `HieraLookupError` naming the path walked so far and the Puppet type
+    found ("The given data requires an Integer index at […], got '…'" /
+    "The given data does not contain a Collection at […], got '…'"). A
+    `list` index follows Ruby's negative/out-of-range rules (negative
+    counts from the end; out of range is `None`); a `dict` key matches
+    only a key of the identical kind (`True` is never `1`, `1` is never
+    `1.0`). `value_type`, when given, asserts the final result with the
+    subject "Found value". Needs at least one key, the first a `str`, else
+    `TypeError`.
   - **`.scoped(*, variables=None, facts=None, trusted=None,
     server_facts=None, environment=None, strict=None, node_name=None) ->
     Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new
