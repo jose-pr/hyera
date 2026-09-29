@@ -10,7 +10,6 @@ import string
 
 from ._navigation import _RUBY_STRIP_CHARS, _ctx_lookup
 from .exceptions import InterpolationError
-from .util import LookupDict
 
 _FUNCTION_RE = re.compile(
     r"""%\{(scope|hiera|lookup|literal|alias)\(['"](?:::|)([^"']*)["']\)\}"""
@@ -179,7 +178,7 @@ class Interpolation:
         return base
 
     def _resolve_dict(self, obj, paths, context, merge):
-        new_obj = LookupDict()
+        new_obj = {}
         for k, v in obj.items():
             new_obj[k] = self._resolve(v, paths, context, merge)
         return new_obj

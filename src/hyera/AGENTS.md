@@ -172,8 +172,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
 - **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
   ("yaml",), "render": ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`.
   `.loads` is `hyera._yaml_loader.safe_load` (Psych's parsing rules, not
-  PyYAML's own) into a plain `dict`/`list` (no `LookupDict` here; the
-  engine adapts); raises `BackendError` on a YAML error, one line, Psych's
+  PyYAML's own) into a plain `dict`/`list`, unadapted -- dotted-key access
+  is a function over that data, not a container method; raises
+  `BackendError` on a YAML error, one line, Psych's
   shape (`<problem> <context> at line L column C`, 1-based; either part may
   be absent) — never a source snippet or the underlying value, with no
   exception chain. `._as_data_hash` ports `yaml_data.rb:27-35`: a `dict`
@@ -374,16 +375,6 @@ is a `Backend` subclass, found by name rather than passed around directly.
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
   the sops timeout.
-
-## Utilities (`util.py`)
-
-- **`LookupDict(dict)`** — supports dotted-path lookup. `.lookup(key)`
-  resolves `"a.b.0.c"`, indexing into nested dicts and lists (numeric
-  segments index a list); raises `KeyError`/`IndexError` on a miss.
-  Intentionally **not hashable** (mutable mapping) — never use one as a
-  dict key.
-- **`sym_lookup(obj, key, default=None)`** — dict lookup that also tries a
-  Ruby-symbol-style `":key"` spelling.
 
 ## Exceptions (`exceptions.py`)
 

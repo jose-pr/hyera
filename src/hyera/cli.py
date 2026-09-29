@@ -73,9 +73,9 @@ def _plain(value):
     """Convert to plain, YAML/JSON-safe types, recursively.
 
     A :class:`~hyera.core.Sensitive` becomes its redacted text (the same
-    text raw/json output already show); any ``dict`` (a ``LookupDict``
-    included) becomes a plain ``dict``; a ``list``/``tuple`` becomes a
-    plain ``list``. Everything else passes through unchanged.
+    text raw/json output already show); a ``dict`` becomes a plain
+    ``dict``; a ``list``/``tuple`` becomes a plain ``list``. Everything
+    else passes through unchanged.
     """
     if isinstance(value, Sensitive):
         return str(value)

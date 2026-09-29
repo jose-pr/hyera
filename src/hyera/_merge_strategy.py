@@ -9,7 +9,6 @@ from copy import deepcopy
 
 from ._navigation import _MISSING
 from .exceptions import MergeError
-from .util import LookupDict
 
 #: Strategy names that build a Merge; also mapped from the legacy type API.
 _MERGE_STRATEGIES = {"first", "unique", "hash", "deep"}
@@ -69,7 +68,7 @@ class Merge:
         if strategy == "unique":
             self.value = []
         elif strategy == "hash":
-            self.value = LookupDict()
+            self.value = {}
         elif strategy == "deep":
             # Deep values may be dicts OR lists; let the first match set the
             # type rather than presuming a dict.
@@ -122,7 +121,7 @@ class Merge:
         in merge order rather than failing the whole lookup.
         """
         if isinstance(obj, dict):
-            out = LookupDict()
+            out = {}
             for k, v in obj.items():
                 out[k] = self._sort_arrays(v)
             return out
@@ -146,7 +145,7 @@ class Merge:
                 for k in obj
                 if isinstance(k, str) and k.startswith(prefix)
             }
-            out = LookupDict()
+            out = {}
             for k, v in obj.items():
                 if isinstance(k, str) and k.startswith(prefix):
                     continue

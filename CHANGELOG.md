@@ -391,6 +391,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The non-Puppet `data_hash` names `yaml`, `json`, `hocon` and `yaml.enc`
   (strict Puppet only). Use `yaml_data`, `json_data` and `hocon_data`;
   `sops_data` (see Changed) is the one intentionally kept non-Puppet name.
+- `hyera.LookupDict`, `hyera.sym_lookup` and the `hyera.util` module.
+  Parsed data and merge results are now plain `dict`/`list` throughout;
+  dotted-key navigation is a function over that data
+  (`"a.b.0.c"`-style lookups still work exactly the same), not a container
+  method. Migration: `LookupDict(...).lookup("a.b.0")` is now
+  `Hiera.get("a.b.0")`. Ruby-symbol keys (`:key`) are normalized to `key`
+  when data loads, so `sym_lookup` has no replacement — nothing needs one.
 
 ### Added
 

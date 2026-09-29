@@ -29,7 +29,6 @@ src/hyera/
 ├── _new_function.py        # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
 ├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
 ├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
-├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
 ├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 └── cli.py                  # duho-based `hyera` console script (Lookup command, main())
 ```
@@ -53,8 +52,11 @@ hiera function calls in the result.
 
 Backends register under one or more Hiera `data_hash` names (see
 `src/hyera/AGENTS.md` for the table) and only need to implement
-`read_file`/`load`; `YAMLBackend` and `JSONBackend` both parse into
-`LookupDict` so `a.b.0.c`-style dotted lookups work uniformly.
+`read_file`/`load`; every backend parses into plain `dict`/`list`, and
+`_navigation.py` (`split_key`/`sub_lookup`, ported from Puppet's own
+`sub_lookup.rb`) is what makes an `"a.b.0.c"`-style dotted key or
+`%{...}` reference navigate that data uniformly, rather than a container
+method.
 
 The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
 `Hiera.get`, designed for unattended use: no interactive prompts,

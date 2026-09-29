@@ -18,7 +18,6 @@ from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import make_merge
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from .backends import default_backends
-from .util import LookupDict
 
 __all__ = ["Hiera", "ScopedHiera"]
 
@@ -59,18 +58,6 @@ def _validate_data_hash(data, name, path) -> None:
         ),
         path=str(path),
     )
-
-
-def _as_lookupdict(obj):
-    """Recursively adapt a backend's plain ``dict``/``list`` result
-    into :class:`~hyera.util.LookupDict` for dotted-key lookup. Backends
-    themselves return plain data; only the engine's cache needs the dotted
-    lookup. ``navigation_sub_lookup`` removes both sides of this adapter."""
-    if isinstance(obj, dict):
-        return LookupDict((k, _as_lookupdict(v)) for k, v in obj.items())
-    if isinstance(obj, list):
-        return [_as_lookupdict(v) for v in obj]
-    return obj
 
 
 class ScopedHiera:
@@ -263,7 +250,7 @@ class Hiera(Interpolation):
                 ) from e
 
             _validate_data_hash(data, backend.name, path)
-            self.cache[path] = _as_lookupdict(data)
+            self.cache[path] = data
         return path
 
     def _get_key(self, key, paths, context, merge):

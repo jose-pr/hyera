@@ -24,7 +24,6 @@ from .core import (
 from ._hiera_config import HieraLevel
 from ._merge_strategy import Merge, make_merge
 from ._types import Sensitive
-from .util import LookupDict, sym_lookup
 
 __version__ = "0.1.0"
 
@@ -41,8 +40,6 @@ __all__ = [
     "JSONBackend",
     "HOCONBackend",
     "SopsBackend",
-    "LookupDict",
-    "sym_lookup",
     "HieraError",
     "ConfigError",
     "BackendError",
