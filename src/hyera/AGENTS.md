@@ -13,23 +13,34 @@ private engine internals with no stability contract.
 ## Engine
 
 - **`Hiera(base_config, backends=None, base_path=None, context=None, **kwargs)`**
-  — the main entry point. `base_config`: a file path, a file-like object, or
-  a pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
-  `hierarchy`, `default_hierarchy`). A path is read once, as bytes (UTF-8,
-  UTF-8 BOM, or UTF-16 with BOM), and `.base_config` keeps the path unchanged
-  (a `str` stays a `str`, a `Path` stays that `Path`). A file-like object is
-  read as given; `Hiera` never closes it and `.base_config` keeps that same
-  object. `backends`: list of `Backend` classes, defaults to
-  `default_backends()`. `base_path`: root that relative `data_dir`/paths
-  resolve against (defaults to the config file's directory, or
-  `os.getcwd()` for a dict/file-like config). `context`/`kwargs`: default
-  format variables merged into every call's context. Raises `ConfigError`
-  for anything about `hiera.yaml` — missing, unreadable, a directory,
-  unparsable, non-mapping, or wrong-shape (bad `version`, missing
-  `hierarchy`, unknown `data_hash`, a malformed hierarchy level) — and
-  `BackendError` (`.path` names it) for a data file that cannot be read or
-  parsed. Context-free hierarchy levels are loaded by the constructor, so a
-  `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
+  — the main entry point. `base_config`: a file path, a file-like object, a
+  pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
+  `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
+  configuration (`datadir: data`, `data_hash: yaml_data`, a single `Common`
+  level at `common.yaml`) rooted at `base_path`. A path is read once, as
+  bytes (UTF-8, UTF-8 BOM, or UTF-16 with BOM), and `.base_config` keeps the
+  path unchanged (a `str` stays a `str`, a `Path` stays that `Path`); a
+  relative path is made absolute at construction, so a later `chdir` cannot
+  change what it resolves against. A file-like object is read as given;
+  `Hiera` never closes it and `.base_config` keeps that same object. A
+  `dict` is deep-copied at construction — `Hiera` never mutates or replaces
+  the caller's own dict. `backends`: list of `Backend` classes, defaults to
+  `default_backends()`. `base_path`: root that relative `datadir`/paths
+  resolve against (defaults to the config file's directory, or `os.getcwd()`
+  for a `dict`/file-like/`None` config); also made absolute at construction.
+  `context`/`kwargs`: default format variables merged into every call's
+  context. Raises `ConfigError` for anything about `hiera.yaml` — missing,
+  unreadable, a directory, unparsable, non-mapping (naming the Hiera 3
+  fallback this runtime does not support yet), or an unsupported `version`
+  (only a literal Integer `5` is accepted; a missing `version` or an
+  explicit `3` reads as "hiera.yaml version 3 is not supported yet"; `4`
+  reads as "cannot be used in the global layer"; anything else as "This
+  runtime does not support hiera.yaml version N") — plus wrong-shape
+  problems (missing `hierarchy`, unknown `data_hash`, a malformed hierarchy
+  level), and `BackendError` (`.path` names it) for a data file that cannot
+  be read or parsed. Context-free hierarchy levels are loaded by the
+  constructor, so a `BackendError` can come from `Hiera(...)` itself, not
+  only from a lookup.
   - **`.get(key, default=None, merge=None, merge_deep=False, throw=False, context=None, **kwargs)`**
     — resolve `key`. `key` must be a `str`; anything else raises `TypeError`.
     A dotted `key` follows Puppet's sub-key grammar (see the dotted
@@ -382,9 +393,13 @@ is a `Backend` subclass, found by name rather than passed around directly.
 `None`) →
 
 - **`ConfigError`** — anything about `hiera.yaml`: missing, unreadable,
-  unparsable, non-mapping, or wrong shape. A read/shape problem's message
-  names the origin directly; an unparsable file's is `(<path>): <problem>
-  at line L column C` (Psych's shape, one line).
+  unparsable, non-mapping, an unsupported `version`, or wrong shape. A
+  read/shape problem's message names the origin directly; an unparsable
+  file's is `(<path>): <problem> at line L column C` (Psych's shape, one
+  line). `.line` (in addition to the inherited `.path`) names the 1-based
+  line in `.path` a problem was found at, when known (`None` for a dict
+  config, or when no line applies); a message that includes a line also
+  ends with Puppet's own `(file: F, line: N)` suffix.
 - **`BackendError`** — a data file could not be read or parsed. `.path`
   names it; an unparsable file's message is `Unable to parse (<path>):
   <problem> at line L column C`, one line. Can be raised from `Hiera(...)`

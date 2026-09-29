@@ -212,7 +212,8 @@ subkeys and alias native-type preservation · merges `first`/`unique`/`hash`/
 `deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays` ·
 `lookup_options` (per-key/regex merge strategy + `convert_to`).
 
-Not implemented: `lookup_key`/`data_dig` provider backends · `uri`/`uris`
+Not implemented: hiera.yaml version 3/4 (a file without `version` is version
+3) · `lookup_key`/`data_dig` provider backends · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
 `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
 
@@ -240,6 +241,9 @@ with one deliberate exception:
   contributes nothing); hyera's default lets pyhocon's own resolution run
   for real, which does glob and includes every match. Every other
   `include` form matches Puppet exactly (see "Backends" above).
+- **`Hiera(path)` raises `ConfigError` when the file does not exist.**
+  Puppet then falls back to its built-in default configuration; ask for
+  that explicitly with `Hiera(None, base_path=...)` here.
 
 ## Notes
 

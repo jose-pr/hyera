@@ -54,6 +54,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   own `filterwarnings = ["error"]`. Both calls are shimmed in hyera's
   already-private `pyhocon.config_parser` module copy; the shared
   `pyhocon` module, and every other caller of it, are unaffected.
+- `Hiera(dict_config)` no longer modifies the caller's dict; the config is
+  deep-copied at construction.
 
 ### Security
 
@@ -180,6 +182,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   throw=True)`'s miss). All exported from `hyera`.
 - Test suite (pytest) covering lookup, interpolation, merge, glob, backends,
   and the CLI; green on Python 3.9 and 3.14.
+- `Hiera(None, base_path=...)`: Puppet's built-in default configuration
+  (`data/common.yaml` under `base_path`), used when there is no hiera.yaml
+  to point at.
+- `ConfigError.path` and `ConfigError.line` name the file (and, where
+  known, the line) a configuration problem was found at.
 
 ### Fixed
 
@@ -385,6 +392,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   named `"a.b"` instead. The CLI's `--scope` follows the same rule: a
   dotted `--scope` name (`--scope a.b=v`) now exits `2` rather than storing
   a variable nothing could ever read.
+- A hiera.yaml without `version`, or with `version: 3`, raises `ConfigError`
+  instead of being read as version 5 -- add `version: 5`.
+- `version: 4` raises "hiera.yaml version 4 cannot be used in the global
+  layer" instead of being read as version 5.
+- Any other unsupported version raises "This runtime does not support
+  hiera.yaml version N".
+- A `version` that is not an Integer (`"5"`, `5.0`) raises, instead of
+  being accepted or silently truncated.
+- An empty or non-mapping hiera.yaml raises a `ConfigError` that names the
+  Hiera version 3 fallback it does not yet support, instead of being read
+  as an empty version 5 config.
+- A relative config path, and a relative `base_path`, are made absolute at
+  construction instead of resolving against the current working directory
+  on every read.
 
 ### Removed
 
