@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "b9b9c35ad2f13b69f21d3222d2443f5489158eea24dc6a61df6322254702fe76",
+  "inputs_sha256": "3206f40989891a521a06b68993a82c36b03beb3a18b6194f5197cdf8894af15c",
   "results": {
     "mymod::only_main": {
       "argv": [
