@@ -1,0 +1,5 @@
+lookup_options:
+  kk: unique
+  '^kk':
+    merge: unique
+kk: [2]

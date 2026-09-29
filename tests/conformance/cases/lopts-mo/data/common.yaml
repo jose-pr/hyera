@@ -1,0 +1,25 @@
+lookup_options:
+  m_bogus_opt: {merge: {strategy: deep, bogus: 1}}
+  m_unique_ko: {merge: {strategy: unique, knockout_prefix: '--'}}
+  m_nostrat: {merge: {knockout_prefix: '--'}}
+  m_unknown: {merge: bogus}
+  m_hashform: {merge: {strategy: deep, knockout_prefix: '--'}}
+  m_str: {merge: deep}
+  m_interp: {merge: "%{facts.strat}"}
+  m_notdict: unique
+  m_first_hash: {merge: {strategy: first}}
+  m_ko_hash: {merge: {strategy: hash, knockout_prefix: '--'}}
+  m_null: {merge: ~}
+  m_empty: {merge: ''}
+m_bogus_opt: {a: [2]}
+m_unique_ko: [2]
+m_nostrat: [2]
+m_unknown: [2]
+m_hashform: {list: [x, z], s: 2}
+m_str: {a: {c: 2}}
+m_interp: [2]
+m_notdict: [2]
+m_first_hash: [2]
+m_ko_hash: {b: 2, c: 3}
+m_null: [2]
+m_empty: [2]

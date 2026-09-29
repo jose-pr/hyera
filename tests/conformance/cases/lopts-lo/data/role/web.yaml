@@ -1,0 +1,20 @@
+lookup_options:
+  '^a::b.*':
+    merge: first
+  exact_k:
+    merge: unique
+app::ports: [80]
+a::b::list: [1]
+s::t::x: [1]
+exact_k: [r]
+nilk: ~
+nil_u: ~
+nil_h: ~
+nil_d: ~
+db:
+  port: [1]
+  name: r
+dotcv:
+  port: 5
+dotfirst:
+  other: 1

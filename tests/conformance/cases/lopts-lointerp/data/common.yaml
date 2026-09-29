@@ -1,0 +1,8 @@
+lookup_options:
+  k: {merge: unique}
+  n: {convert_to: Integer}
+k: [2]
+n: "5"
+ref_k: "%{alias('k')}"
+ref_n: "%{alias('n')}"
+ref_n2: "%{lookup('n')}"

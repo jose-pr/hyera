@@ -1,0 +1,11 @@
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: role
+    path: "role/%{facts.role}.yaml"
+  - name: env
+    path: "env/%{facts.env}.yaml"
+  - name: common
+    path: common.yaml

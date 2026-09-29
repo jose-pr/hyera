@@ -1,0 +1,186 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "2edf471cac82a21f5042f01d454e8d1341039bb517842edaa52b786c79fc4ded",
+  "results": {
+    "app::ports": {
+      "argv": [
+        "--strict",
+        "warning",
+        "app::ports"
+      ],
+      "status": "found",
+      "value": [
+        80,
+        443
+      ]
+    },
+    "a::b::list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "a::b::list"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "s::t::x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s::t::x"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "exact_k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "exact_k"
+      ],
+      "status": "found",
+      "value": [
+        "r",
+        "c"
+      ]
+    },
+    "nilk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nilk"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "onlynil": {
+      "argv": [
+        "--strict",
+        "warning",
+        "onlynil"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "nil_u-merge-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "nil_u"
+      ],
+      "status": "found",
+      "value": [
+        null,
+        "c"
+      ]
+    },
+    "nil_h-merge-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "nil_h"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'nil_h' failed: The first element of the merge has wrong type, expects a Hash value, got Undef"
+    },
+    "nil_d-merge-deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "nil_d"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "status": "found",
+      "value": [
+        2,
+        1
+      ]
+    },
+    "db": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db"
+      ],
+      "status": "found",
+      "value": {
+        "port": [
+          2,
+          1
+        ],
+        "host": "x",
+        "name": "r"
+      }
+    },
+    "dotcv.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotcv.port"
+      ],
+      "status": "found",
+      "value": "5"
+    },
+    "dotfirst.wanted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotfirst.wanted"
+      ],
+      "status": "not_found"
+    },
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "status": "not_found"
+    },
+    "lookup_options.exact_k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options.exact_k"
+      ],
+      "status": "not_found"
+    },
+    "rbkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "rbkey"
+      ],
+      "status": "found",
+      "value": [
+        "e",
+        "c"
+      ]
+    }
+  }
+}

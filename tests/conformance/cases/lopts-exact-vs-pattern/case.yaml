@@ -1,0 +1,9 @@
+description: >-
+  A probe the review fixtures did not have: a key that matches both an
+  exact lookup_options entry (merge: unique) and a regex pattern (merge:
+  first); Puppet checks the exact key before patterns
+  (pops/lookup/lookup_adapter.rb:253-260), so the exact entry's unique
+  merge wins.
+origin: "(no source fixture -- written as a probe for this behavior)"
+queries:
+  - key: probekey

@@ -1,0 +1,5 @@
+description: >-
+  A lower-priority level's lookup_options entry for a key is itself nil.
+origin: spec-lookup-options-types/lonil
+queries:
+  - key: k

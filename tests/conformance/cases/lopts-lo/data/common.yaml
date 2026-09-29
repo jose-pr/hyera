@@ -1,0 +1,34 @@
+lookup_options:
+  '^app::':
+    merge: unique
+  '^a::.*':
+    merge: unique
+  '^s::.*':
+    merge: unique
+  '^s::t.*':
+    merge: first
+  exact_k:
+    convert_to: String
+  db:
+    merge: deep
+  dotcv:
+    convert_to: String
+  '^rb(?<n>\w+)$':
+    merge: unique
+app::ports: [443]
+a::b::list: [2]
+s::t::x: [2]
+exact_k: [c]
+nilk: common
+nil_u: [c]
+nil_h: {a: 1}
+nil_d: {a: 1}
+onlynil: ~
+db:
+  port: [2]
+  host: x
+dotcv:
+  port: 6
+dotfirst:
+  wanted: yes
+rbkey: [c]

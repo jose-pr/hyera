@@ -1,0 +1,4 @@
+probekey: [2]
+lookup_options:
+  probekey: {merge: unique}
+  '^probe.*': {merge: first}

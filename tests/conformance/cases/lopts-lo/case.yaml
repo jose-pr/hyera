@@ -1,0 +1,41 @@
+description: >-
+  lookup_options resolution: regex patterns (anchored and named group),
+  exact-key precedence, nil values under each merge strategy, a dotted
+  literal key vs its root, and a lookup_options key that is itself queried.
+origin: spec-lookup-options-types/lo
+queries:
+  - key: app::ports
+    divergence: spec-lookup-options-types/lookup-options-regex-fullmatch
+  - key: a::b::list
+    divergence: spec-lookup-options-types/lookup-options-pattern-order-across-levels
+  - key: s::t::x
+  - key: exact_k
+  - key: nilk
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: onlynil
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: nil_u
+    id: nil_u-merge-unique
+    merge: unique
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: nil_h
+    id: nil_h-merge-hash
+    merge: hash
+    divergence: spec-lookup-options-types/found-nil-treated-as-missing
+  - key: nil_d
+    id: nil_d-merge-deep
+    merge: deep
+  - key: db.port
+    divergence: spec-lookup-options-types/lookup-options-root-key-and-dig
+  - key: db
+    divergence: spec-merge/deep-array-merge-order-and-dedupe
+  - key: dotcv.port
+    divergence: spec-lookup-options-types/lookup-options-root-key-and-dig
+  - key: dotfirst.wanted
+    divergence: spec-lookup-options-types/lookup-options-root-key-and-dig
+  - key: lookup_options
+    divergence: spec-lookup-options-types/lookup-options-key-not-reserved
+  - key: lookup_options.exact_k
+    divergence: spec-lookup-options-types/lookup-options-key-not-reserved
+  - key: rbkey
+    divergence: spec-lookup-options-types/lookup-options-ruby-regex-dialect

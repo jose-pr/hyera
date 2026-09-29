@@ -1,0 +1,12 @@
+m_bogus_opt: {a: [1]}
+m_unique_ko: [1]
+m_nostrat: [1]
+m_unknown: [1]
+m_hashform: {list: ['--x', 'y'], s: 1}
+m_str: {a: {b: 1}}
+m_interp: [1]
+m_notdict: [1]
+m_first_hash: [1]
+m_ko_hash: {a: 1, '--b': ~}
+m_null: [1]
+m_empty: [1]

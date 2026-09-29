@@ -1,0 +1,32 @@
+description: >-
+  Merge-option hash shapes lookup_options can declare: a bogus extra key, a
+  strategy-less knockout, an unknown strategy name, an equivalent hash
+  form, a plain string, an interpolated strategy, a non-dict legacy form,
+  a first-with-a-hash-wrapper, a hash-strategy knockout, a null merge
+  value, and an empty-string merge value.
+origin: spec-lookup-options-types/mo
+queries:
+  - key: m_bogus_opt
+    divergence: spec-merge/merge-options-not-validated
+    error_match: "unrecognized key"
+  - key: m_unique_ko
+    divergence: spec-merge/merge-options-not-validated
+    error_match: "unrecognized key"
+  - key: m_nostrat
+    divergence: spec-merge/merge-options-not-validated
+  - key: m_unknown
+    divergence: spec-lookup-options-types/merge-errors-escape-as-valueerror
+    error_match: "Unknown merge strategy"
+  - key: m_hashform
+    divergence: spec-merge/deep-array-merge-order-and-dedupe
+  - key: m_str
+  - key: m_interp
+  - key: m_notdict
+  - key: m_first_hash
+  - key: m_ko_hash
+    divergence: spec-merge/merge-options-not-validated
+    error_match: "unrecognized key"
+  - key: m_null
+  - key: m_empty
+    divergence: spec-lookup-options-types/merge-errors-escape-as-valueerror
+    error_match: "Unknown merge strategy"

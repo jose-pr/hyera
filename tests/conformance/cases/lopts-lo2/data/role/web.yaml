@@ -1,0 +1,8 @@
+lookup_options:
+  '^ex.*':
+    merge: first
+  'db.port':
+    merge: unique
+exk: [1]
+db:
+  port: [80]

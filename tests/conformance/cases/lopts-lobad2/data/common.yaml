@@ -1,0 +1,3 @@
+lookup_options:
+  k: {merge: unique}
+k: [2]

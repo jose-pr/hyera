@@ -1,0 +1,8 @@
+description: >-
+  lookup_options is a list instead of a hash at the role level, while a
+  higher-priority level's lookup_options is a well-formed hash.
+origin: spec-lookup-options-types/lobad2
+queries:
+  - key: k
+    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
+    error_match: "wrong type"
