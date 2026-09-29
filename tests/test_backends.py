@@ -49,8 +49,9 @@ def test_json_backend_loads(make_tree):
     assert h.get("k") == "v"
 
 
-def test_json_backend_via_alias(make_tree):
-    # The short `json` data_hash alias resolves the same backend.
+def test_json_short_name_extension(make_tree):
+    # Non-Puppet extension; this test goes with the feature. The short
+    # `json` data_hash alias resolves the same backend.
     root = make_tree(
         {
             "defaults": {"data_hash": "json"},
@@ -62,7 +63,9 @@ def test_json_backend_via_alias(make_tree):
     assert h.get("k") == "aliased"
 
 
-def test_datadir_key_accepts_both_spellings():
+def test_backend_data_dir_extension():
+    # Non-Puppet extension; this test goes with the feature: accepting the
+    # legacy `data_dir` spelling alongside `datadir`.
     assert YAMLBackend({"datadir": "d"}).datadir == "d"
     assert YAMLBackend({"data_dir": "d"}).datadir == "d"
     assert YAMLBackend({}).datadir == ""

@@ -235,7 +235,9 @@ def test_bad_config_exit_2(tmp_path):
     assert rc == 2
 
 
-def test_array_merge_json_output(hiera_root, capsys):
+def test_merge_array_alias_extension(hiera_root, capsys):
+    # Non-Puppet extension; this test goes with the feature: `--merge array`
+    # is our own legacy alias for `unique`.
     rc = main(
         [
             "classes",
@@ -253,7 +255,7 @@ def test_array_merge_json_output(hiera_root, capsys):
     assert json.loads(capsys.readouterr().out) == ["prod", "web", "base"]
 
 
-def test_unique_merge_alias(hiera_root, capsys):
+def test_unique_merge_json_output(hiera_root, capsys):
     rc = main(
         [
             "classes",
