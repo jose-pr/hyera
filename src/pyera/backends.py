@@ -358,7 +358,7 @@ class HOCONBackend(Backend):
     def load(self, data):
         try:
             from pyhocon import ConfigFactory
-        except ImportError as e:  # pragma: no cover - optional dependency
+        except ImportError as e:
             raise BackendError(
                 "hocon_data backend requires the 'pyhocon' package "
                 "(pip install pyera[hocon])"
