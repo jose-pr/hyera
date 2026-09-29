@@ -3,7 +3,7 @@
 Behavioral acceptance for these two functions runs through the
 ``dotted-navigation`` conformance case; this module unit-tests the parser
 and the walker directly, since ``puppet lookup`` output alone cannot show
-which internal rule applied (Design Q3).
+which internal rule applied.
 """
 
 import re

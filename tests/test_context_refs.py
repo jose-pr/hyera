@@ -85,7 +85,8 @@ def test_partial_nested_ref_in_path_skips_level(tree):
 def test_scalar_walked_as_container_raises(tree):
     # `trusted` is a string: walking `.certname` into it is a Puppet type
     # mismatch, not a silent level skip. Construction itself still succeeds
-    # (Design Q6): the error is deferred to the first real lookup.
+    # (the constructor only pre-warms the cache; a lookup-time error there
+    # is swallowed and deferred to the first real lookup, which raises it).
     h = Hiera(str(tree / "hiera.yaml"), context={"trusted": "not-a-dict"})
     with pytest.raises(HieraLookupError, match="Got String"):
         h.get("role")
