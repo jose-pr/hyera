@@ -1,0 +1,23 @@
+---
+lookup_options:
+  karr: [x]
+  kint: 5
+  kbool: true
+  '^karr': {merge: unique}
+  '^kint': {merge: unique}
+  '^kbool': {merge: unique}
+  '^pn': unique
+  '^pa': [x]
+  '^hx\h+\z': {merge: unique}
+  '^(?<!q)lb': {merge: unique}
+  kneg: {merge: unique}
+karr: [a]
+kint: [a]
+kbool: [a]
+pn1: [a]
+pa1: [a]
+hxbeef: [a]
+lbkey: [a]
+kneg: [a]
+nk: ~
+ns: ~

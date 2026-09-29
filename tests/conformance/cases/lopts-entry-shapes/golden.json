@@ -1,0 +1,116 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "56d6e139ea1b3fbdef4bb3a9dc1f7f572cde016c84905cb4b0e9868973a253a7",
+  "results": {
+    "karr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "karr"
+      ],
+      "status": "error",
+      "message": "no implicit conversion of String into Integer"
+    },
+    "kint": {
+      "argv": [
+        "--strict",
+        "warning",
+        "kint"
+      ],
+      "status": "error",
+      "message": "no implicit conversion of String into Integer"
+    },
+    "kbool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "kbool"
+      ],
+      "status": "error",
+      "message": "undefined method '[]' for true"
+    },
+    "pn1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "pn1"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "pa1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "pa1"
+      ],
+      "status": "error",
+      "message": "no implicit conversion of String into Integer"
+    },
+    "hxbeef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hxbeef"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lbkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lbkey"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "kneg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "kneg"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "status": "not_found"
+    },
+    "nk.a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nk.a"
+      ],
+      "status": "not_found"
+    },
+    "ns.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ns.x"
+      ],
+      "status": "not_found"
+    }
+  }
+}
