@@ -4,9 +4,7 @@ description: >-
 queries:
   - key: k1
     note: Puppet 8.10 probe
-    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch
   - key: k1
     id: k1-unique
     merge: unique
     note: Puppet 8.10 probe
-    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch

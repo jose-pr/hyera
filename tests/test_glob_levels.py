@@ -3,10 +3,15 @@ nothing, instead of ``Hiera()``/``.get()`` raising ``FileNotFoundError``
 (Puppet's ``expand_globs`` returns no matches for a missing directory).
 """
 
+import os
 import re
+import shutil
 from pathlib import Path as StdPath
 
-from hyera import Hiera, Scope
+import pytest
+
+from hyera import BackendError, Hiera, Scope
+from test_dir_glob import _dir_link
 
 REPO_ROOT = StdPath(__file__).resolve().parents[1]
 
@@ -76,3 +81,39 @@ def test_readme_example_config_constructs(make_tree):
     root = make_tree(config_text, files={"data/common.yaml": "k: common\n"})
     h = Hiera(str(root / "hiera.yaml"))
     assert h.get("k") == "common"
+
+
+def test_glob_level_rejects_directories(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "g", "glob": "*"}]},
+        files={"data/z.yaml": "k: z\n", "data/sub/in.yaml": "k2: in\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.get("k") == "z"
+    assert not h.has("k2")
+
+    only_dir = make_tree(
+        {"hierarchy": [{"name": "g", "glob": "sub"}]},
+        files={"data/sub/in.yaml": "k2: in\n"},
+        root="only_dir",
+    )
+    h2 = Hiera(str(only_dir / "hiera.yaml"))
+    assert not h2.has("k2")
+
+
+def test_dangling_link_match_raises_backend_error(make_tree):
+    root = make_tree({"hierarchy": [{"name": "g", "glob": "*.yaml"}]})
+    data = root / "data"
+    data.mkdir(exist_ok=True)
+    link = data / "a.yaml"
+    if os.name == "nt":
+        target = root / "gone"
+        target.mkdir()
+        _dir_link(link, target)
+        shutil.rmtree(target)
+    else:
+        os.symlink(str(root / "gone"), str(link))
+
+    with pytest.raises(BackendError) as exc:
+        Hiera(str(root / "hiera.yaml"))
+    assert str(exc.value.path).replace(os.sep, "/").endswith("a.yaml")

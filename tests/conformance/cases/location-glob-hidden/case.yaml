@@ -1,12 +1,7 @@
 description: >-
-  A glob "*.yaml" over a directory containing a dotfile. Whether the
-  dotfile is included depends on which patch of the declared
-  pathlib_next range is installed (0.9.2 excludes it, 0.9.11 includes
-  it) -- both are inside the same pin, so this golden's own status can
-  flip with an unrelated dependency resolve.
+  A glob "*.yaml" over a directory containing a dotfile: hyera's own Ruby
+  Dir.glob port never includes it, on every OS and independent of the
+  installed pathlib_next patch (glob levels no longer delegate to it).
 origin: spec-config/cases/glob_hidden
 queries:
   - key: k
-    divergence:
-      id: critic-engineering/glob-semantics-drift-with-pathlib-next-patch
-      when: pathlib_next-includes-hidden

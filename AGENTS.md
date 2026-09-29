@@ -39,8 +39,9 @@ src/hyera/
 `hyera._*` modules are private engine internals mirroring Puppet's own file
 split; import public names from `hyera` itself.
 
-`pathlib_next.Path` is used throughout instead of stdlib `pathlib` (hierarchy
-glob levels rely on its `Path.glob`).
+`pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
+levels use hyera's own `Dir.glob` port in `_location_resolver.py`, never
+`Path.glob`.
 
 ## How it fits together
 

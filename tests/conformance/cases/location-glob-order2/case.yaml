@@ -1,7 +1,7 @@
 description: >-
   Glob match ordering across a case difference (B.yaml, _x.yaml, a.yaml):
-  Puppet sorts by byte order, platform Path ordering can be case-insensitive.
+  hyera's own Ruby Dir.glob port sorts by byte order on every OS, matching
+  Puppet's Linux servers.
 origin: spec-config/cases/glob_order2
 queries:
   - key: k
-    divergence: {id: spec-config/glob-order-case-insensitive-on-windows, "on": [win32]}

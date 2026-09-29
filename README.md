@@ -246,7 +246,10 @@ key, non-empty strings, the `options` name pattern, and the rest) ·
 `path`/`paths`/`glob`/`globs`/`mapped_paths`, resolved through Puppet's own
 interpolation rules (an undefined variable in a location becomes `''` plus
 a warning and is still probed, never a skipped level; `mapped_paths` binds
-each collection item as a local scope variable) · `datadir` (default `data`,
+each collection item as a local scope variable), with a `glob`/`globs`
+location matched through hyera's own Ruby `Dir.glob` port (brace
+alternation, Ruby's dotfile and `**` rules, no recursion through a symlink
+or junction) · `datadir` (default `data`,
 next to hiera.yaml) ·
 `default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
@@ -300,7 +303,11 @@ with one deliberate exception:
   Puppet 8 defaults to `strict="error"`. Pass `Scope(strict="error")` (or
   `.scoped(strict="error")`) to match Puppet's own default.
 - **The directory holding hiera.yaml is used literally.** Puppet
-  interpolates `%{...}` inside that absolute path too; hyera does not.
+  interpolates `%{...}` inside that absolute path too; hyera does not --
+  and, for glob levels, treats glob metacharacters in it as a pattern.
+- **Glob wildcards are case-sensitive and results sort by byte order on
+  every OS, as on Puppet's Linux servers; Ruby on Windows matches glob
+  wildcards case-insensitively.**
 
 ## Notes
 

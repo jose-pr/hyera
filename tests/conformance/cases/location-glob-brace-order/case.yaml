@@ -4,4 +4,3 @@ description: >-
 queries:
   - key: k
     note: Puppet 8.10 probe
-    divergence: spec-config/glob-brace-expansion-missing

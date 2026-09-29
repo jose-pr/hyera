@@ -159,9 +159,18 @@ private engine internals with no stability contract.
   reaches a top-scope variable of the same name, bypassing the local
   layer). A `path`/`paths`/mapped location that names a directory raises
   `BackendError` ("Is a directory") when loaded, instead of reading its
-  files; a glob match that is a directory is dropped instead. A glob whose
-  directory does not exist yields nothing (matches Puppet), instead of
-  raising from the underlying filesystem walk.
+  files; a glob match that is a directory is dropped instead. A `glob`/
+  `globs` location matches through hyera's own Ruby `Dir.glob` port
+  (`_location_resolver.glob`), never `pathlib_next.Path.glob`: `{a,b}`
+  brace alternation (nested, in written order, duplicates kept); a
+  dotfile matches only an explicit leading `.` in the pattern, never a
+  bare `*`/`?`/`[...]`; `**/` never descends through a symlink or a
+  Windows junction, and a trailing `**` is plain `*`; `\` escapes a
+  metacharacter in the pattern text; each directory's entries sort in
+  byte order and every wildcard is case-sensitive, on every OS; a missing
+  or unreadable directory contributes nothing; `datadir`'s own glob
+  metacharacters are live for a glob level (a literal directory for a
+  `path`/`paths`/mapped one).
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
   Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
   `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`

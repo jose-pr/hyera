@@ -74,6 +74,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it, and a glob drops directory matches. List the files, or use a glob.
 - `HieraLevel`'s fields are now `name, backend, datadir, location_key,
   locations`, and `.paths(base_path, scope)` returns a list.
+- Glob hierarchy levels (`glob:`/`globs:`) now match through hyera's own
+  Ruby `Dir.glob` port instead of `pathlib_next.Path.glob`: `{a,b}` brace
+  alternation (nested, in written order, duplicates kept); `**` never
+  follows a symlink or a Windows junction, and a trailing `**` is plain
+  `*`; a dotfile matches only an explicit leading `.`, and `\` escapes a
+  metacharacter; results sort in byte order and every wildcard is
+  case-sensitive, on every OS; an unreadable directory is skipped; glob
+  metacharacters in `datadir` apply to glob levels.
 
 ### Removed
 
@@ -91,6 +99,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `a`, or a variable whose value refers to itself) raises
   `InterpolationError` "Recursive lookup detected in [a, b]" instead of
   Python's own `RecursionError`.
+- Glob results no longer depend on the installed `pathlib_next` patch
+  (dotfile matching, a trailing `**`), no longer loop or read outside a
+  hierarchy's own tree through a symlink or Windows junction loop, and
+  sort the same way on every OS.
 
 ## [0.0.0a0] - 2026-09-29
 

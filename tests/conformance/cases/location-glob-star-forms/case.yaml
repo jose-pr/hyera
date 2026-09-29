@@ -11,4 +11,3 @@ queries:
     id: k3-unique
     merge: unique
     note: Puppet 8.10 probe
-    divergence: critic-engineering/glob-semantics-drift-with-pathlib-next-patch
