@@ -146,7 +146,18 @@ def input_digest(case_dir: Path) -> str:
         ],
     }
     h.update(json.dumps(asked, sort_keys=True).encode("utf-8") + b"\0")
-    for path in sorted(p for p in case_dir.rglob("*") if p.is_file()):
+    # Sort by the relative POSIX path *string*, never by comparing Path
+    # objects directly: WindowsPath orders case-insensitively (lowercases
+    # before comparing) while PosixPath is case-sensitive, so a case
+    # naming its files with a mix of cases (location-glob-order2's
+    # B.yaml/_x.yaml/a.yaml, deliberately -- it tests Puppet's own
+    # byte-order glob sort) hashed its files in a different order on
+    # Windows than on Linux/macOS, so a golden recorded on Windows read
+    # "stale" in Linux/macOS CI even though not one byte had changed.
+    # Found 2026-09-29 via a CI-only failure that never reproduced on the
+    # Windows recording box.
+    files = [p for p in case_dir.rglob("*") if p.is_file()]
+    for path in sorted(files, key=lambda p: p.relative_to(case_dir).as_posix()):
         rel = path.relative_to(case_dir).as_posix()
         if rel in (GOLDEN, CASE_FILE):
             continue
