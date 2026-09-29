@@ -170,7 +170,14 @@ lookup_options:
 A `lookup_options` key is treated as a regular expression **only when it
 starts with `^`** (Hiera 5's rule); every other key is matched literally, so
 a key containing `.` or other metacharacters cannot shadow unrelated keys.
-An exact key match always wins over a pattern match.
+Patterns use Ruby regex syntax (`(?<name>…)`, `\A`, `\z`, `\h`/`\H`, a
+lookbehind) and match by searching from the start of the key, so `^app::`
+matches `app::ports`; they are tried in the merged order, lower-priority
+levels' patterns first. An exact key match always wins over a pattern
+match. An invalid pattern, or a `lookup_options` value that is not a hash,
+raises `HieraLookupError` for the whole lookup. An entry that is a string
+applies no options and stops the search (a matching pattern for the same
+key is never tried); any other non-hash, non-string entry raises.
 
 An explicit `merge=` argument overrides `lookup_options`. `convert_to` takes
 a Puppet type string (`Integer`, `Optional[Integer]`) or `[Type, *args]`

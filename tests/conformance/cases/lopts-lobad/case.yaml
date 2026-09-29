@@ -3,5 +3,4 @@ description: >-
 origin: spec-lookup-options-types/lobad
 queries:
   - key: k
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
     error_match: "value of lookup_options must be a hash"

@@ -736,8 +736,17 @@ re-exports it too).
   `hyera.MergeError`, never a bare `ValueError`/`TypeError`.
 - A `lookup_options` key is a **regex only when it starts with `^`**
   (Hiera 5's rule); anything else is matched literally, so a key containing
-  `.` cannot shadow-match unrelated keys. An exact key match wins over a
-  pattern; an invalid pattern is skipped rather than raising.
+  `.` cannot shadow-match unrelated keys. Patterns use Ruby syntax
+  (`(?<name>…)`, `\A`, `\z`, `\h`/`\H` and a lookbehind all work), match by
+  **searching** from the start of the key (`^app::` matches `app::ports`,
+  not only `app::`), and are tried in the merged order — lower-priority
+  levels' patterns first. An exact key match always wins over a pattern.
+  An invalid pattern, or a `lookup_options` value that is not a hash, raises
+  `HieraLookupError` — the whole lookup fails, not just the one key. An
+  entry that is a string applies no options and blocks a matching pattern
+  from being tried at all (same key, both an exact and a pattern entry); any
+  other non-hash, non-string entry (a list, an integer, a boolean, ...)
+  raises `HieraLookupError` too.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
   **dotted lookup key** (`h.get("a.b.0")`) both follow Puppet's own
   `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `datadir`,

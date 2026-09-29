@@ -33,7 +33,6 @@ queries:
   id: k_alias_hash
   merge: hash
 - key: pfx::x
-  divergence: code-core/dotted-key-root-semantics
 - key: lo_root.a
   divergence: code-core/dotted-key-root-semantics
 - key: conv

@@ -21,7 +21,11 @@ def _ruby_regex(source):
     end-of-string anchor), and ``\\h``/``\\H`` (hex digit / non-hex digit)
     have no Python equivalent.
     """
-    pattern = source.replace("(?<", "(?P<")
+    # A named-group open (Ruby ``(?<name>``) becomes Python's ``(?P<name>``,
+    # but a lookbehind (Ruby/Python both spell it ``(?<=`` / ``(?<!``) must
+    # be left alone -- rewriting it too turns a valid lookbehind into an
+    # unterminated group name.
+    pattern = re.sub(r"\(\?<(?![=!])", "(?P<", source)
     pattern = re.sub(r"(?<!\\)\\z", "\\\\Z", pattern)
     pattern = re.sub(r"(?<!\\)\\Z", "(?=\\\\n?\\\\Z)", pattern)
     pattern = pattern.replace("\\h", "[0-9a-fA-F]").replace("\\H", "[^0-9a-fA-F]")

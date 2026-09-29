@@ -5,7 +5,6 @@ description: >-
 origin: spec-lookup-options-types/lo
 queries:
   - key: app::ports
-    divergence: spec-lookup-options-types/lookup-options-regex-fullmatch
   - key: a::b::list
   - key: s::t::x
   - key: exact_k
@@ -36,4 +35,3 @@ queries:
   - key: lookup_options.exact_k
     divergence: spec-lookup-options-types/lookup-options-key-not-reserved
   - key: rbkey
-    divergence: spec-lookup-options-types/lookup-options-ruby-regex-dialect

@@ -7,42 +7,104 @@ Ports Puppet's ``lookup_adapter.rb``.
 """
 
 import re
+import typing as _ty
 
 from .exceptions import HieraLookupError
 from ._new_function import new_instance
 from ._type_parser import parse_type
+from ._types import _ruby_regex
+
+#: The reserved data key holding per-key merge/convert_to options.
+LOOKUP_OPTIONS = "lookup_options"
 
 
-def _is_regex(pattern):
-    """Hiera 5's rule: a lookup_options key is a regex only when ``^``-anchored.
+def validate_lookup_options(options):
+    """Puppet's ``LookupAdapter#validate_lookup_options`` (:298-300).
 
-    A key without a leading ``^`` is matched literally, so a dotted key like
-    ``db.port`` never regex-matches an unrelated key such as ``dbxport``.
-    """
-    return isinstance(pattern, str) and pattern.startswith("^")
-
-
-def _extract_lookup_options_for_key(key, options):
-    """Return the merged ``lookup_options`` entry matching ``key``, or None.
-
-    ``lookup_options`` is a reserved data key: ``{pattern: {merge, convert_to}}``.
-    Higher-priority (earlier) levels win per pattern. An exact key match
-    wins over a regex pattern match; the first regex match otherwise wins.
+    ``None`` (no ``lookup_options`` key at all) passes through unchanged;
+    anything other than a hash raises, naming Puppet's own message.
     """
     if options is None:
         return None
-    if key in options and isinstance(options[key], dict):
-        return options[key]
-    for pattern, entry in options.items():
-        if not isinstance(entry, dict):
-            continue
-        if _is_regex(pattern):
+    if not isinstance(options, dict):
+        raise HieraLookupError("value of lookup_options must be a hash")
+    return options
+
+
+class CompiledOptions(_ty.NamedTuple):
+    """A ``lookup_options`` mapping split into exact and pattern entries.
+
+    ``patterns`` keeps the mapping's own order (lower-priority levels'
+    patterns first, per the merge port's hash-strategy precedence), since
+    the first pattern that matches wins.
+    """
+
+    exact: dict
+    patterns: tuple
+
+
+def compile_patterns(options):
+    """Puppet's ``LookupAdapter#compile_patterns`` (:317-330).
+
+    A key starting with ``^`` is a Ruby regex, compiled through
+    :func:`hyera._types._ruby_regex`; anything else, including a non-``str``
+    key, is an exact match. An invalid pattern raises immediately (no
+    rescue, as in Puppet), naming the pattern.
+    """
+    if options is None:
+        return None
+    exact = {}
+    patterns = []
+    for key, entry in options.items():
+        if isinstance(key, str) and key.startswith("^"):
             try:
-                if re.fullmatch(pattern, key):
-                    return entry
-            except re.error:
-                continue
+                pattern = _ruby_regex(key)
+            except re.error as e:
+                raise HieraLookupError("{}: /{}/".format(e.msg, key)) from None
+            patterns.append((pattern, entry))
+        else:
+            exact[key] = entry
+    return CompiledOptions(exact=exact, patterns=tuple(patterns))
+
+
+def extract_lookup_options_for_key(root_key, compiled):
+    """Puppet's ``LookupAdapter#extract_lookup_options_for_key`` (:249-262).
+
+    The exact entry on ``root_key`` unless it is ``None``, else the value of
+    the first pattern that matches by *searching* from the start of
+    ``root_key`` (Ruby ``=~``, not a full match), in the compiled mapping's
+    order. No match at all gives ``None``.
+    """
+    if compiled is None:
+        return None
+    entry = compiled.exact.get(root_key)
+    if entry is not None:
+        return _entry_options(entry, root_key)
+    for pattern, entry in compiled.patterns:
+        if pattern.search(root_key):
+            return _entry_options(entry, root_key)
     return None
+
+
+def _entry_options(entry, root_key):
+    """The options a matched ``lookup_options`` entry contributes.
+
+    A hash is used as-is. A string (or an exact ``None``, which only
+    reaches here through the caller's own ``is not None`` check when a
+    *pattern* entry's value is ``None``) applies no options at all -- Ruby's
+    ``String#[]``/``NilClass#[]`` are both ``nil``, so Puppet neither merges
+    nor converts, and (for an exact match) never falls through to a pattern.
+    Anything else (an Array, Integer, Boolean, ...) is not a shape Puppet's
+    ``Hash#[]`` would ever see there without raising; Puppet's own error is a
+    Ruby internal, so this raises our own message instead.
+    """
+    if isinstance(entry, dict):
+        return entry
+    if entry is None or isinstance(entry, str):
+        return None
+    raise HieraLookupError(
+        "The lookup_options entry for key '{}' is not a hash".format(root_key)
+    )
 
 
 def convert_result(key, convert_to, value):

@@ -82,6 +82,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   metacharacter; results sort in byte order and every wildcard is
   case-sensitive, on every OS; an unreadable directory is skipped; glob
   metacharacters in `datadir` apply to glob levels.
+- `lookup_options` patterns now match as in Puppet: a search from the start
+  of the key (`^app::` matches `app::ports`), Ruby regex syntax, and
+  lower-priority levels' patterns tried first. An invalid pattern, a
+  `lookup_options` value that is not a hash, and an entry that is neither a
+  hash nor a string now raise `HieraLookupError` instead of being skipped.
 
 ### Removed
 

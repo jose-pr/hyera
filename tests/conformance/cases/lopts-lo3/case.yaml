@@ -4,4 +4,3 @@ description: >-
 origin: spec-lookup-options-types/lo3
 queries:
   - key: kk
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated

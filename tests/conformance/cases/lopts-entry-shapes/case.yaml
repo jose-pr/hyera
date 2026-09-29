@@ -6,23 +6,15 @@ description: >-
 queries:
   - key: karr
     error_class: HieraLookupError
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
   - key: kint
     error_class: HieraLookupError
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
   - key: kbool
     error_class: HieraLookupError
-    divergence: spec-lookup-options-types/lookup-options-shape-not-validated
   - key: pn1
   - key: pa1
     error_class: HieraLookupError
-    divergence:
-      - spec-lookup-options-types/lookup-options-shape-not-validated
-      - spec-lookup-options-types/lookup-options-regex-fullmatch
   - key: hxbeef
-    divergence: spec-lookup-options-types/lookup-options-ruby-regex-dialect
   - key: lbkey
-    divergence: spec-lookup-options-types/lookup-options-regex-fullmatch
   - key: kneg
   - key: lookup_options
     divergence: spec-lookup-options-types/lookup-options-key-not-reserved

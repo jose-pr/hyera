@@ -20,7 +20,12 @@ from ._hiera_config import (
 from ._interpolation import interpolate
 from ._invocation import _STRICT, Invocation
 from ._location_resolver import resolve_locations
-from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
+from ._lookup_adapter import (
+    compile_patterns,
+    convert_result,
+    extract_lookup_options_for_key,
+    validate_lookup_options,
+)
 from ._merge_strategy import MergeStrategy
 from ._navigation import _MISSING, parse_lookup_key, sub_lookup
 from ._scope import Scope
@@ -546,13 +551,17 @@ class Hiera:
         return self._levels_for(self.default_hierarchy, scope, "default")
 
     def _lookup_options_map(self, levels, scope, tag="main"):
-        """The merged ``lookup_options`` mapping for a scope, or ``None``.
+        """The compiled ``lookup_options`` mapping for a scope, or ``None``.
 
         Merging it walks every location/level, and a default-merge ``get()``
         needs it for every key — so the result is cached per scope value
         alongside ``_source_cache``, sharing the same instance-lifetime
         staleness contract. Gathered through the location/level nesting
         only, never the layer stack (``lookup_adapter.rb:241,346-380``).
+        Compiling the regex patterns here, once per scope, means an invalid
+        pattern fails every lookup that reads ``lookup_options``, as in
+        Puppet (``compile_patterns``/``validate_lookup_options`` raise
+        eagerly, not lazily per key; a raised error is not cached).
         """
         cache_key = (tag, scope)
         if cache_key in self._lookup_options_cache:
@@ -563,24 +572,21 @@ class Hiera:
             options = self._get_key("lookup_options", levels, inv, "hash")
         except KeyError:
             options = None
-        if not isinstance(options, dict):
-            options = None
-        self._lookup_options_cache[cache_key] = options
-        return options
-
-    def _lookup_adapter(self, key, levels, scope):
-        """Delegate to the lookup options adapter."""
-        options = self._lookup_options_map(levels, scope)
-        return _extract_lookup_options_for_key(key, options)
+        compiled = compile_patterns(validate_lookup_options(options))
+        self._lookup_options_cache[cache_key] = compiled
+        return compiled
 
     def _lookup_options_for(self, key, levels, scope):
         """Return the merged ``lookup_options`` entry matching ``key``, or None.
 
         ``lookup_options`` is a reserved data key: ``{pattern: {merge, convert_to}}``.
         Higher-priority (earlier) levels win per pattern. An exact key match
-        wins over a regex pattern match; the first regex match otherwise wins.
+        wins over a regex pattern match; the first regex match (searched
+        from the start of the key, Ruby ``=~``, not a Python ``fullmatch``)
+        otherwise wins.
         """
-        return self._lookup_adapter(key, levels, scope)
+        compiled = self._lookup_options_map(levels, scope)
+        return extract_lookup_options_for_key(key, compiled)
 
     def get(
         self,
