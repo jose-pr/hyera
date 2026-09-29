@@ -103,8 +103,16 @@ def _dispatch(type_, value, args):
     if isinstance(type_, (PStructType, PHashType)):
         return _new_hash(value)
     if isinstance(type_, (POptionalType, PNotUndefType)):
-        if type_.contained is None or isinstance(type_.contained, str):
+        if type_.contained is None:
             _not_supported(type_)
+        if isinstance(type_.contained, str):
+            # A literal string argument (``Optional['x']``/``Optional[x]``,
+            # parent plan Q3): Puppet's own new() dispatches through the
+            # literal's generalized data type (String), then the caller's
+            # assert_instance_of checks the result against the literal type
+            # itself -- so a value equal to the literal converts cleanly and
+            # anything else is a wrong-type mismatch, never "not supported".
+            return _dispatch(PStringType(), value, args)
         return _dispatch(type_.contained, value, args)
     if isinstance(type_, PRegexpType) or (
         isinstance(type_, _PNamedType) and type_.TYPE_NAME in _OUR_UNSUPPORTED_NAMES

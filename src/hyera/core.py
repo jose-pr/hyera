@@ -14,9 +14,8 @@ from ._hiera_config import (
 )
 from ._interpolation import Interpolation, _format_source, _normalize_source
 from ._location_resolver import _resolve_level_paths
-from ._lookup_adapter import _extract_lookup_options_for_key
+from ._lookup_adapter import _extract_lookup_options_for_key, convert_result
 from ._merge_strategy import make_merge
-from ._types import Sensitive, _convert_to
 from .backends import default_backends
 from .util import LookupDict
 
@@ -455,7 +454,7 @@ class Hiera(Interpolation):
                 return default
 
         if convert_to is not None:
-            value = _convert_to(value, convert_to)
+            value = convert_result(key, convert_to, value)
         return value
 
 

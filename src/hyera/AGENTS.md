@@ -96,8 +96,13 @@ private engine internals with no stability contract.
   directory does not exist yields nothing (matches Puppet), instead of
   raising from the underlying filesystem glob.
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
-  Sensitive`. `str()`/`repr()` show `Sensitive(<redacted>)`; `.unwrap()`
-  returns the real value.
+  Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
+  `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`
+  returns the real value. Equality and hashing follow Puppet: two
+  `Sensitive` values are equal (and hash equal) exactly when their wrapped
+  values are Ruby-`eql?` — `1`, `1.0` and `True` are distinct wrapped
+  values, but a list or dict payload compares/hashes by content (in any key
+  order for a dict) despite being unhashable in plain Python.
 
 ## Backends (`backends.py`)
 
@@ -336,7 +341,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   itself (context-free levels are loaded by the constructor) as well as
   from a lookup.
 - **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
-  a key. →
+  a key, including a `convert_to` whose type cannot be parsed or whose
+  conversion/result-type assertion fails (Puppet's `new()`; see `Sensitive`
+  and the `convert_to` Gotcha below for the two message forms). →
   - **`InterpolationError`** — a `%{...}` interpolation or function call
     could not be resolved.
   - **`MergeError`** — an unknown or invalid merge strategy.
@@ -454,3 +461,16 @@ re-exports it too).
   `cache is None` as "keep looking") — a pre-existing limitation, not
   something this plan's YAML work introduced or fixes; a data file legally
   containing `key: ~` currently makes that key un-lookupable.
+- **`convert_to` is Puppet's `new()`.** A `str` first element of the
+  `convert_to` spec is parsed as a Puppet type expression first; a parse
+  failure raises `HieraLookupError("Invalid data type in lookup_options for
+  key '<key>' could not parse '<source>', error: '<msg>")` (Puppet's own
+  format string, with its unbalanced closing quote, verbatim). A parseable
+  type whose conversion or result-type assertion fails raises
+  `HieraLookupError("The convert_to lookup_option for key '<key>' raised
+  error: <msg>")` instead — both with the underlying error chained as
+  `__cause__`. Converting to SemVer, SemVerRange, Timespan, Timestamp,
+  Regexp, Binary, URI, Type or Object always raises the second form with
+  "hiera does not support new() for the Puppet type '<T>'" — these are
+  types whose values are not plain data, so this subset never implements
+  `new()` for them (a deliberate deviation; Puppet itself supports several).

@@ -102,9 +102,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `lookup_options` data key (per-key and regex-pattern merge strategy +
   `convert_to`, with an explicit `merge=` argument overriding it);
   `mapped_paths` source levels; and `default_hierarchy` fallback.
-- `convert_to` casts: `Integer`, `Float`, `String`, `Boolean`, `Array`, and
-  `Sensitive` (a redacting `hyera.Sensitive` wrapper). Unknown/failed casts
-  leave the value unchanged (never raise — unattended-safe).
+- `convert_to` takes a Puppet type string (`Integer`, `Optional[Integer]`)
+  or `[Type, *args]` (`[Integer, 16]`, `[String, '%x']`) and converts with
+  Puppet's `new()`: Integer, Float, Numeric, String, Boolean, Array, Hash,
+  Tuple, Struct, Optional, NotUndef and Sensitive (a redacting
+  `hyera.Sensitive`). An invalid type or a failed conversion raises
+  `hyera.HieraLookupError`.
 - `HOCONBackend` (`hocon_data`/`hocon`) via the optional `pyhocon` dependency
   (`pip install hyera[hocon]`); registered automatically when importable.
 - CLI merge surface: `--merge first|unique|hash|deep` (with `array`/`set`
@@ -320,3 +323,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   equivalent, so both are reachable only through `sops_data`. `sops` is
   another name for `sops_data`; `sops_yaml`/`sops_json`/`sops_ini`/
   `sops_dotenv` force that format regardless of the file's own extension.
+
+### Changed
+
+- `convert_to` raises `hyera.HieraLookupError` with Puppet's message when
+  its type cannot be parsed or converted to, instead of returning the
+  value unchanged; fix the data or catch the error.
+- `hyera.Sensitive` prints as `Sensitive [value redacted]` and equals
+  another `Sensitive` that wraps an equal value.

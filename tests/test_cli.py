@@ -88,8 +88,8 @@ _VALUES_EXPECTED = {
     "flt": 1.5,
     "nested": {"b": 2, "a": [1, {"z": 1, "y": 2}]},
     "lst": [1, [2, 3], {"k": "v"}],
-    "secret": "Sensitive(<redacted>)",
-    "secret_hash": "Sensitive(<redacted>)",
+    "secret": "Sensitive [value redacted]",
+    "secret_hash": "Sensitive [value redacted]",
 }
 
 
@@ -111,6 +111,23 @@ def test_output_formats(fmt, key, values_root, capsys):
             assert json.loads(out) == expected
         else:
             assert out.strip() == str(expected)
+
+
+def test_sensitive_redacted_in_output(values_root, capsys):
+    """A ``Sensitive``-converted value is redacted in every output format,
+    including the CLI's default (raw) output, and never the wrapped secret.
+    """
+    rc = main(["-c", str(values_root / "hiera.yaml"), "secret"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "hunter2" not in out
+    assert out.strip() == "Sensitive [value redacted]"
+
+    rc = main(["-c", str(values_root / "hiera.yaml"), "-o", "json", "secret"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "hunter2" not in out
+    assert json.loads(out) == "Sensitive [value redacted]"
 
 
 @pytest.mark.parametrize("fmt", ["raw", "json", "yaml"])

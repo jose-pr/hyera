@@ -5,158 +5,125 @@ description: >-
 origin: spec-lookup-options-types/cv
 queries:
   - key: p00
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p00'\\ could\\ not\\ parse\\ 'NoSuch\\[',\\ error:\\ 'Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: p01
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p01'\\ could\\ not\\ parse\\ 'Integer\\[1,',\\ error:\\ 'Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: p02
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: p03
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p03'\\ could\\ not\\ parse\\ 'Integer\\]',\\ error:\\ 'Syntax\\ error\\ at\\ '\\]'\\ \\(line:\\ 1,\\ column:\\ 8\\)"
   - key: p04
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p04'\\ could\\ not\\ parse\\ 'Array\\[String',\\ error:\\ 'Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: p05
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p05'\\ could\\ not\\ parse\\ 'Hash\\[String\\ =>\\ Integer\\]',\\ error:\\ 'Invalid\\ number\\ of\\ type\\ parameters\\ specified:\\ Hash\\ requires\\ 2\\ to\\ 4,\\ 1\\ provided"
   - key: p06
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p06'\\ could\\ not\\ parse\\ '\"String\"',\\ error:\\ 'The\\ expression\\ <\"String\">\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p07
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p07'\\ could\\ not\\ parse\\ '5',\\ error:\\ 'The\\ expression\\ <5>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p08
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p08'\\ could\\ not\\ parse\\ 'Integer\\[a\\]',\\ error:\\ 'The\\ expression\\ <Integer\\[a\\]>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p09
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p09'\\ could\\ not\\ parse\\ 'Integer\\['1'\\]',\\ error:\\ 'The\\ expression\\ <Integer\\['1'\\]>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p10
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p10'\\ could\\ not\\ parse\\ 'Enum\\[\\]',\\ error:\\ 'Syntax\\ error\\ at\\ '\\]'\\ \\(line:\\ 1,\\ column:\\ 6\\)"
   - key: p11
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p11'\\ could\\ not\\ parse\\ 'Integer\\[1,2,3\\]',\\ error:\\ 'Invalid\\ number\\ of\\ type\\ parameters\\ specified:\\ Integer\\ requires\\ 1\\ or\\ 2,\\ 3\\ provided"
   - key: p12
   - key: p13
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p13'\\ could\\ not\\ parse\\ 'Tuple\\[\\]',\\ error:\\ 'Syntax\\ error\\ at\\ '\\]'\\ \\(line:\\ 1,\\ column:\\ 7\\)"
   - key: p14
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p14'\\ raised\\ error:\\ odd\\ number\\ of\\ arguments\\ for\\ Hash"
   - key: p15
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p15'\\ could\\ not\\ parse\\ 'integer',\\ error:\\ 'The\\ expression\\ <integer>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p16
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p16'\\ raised\\ error:\\ Converted\\ value\\ from\\ Optional\\['integer'\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Undef\\ or\\ String,\\ got\\ String"
   - key: p17
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p17'\\ could\\ not\\ parse\\ 'Integer\\[10,0\\]',\\ error:\\ ''from'\\ must\\ be\\ less\\ or\\ equal\\ to\\ 'to'\\.\\ Got\\ \\(10,\\ 0"
   - key: p18
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: p19
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p19'\\ could\\ not\\ parse\\ 'Variant\\[\\]',\\ error:\\ 'Syntax\\ error\\ at\\ '\\]'\\ \\(line:\\ 1,\\ column:\\ 9\\)"
   - key: p20
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p20'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Pattern\\[/\\^a/\\]'\\ is\\ not\\ supported"
   - key: p21
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p21'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Enum\\['a',\\ 'b',\\ true\\]'\\ is\\ not\\ supported"
   - key: p22
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p22'\\ raised\\ error:\\ Converted\\ value\\ from\\ Sensitive\\[Integer\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Sensitive\\[Integer\\]\\ value,\\ got\\ Sensitive\\[String\\]"
   - key: p23
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: p24
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p24'\\ raised\\ error:\\ Converted\\ value\\ from\\ Float\\[1\\.0,\\ 2\\.0\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Float\\[1\\.0,\\ 2\\.0\\]\\ value,\\ got\\ Float\\[5\\.0,\\ 5\\.0\\]"
   - key: p25
   - key: p26
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p26'\\ could\\ not\\ parse\\ 'Hash\\[String\\]',\\ error:\\ 'Invalid\\ number\\ of\\ type\\ parameters\\ specified:\\ Hash\\ requires\\ 2\\ to\\ 4,\\ 1\\ provided"
   - key: p27
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p27'\\ raised\\ error:\\ odd\\ number\\ of\\ arguments\\ for\\ Hash"
   - key: p28
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p28'\\ could\\ not\\ parse\\ 'Undef\\[Integer\\]',\\ error:\\ 'Not\\ a\\ parameterized\\ type\\ <Undef>"
   - key: p29
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p29'\\ could\\ not\\ parse\\ 'Integer\\[1\\.5\\]',\\ error:\\ 'The\\ expression\\ <Integer\\[1\\.5\\]>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p30
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p30'\\ could\\ not\\ parse\\ 'Boolean\\[yes\\]',\\ error:\\ 'Boolean\\ parameter\\ must\\ be\\ true\\ or\\ false"
   - key: p31
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p31'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'TypeReference\\['Frob\\[Integer\\]'\\]'\\ is\\ not\\ supported"
   - key: p32
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p32'\\ raised\\ error:\\ Converted\\ value\\ from\\ Tuple\\[Integer,\\ 1,\\ 2\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ index\\ 0\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: p33
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p33'\\ could\\ not\\ parse\\ 'Array\\[Integer,\\ 2,\\ 1\\]',\\ error:\\ ''from'\\ must\\ be\\ less\\ or\\ equal\\ to\\ 'to'\\.\\ Got\\ \\(2,\\ 1"
   - key: p34
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p34'\\ could\\ not\\ parse\\ 'Any\\[1\\]',\\ error:\\ 'Not\\ a\\ parameterized\\ type\\ <Any>"
   - key: p35
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
-    error_class: HieraLookupError
-    error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p35'\\ raised\\ error:\\ Converted\\ value\\ from\\ Regexp\\[/a/\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Regexp\\[/a/\\]\\ value,\\ got\\ Regexp\\[/5/\\]"
+    deviation:
+      id: convert-to-unsupported-type
+      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      expect:
+        status: error
+        message: "The convert_to lookup_option for key 'p35' raised error: hiera does not support new() for the Puppet type 'Regexp[/a/]'"
   - key: p36
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
-    error_class: HieraLookupError
-    error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p36'\\ raised\\ error:\\ Converted\\ value\\ from\\ Regexp\\[/a/\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Regexp\\[/a/\\]\\ value,\\ got\\ Regexp\\[/5/\\]"
+    deviation:
+      id: convert-to-unsupported-type
+      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      expect:
+        status: error
+        message: "The convert_to lookup_option for key 'p36' raised error: hiera does not support new() for the Puppet type 'Regexp[/a/]'"
   - key: p37
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p37'\\ could\\ not\\ parse\\ 'Integer\\ \\[1\\]',\\ error:\\ 'The\\ expression\\ <Integer\\ \\[1\\]>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: p38
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: p39
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p39'\\ could\\ not\\ parse\\ 'Integer,',\\ error:\\ 'Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: p40
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'p40'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'TypeReference\\['Stdlib::Port\\[1\\]'\\]'\\ is\\ not\\ supported"
   - key: p41
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: p42
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p42'\\ could\\ not\\ parse\\ 'integer::foo',\\ error:\\ 'The\\ expression\\ <integer::foo>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."

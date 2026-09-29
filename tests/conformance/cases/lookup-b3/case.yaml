@@ -50,11 +50,7 @@ queries:
   merge: deep
   divergence: spec-merge/deep-array-merge-order-and-dedupe
 - key: conv_bad
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: conv_bool
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: conv_bool_yes
 - key: conv_hex
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: conv_unknown
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics

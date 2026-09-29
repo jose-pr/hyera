@@ -13,7 +13,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from hyera import HieraLookupError
+from hyera import HieraLookupError, Sensitive
+from hyera._lookup_adapter import convert_result
 from hyera._new_function import new_instance
 from hyera._string_converter import convert as _string_convert
 from hyera._type_mismatch import assert_instance_of
@@ -405,6 +406,53 @@ def test_new_unrecorded():
     assert "Integer.new has wrong type" in str(
         exc_info.value
     ) or "unrecognized key 'a'" in str(exc_info.value)
+
+
+# ------------------------------------------------------ convert_result
+
+
+def test_convert_result_messages():
+    with pytest.raises(HieraLookupError) as exc_info:
+        convert_result("k", "NoSuch[", "x")
+    assert str(exc_info.value) == (
+        "Invalid data type in lookup_options for key 'k' could not parse "
+        "'NoSuch[', error: 'Syntax error at end of input"
+    )
+    assert exc_info.value.__cause__ is not None
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        convert_result("k", "Boolean", "maybe")
+    assert str(exc_info.value) == (
+        "The convert_to lookup_option for key 'k' raised error: "
+        "'new_boolean' The string 'maybe' cannot be converted to Boolean"
+    )
+    assert exc_info.value.__cause__ is not None
+
+    assert convert_result("k", None, "5") == "5"
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        convert_result("k", "SemVer", "1.2.3")
+    assert str(exc_info.value) == (
+        "The convert_to lookup_option for key 'k' raised error: hiera does "
+        "not support new() for the Puppet type 'SemVer'"
+    )
+    assert exc_info.value.__cause__ is not None
+
+
+# ------------------------------------------------------------ Sensitive
+
+
+def test_sensitive_puppet_semantics():
+    assert str(Sensitive("a")) == "Sensitive [value redacted]"
+    assert repr(Sensitive("a")) == "Sensitive [value redacted]"
+
+    assert Sensitive("a") == Sensitive("a")
+    assert Sensitive(1) != Sensitive(1.0)
+    assert Sensitive(1) != Sensitive(True)
+    assert Sensitive([1, {"a": 2}]) == Sensitive([1, {"a": 2}])
+    assert len({Sensitive([1]), Sensitive([1])}) == 1
+    assert Sensitive("a") != "a"
+    assert Sensitive("a").unwrap() == "a"
 
 
 def test_ruby_format_table():

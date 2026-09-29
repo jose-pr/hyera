@@ -7,7 +7,6 @@ queries:
     divergence: spec-merge/merged-hash-key-order
   - key: "lo_hi_wins"
   - key: "lo_shallow"
-    divergence: new/convert-array-splits-string
   - key: "lo_re_one"
   - key: "lo_re_exact"
   - key: "lo_deep_opts"

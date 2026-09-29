@@ -14,13 +14,9 @@ queries:
   merge: first
   divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
 - key: arrc
-  divergence: new/convert-array-splits-string
 - key: hashc
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: hexi
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: boolg
-  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
 - key: dotted
   divergence: spec-merge/merge-value-type-validation
 - key: dotted.sub

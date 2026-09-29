@@ -6,10 +6,7 @@ Ports Puppet's ``pops/types`` (``types.rb``, ``type_calculator.rb``,
 instances from a Puppet type-expression string via :func:`parse_type`.
 """
 
-import logging
 import re
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def _ruby_regex(source):
@@ -1017,12 +1014,47 @@ def _generalized_common(types):
     return PVariantType(uniq)
 
 
-class Sensitive:
-    """Thin marker wrapping a value flagged ``Sensitive`` via ``convert_to``.
+def _eql_key(value):
+    """A recursive, hashable, type-tagged key implementing Ruby ``eql?``.
 
-    ``str()`` redacts; ``.unwrap()`` returns the real value. Mirrors Puppet's
-    Sensitive type without pulling in a dependency.
+    Ruby's ``hash``/``eql?`` distinguish ``1``, ``1.0`` and ``true`` (unlike
+    Python, where ``hash(1) == hash(1.0) == hash(True)`` and ``1 == 1.0 ==
+    True``); a list or dict compares by content, a dict in any key order.
+    Tag every value with its Ruby-relevant type before hashing/comparing so
+    two values Ruby would consider unequal never collide.
     """
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, int):
+        return ("int", value)
+    if isinstance(value, float):
+        return ("float", value)
+    if isinstance(value, str):
+        return ("str", value)
+    if isinstance(value, (list, tuple)):
+        return ("array", tuple(_eql_key(v) for v in value))
+    if isinstance(value, dict):
+        return ("hash", frozenset((_eql_key(k), _eql_key(v)) for k, v in value.items()))
+    if value is None:
+        return ("undef", None)
+    if isinstance(value, Sensitive):
+        return ("sensitive", _eql_key(value.unwrap()))
+    # Anything else (an object with no Ruby equivalent): keyed by identity,
+    # matching Ruby's default Object#hash/#eql?.
+    return ("id", id(value))
+
+
+class Sensitive:
+    """Puppet's ``Sensitive`` value wrapper (``p_sensitive_type.rb:11-37``).
+
+    ``str()``/``repr()`` both redact (Puppet's ``to_s``: "Sensitive [value
+    redacted]"). Equality and hashing follow Puppet: two ``Sensitive``
+    values are equal, and hash equal, exactly when their wrapped values are
+    Ruby-``eql?`` -- so a list or dict payload hashes despite being
+    unhashable in plain Python. ``.unwrap()`` returns the real value.
+    """
+
+    __slots__ = ("_value",)
 
     def __init__(self, value):
         self._value = value
@@ -1031,42 +1063,14 @@ class Sensitive:
         return self._value
 
     def __repr__(self):
-        return "Sensitive(<redacted>)"
+        return "Sensitive [value redacted]"
 
     __str__ = __repr__
 
+    def __eq__(self, other):
+        if not isinstance(other, Sensitive):
+            return NotImplemented
+        return _eql_key(self._value) == _eql_key(other._value)
 
-def _convert_to(value, spec):
-    """Best-effort ``convert_to`` cast. Unknown types leave the value as-is.
-
-    ``spec`` is a type name (``"Integer"``) or ``[name, *args]``. Kept
-    dependency-free and non-raising so unattended lookups never crash on a
-    cast; a failed/unknown cast logs at debug and returns the original value.
-    """
-    args = []
-    if isinstance(spec, (list, tuple)):
-        name, args = spec[0], list(spec[1:])
-    else:
-        name = spec
-    try:
-        if name == "Integer":
-            return int(value, *(args or []))
-        if name == "Float":
-            return float(value)
-        if name == "String":
-            return str(value)
-        if name == "Boolean":
-            if isinstance(value, str):
-                return value.strip().lower() in ("true", "yes", "1", "on")
-            return bool(value)
-        if name == "Array":
-            if isinstance(value, list):
-                return value
-            return [value]
-        if name == "Sensitive":
-            return Sensitive(value)
-    except (ValueError, TypeError) as e:
-        _LOGGER.debug("convert_to %s failed for %r: %s", name, value, e)
-        return value
-    _LOGGER.debug("convert_to: unknown type %r; leaving value unchanged", name)
-    return value
+    def __hash__(self):
+        return hash(_eql_key(self._value))

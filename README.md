@@ -125,9 +125,12 @@ starts with `^`** (Hiera 5's rule); every other key is matched literally, so
 a key containing `.` or other metacharacters cannot shadow unrelated keys.
 An exact key match always wins over a pattern match.
 
-An explicit `merge=` argument overrides `lookup_options`. `convert_to`
-supports `Integer`, `Float`, `String`, `Boolean`, `Array`, and `Sensitive`
-(the last wraps the value in a redacting `hyera.Sensitive` marker).
+An explicit `merge=` argument overrides `lookup_options`. `convert_to` takes
+a Puppet type string (`Integer`, `Optional[Integer]`) or `[Type, *args]`
+(`[Integer, 16]`, `[String, '%x']`) and converts with Puppet's `new()`:
+Integer, Float, Numeric, String, Boolean, Array, Hash, Tuple, Struct,
+Optional, NotUndef and Sensitive (a redacting `hyera.Sensitive` wrapper). An
+invalid type or a failed conversion raises `hyera.HieraLookupError`.
 
 ## Command line
 
@@ -209,6 +212,14 @@ with one deliberate exception:
   Puppet equivalent, for decrypting a
   [sops](https://github.com/getsops/sops)-encrypted data file on the fly.
   A hierarchy that uses it does not load under real Puppet.
+- **`convert_to` (Puppet's `new()`) does not support every type Puppet
+  does.** SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI,
+  Type and Object all raise `hyera.HieraLookupError` ("hiera does not
+  support new() for the Puppet type '...'") instead of converting — these
+  are types whose values are not plain data. A type alias other than
+  `Data`/`RichData` is also unsupported (`parse_type` resolves only the
+  five Puppet static-loader aliases; any other capitalized name becomes an
+  unresolved type reference).
 
 ## Notes
 

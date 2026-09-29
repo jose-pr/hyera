@@ -9,27 +9,20 @@ queries:
   - key: i_bin2
   - key: i_hex16
   - key: i_badradix
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_badradix'\\ raised\\ error:\\ Illegal\\ radix:\\ 7,\\ expected\\ 2,\\ 8,\\ 10,\\ 16,\\ or\\ default"
   - key: i_ws
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_ws'\\ raised\\ error:\\ 'new'\\ The\\ string\\ '\\ 42\\ '\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_signws
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: i_neg
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: i_fstr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_fstr'\\ raised\\ error:\\ 'new'\\ The\\ string\\ '3\\.7'\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_09
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_09'\\ raised\\ error:\\ invalid\\ value\\ for\\ Integer\\(\\):\\ \"09\""
   - key: i_arr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_arr'\\ raised\\ error:\\ 'new'\\ Value\\ of\\ type\\ Array\\[Integer\\]\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_nil
@@ -37,89 +30,63 @@ queries:
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_nil'\\ raised\\ error:\\ 'new'\\ Value\\ of\\ type\\ Undef\\ cannot\\ be\\ converted\\ to\\ Integer"
   - key: i_range
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'i_range'\\ raised\\ error:\\ Converted\\ value\\ from\\ Integer\\[0,\\ 10\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\[0,\\ 10\\]\\ value,\\ got\\ Integer\\[42,\\ 42\\]"
   - key: i_already
   - key: q_int_bigneg
   - key: q_int_plus
   - key: q_int_octbad
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_int_octbad'\\ raised\\ error:\\ invalid\\ value\\ for\\ Integer\\(\\):\\ \"08\""
   - key: f_exp
   - key: f_bin
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: f_hex
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: f_int
   - key: f_bool
   - key: q_float_ws
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: n_hex
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: n_oct
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: n_bad
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'n_bad'\\ raised\\ error:\\ 'new_numeric'\\ The\\ string\\ '1\\.2\\.3'\\ cannot\\ be\\ converted\\ to\\ Numeric"
   - key: n_bool
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: q_num_space
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: b_Y
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: b_TRUE
   - key: b_float
   - key: b_str1
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'b_str1'\\ raised\\ error:\\ 'new_boolean'\\ The\\ string\\ '1'\\ cannot\\ be\\ converted\\ to\\ Boolean"
   - key: b_arr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'b_arr'\\ raised\\ error:\\ 'new_boolean'\\ Value\\ of\\ type\\ Array\\[Boolean\\]\\ cannot\\ be\\ converted\\ to\\ Boolean"
   - key: s_pi
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_int
   - key: s_nested
     hash_inspect: true
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_strq
   - key: s_quote
   - key: s_arr_nested
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_nilarr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_bool_arr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: q_str_neg0
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: q_str_big
   - key: q_str_unicode
   - key: q_str_float_e
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: q_str_esc
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_fmt_d
   - key: s_fmt_p
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_fmt_bool
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: s_fmt_bad
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 's_fmt_bad'\\ raised\\ error:\\ Illegal\\ format\\ 'Q'\\ specified\\ for\\ value\\ of\\ Integer\\ type\\ \\-\\ expected\\ one\\ of\\ the\\ characters\\ 'dxXobBeEfgGaAspc'"
   - key: s_float_s
   - key: s_undef_fmt
     divergence: spec-lookup-options-types/found-nil-treated-as-missing
   - key: a_float
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_float'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Float\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_true
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_true'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Boolean\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_nil
@@ -127,103 +94,81 @@ queries:
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_nil'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Undef\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_zero
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: a_neg
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'a_neg'\\ raised\\ error:\\ 'new_array'\\ Value\\ of\\ type\\ Integer\\ cannot\\ be\\ converted\\ to\\ Array"
   - key: a_wrap_arr
   - key: a_false
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: arr_already
   - key: h_flat
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: h_odd
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'h_odd'\\ raised\\ error:\\ odd\\ number\\ of\\ arguments\\ for\\ Hash"
   - key: h_str
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: h_empty
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: h_int
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'h_int'\\ raised\\ error:\\ odd\\ number\\ of\\ arguments\\ for\\ Hash"
   - key: o_int
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: nu_int
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: se_str
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
   - key: se_int
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'se_int'\\ raised\\ error:\\ Converted\\ value\\ from\\ Sensitive\\[Integer\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Sensitive\\[Integer\\]\\ value,\\ got\\ Sensitive\\[String\\]"
   - key: q_sens_sens
   - key: en_bad
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'en_bad'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Enum\\['a',\\ 'b'\\]'\\ is\\ not\\ supported"
   - key: tu_ok
   - key: st_hash
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'st_hash'\\ raised\\ error:\\ Converted\\ value\\ from\\ Struct\\[\\{'a'\\ =>\\ Integer\\}\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ entry\\ 'a'\\ expects\\ an\\ Integer\\ value,\\ got\\ String"
   - key: str_range
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'str_range'\\ raised\\ error:\\ Converted\\ value\\ from\\ String\\[1,\\ 2\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ String\\[1,\\ 2\\]\\ value,\\ got\\ String"
   - key: ali_data
   - key: ali_std
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'ali_std'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'TypeReference\\['Stdlib::Port'\\]'\\ is\\ not\\ supported"
   - key: sc_t
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'sc_t'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Scalar'\\ is\\ not\\ supported"
   - key: any_t
   - key: undef_t
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'undef_t'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Undef'\\ is\\ not\\ supported"
   - key: bool_t
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'bool_t'\\ raised\\ error:\\ Converted\\ value\\ from\\ Boolean\\[true\\]\\.new\\(\\)\\ has\\ wrong\\ type,\\ expects\\ a\\ Boolean\\[true\\]\\ value,\\ got\\ Boolean\\[false\\]"
   - key: pat_t
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'pat_t'\\ raised\\ error:\\ Creation\\ of\\ new\\ instance\\ of\\ type\\ 'Pattern\\[/\\^x/\\]'\\ is\\ not\\ supported"
   - key: re_t
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+    deviation:
+      id: convert-to-unsupported-type
+      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      expect:
+        status: error
+        message: "The convert_to lookup_option for key 're_t' raised error: hiera does not support new() for the Puppet type 'Regexp'"
   - key: q_int
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_int'\\ raised\\ error:\\ 'new'\\ parameter\\ 'type'\\ expects\\ a\\ Type\\ value,\\ got\\ Integer"
   - key: q_empty
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_empty'\\ raised\\ error:\\ 'new'\\ parameter\\ 'type'\\ expects\\ a\\ Type\\ value,\\ got\\ Undef"
   - key: q_hash
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_hash'\\ raised\\ error:\\ 'new'\\ parameter\\ 'type'\\ expects\\ a\\ Type\\ value,\\ got\\ Struct"
   - key: q_nil
   - key: q_estr
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'q_estr'\\ could\\ not\\ parse\\ '',\\ error:\\ 'The\\ expression\\ <>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: q_extra
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_extra'\\ raised\\ error:\\ 'new'\\ expects\\ between\\ 1\\ and\\ 3\\ arguments,\\ got\\ 4"
   - key: q_boolarg
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_boolarg'\\ raised\\ error:\\ 'new_boolean'\\ expects\\ 1\\ argument,\\ got\\ 2"
   - key: q_arr_nested
-    divergence: spec-lookup-options-types/convert-to-best-effort-semantics
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_arr_nested'\\ raised\\ error:\\ 'new'\\ parameter\\ 'type'\\ expects\\ a\\ Type\\ value,\\ got\\ Tuple"
