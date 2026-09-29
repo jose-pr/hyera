@@ -146,6 +146,11 @@ The CLI is built for unattended use: no interactive prompts, deterministic
 output, and meaningful exit codes — `0` found, `1` key missing, `2`
 usage/config error.
 
+`PYERA_MCP=stdio pyera` runs the same command as an MCP server over
+stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
+`Lookup`, whose arguments are the command-line fields (`key`, `config`,
+`scope`, `merge`, ...) and whose result is what the command would print.
+
 ## sops and unattended runs
 
 `SopsYAMLBackend` shells out to `sops` to decrypt `*.yaml` levels. It is

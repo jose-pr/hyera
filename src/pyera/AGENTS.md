@@ -189,8 +189,13 @@ paths work since `__init__` re-exports it too).
   `first` included, always overrides `lookup_options`. Exit codes: `0` key
   found, `1` key missing (and no `--default`), `2` usage/config error (bad
   `--scope`, unreadable/invalid config, or a `HieraError`).
-- Env: `PYERA_MCP` has no effect (duho's MCP server launch trigger is
-  disabled on `Lookup`); a truthy `AGENT_HELP` or `AGENTS_HELP` makes
+- Env: `PYERA_MCP=stdio` runs the command as an MCP server over
+  stdin/stdout (duho), exposing one tool, `Lookup`, whose arguments are
+  the CLI fields (`key`, `config`, `scope`, ...); a `tools/call` returns
+  what the command would print. Any other `PYERA_MCP` value exits `2`
+  with `unsupported MCP transport`. The trigger is read before the
+  arguments, so an MCP session never performs a command-line lookup. A
+  truthy `AGENT_HELP` or `AGENTS_HELP` makes
   `--help` print duho's JSON agent-help document instead of usage text.
 
 ## Gotchas

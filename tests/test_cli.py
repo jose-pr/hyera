@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import sys
 import textwrap
 
@@ -177,23 +178,58 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
     assert json.loads(capsys.readouterr().out) == ["redhat", "base"]
 
 
-def test_mcp_env_trigger_is_disabled(hiera_root, monkeypatch, capsys):
+def test_mcp_stdio_serves_lookup(hiera_root):
+    # PYERA_MCP=stdio runs the CLI as an MCP server exposing the Lookup tool.
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "Lookup",
+                "arguments": {
+                    "key": "app::name",
+                    "config": str(hiera_root / "hiera.yaml"),
+                    "scope": ["environment=production"],
+                },
+            },
+        },
+    ]
+    src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
+    proc = subprocess.run(
+        [sys.executable, "-m", "pyera"],
+        input="".join(json.dumps(m) + "\n" for m in messages),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYERA_MCP": "stdio", "PYTHONPATH": src},
+        timeout=60,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
+    assert replies[1]["result"]["serverInfo"]["name"] == "Lookup"
+    assert replies[2]["result"]["content"] == [{"type": "text", "text": "myapp\n"}]
+
+
+def test_mcp_unknown_transport_exits_2(hiera_root, monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["pyera"])
     monkeypatch.setenv("PYERA_MCP", "bogus")
 
-    rc = main(
-        [
-            "app::name",
-            "-c",
-            str(hiera_root / "hiera.yaml"),
-            "-s",
-            "environment=production",
-        ]
-    )
+    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
 
-    assert rc == 0
-    assert capsys.readouterr().out.strip() == "myapp"
-    assert os.environ["PYERA_MCP"] == "bogus"
+    assert rc == 2
+    assert "unsupported MCP transport" in capsys.readouterr().err
 
 
 def test_lookup_found(hiera_root, capsys):

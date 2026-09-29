@@ -51,11 +51,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   other forms raise `BackendError`. Previously pyhocon resolved plain and
   `file()` includes against the process working directory and fetched
   `http(s)` URLs named in a data file.
-- duho's `PYERA_MCP` environment trigger, which turned the CLI into an MCP
-  server without reading its arguments, is disabled.
 
 ### Added
 
+- `PYERA_MCP=stdio pyera` serves the command over MCP (stdio): one tool,
+  `Lookup`, taking the command-line fields as arguments and returning what
+  the command prints. Any other `PYERA_MCP` value exits `2`.
 - `NOTICE` and `LICENSES/phiera-Apache-2.0.txt`: credits
   [phiera](https://github.com/Nike-Inc/phiera), the Apache-2.0 project this
   library is derived from. The package license is now `MIT AND Apache-2.0`.
