@@ -1,0 +1,6 @@
+description: A tab character used for indentation/spacing in YAML (technically invalid
+  YAML that some parsers tolerate).
+origin: code-io-security/yamlcases/tabs
+queries:
+- key: plain
+  divergence: code-io-security/yaml-rejects-files-puppet-accepts

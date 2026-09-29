@@ -1,0 +1,3 @@
+---
+p: !!python/tuple [1, 2]
+plain: p

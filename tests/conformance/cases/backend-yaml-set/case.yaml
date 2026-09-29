@@ -1,0 +1,7 @@
+description: A YAML !!set collection.
+origin: code-io-security/yamlcases/set
+queries:
+- key: s
+  divergence: code-io-security/yaml-type-construction-diverges
+- key: plain
+  divergence: code-io-security/yaml-type-construction-diverges

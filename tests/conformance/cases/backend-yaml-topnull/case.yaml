@@ -1,0 +1,6 @@
+description: >-
+  A data file whose top-level YAML value is null.
+origin: code-io-security/yamlcases/topnull
+queries:
+  - key: 'plain'
+  - key: 'fromfirst'

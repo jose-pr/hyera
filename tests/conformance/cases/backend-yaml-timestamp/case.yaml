@@ -1,0 +1,7 @@
+description: A YAML ISO-8601 timestamp scalar.
+origin: code-io-security/yamlcases/timestamp
+queries:
+- key: t
+  divergence: code-io-security/yaml-type-construction-diverges
+- key: plain
+  divergence: code-io-security/yaml-type-construction-diverges

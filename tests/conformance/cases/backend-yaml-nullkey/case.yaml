@@ -1,0 +1,5 @@
+description: >-
+  A YAML null key (~: nullkey).
+origin: code-io-security/yamlcases/nullkey
+queries:
+  - key: 'plain'

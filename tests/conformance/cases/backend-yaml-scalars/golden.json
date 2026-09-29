@@ -1,0 +1,186 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "10b03488c8f900216f3cc508aa38c9b1841d28f5f630a86f97addef001e67f37",
+  "results": {
+    "alias_v": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_v"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1,
+        "y": 2
+      }
+    },
+    "merged": {
+      "argv": [
+        "--strict",
+        "warning",
+        "merged"
+      ],
+      "status": "found",
+      "value": {
+        "x": 1,
+        "y": 3,
+        "z": 4
+      }
+    },
+    "oct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "oct"
+      ],
+      "status": "found",
+      "value": 493
+    },
+    "oct2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "oct2"
+      ],
+      "status": "found",
+      "value": "0o755"
+    },
+    "hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "hex"
+      ],
+      "status": "found",
+      "value": 31
+    },
+    "sexa": {
+      "argv": [
+        "--strict",
+        "warning",
+        "sexa"
+      ],
+      "status": "found",
+      "value": 5400
+    },
+    "under": {
+      "argv": [
+        "--strict",
+        "warning",
+        "under"
+      ],
+      "status": "found",
+      "value": 1000
+    },
+    "exp": {
+      "argv": [
+        "--strict",
+        "warning",
+        "exp"
+      ],
+      "status": "found",
+      "value": "1e3"
+    },
+    "exp2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "exp2"
+      ],
+      "status": "found",
+      "value": "1.0e3"
+    },
+    "yes_v": {
+      "argv": [
+        "--strict",
+        "warning",
+        "yes_v"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "no_v": {
+      "argv": [
+        "--strict",
+        "warning",
+        "no_v"
+      ],
+      "status": "found",
+      "value": false
+    },
+    "on_v": {
+      "argv": [
+        "--strict",
+        "warning",
+        "on_v"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "y_v": {
+      "argv": [
+        "--strict",
+        "warning",
+        "y_v"
+      ],
+      "status": "found",
+      "value": "y"
+    },
+    "tilde": {
+      "argv": [
+        "--strict",
+        "warning",
+        "tilde"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "plus": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plus"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "dot5": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dot5"
+      ],
+      "status": "found",
+      "value": 0.5
+    },
+    "str_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_bool"
+      ],
+      "status": "found",
+      "value": "true"
+    },
+    "dup": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dup"
+      ],
+      "status": "found",
+      "value": 2
+    },
+    "1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "1"
+      ],
+      "status": "not_found"
+    }
+  }
+}

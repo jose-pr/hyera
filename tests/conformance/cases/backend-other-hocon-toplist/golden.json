@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "58d9e2d0cf2221438e1713b471641c9a08d2ea099286a45b1d14bd03279945a3",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.conf): String: 1:  has type LIST rather than object at file root"
+    },
+    "fromfirst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromfirst"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.conf): String: 1:  has type LIST rather than object at file root"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "28bad1f3ee1e3da27f84d765420613121c4dd9bd3c53df1eee6c373e05489f75",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.json): JSON::ParserError"
+    },
+    "fromfirst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromfirst"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.json): JSON::ParserError"
+    }
+  }
+}

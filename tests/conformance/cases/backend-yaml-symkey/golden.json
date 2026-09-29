@@ -1,0 +1,35 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "aba0f61700ea03dcab1926d295d2629ed4cc8af1d05b841221a80b2bdd7fc9bd",
+  "results": {
+    "symkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symkey"
+      ],
+      "status": "found",
+      "value": "symval"
+    },
+    "colonsymkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        ":symkey"
+      ],
+      "status": "not_found"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "p"
+    }
+  }
+}

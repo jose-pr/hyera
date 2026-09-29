@@ -1,0 +1,11 @@
+---
+version: 5
+defaults:
+  datadir: data
+hierarchy:
+  - name: first
+    data_hash: hocon_data
+    path: first.conf
+  - name: common
+    data_hash: yaml_data
+    path: common.yaml

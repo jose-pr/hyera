@@ -1,0 +1,5 @@
+description: >-
+  A JSON data file with trailing garbage after the object.
+origin: code-io-security/othercases/json_trailing
+queries:
+  - key: 'plain'

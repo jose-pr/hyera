@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6c510d653b05edde44d268ba0b75f1327e65eb20f2fdbdc99d14e694467177a9",
+  "results": {
+    "t": {
+      "argv": [
+        "--strict",
+        "warning",
+        "t"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Time"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Time"
+    }
+  }
+}

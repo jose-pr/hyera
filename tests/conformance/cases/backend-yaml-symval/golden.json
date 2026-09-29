@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d2d7f79dae9a2849b9ae9e890cf74d1fdb9b16caa6d4197f2e02f3e4e94df928",
+  "results": {
+    "symval": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symval"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'symval' failed: Value for key 'symval', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "p"
+    }
+  }
+}

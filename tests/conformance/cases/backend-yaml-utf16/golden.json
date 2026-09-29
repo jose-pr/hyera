@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "5de1f1c0502c18008c13cda79920ebbe8c77043b8d138f281d31e43e1f819f59",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.raw.yaml): invalid leading UTF-8 octet at line 1 column 1"
+    }
+  }
+}

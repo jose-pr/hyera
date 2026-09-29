@@ -1,0 +1,5 @@
+description: A UTF-16-encoded YAML file.
+origin: code-io-security/yamlcases/utf16
+queries:
+- key: plain
+  divergence: critic-puppet-coverage/data-file-encoding-lenient

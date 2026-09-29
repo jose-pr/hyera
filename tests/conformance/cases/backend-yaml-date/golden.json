@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7d7f693651cc7fc7e8a62ebc9ebbc0a5c57583c67778c394a1b580b8413229db",
+  "results": {
+    "d": {
+      "argv": [
+        "--strict",
+        "warning",
+        "d"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Date"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Date"
+    }
+  }
+}

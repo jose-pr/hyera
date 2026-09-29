@@ -1,0 +1,6 @@
+description: >-
+  A data file containing only a comment.
+origin: code-io-security/yamlcases/comment_only
+queries:
+  - key: 'plain'
+  - key: 'fromfirst'

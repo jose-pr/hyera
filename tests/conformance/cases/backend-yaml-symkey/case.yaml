@@ -1,0 +1,9 @@
+description: A Ruby-symbol-style YAML key (:symkey:).
+origin: code-io-security/yamlcases/symkey
+queries:
+- key: symkey
+  divergence: spec-layers-backends/yaml-symbol-keys
+- key: :symkey
+  id: colonsymkey
+  divergence: spec-layers-backends/yaml-symbol-keys
+- key: plain

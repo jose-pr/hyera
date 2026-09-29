@@ -1,0 +1,22 @@
+---
+base: &b {x: 1, y: 2}
+alias_v: *b
+merged: {<<: *b, y: 3, z: 4}
+oct: 0755
+oct2: 0o755
+hex: 0x1F
+sexa: 1:30
+under: 1_000
+exp: 1e3
+exp2: 1.0e3
+yes_v: yes
+no_v: no
+on_v: on
+y_v: y
+tilde: ~
+plus: +1
+dot5: .5
+str_bool: "true"
+dup: 1
+dup: 2
+1: intkey

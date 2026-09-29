@@ -1,0 +1,11 @@
+description: 'Basic HOCON forms: a nested object, null, a substitution, and a list.'
+origin: code-io-security/othercases/hocon_basic
+requires:
+- pyhocon
+queries:
+- key: plain
+- key: n
+- key: z
+  divergence: code-core/null-value-treated-as-missing
+- key: subst
+- key: lst

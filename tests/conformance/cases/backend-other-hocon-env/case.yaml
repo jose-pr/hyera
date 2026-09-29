@@ -1,0 +1,8 @@
+description: >-
+  A HOCON substitution referencing an environment variable. Only `plain` is
+  harvested: `home` resolves to the recording host's real $HOME path, which
+  record.py's leak guard refuses to write into a golden.
+origin: code-io-security/othercases/hocon_env
+requires: [pyhocon]
+queries:
+  - key: 'plain'

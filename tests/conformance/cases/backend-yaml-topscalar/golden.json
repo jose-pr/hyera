@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "e171decb0f9a295e95dac004922e46b257de5d38ce4ca7641c14b15554b7b446",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "warnings": [
+        "<case>/data/first.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "not_found"
+    },
+    "fromfirst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromfirst"
+      ],
+      "warnings": [
+        "<case>/data/first.yaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": "fallback-from-common"
+    }
+  }
+}

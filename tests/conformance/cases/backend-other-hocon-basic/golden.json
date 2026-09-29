@@ -1,0 +1,59 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a2e5eef826afefa6a8ae4efb06fa280356c24ffdb5741746a230ea255e0adc2b",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "found",
+      "value": "p"
+    },
+    "n": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "z": {
+      "argv": [
+        "--strict",
+        "warning",
+        "z"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "subst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "subst"
+      ],
+      "status": "found",
+      "value": 1
+    },
+    "lst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lst"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    }
+  }
+}

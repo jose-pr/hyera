@@ -1,0 +1,6 @@
+description: >-
+  A JSON object with a duplicate key.
+origin: code-io-security/othercases/json_dup
+queries:
+  - key: 'd'
+  - key: 'plain'

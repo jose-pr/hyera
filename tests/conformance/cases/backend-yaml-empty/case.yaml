@@ -1,0 +1,6 @@
+description: >-
+  A completely empty data file.
+origin: code-io-security/yamlcases/empty
+queries:
+  - key: 'plain'
+  - key: 'fromfirst'

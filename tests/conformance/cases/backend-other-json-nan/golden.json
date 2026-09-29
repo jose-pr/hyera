@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "b209105a3478ca0fa19113b685d11c66f770c2c99461b8dfed8eef9dc6b47ad0",
+  "results": {
+    "n": {
+      "argv": [
+        "--strict",
+        "warning",
+        "n"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.json): unexpected token 'NaN,' at line 1 column 7"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.json): unexpected token 'NaN,' at line 1 column 7"
+    }
+  }
+}

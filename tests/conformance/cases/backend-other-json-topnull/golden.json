@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c07d07c1b596a443d01d7e25df7f8132f63eea24817f6fe30382ed86bb6d7d3e",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location <case>/data/first.json', has wrong type, expects a Hash value, got Undef"
+    },
+    "fromfirst": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromfirst"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location <case>/data/first.json', has wrong type, expects a Hash value, got Undef"
+    }
+  }
+}

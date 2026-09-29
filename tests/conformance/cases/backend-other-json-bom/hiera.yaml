@@ -1,0 +1,11 @@
+---
+version: 5
+defaults:
+  datadir: data
+hierarchy:
+  - name: first
+    data_hash: json_data
+    path: first.raw.json
+  - name: common
+    data_hash: yaml_data
+    path: common.yaml

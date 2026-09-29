@@ -1,0 +1,5 @@
+description: A YAML complex (list) mapping key.
+origin: code-io-security/yamlcases/complexkey
+queries:
+- key: plain
+  divergence: code-io-security/yaml-rejects-files-puppet-accepts

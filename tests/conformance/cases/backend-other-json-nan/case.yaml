@@ -1,0 +1,6 @@
+description: A JSON data file with a non-standard NaN literal.
+origin: code-io-security/othercases/json_nan
+queries:
+- key: n
+- key: plain
+  divergence: critic-puppet-coverage/data-file-encoding-lenient
