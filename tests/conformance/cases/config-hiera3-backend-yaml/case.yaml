@@ -1,0 +1,7 @@
+description: >-
+  `hiera3_backend: yaml` in a v5 hierarchy is rejected -- Puppet tells the author to use `data_hash: yaml_data` instead.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'Use "data_hash: yaml_data" instead of "hiera3_backend: yaml"'

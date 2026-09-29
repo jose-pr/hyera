@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "dd49daf736c35e2e94884d362f63735bf82c67d4b6c8770c22a16e92fb12e858",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'options' key of entry 'bad key' expects a match for Pattern[/\\A[A-Za-z](:?[0-9A-Za-z_-]*[0-9A-Za-z])?\\z/], got 'bad key'"
+    }
+  }
+}

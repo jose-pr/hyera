@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry's `options` key must match Puppet's option-name pattern.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "key of entry 'bad key' expects a match for Pattern"

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7e9cad420187755a7756a987db22a3c71d2e88429584648745462d7df4acead7",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Option key 'uri' used in defaults is reserved by Puppet (file: <case>/hiera.yaml)"
+    }
+  }
+}

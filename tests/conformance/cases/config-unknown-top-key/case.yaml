@@ -1,0 +1,7 @@
+description: >-
+  An unrecognized top-level key ('hierarchies', a plural typo) is a Puppet config error.
+origin: spec-config/cases/unknown_top_key
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: "unrecognized key 'hierarchies'"

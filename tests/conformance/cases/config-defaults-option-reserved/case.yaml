@@ -1,0 +1,7 @@
+description: >-
+  `defaults.options` may not reuse `uri`, a location key Puppet reserves.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "Option key 'uri' used in defaults is reserved by Puppet"

@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry's `options` value must be Puppet `Data` (a hash with a non-string key is not).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'options' entry 'a' expects a Data value, got Hash"

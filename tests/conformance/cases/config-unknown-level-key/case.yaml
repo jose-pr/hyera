@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry with a misspelled key ('pathz') is a Puppet config error.
+origin: spec-config/cases/unknown_level_key
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: "index 0 unrecognized key 'pathz'"

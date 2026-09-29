@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry's `name` must be a String; an Integer is a Puppet config error.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'name' expects a String value, got Integer"

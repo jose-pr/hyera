@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "30d3c5f03649f6206035c5404cd9733e57205b77062160af0dd5c70ac6bece44",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Hierarchy name 'same' defined more than once. First defined at (line: 4) (file: <case>/hiera.yaml, line: 8)"
+    }
+  }
+}

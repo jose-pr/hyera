@@ -1,0 +1,7 @@
+description: >-
+  `defaults` may declare at most one function key (`data_hash` and `lookup_key` together are a Puppet config error).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "can be defined in defaults"

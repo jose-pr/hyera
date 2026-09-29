@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry's `datadir: ~` is a Puppet config error (a present key must match its type; only an absent key is optional).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'datadir' expects a String value, got Undef"

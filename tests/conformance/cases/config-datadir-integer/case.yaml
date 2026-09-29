@@ -1,0 +1,7 @@
+description: >-
+  `defaults.datadir` must be a String; an Integer is a Puppet config error, not a raw exception.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'defaults' entry 'datadir' expects a String value, got Integer"

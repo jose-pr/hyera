@@ -1,0 +1,7 @@
+description: >-
+  An empty `defaults: {}` leaves the hierarchy entry with no function key at all, which is a Puppet config error.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "must be defined in hierarchy 'common'"

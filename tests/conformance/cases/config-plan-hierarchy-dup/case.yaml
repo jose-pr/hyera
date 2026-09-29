@@ -1,0 +1,5 @@
+description: >-
+  A duplicate `name` within `plan_hierarchy` is not checked at lookup time (only `hierarchy`/`default_hierarchy` are); the lookup still finds the ordinary hierarchy's value.
+queries:
+  - key: k
+    note: Puppet 8.10 probe

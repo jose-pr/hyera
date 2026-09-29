@@ -1,0 +1,7 @@
+description: >-
+  A hierarchy entry's `paths` must be an Array; a bare String is a Puppet config error, not silently split into one source per character.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'paths' expects an Array value, got String"

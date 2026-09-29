@@ -1,0 +1,7 @@
+description: >-
+  Two block-style hierarchy entries sharing the same `name` is a Puppet config error naming both lines.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'defined more than once\. First defined at \(line: 4\)'

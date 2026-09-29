@@ -1,0 +1,7 @@
+description: >-
+  A `plan_hierarchy` entry is validated against the same schema as `hierarchy`.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "entry 'plan_hierarchy' index 0 unrecognized key 'pathz'"

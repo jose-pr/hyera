@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "a4545feb6154af0ad0745a2c868f25fbfab0cca3188b3c6ec3653c75711f92dc",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Use \"data_hash: yaml_data\" instead of \"hiera3_backend: yaml\" (file: <case>/hiera.yaml, line: 4)"
+    }
+  }
+}

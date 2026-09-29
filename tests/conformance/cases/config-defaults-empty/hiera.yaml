@@ -1,0 +1,4 @@
+version: 5
+defaults: {}
+hierarchy:
+  - {name: common, path: common.yaml}
