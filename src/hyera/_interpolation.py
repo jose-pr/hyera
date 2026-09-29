@@ -310,7 +310,7 @@ def _get_method_and_data(expr, allow_methods):
         if not allow_methods:
             # A hiera.yaml problem (a location/datadir/options template),
             # not a lookup-time failure -- ConfigError, not
-            # InterpolationError (hierarchy_location_resolution Design Q3).
+            # InterpolationError.
             raise ConfigError(
                 "Interpolation using method syntax is not allowed in this context"
             )

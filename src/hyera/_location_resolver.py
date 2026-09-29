@@ -258,6 +258,5 @@ def resolve_locations(level, base_path, scope):
         return _expand_globs(base, level.locations, lenient_inv)
     if key == "mapped_paths":
         return _expand_mapped_paths(base, level, lenient_inv)
-    # "uri"/"uris"/None: no locations yet (function_providers_and_eyaml adds
-    # uri handling).
+    # "uri"/"uris"/None: no locations yet (uri handling is not implemented).
     return []

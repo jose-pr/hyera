@@ -93,7 +93,7 @@ def test_hiera_level_new_no_location():
     assert lvl.locations == ()
 
 
-# --- path/paths extension (used by hiera_v3_v4_configs) ------------------
+# --- path/paths extension (used for Hiera 3 configs) ---------------------
 
 
 def test_resolve_paths_extension(make_tree):
