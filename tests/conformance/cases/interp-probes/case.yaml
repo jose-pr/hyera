@@ -12,7 +12,6 @@ queries:
   divergence: spec-interpolation/hash-keys-not-interpolated
 - key: fl
   note: Puppet 8.10 probe
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: undef_ws
   note: Puppet 8.10 probe
 - key: colon_undef

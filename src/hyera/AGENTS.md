@@ -638,6 +638,9 @@ re-exports it too).
   must resolve to a scalar; interpolating a non-scalar (list/dict) into a
   string raises `InterpolationError`. A function call standing alone as the
   *entire* value keeps its native (possibly non-scalar) type.
+- An interpolated non-string renders as Puppet renders it: `true`/`false`,
+  `""` for null, `1.0e+20`, `["a", "b"]`, `{"k"=>"v"}` (the form Puppet 8's
+  packaged Ruby 3.2 prints), `Sensitive [value redacted]`.
 - Nested/inline lookups (function calls resolving other keys) never inherit
   the caller's `merge=` — accumulation happens exactly once per lookup, at
   the top level.

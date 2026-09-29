@@ -5,5 +5,4 @@ queries:
 - key: v_clientcert
 - key: v_trusted
   hash_inspect: true
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: v_fqdn

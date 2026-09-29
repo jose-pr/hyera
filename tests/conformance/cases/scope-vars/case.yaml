@@ -23,12 +23,9 @@ queries:
 - key: v_scope_list
   divergence: spec-interpolation/method-result-type-and-nonscalar
 - key: v_list_embed
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: v_hash_embed
-  divergence: spec-interpolation/ruby-to_s-formatting
   hash_inspect: true
 - key: v_trusted
-  divergence: spec-interpolation/ruby-to_s-formatting
   hash_inspect: true
 - key: v_trusted_certname
 - key: v_serverversion
@@ -48,5 +45,5 @@ queries:
 - key: v_calling_module
 - key: v_calling_class
 - key: v_facts_whole_type
-  divergence: spec-interpolation/ruby-to_s-formatting
+  divergence: spec-interpolation/method-result-type-and-nonscalar
   hash_inspect: true

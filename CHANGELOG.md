@@ -17,6 +17,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Non-string values interpolated into strings, hierarchy paths and
+  `format()` render as Puppet renders them: floats in Ruby's form
+  (`1.0e+20`), arrays as `["a", "b"]`, hashes as `{"k"=>"v"}`, and
+  `Sensitive` as `Sensitive [value redacted]`.
 - Merges now follow Puppet 8: deep merges put lower-priority array elements
   first and drop duplicates on both sides; merged hashes list lower-priority
   keys first; `unique` flattens nested arrays; duplicates are found with

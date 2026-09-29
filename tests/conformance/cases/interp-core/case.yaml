@@ -9,10 +9,8 @@ queries:
 - key: s_zero
 - key: s_nested_false
 - key: s_list
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_hash
   hash_inspect: true
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_ws
 - key: s_ws_fn
   divergence: spec-interpolation/whitespace-in-expression-ignored
@@ -52,7 +50,6 @@ queries:
   divergence: spec-interpolation/method-call-syntax-validation
 - key: s_float
 - key: s_bigfloat
-  divergence: spec-interpolation/ruby-to_s-formatting
 - key: s_paren_var
   divergence: spec-interpolation/method-call-syntax-validation
 - key: s_dq_fn

@@ -36,6 +36,4 @@ queries:
   - key: nope
   - key: h_interp
     hash_inspect: true
-    divergence:
-      - spec-interpolation/ruby-to_s-formatting
-      - spec-interpolation/method-result-type-and-nonscalar
+    divergence: spec-interpolation/method-result-type-and-nonscalar

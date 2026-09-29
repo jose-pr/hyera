@@ -16,6 +16,5 @@ queries:
   - key: v4
     id: v4
     hash_inspect: true
-    divergence: spec-interpolation/ruby-to_s-formatting
   - key: v5
     id: v5

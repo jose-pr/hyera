@@ -10,8 +10,10 @@ Ports Puppet's ``interpolation.rb``.
 
 import re
 import string
+from decimal import Decimal
 
 from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
+from ._types import Sensitive
 from .exceptions import HieraLookupError, InterpolationError
 
 _FUNCTION_RE = re.compile(
@@ -41,16 +43,136 @@ def _normalize_source(source: str) -> str:
     return _FORMAT_RE.sub(r"{\g<1>}", source, count=0)
 
 
+#: Ruby ``String#inspect`` escapes for characters with a short mnemonic
+#: (rather than a ``\\uXXXX`` fallback).
+_RUBY_INSPECT_SIMPLE_ESCAPES = {
+    "\\": "\\\\",
+    '"': '\\"',
+    "\t": "\\t",
+    "\n": "\\n",
+    "\r": "\\r",
+    "\f": "\\f",
+    "\v": "\\v",
+    "\b": "\\b",
+    "\a": "\\a",
+    "\x1b": "\\e",
+}
+
+
 def _to_puppet_str(value) -> str:
-    """A value's default string rendering for interpolation: ``None`` -> ``""``,
-    ``True``/``False`` -> ``"true"``/``"false"``, anything else -> ``str(value)``.
-    Floats and collections keep Python's own ``str()`` for now -- Ruby's
-    exact ``to_s``/inspect forms are a later refinement."""
+    """A value's default string rendering for interpolation: Ruby ``to_s``.
+
+    ``None`` -> ``""``; ``True``/``False`` -> ``"true"``/``"false"``; a
+    ``str`` is itself; an ``int`` is its decimal digits; a ``float`` follows
+    Ruby's ``Float#to_s`` (:func:`_float_to_s`); a ``list``/``dict`` renders
+    as Ruby ``inspect`` (:func:`_ruby_inspect`); a :class:`~hyera.Sensitive`
+    redacts. Anything else falls back to Python's own ``str()``.
+    """
     if value is None:
         return ""
+    if isinstance(value, str):
+        return value
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return _float_to_s(value)
+    if isinstance(value, (list, dict)):
+        return _ruby_inspect(value)
+    if isinstance(value, Sensitive):
+        return "Sensitive [value redacted]"
     return str(value)
+
+
+def _ruby_inspect(value) -> str:
+    """Ruby ``Object#inspect`` for a value already produced by our backends:
+    ``str``, ``None``, ``bool``/``int``/``float``, ``list``, ``dict`` or
+    :class:`~hyera.Sensitive` -- the shapes Ruby's ``to_json``/render path
+    can actually hold. Used for a bare ``%{var}``/function-call result that
+    is itself a list or hash, and recursively for their elements/keys/values.
+    """
+    if isinstance(value, str):
+        return _ruby_inspect_str(value)
+    if value is None:
+        return "nil"
+    if isinstance(value, (bool, int, float)):
+        return _to_puppet_str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_ruby_inspect(v) for v in value) + "]"
+    if isinstance(value, dict):
+        return (
+            "{"
+            + ", ".join(
+                "{}=>{}".format(_ruby_inspect(k), _ruby_inspect(v))
+                for k, v in value.items()
+            )
+            + "}"
+        )
+    if isinstance(value, Sensitive):
+        return "#<Sensitive [value redacted]>"
+    return str(value)
+
+
+def _ruby_inspect_str(s: str) -> str:
+    """Ruby ``String#inspect``: a double-quoted, escaped form.
+
+    ``\\`` ``"`` and the named control escapes (``\\t\\n\\r\\f\\v\\b\\a``,
+    ``\\x1b`` as ``\\e``) render as their short mnemonic; ``#`` immediately
+    before ``{``/``$``/``@`` is escaped (``\\#``) since Ruby would otherwise
+    read it as interpolation syntax; the rest of C0, DEL, C1 and U+2028/9
+    become ``\\uXXXX``; everything else -- including non-ASCII text outside
+    those ranges -- is left raw.
+    """
+    out = ['"']
+    n = len(s)
+    i = 0
+    while i < n:
+        ch = s[i]
+        escape = _RUBY_INSPECT_SIMPLE_ESCAPES.get(ch)
+        if escape is not None:
+            out.append(escape)
+            i += 1
+            continue
+        if ch == "#" and i + 1 < n and s[i + 1] in "{$@":
+            out.append("\\#")
+            i += 1
+            continue
+        cp = ord(ch)
+        if cp <= 0x1F or 0x7F <= cp <= 0x9F or ch in (" ", " "):
+            out.append("\\u{:04X}".format(cp))
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    out.append('"')
+    return "".join(out)
+
+
+def _float_to_s(f: float) -> str:
+    """Ruby ``Float#to_s``: fixed notation for a scientific exponent of
+    -4..14 (and 15 when the shortest round-trip digits run past the point),
+    ``<d>.<digits>e±NN`` otherwise; ``NaN``/``Infinity``/``-Infinity`` for
+    the non-finite cases. Measured against Ruby 4.0.7 over 8,291 floats
+    spanning exponents -30..39 and 1-17 significant digits (see the parent
+    plan's Known Facts) -- Python's own ``repr()`` already agrees with Ruby
+    in the fixed-notation range, so this only has to pick which range
+    applies and reformat the scientific case.
+    """
+    if f != f:
+        return "NaN"
+    if f == float("inf"):
+        return "Infinity"
+    if f == float("-inf"):
+        return "-Infinity"
+    sign, digits, exp = Decimal(repr(f)).as_tuple()
+    m = "".join(map(str, digits)).rstrip("0") or "0"
+    e = len(digits) + exp - 1
+    if -4 <= e and (e <= 14 or e + 1 < len(m)):
+        return repr(f)
+    return "{}{}.{}e{}{:02d}".format(
+        "-" if sign else "", m[0], m[1:] or "0", "+" if e >= 0 else "-", abs(e)
+    )
 
 
 def _scope_ref(scope, ref: str, subject: str = None):
