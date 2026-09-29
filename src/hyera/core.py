@@ -31,7 +31,7 @@ from ._lookup_adapter import (
 )
 from ._lookup_function import lookup as _lookup_call, nested_lookup, parse_call
 from ._merge_strategy import MergeStrategy
-from ._navigation import _MISSING, parse_lookup_key, sub_lookup
+from ._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
 from ._scope import Scope
 from ._type_mismatch import assert_instance_of
 from ._type_parser import parse_type
@@ -711,6 +711,79 @@ class Hiera:
         result = _data_functions.dig(root, keys[1:])
         if value_type is not None:
             assert_instance_of("Found value", parse_type(value_type), result)
+        return result
+
+    def get(
+        self,
+        dotted,
+        default_value=None,
+        block=None,
+        *,
+        value_type=None,
+        merge=None,
+        default_values_hash=None,
+        override=None,
+    ):
+        """Puppet's ``get()`` (``functions/get.rb``): resolve the root of
+        ``dotted`` through `.lookup()`, then dig the rest of it out of the
+        result -- unlike the removed old ``.get()``, this ``dotted``
+        argument is a single Puppet dotted-navigation *string*
+        (``"a.b.0"``), not a plain key.
+
+        ``dotted`` must be a non-empty ``str`` (there is no whole-data value
+        to fall back to), else ``HieraLookupError("Syntax error in dotted-
+        navigation string")``, same as a malformed one; a non-``str``
+        ``dotted`` raises ``TypeError`` instead. The root segment is looked
+        up like `.lookup()` (``merge``/``default_values_hash``/``override``
+        apply to it; an ``int`` root can never match a hiera key, so it is
+        treated as a miss directly, without a lookup at all); a root miss
+        or a found ``None`` returns ``default_value``, never raises. The
+        remaining segments are dug out with Puppet's ``dig()`` semantics; a
+        walk error (a non-collection or a non-integer list index) reaches
+        ``block(error)`` when given, else raises. ``value_type``, when
+        given, asserts the final result with the subject that says where it
+        came from ("Found value", "Default value" or "Value returned from
+        block").
+        """
+        if not isinstance(dotted, str):
+            raise TypeError(
+                "get() dotted key must be a str, not {}".format(type(dotted).__name__)
+            )
+        if dotted == "":
+            raise HieraLookupError("Syntax error in dotted-navigation string")
+        segments = split_key(
+            dotted,
+            lambda _problem: HieraLookupError(
+                "Syntax error in dotted-navigation string"
+            ),
+        )
+        root = segments[0]
+        if not isinstance(root, str):
+            root_value = None
+        else:
+            call = parse_call(
+                root, None, merge, None, default_values_hash, override, None
+            )
+            invocation = Invocation(
+                self.scope,
+                self._sub_lookup,
+                override_values=call.override,
+                default_values=call.default_values_hash,
+            )
+
+            def search(name, inv, m, _root=root):
+                # Puppet's own `get()` looks up the root by its *segment*
+                # form directly (never re-parsed): a quoted root such as
+                # `'"a.b".c'` must not have its own embedded dot split
+                # again by a second `parse_lookup_key` pass.
+                return self._search_and_merge(name, inv, m, parsed=(_root, ()))
+
+            root_value = _lookup_call(call, invocation, search)
+        result, subject = _data_functions.get_segments(
+            root_value, segments[1:], default_value, block
+        )
+        if value_type is not None:
+            assert_instance_of(subject, parse_type(value_type), result)
         return result
 
 

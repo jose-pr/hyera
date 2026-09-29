@@ -1,11 +1,12 @@
-"""Puppet's ``dig()`` function, ported onto an already-resolved value:
-``functions/dig.rb``.
+"""Puppet's ``dig()``/``get()`` functions, ported onto an already-resolved
+value: ``functions/dig.rb``, ``functions/get.rb``.
 
-Original code; no phiera/Puppet-source header (see ``core.Hiera.dig``, the
-thin method wrapping this module).
+Original code; no phiera/Puppet-source header (see ``core.Hiera.dig``/
+``.get``, the thin methods wrapping this module).
 """
 
 from ._interpolation import _ruby_inspect
+from ._navigation import split_key
 from ._types import infer
 from .exceptions import HieraLookupError
 
@@ -73,3 +74,52 @@ def dig(data, keys):
                 break
         value = found if hit else None
     return value
+
+
+def get_segments(value, segments, default_value, block):
+    """Puppet's shared tail of ``get()``/``getvar()``
+    (``functions/get.rb:135-146``): dig ``segments`` out of ``value``,
+    substituting ``default_value`` for ``None``/a miss.
+
+    A :class:`_DigError` reaches ``block(error)`` when a block is given
+    (its return value is used as-is), otherwise it propagates.
+
+    Returns ``(result, subject)``: ``subject`` is Puppet's own name for
+    where ``result`` came from ("Found value", "Default value" or "Value
+    returned from block"), for a caller that asserts a ``value_type``
+    against it (``core.Hiera.get``); a caller with no such use (``get()``/
+    ``getvar()`` themselves) reads just ``result``.
+    """
+    if value is None:
+        return default_value, "Default value"
+    if not segments:
+        return value, "Found value"
+    try:
+        result = dig(value, segments)
+    except _DigError as e:
+        if block is not None:
+            return block(e), "Value returned from block"
+        raise
+    if result is None:
+        return default_value, "Default value"
+    return result, "Found value"
+
+
+def get(value, navigation, default_value=None, block=None):
+    """Puppet's ``get()`` (``functions/get.rb:118-146``) over an
+    already-looked-up ``value``: dig Puppet's dotted-navigation string
+    ``navigation`` out of it.
+
+    An empty ``navigation`` returns ``value`` itself, untouched. Otherwise
+    ``navigation`` is parsed with the same dotted-key grammar a lookup key
+    uses (quoted segments, numeric segments as ``int``), raising
+    ``HieraLookupError("Syntax error in dotted-navigation string")`` on a
+    malformed one.
+    """
+    if navigation == "":
+        return value
+    segments = split_key(
+        "x." + navigation,
+        lambda _problem: HieraLookupError("Syntax error in dotted-navigation string"),
+    )[1:]
+    return get_segments(value, segments, default_value, block)[0]

@@ -134,6 +134,22 @@ private engine internals with no stability contract.
     `1.0`). `value_type`, when given, asserts the final result with the
     subject "Found value". Needs at least one key, the first a `str`, else
     `TypeError`.
+  - **`.get(dotted, default_value=None, block=None, *, value_type=None,
+    merge=None, default_values_hash=None, override=None) -> Any`** —
+    Puppet's `get()`: `dotted` is a single dotted-navigation *string*
+    (`"a.b.0"`), **not** the removed old `.get(key, ...)`'s plain key. The
+    root segment resolves like `.lookup()` (an `int` root can never match a
+    hiera key, so it is treated as a miss without a lookup at all); a root
+    miss or a found `None`, or any navigation past it landing on `None`,
+    returns `default_value` — never raises for that reason. A walk error
+    (the same two `HieraLookupError`s `.dig()` raises) reaches `block(error)`
+    when a block is given, else raises. `dotted` must be a non-empty `str`
+    (there is no whole-data value to return), else
+    `HieraLookupError("Syntax error in dotted-navigation string")`, the
+    same error a malformed one raises; a non-`str` `dotted` raises
+    `TypeError` instead. `value_type` asserts the final result with the
+    subject that says where it came from ("Found value", "Default value"
+    or "Value returned from block").
   - **`.scoped(*, variables=None, facts=None, trusted=None,
     server_facts=None, environment=None, strict=None, node_name=None) ->
     Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new

@@ -21,6 +21,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `name in h` tests for a value. `value_type` takes a Puppet type string;
   a list of names returns the first one found.
 - `Hiera.dig(*keys, ...)`, Puppet's `dig()` over a looked-up value.
+- `Hiera.get(dotted, default_value=None, block=None, ...)`, Puppet's
+  `get()` with a dotted navigation string; it returns `default_value`
+  instead of raising on a miss.
 
 ### Changed
 

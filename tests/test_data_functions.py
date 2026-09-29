@@ -1,5 +1,6 @@
-"""``Hiera.dig``: Puppet's ``dig()`` function (``functions/dig.rb``), ported
-onto an already-looked-up value."""
+"""``Hiera.dig``/``.get``: Puppet's ``dig()``/``get()`` functions
+(``functions/dig.rb``, ``get.rb``), ported onto an already-looked-up
+value."""
 
 import pytest
 
@@ -75,3 +76,25 @@ def test_dig_takes_lookup_options(fn):
         match=r"Found value has wrong type, expects a String value, got Integer",
     ):
         h.dig("h", "x", "p", value_type="String")
+
+
+def test_get_navigates_like_puppet(fn):
+    h = fn
+    assert h.get("h.x.q", "D") == 2
+    with pytest.raises(
+        HieraLookupError,
+        match=(
+            r"The given data does not contain a Collection at \[\"y\"\], "
+            r"got 'Integer\[3, 3\]'"
+        ),
+    ):
+        h.get("h.y.z", "D")
+    caught = h.get("h.y.z", "D", block=lambda e: "E:" + str(e))
+    assert caught.startswith("E:The given data does not contain a Collection")
+    assert h.get("mixed.5", "D") == "D"
+    with pytest.raises(
+        HieraLookupError, match="Syntax error in dotted-navigation string"
+    ):
+        h.get("h.a..b", "D")
+    assert h.get("nope.x", "D") == "D"  # missing root
+    assert h.get("0.a", "D") == "D"  # an int root can never match
