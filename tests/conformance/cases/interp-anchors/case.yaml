@@ -1,0 +1,12 @@
+description: >-
+  A YAML anchor reused across a hash and a list, merged over two levels and
+  interpolated -- guards that an interpolated value shares its anchored
+  nodes wherever they appear, while a value entering a merge is always
+  copied per position first.
+queries:
+- key: h
+  id: h-deep
+  merge: deep
+  note: Puppet 8.10 probe
+- key: b
+  note: Puppet 8.10 probe
