@@ -33,7 +33,7 @@ __all__ = [
 SOPS_TIMEOUT = 30
 
 
-class Backend(object):
+class Backend:
     """Backends load data from files. Subclasses override ``.load``.
 
     A backend registers itself under one or more ``NAMES`` (the Hiera 5

@@ -8,7 +8,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
-class Sensitive(object):
+class Sensitive:
     """Thin marker wrapping a value flagged ``Sensitive`` via ``convert_to``.
 
     ``str()`` redacts; ``.unwrap()`` returns the real value. Mirrors Puppet's

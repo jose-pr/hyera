@@ -44,7 +44,7 @@ def make_merge(spec):
     return Merge(strategy, **options)
 
 
-class Merge(object):
+class Merge:
     """Accumulates matches across the hierarchy per a merge strategy.
 
     Strategies: ``unique`` (flatten scalars+arrays, dedupe, first-seen order),

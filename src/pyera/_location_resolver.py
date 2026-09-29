@@ -9,7 +9,7 @@ import logging
 
 from ._interpolation import _format_source
 
-LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 def _resolve_level_paths(level, base_path, context):
@@ -65,7 +65,7 @@ def _resolve_level_paths(level, base_path, context):
                     prefix = segments[:i]
                     break
             if not root.joinpath(*prefix).is_dir():
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Skipping glob %r under %s: %s is not a directory",
                     rel,
                     root,
@@ -75,7 +75,7 @@ def _resolve_level_paths(level, base_path, context):
             try:
                 matches = sorted(root.glob(rel))
             except (FileNotFoundError, NotADirectoryError):
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Glob %r under %s matched nothing (directory vanished)",
                     rel,
                     root,

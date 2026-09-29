@@ -20,10 +20,10 @@ from .util import LookupDict
 
 __all__ = ["Hiera", "ScopedHiera"]
 
-LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
-class ScopedHiera(object):
+class ScopedHiera:
     def __init__(self, hiera, context=None):
         self.hiera = hiera
         self.context = context or {}
@@ -97,9 +97,9 @@ class Hiera(Interpolation):
         #: Per-context cache of the merged ``lookup_options`` mapping.
         self._lookup_options_cache: dict = {}
 
-        self.load(backends or default_backends(), base_path)
+        self._load_config(backends or default_backends(), base_path)
 
-    def buildcontext(self, context: dict = None, **kwargs) -> dict:
+    def _build_context(self, context: dict = None, **kwargs) -> dict:
         new_context = {}
         new_context.update(self.context)
         new_context.update(context or {})
@@ -108,10 +108,10 @@ class Hiera(Interpolation):
         return {k: v for k, v in new_context.items() if v}
 
     def format(self, text: str, context: dict = None, **kwargs) -> str:
-        context = self.buildcontext(context, **kwargs)
+        context = self._build_context(context, **kwargs)
         return _format_source(_normalize_source(text), context)
 
-    def load(self, backends, base_path=None):
+    def _load_config(self, backends, base_path=None):
         """Load and validate the base configuration, building hierarchy state.
 
         Raises :class:`ConfigError` on any invalid/missing configuration.
@@ -134,7 +134,7 @@ class Hiera(Interpolation):
         # Pre-load/cache global (context-free) data.
         self.get(None)
 
-    def load_file(self, path, backend, ignore_cache=False):
+    def _load_file(self, path, backend, ignore_cache=False):
         """Load ``path`` via ``backend``, caching the parsed result."""
         if path not in self.cache or ignore_cache:
             try:
@@ -143,7 +143,7 @@ class Hiera(Interpolation):
                 raise ConfigError("Failed to load file {}: `{}`".format(path, e)) from e
         return path
 
-    def get_key(self, key, paths, context, merge):
+    def _get_key(self, key, paths, context, merge):
         """Get the value of ``key``, resolving it, walking ``paths`` in order.
 
         ``merge`` is a :class:`Merge` accumulator or ``None`` (first wins).
@@ -158,7 +158,7 @@ class Hiera(Interpolation):
                     pass
 
                 if cache is not None:
-                    value = self.resolve(cache, paths, context, merge)
+                    value = self._resolve(cache, paths, context, merge)
                     if merge is None:
                         return value
                     merge.merge_value(value)
@@ -168,7 +168,7 @@ class Hiera(Interpolation):
             return merge.finalize()
 
         if key is not None and len(key.split(".")) > 1:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Lookup key '%s' not found; ensure it is provided in the "
                 "hiera data.",
                 key,
@@ -192,23 +192,23 @@ class Hiera(Interpolation):
         except KeyError:
             return False
 
-    def sources(self, context=None, _load=True, **kwargs):
+    def sources(self, context=None, **kwargs):
         """Resolve the ordered list of source paths for a context.
 
-        When ``_load`` is True, existing files are parsed and cached and their
-        cache-key paths returned; otherwise the raw candidate paths are yielded.
+        Existing files are parsed and cached and their cache-key paths
+        returned.
 
         The filesystem walk (glob/iterdir/stat) is cached per resolved context
         so a merge lookup across many keys does not re-walk the tree for each
         key. This shares the staleness assumption of the parsed-content cache:
         a single instance reflects the tree as first seen for a given context.
         """
-        context = self.buildcontext(context, **kwargs)
-        return self._files_for(self.hierarchy, context, _load, "main")
+        context = self._build_context(context, **kwargs)
+        return self._files_for(self.hierarchy, context, "main")
 
-    def _files_for(self, hierarchy, context, _load, tag):
+    def _files_for(self, hierarchy, context, tag):
         try:
-            cache_key = (tag, _load, frozenset(context.items()))
+            cache_key = (tag, frozenset(context.items()))
         except TypeError:
             # An unhashable context value (e.g. a list) — skip caching.
             cache_key = None
@@ -222,17 +222,14 @@ class Hiera(Interpolation):
             for path in _resolve_level_paths(level, self.base_path, context):
                 paths = path.iterdir() if path.is_dir() else [path]
                 for path in paths:
-                    if _load:
-                        if path.exists() and path.is_file():
-                            files.append(self.load_file(path, level.backend))
-                    else:
-                        files.append(path)
+                    if path.exists() and path.is_file():
+                        files.append(self._load_file(path, level.backend))
         if cache_key is not None:
             self._source_cache[cache_key] = list(files)
         return files
 
     def _default_files(self, context):
-        return self._files_for(self.default_hierarchy, context, True, "default")
+        return self._files_for(self.default_hierarchy, context, "default")
 
     def _lookup_options_map(self, files, context, tag="main"):
         """The merged ``lookup_options`` mapping for a context, or ``None``.
@@ -251,7 +248,9 @@ class Hiera(Interpolation):
             return self._lookup_options_cache[cache_key]
 
         try:
-            options = self.get_key("lookup_options", files, context, make_merge("hash"))
+            options = self._get_key(
+                "lookup_options", files, context, make_merge("hash")
+            )
         except KeyError:
             options = None
         if not isinstance(options, dict):
@@ -300,7 +299,7 @@ class Hiera(Interpolation):
         :param context: per-call context variables.
         :param kwargs: override context variables.
         """
-        new_context = self.buildcontext(context, **kwargs)
+        new_context = self._build_context(context, **kwargs)
         # Resolve sources against the *built* context: per-call **kwargs are
         # documented context overrides, so they must reach hierarchy path
         # resolution too, not just interpolation and lookup_options. (The
@@ -322,11 +321,11 @@ class Hiera(Interpolation):
                 convert_to = opts.get("convert_to")
 
         try:
-            value = self.get_key(key, files, new_context, merge=merge_obj)
+            value = self._get_key(key, files, new_context, merge=merge_obj)
         except KeyError:
             if self.default_hierarchy:
                 try:
-                    value = self.get_key(
+                    value = self._get_key(
                         key,
                         self._default_files(new_context),
                         new_context,

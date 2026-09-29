@@ -217,8 +217,8 @@ paths work since `__init__` re-exports it too).
   string raises `InterpolationError`. A function call standing alone as the
   *entire* value keeps its native (possibly non-scalar) type.
 - Nested/inline lookups (function calls resolving other keys) never inherit
-  the caller's `merge=` — accumulation happens exactly once, at the
-  top-level `get_key` call.
+  the caller's `merge=` — accumulation happens exactly once per lookup, at
+  the top level.
 - A missing bare `%{var}` interpolation resolves to `""` (matches Ruby
   Hiera); a missing function-call argument raises `InterpolationError`
   instead — the two failure modes are not symmetric.

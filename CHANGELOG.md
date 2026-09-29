@@ -228,3 +228,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The engine is split into private modules; import public names from
   `pyera`. `pyera.core` now defines only `Hiera` and `ScopedHiera`, and
   `default_backends` lives in `pyera.backends`.
+- `Hiera.get_key`, `load`, `load_file`, `buildcontext`, `can_resolve` and
+  the `resolve*` methods are private (leading underscore); `sources()` no
+  longer takes `_load`; the module globals `function`, `interpolate`,
+  `rformat` and `LOGGER` are gone.
