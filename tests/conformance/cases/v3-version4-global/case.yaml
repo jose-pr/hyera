@@ -1,0 +1,8 @@
+description: >-
+  A Hiera version-4 config (version: 4, backend: yaml instead of data_hash,
+  no explicit extensions) at the global layer, so the layers-AdapterUnsupported
+  path never masks the version-4-specific divergence.
+origin: critic-puppet-coverage/v4env
+queries:
+  - key: k
+  - key: c

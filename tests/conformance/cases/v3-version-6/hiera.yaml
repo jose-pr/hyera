@@ -1,0 +1,8 @@
+---
+version: 6
+:backends:
+  - yaml
+:yaml:
+  :datadir: data
+:hierarchy:
+  - common

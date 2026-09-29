@@ -1,0 +1,9 @@
+---
+:backends:
+  - yaml
+:yaml:
+  :datadir: data
+:hierarchy:
+  - "%{::osfamily}"
+  - common
+:merge_behavior: deeper

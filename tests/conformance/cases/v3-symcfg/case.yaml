@@ -1,0 +1,7 @@
+description: A v5-shaped hiera.yaml written entirely with Ruby-symbol-style keys (:version:,
+  :defaults:, :hierarchy:); Puppet's symkeys_to_string normalization applies to v5
+  configs too, not only v3.
+origin: critic-puppet-coverage/symcfg
+queries:
+- key: k
+  divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported
