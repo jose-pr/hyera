@@ -69,11 +69,24 @@ sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
   bounds are supported and kept green).
 - Tests: `<py> -m pytest -q` (pytest config in `pyproject.toml` puts `src/`
   on the path).
-- Editable install: `<py> -m pip install -e ".[dev]"`.
+- Editable install: `<py> -m pip install -e ".[dev]"`. `dev` pulls in the
+  `cli` and `hocon` extras, so nothing else needs adding by hand.
 - Package: built with `hatchling`. The PyPI distribution, the import
   package and the console script are all `pyera`. `pyera[cli]` pulls in
   `duho` for the console script, `pyera[hocon]` pulls in `pyhocon` for
   `HOCONBackend`.
+- **Version**: lives in exactly one place, `src/pyera/__init__.py`
+  (`__version__`); `[tool.hatch.version]` reads it to build the package.
+  Bump it in the same commit as the CHANGELOG entry for that release.
+- **CI**: `test.yml` runs the full OS/Python matrix, a `black --check`, and
+  a `floors` job that installs every declared dependency at its floor
+  (`pyproject.toml`'s `>=` bound) on the oldest supported Python, so a floor
+  that stops working is caught before a release does.
+- **Releases**: tags are SemVer (`v1.0.0`, `v1.0.0-rc.1`); the PEP 440 form
+  of the tag (`v1.0.0-rc.1` -> `1.0.0rc1`) must equal the built version, or
+  `release.yml` stops before publishing anything. Pre-release tags create a
+  GitHub pre-release and are never uploaded to PyPI; a hyphenless tag such
+  as `v1.0.0rc1` counts as final.
 
 ### Conformance goldens
 
