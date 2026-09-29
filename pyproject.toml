@@ -39,12 +39,14 @@ hocon = ["pyhocon>=0.3.62,<0.4"]
 # extras -- without pyhocon/duho the HOCON/CLI tests silently skip instead of
 # running. `hatchling` is left out: build isolation supplies it.
 dev = ["pyera[cli,hocon]", "black", "build", "pytest", "twine"]
+docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 [project.scripts]
 pyera = "pyera.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/jose-pr/pyera/"
+Documentation = "https://jose-pr.github.io/pyera/"
 Issues = "https://github.com/jose-pr/pyera/issues"
 
 # hatchling reads __version__ from the file itself, without importing the
