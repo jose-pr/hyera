@@ -30,8 +30,6 @@ def _extract_lookup_options_for_key(key, options):
     for pattern, entry in options.items():
         if not isinstance(entry, dict):
             continue
-        if pattern == key:
-            return entry
         if _is_regex(pattern):
             try:
                 if re.fullmatch(pattern, key):

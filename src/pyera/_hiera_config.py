@@ -52,7 +52,7 @@ class HieraLevel(_ty.NamedTuple):
             collection_var, item_var, template = mapped_paths
             mapped = (collection_var, item_var, _normalize_source(template))
 
-        return HieraLevel(
+        return cls(
             backend,
             [_normalize_source(source) for source in sources if source],
             is_glob,

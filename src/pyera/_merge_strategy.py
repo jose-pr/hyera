@@ -64,9 +64,6 @@ class Merge:
         self.knockout_prefix = knockout_prefix
         self.sort_merged_arrays = sort_merged_arrays
         self.merge_hash_arrays = merge_hash_arrays
-        # Back-compat attributes used elsewhere.
-        self.deep = strategy == "deep"
-        self.typ = {"hash": dict, "deep": dict}.get(strategy, list)
 
         if strategy == "unique":
             self.value = []

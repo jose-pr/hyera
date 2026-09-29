@@ -134,9 +134,9 @@ class Hiera(Interpolation):
         # Pre-load/cache global (context-free) data.
         self.get(None)
 
-    def _load_file(self, path, backend, ignore_cache=False):
+    def _load_file(self, path, backend):
         """Load ``path`` via ``backend``, caching the parsed result."""
-        if path not in self.cache or ignore_cache:
+        if path not in self.cache:
             try:
                 self.cache[path] = backend.load(backend.read_file(path))
             except Exception as e:

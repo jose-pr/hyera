@@ -232,3 +232,4 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the `resolve*` methods are private (leading underscore); `sources()` no
   longer takes `_load`; the module globals `function`, `interpolate`,
   `rformat` and `LOGGER` are gone.
+- `Merge.deep` and `Merge.typ` are removed; read `Merge.strategy`.
