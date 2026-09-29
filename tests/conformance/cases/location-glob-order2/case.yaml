@@ -4,4 +4,4 @@ description: >-
 origin: spec-config/cases/glob_order2
 queries:
   - key: k
-    divergence: {id: spec-config/glob-order-case-insensitive-on-windows, on: [win32]}
+    divergence: {id: spec-config/glob-order-case-insensitive-on-windows, "on": [win32]}

@@ -209,6 +209,13 @@ def _is_marker_valid(value) -> bool:
     if isinstance(value, list):
         return bool(value) and all(_is_marker_valid(v) for v in value)
     if isinstance(value, dict):
+        # A bare `on:` key is read back as the boolean True by PyYAML's
+        # YAML-1.1 resolver (the same "Norway problem" as unquoted
+        # off/on/yes elsewhere in a case.yaml) -- catch it here so a
+        # platform guard silently authored as `on: [...]` instead of
+        # `"on": [...]` fails loudly instead of never applying.
+        if set(value) - {"id", "on"}:
+            return False
         if not _DIVERGENCE_ID_RE.match(value.get("id", "")):
             return False
         on = value.get("on")
