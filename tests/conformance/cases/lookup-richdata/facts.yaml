@@ -1,0 +1,6 @@
+---
+os:
+  family: RedHat
+role: toplevel
+roles:
+  - web

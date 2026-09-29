@@ -1,0 +1,60 @@
+description: 'alias()/hiera()/literal() combined with merges: nested alias, chained
+  hiera() calls, knockout/sort-merged-arrays over interpolated values, and best-effort
+  convert_to (bad int, bad bool, hex, unknown type).'
+origin: code-core/b3
+queries:
+- key: m_alias_arr
+- key: m_nested_alias
+- key: m_lit_pct
+- key: m_scope_dotted
+- key: m_colon
+- key: m_embedded_int
+- key: m_alias_hash
+- key: m_interp_list
+- key: chain_b
+- key: chain_a
+  divergence: new/fact-substitution-value-not-rescanned
+- key: dm
+  id: dm_deep
+  merge: deep
+- key: hm
+  id: hm_hash
+  merge: hash
+- key: um
+  id: um_unique
+  merge: unique
+- key: ko_val
+  id: ko_val_deep_ko
+  merge:
+    strategy: deep
+    knockout_prefix: --
+- key: ko_key
+  id: ko_key_deep_ko
+  merge:
+    strategy: deep
+    knockout_prefix: --
+  divergence: spec-merge/knockout-hash-key-and-scalar-semantics
+- key: ko_str
+  id: ko_str_deep_ko
+  merge:
+    strategy: deep
+    knockout_prefix: --
+  divergence: spec-merge/knockout-hash-key-and-scalar-semantics
+- key: sm
+  id: sm_deep_sort
+  merge:
+    strategy: deep
+    sort_merged_arrays: true
+- key: top_list
+  id: top_list_deep
+  merge: deep
+  divergence: spec-merge/deep-array-merge-order-and-dedupe
+- key: conv_bad
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: conv_bool
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: conv_bool_yes
+- key: conv_hex
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics
+- key: conv_unknown
+  divergence: spec-lookup-options-types/convert-to-best-effort-semantics

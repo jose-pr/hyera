@@ -1,0 +1,23 @@
+---
+nil_first: x
+db:
+  host: h2
+  port: 5432
+deep_arr:
+  l: [c, a]
+hash_nonhash:
+  a: 1
+unique_nested: [d]
+unique_hash: {k2: v2}
+k_alias:
+  c: 3
+base:
+  b: 2
+pfx::x: [b]
+lo_root:
+  a:
+    y: 2
+badmerge: [b]
+typo_opt: {b: 2}
+mha:
+  - {c: 3}

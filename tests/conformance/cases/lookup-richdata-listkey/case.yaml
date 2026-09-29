@@ -1,0 +1,8 @@
+description: 'A YAML hash key that is itself a list/collection ([a, b]: 1) is invalid
+  as a Puppet lookup value for that one key only; a sibling key must still resolve
+  normally.'
+origin: critic-puppet-coverage/richdata_listkey
+queries:
+- key: k_listkey
+- key: k_ok
+  divergence: code-io-security/yaml-rejects-files-puppet-accepts

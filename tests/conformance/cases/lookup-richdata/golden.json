@@ -1,0 +1,67 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d71ea8e78a1764ac1fb977aa05bbe174b894737e77c724c7600a25d33a4d8a4d",
+  "results": {
+    "k_boolkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_boolkey"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'k_boolkey' failed: Value for key 'k_boolkey', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Hash[Boolean[true], Integer[1, 1], 1, 1]"
+    },
+    "k_nullkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_nullkey"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'k_nullkey' failed: Value for key 'k_nullkey', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Hash[Undef, Integer[1, 1], 1, 1]"
+    },
+    "k_nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_nested"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'k_nested' failed: Value for key 'k_nested', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Array[Hash[Boolean[false], String, 1, 1], 1, 1]"
+    },
+    "k_intkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_intkey"
+      ],
+      "status": "found",
+      "value": {
+        "1": "one"
+      }
+    },
+    "k_floatkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_floatkey"
+      ],
+      "status": "found",
+      "value": {
+        "1.5": "x"
+      }
+    },
+    "k_ok": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k_ok"
+      ],
+      "status": "found",
+      "value": "fine"
+    }
+  }
+}

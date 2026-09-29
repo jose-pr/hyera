@@ -1,0 +1,14 @@
+---
+flag_false: false
+flag_true: true
+zero: 0
+num: 5
+fl: 1.5
+big: 1.0e+20
+list: [a, b]
+os: {family: RedHat}
+ref_a: "%{c_var}"
+b_var: B
+c_var: C
+colls: [x, y]
+nested: {svcs: [s1, s2]}

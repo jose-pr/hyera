@@ -1,0 +1,250 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "378eb1e1f45bb6eb9a4baa5158d89600d7dd50308302e893b94dd5d580df5372",
+  "results": {
+    "nil_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nil_first"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "status": "not_found"
+    },
+    "db.host": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.host"
+      ],
+      "status": "found",
+      "value": "h1"
+    },
+    "unique_single_u": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "unique_single"
+      ],
+      "status": "found",
+      "value": [
+        "a"
+      ]
+    },
+    "unique_single_arr_u": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "unique_single_arr"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "deep_arr_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "deep_arr"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "c",
+          "a",
+          "b"
+        ]
+      }
+    },
+    "hash_nonhash_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "hash_nonhash"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'hash_nonhash' failed: The first element of the merge has wrong type, expects a Hash value, got String"
+    },
+    "hash_single_str_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "hash_single_str"
+      ],
+      "status": "found",
+      "value": "str"
+    },
+    "unique_nested_u": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "unique_nested"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ]
+    },
+    "unique_hash_u": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "unique_hash"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'unique_hash' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
+    },
+    "k_alias_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "k_alias"
+      ],
+      "status": "found",
+      "value": {
+        "c": 3,
+        "a": 1
+      }
+    },
+    "pfx::x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "pfx::x"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "lo_root.a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lo_root.a"
+      ],
+      "status": "found",
+      "value": {
+        "y": 2,
+        "x": 1
+      }
+    },
+    "conv": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "conv_first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "conv"
+      ],
+      "status": "found",
+      "value": 42
+    },
+    "badmerge": {
+      "argv": [
+        "--strict",
+        "warning",
+        "badmerge"
+      ],
+      "status": "error",
+      "message": "Unknown merge strategy: 'bogus'"
+    },
+    "typo_opt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "typo_opt"
+      ],
+      "status": "error",
+      "message": "The merge options has wrong type, unrecognized key 'knockout_prfix'"
+    },
+    "mha_deep_hasharr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--merge-hash-arrays",
+        "mha"
+      ],
+      "status": "found",
+      "value": [
+        {
+          "c": 3,
+          "a": 1
+        },
+        {
+          "b": 2
+        }
+      ]
+    },
+    "str_leaf.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_leaf.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'str_leaf.x'"
+    },
+    "list_leaf.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "list_leaf.x"
+      ],
+      "status": "error",
+      "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'list_leaf.x'"
+    },
+    "null_leaf.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "null_leaf.x"
+      ],
+      "status": "not_found"
+    }
+  }
+}

@@ -1,0 +1,287 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3b4e24d82682f6ea27823b244cacde81a00bb97555962791f98b945f33a6c70f",
+  "results": {
+    "m_alias_arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_alias_arr"
+      ],
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "m_nested_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_nested_alias"
+      ],
+      "status": "found",
+      "value": {
+        "x": [
+          1,
+          2
+        ]
+      }
+    },
+    "m_lit_pct": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_lit_pct"
+      ],
+      "status": "found",
+      "value": "100% done"
+    },
+    "m_scope_dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_scope_dotted"
+      ],
+      "status": "found",
+      "value": "RedHat"
+    },
+    "m_colon": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_colon"
+      ],
+      "status": "found",
+      "value": "C"
+    },
+    "m_embedded_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_embedded_int"
+      ],
+      "status": "found",
+      "value": "n=5"
+    },
+    "m_alias_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_alias_hash"
+      ],
+      "status": "found",
+      "value": {
+        "k": "v"
+      }
+    },
+    "m_interp_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "m_interp_list"
+      ],
+      "status": "found",
+      "value": [
+        "C",
+        "x"
+      ]
+    },
+    "chain_b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "chain_b"
+      ],
+      "status": "found",
+      "value": "%{hiera('plain')}"
+    },
+    "chain_a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "chain_a"
+      ],
+      "status": "found",
+      "value": "P-5"
+    },
+    "dm_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "dm"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "n": {
+          "y": 2,
+          "x": 1
+        }
+      }
+    },
+    "hm_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "hm"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "um_unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "um"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "ko_val_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_val"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "b"
+        ]
+      }
+    },
+    "ko_key_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_key"
+      ],
+      "status": "found",
+      "value": {
+        "h": {
+          "x": 2,
+          "y": 3,
+          "--x": 1
+        }
+      }
+    },
+    "ko_str_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko_str"
+      ],
+      "status": "found",
+      "value": {
+        "h": {
+          "x": ""
+        }
+      }
+    },
+    "sm_deep_sort": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--sort-merged-arrays",
+        "sm"
+      ],
+      "status": "found",
+      "value": {
+        "l": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    "top_list_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "top_list"
+      ],
+      "status": "found",
+      "value": [
+        "b",
+        "a"
+      ]
+    },
+    "conv_bad": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv_bad"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'conv_bad' raised error: 'new' The string 'abc' cannot be converted to Integer"
+    },
+    "conv_bool": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv_bool"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'conv_bool' raised error: 'new_boolean' The string 'garbage' cannot be converted to Boolean"
+    },
+    "conv_bool_yes": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv_bool_yes"
+      ],
+      "status": "found",
+      "value": true
+    },
+    "conv_hex": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv_hex"
+      ],
+      "status": "found",
+      "value": 31
+    },
+    "conv_unknown": {
+      "argv": [
+        "--strict",
+        "warning",
+        "conv_unknown"
+      ],
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'conv_unknown' raised error: Creation of new instance of type 'TypeReference['Foo']' is not supported"
+    }
+  }
+}

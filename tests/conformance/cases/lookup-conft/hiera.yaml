@@ -1,0 +1,13 @@
+---
+version: 5
+defaults:
+  data_hash: yaml_data
+  datadir: data
+hierarchy:
+  - name: "Per-environment"
+    path: "environments/%{environment}.yaml"
+  - name: "Modules"
+    globs:
+      - "modules/*.yaml"
+  - name: "Common"
+    path: "common.yaml"

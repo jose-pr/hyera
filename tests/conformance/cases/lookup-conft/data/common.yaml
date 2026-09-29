@@ -1,0 +1,7 @@
+---
+app::name: myapp
+db:
+  host: localhost
+  port: 5432
+port_msg: "listening on %{hiera('db.port')}"
+conf: {drop: 99, other: 2}

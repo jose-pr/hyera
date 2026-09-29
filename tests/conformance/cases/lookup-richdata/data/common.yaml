@@ -1,0 +1,6 @@
+k_boolkey: {true: 1}
+k_nullkey: {~: 1}
+k_nested: [{false: x}]
+k_intkey: {1: one}
+k_floatkey: {1.5: x}
+k_ok: fine

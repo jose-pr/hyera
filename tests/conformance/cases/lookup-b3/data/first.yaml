@@ -1,0 +1,34 @@
+---
+lookup_options:
+  conv_bad: {convert_to: Integer}
+  conv_bool: {convert_to: Boolean}
+  conv_bool_yes: {convert_to: Boolean}
+  conv_hex: {convert_to: Integer}
+  conv_unknown: {convert_to: Foo}
+plain: P
+int: 5
+arr: [1, 2]
+hsh: {k: v}
+m_alias_arr: "%{alias('arr')}"
+m_nested_alias: {x: "%{alias('arr')}"}
+m_lit_pct: "100%{literal('%')} done"
+m_scope_dotted: "%{scope('os.family')}"
+m_colon: "%{::c_var}"
+m_embedded_int: "n=%{hiera('int')}"
+m_alias_hash: "%{alias('hsh')}"
+m_interp_list: ["%{c_var}", x]
+chain_b: "%{literal('%')}{hiera('plain')}"
+chain_a: "%{hiera('chain_b')}-%{hiera('int')}"
+dm: {a: 1, n: {x: 1}}
+hm: {a: 1}
+um: [a, b]
+ko_val: {l: ["--a"]}
+ko_key: {h: {"--x": 1}}
+ko_str: {h: {x: "--"}}
+sm: {l: [b]}
+top_list: [a]
+conv_bad: abc
+conv_bool: garbage
+conv_bool_yes: "yes"
+conv_hex: "0x1F"
+conv_unknown: v

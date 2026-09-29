@@ -1,0 +1,41 @@
+---
+lookup_options:
+  "^pfx::":
+    merge: unique
+  lo_root:
+    merge: deep
+  conv:
+    convert_to: Integer
+  badmerge:
+    merge: bogus
+  typo_opt:
+    merge:
+      strategy: deep
+      knockout_prfix: "--"
+nil_first: ~
+db:
+  host: h1
+unique_single: a
+unique_single_arr: [a, a, b]
+deep_arr:
+  l: [a, b]
+hash_nonhash: str
+hash_single_str: str
+unique_nested: [[a, b], c]
+unique_hash: {k: v}
+k_alias: "%{alias('base')}"
+base:
+  a: 1
+pfx::x: [a]
+lo_root:
+  a:
+    x: 1
+conv: "42"
+badmerge: [a]
+typo_opt: {a: 1}
+mha:
+  - {a: 1}
+  - {b: 2}
+str_leaf: hello
+list_leaf: [p, q]
+null_leaf: ~

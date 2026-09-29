@@ -1,0 +1,19 @@
+description: A global/environment/module hiera.yaml (layers not supported yet -- every
+  query here is AdapterUnsupported), dotted root-key lookup, embedded hiera() in a
+  value, and a knockout merge on a hash with a '--'-prefixed key.
+origin: code-core/conft
+queries:
+- key: port_msg
+  divergence:
+  - spec-layers-backends/no-config-layers
+  - code-core/dotted-key-root-semantics
+- key: db.port
+  divergence:
+  - spec-layers-backends/no-config-layers
+  - code-core/dotted-key-root-semantics
+- key: conf
+  id: conf_deep_ko
+  merge:
+    strategy: deep
+    knockout_prefix: --
+  divergence: spec-layers-backends/no-config-layers

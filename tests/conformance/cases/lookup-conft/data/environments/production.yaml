@@ -1,0 +1,4 @@
+---
+db:
+  host: db.prod.internal
+conf: {keep: 1, '--drop': true}

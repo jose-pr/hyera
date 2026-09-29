@@ -1,0 +1,14 @@
+lookup_options:
+  u: {merge: unique}
+  h: {merge: deep}
+  cv: {convert_to: Integer}
+u: [2]
+h: {x: {q: 2}, y: 3}
+s: "str"
+n: 5
+big: 11
+cv: "7"
+nilk: ~
+k: "kv"
+mixed: [a, 1]
+hsi: {a: 1, b: 2}

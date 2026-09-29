@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7ef87e371fa072021f028e7f26cf6533ae390e61da4352d7cc9b3d137c27221c",
+  "results": {
+    "port_msg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "port_msg"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": "listening on "
+    },
+    "db.port": {
+      "argv": [
+        "--strict",
+        "warning",
+        "db.port"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "not_found"
+    },
+    "conf_deep_ko": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "conf"
+      ],
+      "warnings": [
+        "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
+      ],
+      "status": "found",
+      "value": {
+        "drop": 99,
+        "other": 2,
+        "keep": 1,
+        "--drop": true
+      }
+    }
+  }
+}

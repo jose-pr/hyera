@@ -1,0 +1,120 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7ae5e623a72493c5c7ea7be1cb9c2126138c03948d8123b8a1b3dbd608f4ebcb",
+  "results": {
+    "s_type_integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer",
+        "s"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got String"
+    },
+    "n_type_integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer",
+        "n"
+      ],
+      "status": "found",
+      "value": 5
+    },
+    "n_type_string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "String",
+        "n"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects a String value, got Integer"
+    },
+    "big_type_range": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Integer[0,10]",
+        "big"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer[0, 10] value, got Integer[11, 11]"
+    },
+    "s_type_enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum['a', 'b']",
+        "s"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum['a', 'b'], got 'str'"
+    },
+    "hsi_type_hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[String, Integer]",
+        "hsi"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "mixed_type_array_string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[String]",
+        "mixed"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, index 1 expects a String value, got Integer"
+    },
+    "u_type_array3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[Integer, 3]",
+        "u"
+      ],
+      "status": "error",
+      "message": "Found value has wrong type, expects size to be at least 3, got 2"
+    },
+    "namelist_missing1_k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "missing1",
+        "k"
+      ],
+      "status": "found",
+      "value": "kv"
+    },
+    "namelist_all_missing": {
+      "argv": [
+        "--strict",
+        "warning",
+        "missing1",
+        "missing2"
+      ],
+      "status": "error",
+      "message": "Function lookup() did not find a value for any of the names ['missing1', 'missing2']"
+    }
+  }
+}

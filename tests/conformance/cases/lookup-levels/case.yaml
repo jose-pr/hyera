@@ -1,0 +1,65 @@
+description: lookup_options across levels (unique/deep/hash merges, bad merge names,
+  a typo'd knockout option key), a null shadowing a lower level, and dotted navigation
+  into a String/Array/null leaf.
+origin: code-core/levels
+queries:
+- key: nil_first
+  divergence: code-core/null-value-treated-as-missing
+- key: db.port
+  divergence: code-core/dotted-key-root-semantics
+- key: db.host
+- key: unique_single
+  id: unique_single_u
+  merge: unique
+- key: unique_single_arr
+  id: unique_single_arr_u
+  merge: unique
+- key: deep_arr
+  id: deep_arr_deep
+  merge: deep
+  divergence: spec-merge/deep-array-merge-order-and-dedupe
+- key: hash_nonhash
+  id: hash_nonhash_hash
+  merge: hash
+  divergence: spec-merge/merge-value-type-validation
+- key: hash_single_str
+  id: hash_single_str_hash
+  merge: hash
+  divergence: spec-merge/hash-merge-nonhash-returns-empty-dict
+- key: unique_nested
+  id: unique_nested_u
+  merge: unique
+  divergence: spec-merge/unique-no-flatten
+- key: unique_hash
+  id: unique_hash_u
+  merge: unique
+  divergence: spec-merge/merge-value-type-validation
+- key: k_alias
+  id: k_alias_hash
+  merge: hash
+  divergence: spec-lookup-options-types/interpolated-lookups-bypass-lookup-options
+- key: pfx::x
+  divergence: code-core/dotted-key-root-semantics
+- key: lo_root.a
+  divergence: code-core/dotted-key-root-semantics
+- key: conv
+- key: conv
+  id: conv_first
+  merge: first
+  divergence: spec-lookup-options-types/explicit-merge-drops-convert-to
+- key: badmerge
+  divergence: spec-merge/bad-merge-strategy-uncaught-valueerror
+- key: typo_opt
+  divergence: spec-merge/merge-options-not-validated
+- key: mha
+  id: mha_deep_hasharr
+  merge:
+    strategy: deep
+    merge_hash_arrays: true
+  divergence: spec-merge/merge-hash-arrays-unequal-length
+- key: str_leaf.x
+  divergence: code-io-security/dotted-subkey-raw-exceptions
+- key: list_leaf.x
+  divergence: code-io-security/dotted-subkey-raw-exceptions
+- key: null_leaf.x
+  divergence: code-io-security/dotted-subkey-raw-exceptions

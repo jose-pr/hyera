@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "c644b13854c03fd0fedb5e7ec734b60e3d5f581117f309b1331a7fa119e525c4",
+  "results": {
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "status": "not_found"
+    },
+    "dotted_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dotted.key"
+      ],
+      "status": "not_found"
+    },
+    "s_undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_undef"
+      ],
+      "warnings": [
+        "Undefined variable 'nonexistent';"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "s_undef_scope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "s_undef_scope"
+      ],
+      "warnings": [
+        "Undefined variable 'nonexistent';"
+      ],
+      "status": "found",
+      "value": "ab"
+    }
+  }
+}

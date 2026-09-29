@@ -1,0 +1,8 @@
+---
+lookup_options:
+  foo:
+    merge: unique
+"dotted.key": dv
+s_undef: "a%{nonexistent}b"
+s_undef_scope: "a%{scope('nonexistent')}b"
+nilv: ~
