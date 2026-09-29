@@ -25,7 +25,7 @@ src/pyera/
 ├── _types.py               # Sensitive, convert_to (pops/types)
 ├── backends.py             # Backend + YAMLBackend/JSONBackend/SopsYAMLBackend/HOCONBackend, default_backends
 ├── util.py                 # LookupDict (dotted-path lookup), sym_lookup
-├── exceptions.py           # HieraError -> ConfigError, BackendError, InterpolationError
+├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 └── cli.py                  # duho-based `pyera` console script (Lookup command, main())
 ```
 

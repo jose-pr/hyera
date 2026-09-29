@@ -31,7 +31,7 @@ h.get("ntp::servers")
 h.get("classes", merge=list)                 # array merge
 h.get("users", merge=dict, merge_deep=True)  # deep hash merge
 
-# Missing keys return the default (or raise with throw=True):
+# Missing keys return the default (with throw=True they raise KeyNotFoundError, a KeyError):
 h.get("missing", default="fallback")
 h.has("some::key")
 
@@ -143,8 +143,11 @@ The CLI needs the `cli` extra (`pip install "pyera[cli]"`); without it the
 command prints that hint and exits 2.
 
 The CLI is built for unattended use: no interactive prompts, deterministic
-output, and meaningful exit codes — `0` found, `1` key missing, `2`
-usage/config error.
+output, and meaningful exit codes: `0` found (or `--default` printed), `1`
+key not found, `2` any other error — reported as one stderr line (`-v` or
+`DUHO_TRACEBACK=1` adds the traceback). `puppet lookup` exits `1` for both a
+miss and an error, printing nothing for the error case; pyera's CLI tells
+the two apart.
 
 `PYERA_MCP=stdio pyera` runs the same command as an MCP server over
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
@@ -186,9 +189,17 @@ HOCON `include file()` (Puppet reads the file; pyera always raises instead).
 
 ## Notes
 
-Values that fail to interpolate raise `InterpolationError`; invalid base config
-raises `ConfigError`; backend/parse failures raise `BackendError`. All inherit
-from `HieraError`.
+Everything raised derives from `HieraError` (`.path` names the file
+concerned, where there is one):
+
+- `ConfigError` — `hiera.yaml` is missing, unreadable, unparsable, or the
+  wrong shape.
+- `BackendError` — a data file could not be read or parsed; `.path` names
+  it.
+- `HieraLookupError` — a failure while resolving a key, with subclasses
+  `InterpolationError` (a `%{...}` call or reference could not be
+  resolved), `MergeError` (an unknown or invalid merge strategy), and
+  `KeyNotFoundError` (also a `KeyError`) — `.get(..., throw=True)`'s miss.
 
 ## License
 
