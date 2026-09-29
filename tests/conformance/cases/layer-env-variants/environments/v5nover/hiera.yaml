@@ -1,0 +1,2 @@
+hierarchy:
+  - {name: common, path: common.yaml}

@@ -1,0 +1,161 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "f09a6ca8f6543fda0872cf2f88878ec9265bb78acb503995225a86a883c0d2ec",
+  "results": {
+    "v3env-env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v3env",
+        "env_only"
+      ],
+      "warnings": [
+        "<case>/environments/v3env/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
+        "hiera.yaml version 3 found at the environment root was ignored"
+      ],
+      "status": "not_found"
+    },
+    "v3env-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v3env",
+        "g_only"
+      ],
+      "warnings": [
+        "<case>/environments/v3env/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
+        "hiera.yaml version 3 found at the environment root was ignored"
+      ],
+      "status": "found",
+      "value": "g"
+    },
+    "noconf-env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "noconf",
+        "env_only"
+      ],
+      "status": "not_found"
+    },
+    "noconf-ncmod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "noconf",
+        "ncmod::k"
+      ],
+      "status": "found",
+      "value": "nc"
+    },
+    "noconf-g_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "noconf",
+        "g_env"
+      ],
+      "status": "found",
+      "value": "noconf"
+    },
+    "emptyconf-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "emptyconf",
+        "g_only"
+      ],
+      "warnings": [
+        "<case>/environments/emptyconf/hiera.yaml: File exists but does not contain a valid YAML hash. Falling back to Hiera version 3 default config",
+        "<case>/environments/emptyconf/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
+        "hiera.yaml version 3 found at the environment root was ignored"
+      ],
+      "status": "found",
+      "value": "g"
+    },
+    "v3env-strict-error": {
+      "argv": [
+        "--environment",
+        "v3env",
+        "--strict",
+        "error",
+        "env_only"
+      ],
+      "warnings": [
+        "<case>/environments/v3env/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "hiera.yaml version 3 cannot be used in an environment (file: <case>/environments/v3env/hiera.yaml)"
+    },
+    "h3benv-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "h3benv",
+        "g_only"
+      ],
+      "status": "error",
+      "message": "'hiera3_backend' is only allowed in the global layer (file: <case>/environments/h3benv/hiera.yaml, line: 3)"
+    },
+    "staging-env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "staging",
+        "env_only"
+      ],
+      "status": "error",
+      "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/environments/staging/hiera.yaml, line: 4)"
+    },
+    "staging-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "staging",
+        "g_only"
+      ],
+      "status": "error",
+      "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/environments/staging/hiera.yaml, line: 4)"
+    },
+    "v5nover-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v5nover",
+        "g_only"
+      ],
+      "warnings": [
+        "<case>/environments/v5nover/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "The Lookup Configuration at <case>/environments/v5nover/hiera.yaml' has wrong type, entry 'hierarchy' variant 0 expects a String value, got Tuple"
+    },
+    "v4env-env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v4env",
+        "env_only"
+      ],
+      "warnings": [
+        "<case>/environments/v4env/hiera.yaml: Use of 'hiera.yaml' version 4 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "v4"
+    }
+  }
+}

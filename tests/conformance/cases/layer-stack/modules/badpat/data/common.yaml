@@ -1,0 +1,3 @@
+lookup_options:
+  '^other::.*': {merge: unique}
+badpat::k: v

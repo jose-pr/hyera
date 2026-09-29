@@ -1,0 +1,10 @@
+lookup_options:
+  mymod::modlo: {merge: unique}
+  mymod::lo_both: {merge: first}
+  mymod::env_lo: {merge: first}
+mymod::modlo: [m]
+mymod::lo_both: [m]
+mymod::env_lo: [m]
+mymod::only_mod: m
+mymod::mn: "%{module_name}"
+mymod::ref_env: "%{lookup('env_only')}"

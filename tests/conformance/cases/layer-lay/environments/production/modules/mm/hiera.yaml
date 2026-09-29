@@ -1,0 +1,10 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - name: common
+    path: common.yaml
+default_hierarchy:
+  - name: defaults
+    path: defaults.yaml
+  - name: defaults2
+    path: defaults2.yaml

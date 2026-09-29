@@ -1,0 +1,2 @@
+g_only: g
+g_env: "%{environment}"

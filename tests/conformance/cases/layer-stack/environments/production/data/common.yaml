@@ -1,0 +1,9 @@
+env_only: e
+env_ref_mod: "%{lookup('mymod::only_mod')}"
+lookup_options:
+  shared_lo: {merge: first}
+  mymod::env_lo: {merge: unique}
+shared_lo: [e]
+mymod::env_lo: [e]
+mymod::lo_both: [e]
+mymod::modlo: [e]

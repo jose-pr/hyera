@@ -1,0 +1,3 @@
+lookup_options:
+  other::x: {merge: unique}
+badlo::k: v

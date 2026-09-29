@@ -1,0 +1,5 @@
+lookup_options:
+  mm::arr: {merge: unique}
+top: global
+mm::h: {g: 1}
+mm::arr: [g]

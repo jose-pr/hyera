@@ -1,0 +1,14 @@
+description: >-
+  Harvested review fixture (dimension spec-layers-backends, verification
+  copy): a global hiera.yaml declaring default_hierarchy is a config error,
+  swallowed by puppet lookup's normal miss path.
+origin: verify-spec-layers-backends/gdh
+queries:
+  - key: a
+    error_match: "'default_hierarchy' is only allowed in the module layer"
+    error_class: ConfigError
+    divergence: spec-layers-backends/default-hierarchy-semantics
+  - key: b
+    error_match: "'default_hierarchy' is only allowed in the module layer"
+    error_class: ConfigError
+    divergence: spec-layers-backends/default-hierarchy-semantics

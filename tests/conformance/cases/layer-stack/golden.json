@@ -1,0 +1,327 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d80c498dc8074ed66289d29cb30519b30d7bee771e8a790eb47a237b1887036b",
+  "results": {
+    "g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_only"
+      ],
+      "status": "found",
+      "value": "g"
+    },
+    "g_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_env"
+      ],
+      "status": "found",
+      "value": "production"
+    },
+    "g_ref_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_ref_env"
+      ],
+      "status": "found",
+      "value": "e"
+    },
+    "env_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "env_only"
+      ],
+      "status": "found",
+      "value": "e"
+    },
+    "env_ref_mod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "env_ref_mod"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "shared_lo": {
+      "argv": [
+        "--strict",
+        "warning",
+        "shared_lo"
+      ],
+      "status": "found",
+      "value": [
+        "g",
+        "e"
+      ]
+    },
+    "mymod::lo_both": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::lo_both"
+      ],
+      "status": "found",
+      "value": [
+        "g",
+        "e",
+        "m"
+      ]
+    },
+    "mymod::only_mod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::only_mod"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "mymod::mn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::mn"
+      ],
+      "status": "found",
+      "value": ""
+    },
+    "mymod::ref_env": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::ref_env"
+      ],
+      "status": "found",
+      "value": "e"
+    },
+    "basemod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "basemod::k"
+      ],
+      "status": "found",
+      "value": "b"
+    },
+    "dhbad::main": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dhbad::main"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "dhmain::inmain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dhmain::inmain"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "mymod::dup": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::dup"
+      ],
+      "status": "not_found"
+    },
+    "othermod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "othermod::k"
+      ],
+      "status": "not_found"
+    },
+    "Upper::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "Upper::k"
+      ],
+      "status": "not_found"
+    },
+    "mymod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod"
+      ],
+      "status": "not_found"
+    },
+    "v3mod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v3mod::k"
+      ],
+      "warnings": [
+        "<case>/modules/v3mod/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
+        "hiera.yaml version 3 found at module root was ignored"
+      ],
+      "status": "not_found"
+    },
+    "unq2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unq2"
+      ],
+      "status": "not_found"
+    },
+    "basemod-modulepath": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--modulepath",
+        "./environments/production/modules",
+        "basemod::k"
+      ],
+      "status": "not_found"
+    },
+    "mymod-modulepath": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--modulepath",
+        "./modules",
+        "mymod::only_mod"
+      ],
+      "status": "not_found"
+    },
+    "h3bmod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h3bmod::k"
+      ],
+      "status": "error",
+      "message": "'hiera3_backend' is only allowed in the global layer (file: <case>/modules/h3bmod/hiera.yaml, line: 3)"
+    },
+    "v3mod-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v3mod::k"
+      ],
+      "warnings": [
+        "<case>/modules/v3mod/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "hiera.yaml version 3 cannot be used in a module (file: <case>/modules/v3mod/hiera.yaml)"
+    },
+    "g_ref": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_ref"
+      ],
+      "status": "found",
+      "value": "[\"e\", \"m\"]"
+    },
+    "g_alias": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_alias"
+      ],
+      "status": "found",
+      "value": [
+        "e",
+        "m"
+      ]
+    },
+    "mymod::env_lo": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::env_lo"
+      ],
+      "status": "found",
+      "value": [
+        "e",
+        "m"
+      ]
+    },
+    "mymod::modlo": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::modlo"
+      ],
+      "status": "found",
+      "value": [
+        "e",
+        "m"
+      ]
+    },
+    "badlo::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "badlo::k"
+      ],
+      "status": "error",
+      "message": "all lookup_options keys must start with module name 'badlo'"
+    },
+    "badpat::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "badpat::k"
+      ],
+      "status": "error",
+      "message": "all lookup_options patterns must match a key starting with module name 'badpat'"
+    },
+    "dhmain::indefault": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dhmain::indefault"
+      ],
+      "warnings": [
+        "Module 'dhmain': Value returned from data_hash function 'yaml_data', when using location <case>/modules/dhmain/data/d.yaml', must use keys qualified with the name of the module; got unq2"
+      ],
+      "status": "found",
+      "value": "d"
+    },
+    "dhmain::k-deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "dhmain::k"
+      ],
+      "warnings": [
+        "Module 'dhmain': Value returned from data_hash function 'yaml_data', when using location <case>/modules/dhmain/data/d.yaml', must use keys qualified with the name of the module; got unq2"
+      ],
+      "status": "found",
+      "value": "d"
+    },
+    "dhbad::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "dhbad::k"
+      ],
+      "warnings": [
+        "Module 'dhbad': Value returned from data_hash function 'yaml_data', when using location <case>/modules/dhbad/data/d.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "error",
+      "message": "all lookup_options keys must start with module name 'dhbad'"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+g_only: g
+g_env: "%{environment}"
+g_ref: "%{lookup('mymod::modlo')}"
+g_alias: "%{alias('mymod::modlo')}"
+g_ref_env: "%{lookup('env_only')}"
+lookup_options:
+  mymod::lo_both: {merge: unique}
+  shared_lo: {merge: unique}
+mymod::lo_both: [g]
+shared_lo: [g]

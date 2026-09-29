@@ -1,0 +1,161 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d42b1c5b73a5cc7c914e1498bb5d9626b7018ba5aa577379c9a5aaf7728f1d38",
+  "results": {
+    "top": {
+      "argv": [
+        "--strict",
+        "warning",
+        "top"
+      ],
+      "status": "found",
+      "value": "global"
+    },
+    "envkey": {
+      "argv": [
+        "--strict",
+        "warning",
+        "envkey"
+      ],
+      "status": "found",
+      "value": "e"
+    },
+    "envos": {
+      "argv": [
+        "--strict",
+        "warning",
+        "envos"
+      ],
+      "status": "found",
+      "value": "rh"
+    },
+    "mm::onlymod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::onlymod"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": "m"
+    },
+    "mm::envmod": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::envmod"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": "env"
+    },
+    "unq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "unq"
+      ],
+      "status": "not_found"
+    },
+    "mm::darr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::darr"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": [
+        "d1"
+      ]
+    },
+    "mm::dopt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::dopt"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": [
+        "o1",
+        "o2"
+      ]
+    },
+    "mm::h": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::h"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": {
+        "g": 1
+      }
+    },
+    "mm::h-deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "mm::h"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": {
+        "m": 3,
+        "e": 2,
+        "g": 1
+      }
+    },
+    "mm::arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mm::arr"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": [
+        "g",
+        "e",
+        "m"
+      ]
+    },
+    "mm::darr-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "mm::darr"
+      ],
+      "warnings": [
+        "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
+      ],
+      "status": "found",
+      "value": [
+        "d1"
+      ]
+    }
+  }
+}
