@@ -1,0 +1,7 @@
+v1: "[%{name}]"
+v2: "[%{title}]"
+v3: "[%{module_name}]"
+v4: "[%{caller_module_name}]"
+v5: "[%{clientversion}]"
+v6: "[%{clientcert}]"
+v7: "[%{::environment}]"

@@ -1,0 +1,4 @@
+clientcert: web01
+hostname: web01
+domain: ""
+fqdn: web01

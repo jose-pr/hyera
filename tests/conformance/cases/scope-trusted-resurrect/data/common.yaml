@@ -1,0 +1,4 @@
+v1: "[%{trusted.certname}]"
+v2: "[%{trusted.authenticated}]"
+v3: "[%{facts.trusted.certname}]"
+v4: "%{trusted}"

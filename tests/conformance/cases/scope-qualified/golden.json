@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4b37c5014204af4cafd30c418be8e76d74b6e6a69e485895cd814f40a111a309",
+  "results": {
+    "v1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v1"
+      ],
+      "warnings": [
+        "Undefined variable 'foo::bar'; class foo could not be found"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v2"
+      ],
+      "status": "found",
+      "value": "[Debian]"
+    },
+    "v3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v3"
+      ],
+      "status": "found",
+      "value": "[]"
+    }
+  }
+}

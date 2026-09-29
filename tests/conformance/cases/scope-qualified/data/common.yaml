@@ -1,0 +1,3 @@
+v1: "[%{foo::bar}]"
+v2: "[%{::os.family}]"
+v3: "[%{::module_name}]"

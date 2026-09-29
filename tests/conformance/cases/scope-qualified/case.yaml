@@ -1,0 +1,12 @@
+description: >-
+  There are no class scopes, so a qualified name is always undefined
+  (never a class-not-found crash); a leading :: is ignored for both a
+  dotted reference and a built-in name.
+origin: critic-puppet-coverage/builtins
+queries:
+  - key: v1
+    id: v1
+  - key: v2
+    id: v2
+  - key: v3
+    id: v3

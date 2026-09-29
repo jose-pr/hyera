@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d24b3962650c874fb3448dc43545c6e43725b18460c95ad7e3d716e24543e14f",
+  "results": {
+    "v1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v1"
+      ],
+      "status": "found",
+      "value": "[spoof.example.com]"
+    },
+    "v2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v2"
+      ],
+      "status": "found",
+      "value": "[remote]"
+    },
+    "v3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v3"
+      ],
+      "status": "found",
+      "value": "[spoof.example.com]"
+    },
+    "v4": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v4"
+      ],
+      "status": "found",
+      "value": "{\"authenticated\"=>\"remote\", \"certname\"=>\"spoof.example.com\", \"extensions\"=>{\"pp_role\"=>\"x\"}}",
+      "raw_value": "{\"authenticated\" => \"remote\", \"certname\" => \"spoof.example.com\", \"extensions\" => {\"pp_role\" => \"x\"}}"
+    }
+  }
+}

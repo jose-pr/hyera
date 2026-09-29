@@ -1,0 +1,64 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4e373f6c2ae3297a2fdd7afbfa876cd09e315f531c34a857817cd9d1880c7b5d",
+  "results": {
+    "v1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v1"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v1-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "v1"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v2"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v3"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v4": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v4"
+      ],
+      "status": "found",
+      "value": "{\"n\"=>\"\", \"h\"=>{\"k\"=>\"\"}, \"l\"=>[1, \"\"], \"os\"=>{\"family\"=>\"Debian\"}}",
+      "raw_value": "{\"n\" => \"\", \"h\" => {\"k\" => \"\"}, \"l\" => [1, \"\"], \"os\" => {\"family\" => \"Debian\"}}"
+    },
+    "v5": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v5"
+      ],
+      "status": "found",
+      "value": "[]"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4f9bc9e7be959f1ddc90f00f220f16b5acf8fd6a856c2f701ff02f1229c658e0",
+  "results": {
+    "v1": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v1"
+      ],
+      "status": "found",
+      "value": "[main]"
+    },
+    "v2": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v2"
+      ],
+      "status": "found",
+      "value": "[main]"
+    },
+    "v3": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v3"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v4": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v4"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v5": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v5"
+      ],
+      "warnings": [
+        "Undefined variable 'clientversion';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v6": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v6"
+      ],
+      "warnings": [
+        "Undefined variable 'clientcert';"
+      ],
+      "status": "found",
+      "value": "[]"
+    },
+    "v7": {
+      "argv": [
+        "--strict",
+        "warning",
+        "v7"
+      ],
+      "status": "found",
+      "value": "[production]"
+    }
+  }
+}

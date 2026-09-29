@@ -1,0 +1,2 @@
+trusted: {authenticated: remote, certname: spoof.example.com, extensions: {pp_role: x}}
+os: {family: Debian}

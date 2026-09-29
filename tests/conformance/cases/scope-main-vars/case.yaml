@@ -1,0 +1,22 @@
+description: >-
+  The evaluated main class's built-in variables (name/title are "main",
+  module_name is "", caller_module_name and clientversion are undefined),
+  plus an undefined clientcert and an always-defined environment.
+origin: critic-puppet-coverage/builtins
+queries:
+  - key: v1
+    id: v1
+    divergence: spec-context-facts/no-puppet-scope-model
+  - key: v2
+    id: v2
+    divergence: spec-context-facts/no-puppet-scope-model
+  - key: v3
+    id: v3
+  - key: v4
+    id: v4
+  - key: v5
+    id: v5
+  - key: v6
+    id: v6
+  - key: v7
+    id: v7
