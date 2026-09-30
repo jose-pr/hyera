@@ -36,6 +36,8 @@ from ._scope import Scope
 from ._type_parser import parse_type
 from .backends import Backend
 
+__all__ = ["main"]
+
 _LOGGER = _logging.getLogger(__name__)
 
 #: The four merge strategy names puppet lookup --merge accepts; there
@@ -236,6 +238,46 @@ def _unplaceholder(value):
 
 if duho is not None:
 
+    #: Module-level aliases for every ``Lookup`` field's ``duho.Arg``
+    #: annotation -- the same object duho itself reads through
+    #: ``typing.get_type_hints``, but typeable by pyright (an inline string
+    #: forward-reference on the field itself resolves to Unknown; a
+    #: top-level ``X = duho.Arg[...]`` assignment pyright treats as an
+    #: implicit type alias and fully resolves).
+    _KeysArg = duho.Arg[_ty.List[str], duho.NS(flags=["keys"], metavar="KEY")]
+    _MergeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--merge"])]
+    _KnockOutPrefixArg = duho.Arg[
+        _ty.Optional[str], duho.NS(flags=["--knock-out-prefix"])
+    ]
+    _SortMergedArraysArg = duho.Arg[bool, duho.NS(flags=["--sort-merged-arrays"])]
+    _MergeHashArraysArg = duho.Arg[bool, duho.NS(flags=["--merge-hash-arrays"])]
+    _ValueTypeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--type"])]
+    _DefaultArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--default"])]
+    _ExplainArg = duho.Arg[bool, duho.NS(flags=["--explain"])]
+    _ExplainOptionsArg = duho.Arg[bool, duho.NS(flags=["--explain-options"])]
+    _FactsArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--facts"])]
+    _NodeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--node"])]
+    _ScopeArg = duho.Arg[_ty.List[str], duho.NS(flags=["--scope", "-s"]), duho.Append()]
+    _HieraConfigArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--hiera_config"])]
+    _EnvironmentArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--environment"])]
+    _EnvironmentPathArg = duho.Arg[
+        _ty.Optional[str], duho.NS(flags=["--environmentpath"])
+    ]
+    _ModulepathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--modulepath"])]
+    _BasemodulepathArg = duho.Arg[
+        _ty.Optional[str], duho.NS(flags=["--basemodulepath"])
+    ]
+    _CodedirArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--codedir"])]
+    _StrictArg = duho.Arg[
+        _ty.Optional[str],
+        duho.Choice("off", "warning", "error"),
+        duho.NS(flags=["--strict"]),
+    ]
+    _RenderAsArg = duho.Arg[
+        _ty.Optional[str], duho.NS(flags=["--render-as"], metavar="FORMAT")
+    ]
+    _DebugArg = duho.Arg[bool, duho.NS(flags=["--debug", "-d"])]
+
     class Lookup(duho.LoggingArgs, duho.Cli):
         """Look up keys in Hiera data the way puppet lookup does.
 
@@ -248,80 +290,60 @@ if duho is not None:
         _parsername_ = "hyera"
         _logger_name_ = "hyera"
 
-        keys: "duho.Arg[_ty.List[str], duho.NS(flags=['keys'], metavar='KEY')]" = None
+        keys: _KeysArg = None
         """Keys to look up; the first one found wins."""
-        merge: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--merge'])]" = None
+        merge: _MergeArg = None
         """Merge strategy: first, unique, hash or deep. Overrides the
         data's lookup_options; omitted, lookup_options decide, else the
         first value found wins."""
-        knock_out_prefix: (
-            "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knock-out-prefix'])]"
-        ) = None
+        knock_out_prefix: _KnockOutPrefixArg = None
         """With --merge deep: a prefix that marks a value or key for removal."""
-        sort_merged_arrays: (
-            "duho.Arg[bool, duho.NS(flags=['--sort-merged-arrays'])]"
-        ) = False
+        sort_merged_arrays: _SortMergedArraysArg = False
         """With --merge deep: sort merged arrays."""
-        merge_hash_arrays: "duho.Arg[bool, duho.NS(flags=['--merge-hash-arrays'])]" = (
-            False
-        )
+        merge_hash_arrays: _MergeHashArraysArg = False
         """With --merge deep: deep-merge hashes inside arrays by position."""
-        value_type: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--type'])]" = None
+        value_type: _ValueTypeArg = None
         """Assert the value (and --default) has this Puppet type, e.g. Array[String]."""
-        default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
+        default: _DefaultArg = None
         """String printed when no key is found."""
-        explain: "duho.Arg[bool, duho.NS(flags=['--explain'])]" = False
+        explain: _ExplainArg = False
         """Show how the value was found, instead of only its value."""
-        explain_options: "duho.Arg[bool, duho.NS(flags=['--explain-options'])]" = False
+        explain_options: _ExplainOptionsArg = False
         """Show only how lookup_options was assembled."""
 
-        facts: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--facts'])]" = None
-        """Facts file: .json, .yaml or .yml; any other name is read as JSON, then YAML."""
-        node: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--node'])]" = None
+        facts: _FactsArg = None
+        """Facts file: .json, .yaml or .yml; any other name is read as
+        JSON, then YAML."""
+        node: _NodeArg = None
         """Node name used in messages; sets no fact."""
-        scope: (
-            "duho.Arg[_ty.List[str], duho.NS(flags=['--scope', '-s']), duho.Append()]"
-        ) = None
+        scope: _ScopeArg = None
         """Node parameter (top-scope variable); VALUE is YAML and a
         dotted NAME builds a hash."""
 
-        hiera_config: (
-            "duho.Arg[_ty.Optional[str], duho.NS(flags=['--hiera_config'])]"
-        ) = None
+        hiera_config: _HieraConfigArg = None
         """Path to the base hiera.yaml (default: ./hiera.yaml if it
         exists, else Puppet's built-in default configuration)."""
-        environment: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--environment'])]" = (
-            None
-        )
+        environment: _EnvironmentArg = None
         """Environment name."""
-        environmentpath: (
-            "duho.Arg[_ty.Optional[str], duho.NS(flags=['--environmentpath'])]"
-        ) = None
+        environmentpath: _EnvironmentPathArg = None
         """Environment directories, separated by the OS path separator."""
-        modulepath: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--modulepath'])]" = (
-            None
-        )
+        modulepath: _ModulepathArg = None
         """Module directories for the current environment, separated by
         the OS path separator (replaces the default modulepath)."""
-        basemodulepath: (
-            "duho.Arg[_ty.Optional[str], duho.NS(flags=['--basemodulepath'])]"
-        ) = None
+        basemodulepath: _BasemodulepathArg = None
         """Module directories shared by every environment, separated by
         the OS path separator."""
-        codedir: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--codedir'])]" = None
+        codedir: _CodedirArg = None
         """Puppet's $codedir (Puppet's own AIO default per platform if
         omitted); consulted only by a version 3 hiera.yaml's default
         per-backend datadir."""
-        strict: (
-            "duho.Arg[_ty.Optional[str], duho.Choice('off', 'warning', 'error'), "
-            "duho.NS(flags=['--strict'])]"
-        ) = None
+        strict: _StrictArg = None
         """Strictness for undefined variables: off, warning (default) or error."""
 
-        render_as: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--render-as'], metavar='FORMAT')]" = (None)
+        render_as: _RenderAsArg = None
         """Output format: s, json or yaml (default yaml; s when explaining)."""
 
-        debug: "duho.Arg[bool, duho.NS(flags=['--debug', '-d'])]" = False
+        debug: _DebugArg = False
         """Log debug messages (same as -vv)."""
 
         def _verbose_loglevel_(self) -> int:
@@ -507,8 +529,17 @@ if duho is not None:
                 )
             return 0
 
+    __all__.append("Lookup")
 
-def main(argv=None) -> int:
+
+def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
+    """The ``hyera`` console script and ``python -m hyera`` entry point.
+
+    :param argv: the argument vector, excluding the program name; defaults
+        to ``sys.argv[1:]``.
+    :returns: 0 found (or ``--default`` printed), 1 no key found, 2 any
+        other error, or the CLI extra is not installed.
+    """
     # duho.main sets up stderr logging (honoring -v/-q/--loglevel) and
     # dispatches to Lookup.__call__, whose int return becomes the exit code.
     if duho is None:
