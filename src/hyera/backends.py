@@ -1221,7 +1221,7 @@ def _install_hocon_include_guard(module=None) -> None:
     :class:`HOCONBackend` call: the wrapped shared-module methods were
     simply never on the call path. :func:`_hocon_parser` now calls this
     a second time, with its own ``mod``, to close that gap -- pre-existing
-    (since `json_hocon_loaders` added the private copy), found and fixed
+    (since the private copy was added), found and fixed
     while hardening the more permissive default, which makes the
     backstop's guarantee matter more, not less.
 

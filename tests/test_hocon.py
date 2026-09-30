@@ -20,7 +20,7 @@ resolve_package_path``) never runs for a form neither mode intends to
 resolve for real -- patched on BOTH the shared ``pyhocon`` module (any
 caller using ``import pyhocon`` directly) and hyera's own private
 ``_hocon_parser()`` module copy (a *different* ``ConfigFactory``/
-``ConfigParser`` class since ``json_hocon_loaders``'s ``exec_module`` copy
+``ConfigParser`` class since it is an ``exec_module`` copy
 -- the one ``HOCONBackend.loads`` actually calls through; patching only the
 shared module left this fixture unable to observe a real ``HOCONBackend``
 call at all, a gap found and fixed in the same commit that reversed the

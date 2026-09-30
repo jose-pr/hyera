@@ -859,7 +859,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an undiscovered scanner gap cannot read a file or reach the network;
   they behave normally for any other use of pyhocon in the same process.
   This backstop now also wraps hyera's own private `pyhocon.config_parser`
-  module copy (added by `json_hocon_loaders` for Ruby-hocon-compatible
+  module copy (added for Ruby-hocon-compatible
   duration parsing) -- previously it wrapped only the shared `pyhocon`
   module, which `HOCONBackend` never actually parses through, leaving the
   backstop installed but inert for every real `HOCONBackend` call; found

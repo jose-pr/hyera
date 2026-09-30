@@ -4,7 +4,7 @@ description: >-
   and hyera's default is never *less* than Puppet, so it errors here too,
   representative of the whole family (url()/classpath()/required()/
   package()) Ruby hocon never resolves in any form.
-origin: hocon_include_parity
+origin: HOCON include parity with Puppet
 requires:
 - pyhocon
 queries:

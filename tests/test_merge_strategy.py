@@ -457,7 +457,7 @@ def test_invalid_merge_raises_merge_error(make_tree):
         h.lookup("k", merge=legacy_type_spelling)
 
 
-# --- hiera3_deep_strategies: reverse_deep, unconstrained_deep ---------
+# --- Hiera 3 deep strategies: reverse_deep, unconstrained_deep ---------
 
 
 def test_hidden_strategy_keys():
