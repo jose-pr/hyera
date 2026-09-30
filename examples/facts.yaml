@@ -1,0 +1,7 @@
+hostname: web01
+domain: example.com
+fqdn: web01.example.com
+clientcert: web01.example.com
+role: web
+os:
+  family: RedHat

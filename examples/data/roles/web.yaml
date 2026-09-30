@@ -1,0 +1,3 @@
+ntp::servers:
+  - ntp.web.example.com
+nginx::workers: 4

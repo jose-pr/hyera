@@ -1,0 +1,4 @@
+nginx::workers: 8
+users:
+  alice:
+    uid: 1001

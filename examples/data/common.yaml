@@ -1,0 +1,12 @@
+lookup_options:
+  ntp::servers:
+    merge: unique
+  users:
+    merge: deep
+ntp::servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+motd: "Welcome to %{trusted.certname}"
+users:
+  alice:
+    shell: /bin/bash

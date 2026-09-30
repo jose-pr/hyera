@@ -1,0 +1,13 @@
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: "Per node"
+    path: "nodes/%{trusted.certname}.yaml"
+  - name: "Per OS family"
+    path: "os/%{facts.os.family}.yaml"
+  - name: "Per role"
+    path: "roles/%{role}.yaml"
+  - name: "Common"
+    path: "common.yaml"

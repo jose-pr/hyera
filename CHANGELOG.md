@@ -64,6 +64,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which wins over module, per key). A module's `lookup_options` key or
   `^`-prefixed pattern that does not start with that module's own name
   raises `HieraLookupError`.
+- `examples/`: a runnable Hiera 5 configuration, data tree and facts file,
+  with a lookup script and the equivalent CLI invocation.
 
 ### Changed
 
