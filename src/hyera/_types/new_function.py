@@ -217,15 +217,12 @@ def _new_float(value, *args):
             body = body[1:]
         body = body.strip()
         if _HEXBIN_RE.match(body):
+            # _HEXBIN_RE only ever matches a "0x"/"0X"/"0b"/"0B" prefix
+            # followed by one or more valid digits for that base (`+`, not
+            # `*`), so int(body, base) can never raise here -- unlike the
+            # plain-decimal float() parse below, which has no such guard.
             base = 16 if body[1] in "xX" else 2
-            try:
-                v = float(int(body, base))
-            except ValueError:
-                raise HieraLookupError(
-                    "'new_float' The string '{}' cannot be converted to Float".format(
-                        value
-                    )
-                )
+            v = float(int(body, base))
             return -v if sign == "-" else v
         try:
             return float(sign + body)

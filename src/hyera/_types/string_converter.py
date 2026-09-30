@@ -116,10 +116,12 @@ def _int_body(directive, flags, width, prec, value):
             body = ("0b" if directive == "b" else "0B") + body
     elif directive in ("e", "E", "f", "g", "G", "a", "A"):
         return _float_body(directive, flags, width, prec, float(value))
-    elif directive == "c":
+    else:  # directive == "c" -- the only remaining member of _ALL_FORMAT_CHARS
+        # once _render already handled "p"/"s" itself before ever calling
+        # here; every other member is one of the elif branches above, so
+        # this is never reached for anything but "c" (never a directive
+        # _check_char would have rejected already).
         body = chr(mag)
-    else:
-        body = str(mag)
     sign = "-" if neg else ("+" if "+" in flags else (" " if " " in flags else ""))
     body = sign + body
     if width and len(body) < width:

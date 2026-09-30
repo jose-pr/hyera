@@ -1176,9 +1176,15 @@ def test_sensitive_puppet_semantics():
 
 def test_ruby_format_table():
     assert _string_convert(8, "%#o") == "010"
+    # Plain "%o" (no "#" alternate-form flag) -- distinct from the "%#o"
+    # case above, which always takes the "0" prefix branch.
+    assert _string_convert(8, "%o") == "10"
     assert _string_convert(5, "%b") == "101"
     assert _string_convert(255, "%x") == "ff"
     assert _string_convert(1e20, "%p") == "1.0e+20"
+    # A mantissa that already has a decimal point in exponent form (unlike
+    # 1e20 above, whose repr() mantissa is bare "1" and needs ".0" added).
+    assert _string_convert(1.5e20, "%p") == "1.5e+20"
     assert _string_convert(3.0, "%f") == "3.000000"
     assert _string_convert(2.5, "%s") == "2.5"
     # "#" alternate-form prefix on hex/binary (octal's own "#" is covered
