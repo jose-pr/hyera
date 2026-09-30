@@ -119,12 +119,17 @@ def split_key(
     # Ruby's String#split drops trailing empty strings; re.split keeps them.
     while segments and segments[-1] == "":
         segments.pop()
+    # The loop above guarantees that once it exits, a non-empty `segments`
+    # never ends in "" -- so a length-1 list's one and only element is
+    # never "", and the check below already raises for it (its first
+    # element, being both first and last, fails `!= ""`). Reaching past
+    # that check with a non-empty first element therefore always leaves
+    # at least one element behind after popping it: `count` can never be
+    # 0 here, so there is no separate empty-after-pop case to check.
     if not segments or segments.pop(0) != "":
         raise make_error("Syntax error")
 
     count = len(segments)
-    if count == 0:
-        raise make_error("Syntax error")
     segments = [s for s in segments if s != "."]
     if len(segments) * 2 != count + 1:
         raise make_error("Syntax error")
