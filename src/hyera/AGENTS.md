@@ -992,6 +992,14 @@ re-exports it too).
 
 ## Gotchas
 
+- Debug trace: with the `hyera` logger at `DEBUG` (and a handler attached),
+  each `lookup`/`dig`/`get`/`explain` call logs one record on the
+  `hyera._explain` logger: `Lookup of '<key>'` followed by the same report
+  `explain()` returns, each line indented two spaces. Each
+  `%{lookup()}`/`%{hiera()}`/`%{alias()}` encountered while resolving a
+  value logs its own record first, in the order it actually runs. With
+  `DEBUG` off (the default), nothing is recorded and no explain tree is
+  built at all — checked once per top-level call, not once per hook.
 - The engine interpolates a `data_hash` value (methods allowed) but never a
   `lookup_key`/`data_dig` result — a backend that wants interpolation calls
   `context.interpolate(value)` itself. `lookup_key`/`data_dig` providers and

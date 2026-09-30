@@ -27,7 +27,7 @@ from .core import Hiera
 from ._scope import Scope
 from ._types import Sensitive
 
-_LOGGER = _logging.getLogger("hyera")
+_LOGGER = _logging.getLogger(__name__)
 
 #: CLI merge choice -> spec strategy name (array/set are legacy aliases).
 _MERGE_ALIASES = {"array": "unique", "set": "unique"}

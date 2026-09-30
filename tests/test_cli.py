@@ -18,7 +18,9 @@ from hyera.cli import main  # noqa: E402
 
 def _error_records(caplog):
     return [
-        r for r in caplog.records if r.name == "hyera" and r.levelno == logging.ERROR
+        r
+        for r in caplog.records
+        if r.name == "hyera.cli" and r.levelno == logging.ERROR
     ]
 
 

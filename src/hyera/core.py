@@ -26,7 +26,8 @@ from ._data_provider import (
     prune_module_data,
     split_path_setting,
 )
-from ._explain import Explainer, ExplainResult, _ProviderRef
+from . import _explain
+from ._explain import Explainer, ExplainResult, _ProviderRef, _DebugExplainer
 from ._hiera_config import (
     HieraLevel,
     _build_hierarchies,
@@ -231,6 +232,19 @@ def _provider_ref(provider) -> _ProviderRef:
     config_path = None if path is None else Path(path).as_posix()
     module_name = provider.module_name if provider.place == "Module" else None
     return _ProviderRef(name, config_path, module_name)
+
+
+def _debug_explainer(explainer=None):
+    """The ``explainer`` a root :class:`~hyera._invocation.Invocation`
+    should actually carry: wrapped in a :class:`~hyera._explain._DebugExplainer`
+    while the ``hyera._explain`` logger allows ``DEBUG`` (checked once per
+    top-level call, matching Puppet's own ``Puppet[:debug]`` read at
+    ``Invocation.new``), else ``explainer`` unchanged (``None`` for an
+    ordinary lookup with no explicit ``explain()`` in progress).
+    """
+    if _explain._LOGGER.isEnabledFor(logging.DEBUG):
+        return _DebugExplainer(explainer)
+    return explainer
 
 
 class Hiera:
@@ -1875,6 +1889,7 @@ class Hiera:
             self._sub_lookup,
             override_values=call.override,
             default_values=call.default_values_hash,
+            explainer=_debug_explainer(),
         )
         return _lookup_call(call, invocation, self._search_and_merge)
 
@@ -1993,6 +2008,7 @@ class Hiera:
                 self._sub_lookup,
                 override_values=call.override,
                 default_values=call.default_values_hash,
+                explainer=_debug_explainer(),
             )
 
             def search(name, inv, m, _root=root):
@@ -2074,7 +2090,7 @@ class Hiera:
             self._sub_lookup,
             override_values=call.override,
             default_values=call.default_values_hash,
-            explainer=explainer,
+            explainer=_debug_explainer(explainer),
             _lo_cache=lo_memo,
         )
         error = None

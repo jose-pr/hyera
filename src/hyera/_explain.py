@@ -1,23 +1,27 @@
 """Puppet's explain tree (``pops/lookup/explainer.rb``) and its text
 rendering: the private ``Explainer``/node classes that record and dump a
 lookup's own trace, exactly as ``puppet lookup --explain``/``--render-as
-s|json`` project it.
+s|json`` project it, plus the ``DebugExplainer`` a lookup wraps it in to
+also log the same report at ``DEBUG``.
 
 Original code; no phiera/Puppet-source header -- this is a from-scratch
 Python port of one Ruby file's class hierarchy (structurally close enough
 to cite line numbers against, in the module docstrings below, but never
 copied verbatim), not a translation carried over from phiera. Recording
-hooks live on ``_invocation.Invocation`` (a later phase); this module only
-holds the tree itself, so it has no engine imports at all beyond the one
-Ruby-rendering helper every value passes through.
+hooks live on ``_invocation.Invocation``; this module only holds the tree
+itself (and the debug wrapper), so it has no engine imports at all beyond
+the one Ruby-rendering helper every value passes through.
 """
 
 import copy
+import logging
 import typing as _ty
 
 from ._interpolation import _ruby_inspect, _to_puppet_str
 
 __all__ = ["ExplainResult"]  # everything else here is private.
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class _ProviderRef(_ty.NamedTuple):
@@ -651,3 +655,60 @@ class ExplainResult:
         as the report's own last line -- ``None`` when a value was found or
         defaulted to."""
         return self._error
+
+
+class _DebugExplainer(Explainer):
+    """Puppet's ``DebugExplainer`` (``explainer.rb:569-595``): every
+    recording hook a lookup makes still lands here -- ``push``/``pop``/
+    every ``accept_*`` are inherited from :class:`Explainer` unchanged, so
+    this is a transparent proxy over the same node graph, whether or not
+    ``wrapped`` (a real ``Explainer``, when an actual ``explain()`` call is
+    also in progress) is given.
+
+    ``wrapped is None`` (an ordinary ``.lookup()`` with the ``hyera._explain``
+    logger at ``DEBUG``): this instance is its own root, exactly like a
+    bare ``Explainer()`` -- built and thrown away once the trace is logged.
+    ``wrapped`` given (``Hiera.explain()`` also has ``DEBUG`` on): every
+    push/pop still runs through this wrapper's own ``current``, but the
+    actual nodes it builds are appended onto ``wrapped``'s own tree
+    (``push`` starts from ``self.current == wrapped``), so ``wrapped``
+    itself ends up exactly as it would from an unwrapped explain -- the
+    caller keeps a reference to `wrapped`, never to this proxy.
+    """
+
+    def __init__(self, wrapped: "_ty.Optional[Explainer]") -> None:
+        explain_options = wrapped.explain_options if wrapped is not None else False
+        only_explain_options = (
+            wrapped.only_explain_options if wrapped is not None else False
+        )
+        super().__init__(explain_options, only_explain_options)
+        self.wrapped = wrapped
+        self.current = wrapped if wrapped is not None else self
+
+    def dump_on(self, parts: list, indent: str, first_indent: str) -> None:
+        """Dump the node that is current right now -- the whole tree at the
+        top level, or (for a nested emission, mid-interpolation) just the
+        subtree of whichever node the lookup is inside of when this fires."""
+        if self.current is self:
+            super().dump_on(parts, indent, first_indent)
+        else:
+            self.current.dump_on(parts, indent, first_indent)
+
+    def emit_debug_info(self, preamble: str) -> None:
+        """``pops/lookup.rb:62,66``'s ``emit_debug_info`` +
+        ``explainer.rb:588-594``: one DEBUG record, the preamble line
+        followed by the ordinary text report, indented two spaces
+        (``dump_on(parts, "  ", "  ")``, matching ``Puppet.debug``'s own
+        ``chomp!`` of exactly one trailing newline)."""
+        parts = [preamble, "\n"]
+        self.dump_on(parts, "  ", "  ")
+        message = "".join(parts)
+        if message.endswith("\n"):
+            message = message[:-1]
+        _LOGGER.debug("%s", message)
+
+
+def _debug_preamble(names) -> str:
+    """Puppet's ``debug_preamble`` (``pops/lookup.rb:71-78``): ``Lookup of
+    'a'`` for one name, ``Lookup of 'a', 'b'`` for several."""
+    return "Lookup of " + ", ".join("'{}'".format(n) for n in names)

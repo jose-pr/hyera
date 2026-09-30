@@ -290,3 +290,13 @@ class Invocation:
         explaining."""
         if self.explainer is not None:
             self.explainer.accept_text(producer())
+
+    def emit_debug_info(self, preamble) -> None:
+        """Puppet's ``Lookup.lookup``'s own debug emission
+        (``pops/lookup.rb:62,66``): a no-op unless :attr:`explainer` is a
+        :class:`~hyera._explain._DebugExplainer` -- checked by duck type
+        (``hasattr``), not ``isinstance``, so this module never imports
+        ``_explain`` at all."""
+        emit = getattr(self.explainer, "emit_debug_info", None)
+        if emit is not None:
+            emit(preamble)

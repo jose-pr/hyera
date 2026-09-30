@@ -95,6 +95,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- With the `hyera` logger at `DEBUG`, each lookup logs one record: `Lookup
+  of '<key>'` followed by the report `explain()` returns (every path
+  consulted and whether the key was found there). The DEBUG message
+  logged only for a missing dotted key is gone.
+- The command-line interface logs under `hyera.cli`, a child of the
+  `hyera` logger, instead of `hyera` itself.
 - `default_hierarchy` is accepted only in a module's hiera.yaml, as in
   Puppet. A global or environment hiera.yaml containing it raises
   `ConfigError` ("'default_hierarchy' is only allowed in the module

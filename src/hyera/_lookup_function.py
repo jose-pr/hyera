@@ -8,6 +8,7 @@ which is the thin method wrapping this module).
 
 import typing as _ty
 
+from ._explain import _debug_preamble
 from ._invocation import _STRICT
 from ._navigation import _MISSING
 from ._type_parser import parse_type
@@ -223,31 +224,42 @@ def lookup(call: LookupCall, invocation, search):
     try:
         for name in call.names:
             if name in invocation.override_values:
-                return _assert(
+                result = _assert(
                     call,
                     "Value found for key '{}' in override hash".format(name),
                     invocation.override_values[name],
                 )
+                invocation.emit_debug_info(_debug_preamble(call.names))
+                return result
             value = search(name, invocation, call.merge)
             if value is not _MISSING:
-                return _assert(call, "Found value", value)
+                result = _assert(call, "Found value", value)
+                invocation.emit_debug_info(_debug_preamble(call.names))
+                return result
 
         for name in call.names:
             if name in invocation.default_values:
-                return _assert(
+                result = _assert(
                     call,
                     "Value found for key '{}' in default values hash".format(name),
                     invocation.default_values[name],
                 )
+                invocation.emit_debug_info(_debug_preamble(call.names))
+                return result
 
         if call.block is not None:
-            return _assert(
+            result = _assert(
                 call, "Value returned from default block", call.block(call.name)
             )
+            invocation.emit_debug_info(_debug_preamble(call.names))
+            return result
 
         if call.has_default:
-            return _assert(call, "Default value", call.default_value)
+            result = _assert(call, "Default value", call.default_value)
+            invocation.emit_debug_info(_debug_preamble(call.names))
+            return result
 
+        invocation.emit_debug_info(_debug_preamble(call.names))
         raise KeyNotFoundError(list(call.names)) from None
     finally:
         _STRICT.reset(strict_token)
@@ -263,10 +275,14 @@ def nested_lookup(key, invocation, search):
     already-found value).
     """
     if key in invocation.override_values:
+        invocation.emit_debug_info(_debug_preamble((key,)))
         return invocation.override_values[key]
     value = search(key, invocation, None)
     if value is not _MISSING:
+        invocation.emit_debug_info(_debug_preamble((key,)))
         return value
     if key in invocation.default_values:
+        invocation.emit_debug_info(_debug_preamble((key,)))
         return invocation.default_values[key]
+    invocation.emit_debug_info(_debug_preamble((key,)))
     return _MISSING
