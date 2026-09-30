@@ -1270,17 +1270,26 @@ def _install_hocon_include_guard(module=None) -> None:
     _HOCON_GUARD_INSTALLED = True
 
 
+def _try_install_hocon_include_guard() -> None:
+    """Best-effort wrapper around :func:`_install_hocon_include_guard` for
+    module import time: pyhocon being present but broken in some way this
+    guard's own probing cannot anticipate must never crash importing
+    ``hyera`` itself -- :meth:`HOCONBackend.check_available` (and
+    :meth:`HOCONBackend.loads`, which calls
+    :func:`_install_hocon_include_guard` again, unguarded, once pyhocon has
+    already been imported successfully) cover the missing/broken case for
+    real.
+    """
+    try:
+        _install_hocon_include_guard()
+    except Exception:
+        pass
+
+
 # Installed eagerly, at import time, if pyhocon is already importable -- so
 # the guard is in place before any test fixture (or other code) gets a
 # chance to monkeypatch these same three methods for its own purposes.
-# Harmless no-op if pyhocon is missing or broken: HOCONBackend.check_available
-# (and loads) cover that case, and loads() also calls this (idempotent) for
-# the rarer case where pyhocon becomes importable only after this module was
-# first imported.
-try:
-    _install_hocon_include_guard()
-except Exception:  # pragma: no cover - optional dependency, best-effort
-    pass
+_try_install_hocon_include_guard()
 
 
 def _as_plain(obj):

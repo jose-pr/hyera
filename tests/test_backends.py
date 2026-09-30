@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from hyera import BackendError, ConfigError, Hiera, default_backends
+from hyera import backends
 from hyera.backends import (
     Backend,
     HOCONBackend,
@@ -391,6 +392,19 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
     monkeypatch.setitem(sys.modules, "pyhocon", None)
     with pytest.raises(BackendError, match="hyera\\[hocon\\]"):
         HOCONBackend().loads("k = v")
+
+
+def test_hocon_include_guard_import_time_failure_is_swallowed(monkeypatch):
+    # `_try_install_hocon_include_guard` is what module import runs eagerly
+    # (best-effort, so a pyhocon that is present but broken in some way the
+    # guard's own probing cannot anticipate never crashes importing
+    # `hyera`); exercise its swallow directly rather than reloading the
+    # whole module (which would re-run every backend's self-registration).
+    def _boom(module=None):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(backends, "_install_hocon_include_guard", _boom)
+    backends._try_install_hocon_include_guard()  # must not raise
 
 
 # ---------------------------------------------------------------------------
