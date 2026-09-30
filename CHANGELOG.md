@@ -198,6 +198,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hierarchy's own tree through a symlink or Windows junction loop, and
   sort the same way on every OS.
 
+### Security
+
+- `eyaml_lookup_key`'s check for whether a value needs decrypting no
+  longer risks a denial of service: the previous regex was quadratic to
+  cubic under Python's backtracking `re` engine for a value made mostly of
+  unterminated `ENC[` prefixes. The replacement is a linear, line-at-a-time
+  check with the same acceptance.
+- `eyaml_lookup_key`'s PKCS7 OBJECT IDENTIFIER reader now rejects an
+  identifier longer than a handful of known encodings ever need, instead
+  of spending quadratic time building an unbounded integer per byte of a
+  hostile ciphertext.
+- A non-string `pkcs7_private_key` option (an `Integer` or `Boolean`, as
+  YAML can produce) is now rejected before any file operation, instead of
+  being read as an already-open file descriptor by number (and closed).
+- An `OSError` opening or reading the `pkcs7_private_key` file (a
+  directory, a permission error) is now wrapped as a `BackendError`
+  instead of escaping raw.
+- `eyaml_lookup_key`'s base64 decoding (`pkcs7_b64_private_key_env_var`)
+  now tolerates a value containing characters outside the base64 alphabet
+  the way Ruby's own lenient decoder does, instead of letting a raw
+  `binascii.Error` escape.
+- Neither the decrypted private key PEM nor any decrypted plaintext is
+  reachable any more from an `eyaml_lookup_key` decrypt failure's
+  `__context__` exception chain (a `raise ... from None` inside an
+  `except` block still sets `__context__`, whose own traceback frames kept
+  these values live).
+
 ## [0.0.0a0] - 2026-09-29
 
 ### Added

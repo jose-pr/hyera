@@ -270,7 +270,11 @@ private engine internals with no stability contract.
     process's working directory), which copies the parsed-data cache too,
     sops-decrypted values included (`Scope`'s own warning-dedup state is
     NOT carried over verbatim — its internal lock cannot be pickled, so a
-    copy starts with the same dedup keys but a fresh, unlocked mutex).
+    copy starts with the same dedup keys but a fresh, unlocked mutex). The
+    same applies to an `eyaml_lookup_key` hierarchy entry: its decrypted
+    plaintext lives in the view's own `_providers`/`LookupContext` cache
+    (see the Gotchas section below), which `copy.deepcopy`/`pickle` copies
+    right along with the rest of the instance.
     Concurrent `.lookup()` calls on one instance (or its views) from
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches (untested on free-threaded builds).
