@@ -18,7 +18,12 @@ from hyera._lookup_adapter import convert_result
 from hyera._new_function import new_instance
 from hyera._string_converter import convert as _string_convert
 from hyera._string_converter import puppet_quote as _puppet_quote
-from hyera._type_mismatch import assert_instance_of
+from hyera._type_mismatch import (
+    _a_an,
+    _size_text,
+    assert_instance_of,
+    describe_mismatch,
+)
 from hyera._type_parser import _Parser, parse_type
 from hyera._types import (
     ALIASES,
@@ -779,6 +784,167 @@ def test_describe_evidence():
         lines[1]
         == " Found value has wrong type, entry 'b' expects a String value, got Integer"
     )
+
+
+def test_describe_evidence_more_branches():
+    def err(t, v):
+        with pytest.raises(HieraLookupError) as exc_info:
+            assert_instance_of("Found value", t, v)
+        return str(exc_info.value)
+
+    # A Variant branch that is itself an Optional[<bareword literal>]:
+    # short_name's wrapper-type case, with a raw-str `.contained` (never a
+    # real PAnyType -- `_bare_name`'s own str branch).
+    assert err(parse_type("Variant[Optional[integer], Boolean]"), 5) == (
+        "Found value has wrong type, expects a value of type Optional[String] "
+        "or Boolean, got Integer"
+    )
+
+    # NotUndef on Undef, both bare and with a contained type.
+    assert err(parse_type("NotUndef[Integer]"), None) == (
+        "Found value has wrong type, expects a NotUndef[Integer] value, got Undef"
+    )
+    assert err(parse_type("NotUndef"), None) == (
+        "Found value has wrong type, expects a NotUndef value, got Undef"
+    )
+    # A bare NotUndef/Optional (no contained type) never rejects a non-Undef
+    # value, whatever it is.
+    marker = object()
+    assert assert_instance_of("Found value", parse_type("NotUndef"), marker) is marker
+    assert assert_instance_of("Found value", parse_type("Optional"), marker) is marker
+
+    # A type alias whose own `.instance()` fails collapses to one mismatch
+    # on the alias itself (never the branches' own structural detail).
+    assert err(parse_type("RichDataKey"), [1, 2]) == (
+        "Found value has wrong type, expects a RichDataKey value, got Tuple"
+    )
+
+    # Array/Collection/Tuple/Struct all reject a non-list/non-dict value the
+    # same way, before any element/size check.
+    assert err(parse_type("Array[Integer]"), "not a list") == (
+        "Found value has wrong type, expects an Array value, got String"
+    )
+    assert err(parse_type("Collection"), "not a list") == (
+        "Found value has wrong type, expects a Collection value, got String"
+    )
+    assert err(parse_type("Tuple[Integer]"), "not a list") == (
+        "Found value has wrong type, expects a Tuple value, got String"
+    )
+    assert err(parse_type("Struct[{a=>String}]"), [1, 2]) == (
+        "Found value has wrong type, expects a Struct value, got Tuple"
+    )
+
+    # `_size_text`'s four shapes: unlimited (no bound at all -- covered by
+    # the Collection case above, which has no size constraint), "at least"
+    # (a lower bound only), "at most" (an upper bound only), and "between"
+    # (both, covered by the Tuple/Hash cases elsewhere in this file).
+    assert err(parse_type("Array[Integer,3]"), [1, 2]) == (
+        "Found value has wrong type, expects size to be at least 3, got 2"
+    )
+    assert err(parse_type("Array[Integer,default,3]"), [1, 2, 3, 4]) == (
+        "Found value has wrong type, expects size to be at most 3, got 4"
+    )
+
+    # A Variant with a mix of immediate (whole-value) and deeper (nested
+    # path) failures reports the first deeper one, prefixed with its own
+    # "variant N" path element.
+    assert err(parse_type("Variant[Hash[String,String],Array]"), {"a": 1, "b": 2}) == (
+        "Found value has wrong type, variant 0 entry 'a' expects a String "
+        "value, got Integer"
+    )
+
+    # `short_name`'s own top-level "expected is a raw literal string"
+    # branch (distinct from the wrapper-type case above): NotUndef[integer]
+    # unwraps to its raw-str contained type directly (not re-wrapped).
+    assert err(parse_type("NotUndef[integer]"), 5) == (
+        "Found value has wrong type, expects a String value, got Integer"
+    )
+
+    # A wrapper type whose contained type is literally `Any` renders bare
+    # (no "[Any]" suffix) -- `short_name`'s own "or not _is_any(contained)"
+    # guard.
+    assert err(parse_type("Sensitive[Any]"), 5) == (
+        "Found value has wrong type, expects a Sensitive value, got Integer"
+    )
+
+    # An Optional wrapping a Variant: the "Undef" prefix (m.optional) on a
+    # list-shaped `e_render`, `_join_or`'s 3-way "a, b, or c" join.
+    assert err(parse_type("Optional[Variant[Integer,Boolean]]"), "x") == (
+        "Found value has wrong type, expects a value of type Undef, "
+        "Integer, or Boolean, got String"
+    )
+
+    # Two Variant branches that render to the *same* short name dedupe down
+    # to `_join_or`'s single-item return (no "or" at all).
+    assert err(parse_type("Variant[Optional[integer], Optional[foo]]"), 5) == (
+        "Found value has wrong type, expects a value of type "
+        "Optional[String], got Integer"
+    )
+
+    # `_actual_literal`'s own fallback (a non-string actual value against a
+    # pattern-shaped expected type renders the actual's short name, not a
+    # quoted literal).
+    assert err(parse_type("Enum[a,b]"), 5) == (
+        "Found value has wrong type, expects a match for Enum['a', 'b'], " "got Integer"
+    )
+
+    # A type alias whose own `.instance()` succeeds: `_describe` returns no
+    # mismatches for it, same as any other matching type.
+    assert (
+        assert_instance_of("Found value", parse_type("RichDataKey"), "a string")
+        == "a string"
+    )
+
+    # A literal-string contained type (NotUndef[integer]) that DOES match.
+    assert (
+        assert_instance_of("Found value", parse_type("NotUndef[integer]"), "integer")
+        == "integer"
+    )
+
+    # A Variant where the FIRST branch fails immediately (shallow) and a
+    # LATER one fails deeper: the loop must skip the immediate one to find
+    # the deep one it actually reports.
+    assert err(
+        parse_type("Variant[Boolean, Hash[String,String]]"), {"a": 1, "b": 2}
+    ) == (
+        "Found value has wrong type, variant 1 entry 'a' expects a String "
+        "value, got Integer"
+    )
+
+
+def test_size_text_direct():
+    # `_size_text`'s own "unlimited" branch is unreachable through
+    # `_describe_array`/`_describe_hash`/`_describe_tuple` (each defaults or
+    # normalizes its bounds before ever calling `_size_mismatch`, so a
+    # size-mismatch report is never built from a truly unconstrained size);
+    # exercised directly, the same as this file's other private helpers.
+    assert _size_text(None, None) == "unlimited"
+    assert _size_text(3, None) == "at least 3"
+    assert _size_text(None, 3) == "at most 3"
+    assert _size_text(1, 3) == "between 1 and 3"
+
+
+def test_describe_mismatch_and_a_an_direct():
+    # describe_mismatch() takes two already-computed types directly (no
+    # value) -- exported in __all__ for callers holding two types, but
+    # nothing in this codebase currently calls it (every caller has a
+    # value and uses assert_instance_of instead); exercised directly.
+    assert describe_mismatch(
+        "Found value", parse_type("Integer"), parse_type("String")
+    ) == ("Found value expects an Integer value, got String")
+    assert describe_mismatch(
+        "Found value", parse_type("Optional[Integer]"), parse_type("String")
+    ) == ("Found value expects a value of type Undef or Integer, got String")
+
+    # _a_an's own leading-quote skip (Puppet's a_an handles a quoted label,
+    # even though nothing this subset renders through it is ever
+    # quote-prefixed): a quote char is skipped, a real letter stops the
+    # loop, and a label that is quote characters all the way through (or
+    # empty) never finds one at all.
+    assert _a_an("'x'") == "a"
+    assert _a_an("'Anvil'") == "an"
+    assert _a_an("''") == "a"
+    assert _a_an("") == "a"
 
 
 def test_assert_nil_ok_and_reference():
