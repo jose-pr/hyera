@@ -366,7 +366,9 @@ def _segment_matches(kind, value, name: str) -> bool:
     return False
 
 
-def _glob_one(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
+def _glob_one(
+    root: str, pattern: str, on_scandir=None, probe_isdir=None
+) -> "_ty.List[str]":
     """One already-brace-expanded pattern matched under the literal
     directory ``root``: a depth-first walk over sets of segment indices
     (:func:`_prepare_segments`), so ``**``'s "zero or more directories" and
@@ -379,6 +381,15 @@ def _glob_one(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
     literal-only fast path below, which never scans a directory at all) --
     used to record which directories a listing actually depended on, for a
     later freshness check.
+
+    ``probe_isdir``, when given, replaces the plain ``os.path.isdir(child)``
+    check an intermediate literal segment uses to decide whether to descend
+    -- a memo-aware caller (``core.Hiera._glob_matches``) passes one so this
+    check costs a real probe at most once per lookup, same as
+    ``on_scandir``. Never used for a *final* literal segment's own
+    ``os.path.lexists`` check: that one deliberately does not follow
+    symlinks (a dangling symlink still counts as a match, exactly like the
+    wildcard path), which a ``os.stat``-based memo would get wrong.
     """
     if pattern.endswith("/"):
         return []
@@ -405,7 +416,11 @@ def _glob_one(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
                 mid_idxs = [i for i in idxs if i + 1 != n]
                 if final_idxs and os.path.lexists(child):
                     nxt.update(i + 1 for i in final_idxs)
-                if mid_idxs and os.path.isdir(child):
+                if mid_idxs and (
+                    probe_isdir(child)
+                    if probe_isdir is not None
+                    else os.path.isdir(child)
+                ):
                     nxt.update(i + 1 for i in mid_idxs)
                 if nxt:
                     walk(child, nxt)
@@ -440,17 +455,18 @@ def _glob_one(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
     return results
 
 
-def glob(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
+def glob(root: str, pattern: str, on_scandir=None, probe_isdir=None) -> "_ty.List[str]":
     """Ruby ``Dir.glob`` for ``pattern`` under the literal directory
     ``root``: the concatenation of :func:`_glob_one` over every brace
     alternative of ``pattern``, in written order (duplicates kept, as Ruby
     keeps them).
     Results are ``os.path.join``ed absolute strings; directories are
     included here (a caller wanting files only, as every Hiera glob level
-    does, filters them out itself). ``on_scandir``: see :func:`_glob_one`."""
+    does, filters them out itself). ``on_scandir``/``probe_isdir``: see
+    :func:`_glob_one`."""
     results = []
     for p in _expand_braces(pattern):
-        results.extend(_glob_one(root, p, on_scandir))
+        results.extend(_glob_one(root, p, on_scandir, probe_isdir))
     return results
 
 

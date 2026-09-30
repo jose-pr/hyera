@@ -12,7 +12,6 @@ import logging
 import os
 import pickle
 import random
-import sys
 
 import pytest
 
@@ -762,20 +761,17 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
                 stat_counts[p] += c
         return max(stat_counts.values(), default=0)
 
-    # A plain (non-glob) location is probed exactly once per lookup on
-    # every platform/interpreter tested. The glob-walked directory itself
-    # ("mods") is probed twice on Windows/Python 3.9 specifically (both a
-    # location build and its own materialization ask this same lookup's
-    # memo about it; every other combination in CI answers the second ask
-    # from the memo with no real syscall, but this one interpreter/OS pair
-    # was measured re-stating it) -- tolerated here rather than loosened
-    # across the board, since every *file* still probes exactly once
-    # everywhere, and `scandir` itself never runs twice.
-    _STAT_TOLERANCE = 2 if sys.version_info[:2] < (3, 10) and os.name == "nt" else 1
+    # Every candidate -- a plain (non-glob) location or the glob-walked
+    # directory itself -- is probed at most once per lookup, on every
+    # platform/interpreter tested: a location build and its own
+    # materialization share one memo, and `_glob_one`'s own intermediate
+    # literal-segment descent (the "mods" directory, ahead of its wildcard
+    # segment) goes through that same memo rather than a bare
+    # `os.path.isdir`, so it never re-asks the filesystem either.
 
     assert h.lookup("k") == "node_a"
     if revalidate:
-        assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+        assert max_stat_per_path() <= 1, counts
         assert scandir_count() == 0, counts
     else:
         assert sum(counts.values()) == 0, counts
@@ -789,13 +785,13 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
     # lookup (build and materialize share one memo), and the mods glob's
     # own cache is untouched (its own key never depended on clientcert),
     # so no scandir happens here either.
-    assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+    assert max_stat_per_path() <= 1, counts
     assert scandir_count() == 0, counts
 
     counts.clear()
     h.clear_cache()
     assert h.lookup("k") == "node_a"
-    assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+    assert max_stat_per_path() <= 1, counts
     if revalidate:
         assert scandir_count() == 1, counts
 

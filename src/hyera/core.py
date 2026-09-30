@@ -903,7 +903,16 @@ class Hiera:
             if probe.kind == "dir":
                 dirs.append((d, probe.sig[:2]))
 
-        raw = _dir_glob(root, pattern, on_scandir if self.revalidate else None)
+        def probe_isdir(d):
+            probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
+            return probe.kind == "dir"
+
+        raw = _dir_glob(
+            root,
+            pattern,
+            on_scandir if self.revalidate else None,
+            probe_isdir if self.revalidate else None,
+        )
         matches = []
         for m in raw:
             # Only a directory is dropped here (``reject(&:directory?)``,
