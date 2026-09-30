@@ -20,11 +20,14 @@ from hyera import (
     ConfigError,
     Hiera,
     InterpolationError,
+    KeyNotFoundError,
     LookupContext,
     Scope,
 )
+from hyera._function_provider import _EnvironmentContext, _FunctionProvider
 from hyera._invocation import Invocation
 from hyera._lookup_adapter import extract_lookup_options_for_key
+from hyera._navigation import _MISSING
 from hyera.backends import Backend, HOCONBackend, JSONBackend, SopsBackend, YAMLBackend
 
 
@@ -222,6 +225,29 @@ def test_data_dig_cached_per_full_key(make_tree, backends, calls, script):
     assert h.lookup("a.b") == "leaf"
     assert h.lookup("a.b") == "leaf"
     assert len(calls) == 1
+
+
+def test_data_dig_missing_location_not_called(make_tree, backends, calls, script):
+    # _DataDigProvider's own "location is not None and not location.exist"
+    # check (distinct from _LookupKeyProvider's copy, covered by
+    # test_lookup_key_missing_location_not_called above).
+    root = make_tree(
+        {
+            "hierarchy": [
+                {
+                    "name": "s",
+                    "data_dig": "test_data_dig",
+                    "paths": ["missing.yaml", "b.yaml"],
+                }
+            ]
+        },
+        files={"data/b.yaml": "x"},
+    )
+    script["data_dig"] = lambda key_segments, options, context: "found"
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "found"
+    assert len(calls) == 1
+    assert calls[0][2]["path"].endswith("b.yaml")
 
 
 # --- locations and options ---------------------------------------------
@@ -425,6 +451,114 @@ def test_cached_file_data_revalidates_by_stat(make_tree, backends, script, tmp_p
     assert h2.lookup("k") == "two"
 
 
+def test_cached_file_data_missing_file_is_backend_error(
+    make_tree, backends, script, tmp_path
+):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "lookup_key": "test_lookup_key", "path": "a.yaml"}
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    missing = tmp_path / "nosuchfile.txt"
+
+    def fn(key, options, context):
+        return context.cached_file_data(str(missing))
+
+    script["lookup_key"] = fn
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="Unable to read"):
+        h.lookup("k")
+
+
+def test_cached_file_data_bad_utf8_is_backend_error(
+    make_tree, backends, script, tmp_path
+):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "lookup_key": "test_lookup_key", "path": "a.yaml"}
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    bad_path = tmp_path / "bad.bin"
+    bad_path.write_bytes(b"\xff\xfe not utf-8")
+
+    def fn(key, options, context):
+        return context.cached_file_data(str(bad_path))
+
+    script["lookup_key"] = fn
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="Unable to parse"):
+        h.lookup("k")
+
+
+def test_cached_file_data_parse_backend_error_wrapped_or_reraised(
+    make_tree, backends, script, tmp_path
+):
+    # A parse callback's own BackendError with no `path` set is wrapped
+    # ("Unable to parse (<path>): ..."); one that already names a path is
+    # re-raised as-is (it already knows where it came from).
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "lookup_key": "test_lookup_key", "path": "a.yaml"}
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    side_path = tmp_path / "side.txt"
+    side_path.write_text("x", encoding="utf-8")
+
+    def parse_unwrapped(text):
+        raise BackendError("boom, no path")
+
+    def fn(key, options, context):
+        return context.cached_file_data(str(side_path), parse=parse_unwrapped)
+
+    script["lookup_key"] = fn
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="Unable to parse.*boom, no path"):
+        h.lookup("k")
+
+    def parse_with_path(text):
+        raise BackendError("boom, own path", path="elsewhere")
+
+    def fn2(key, options, context):
+        return context.cached_file_data(str(side_path), parse=parse_with_path)
+
+    script["lookup_key"] = fn2
+    h2 = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="^boom, own path$"):
+        h2.lookup("k")
+
+
+def test_cached_file_data_hit_within_one_call(make_tree, backends, script, tmp_path):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "lookup_key": "test_lookup_key", "path": "a.yaml"}
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    side_path = tmp_path / "side.txt"
+    side_path.write_text("one", encoding="utf-8")
+
+    def fn(key, options, context):
+        first = context.cached_file_data(str(side_path))
+        second = context.cached_file_data(str(side_path))
+        assert first == second == "one"
+        return "v"
+
+    script["lookup_key"] = fn
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v"
+
+
 def test_lookup_context_names_and_explain_noop(make_tree, backends, script):
     root = make_tree(
         {
@@ -525,6 +659,141 @@ def test_data_hash_non_dict_return_is_backend_error(make_tree, backends, script)
         ),
     ):
         h.lookup("k")
+
+
+def test_data_hash_no_location_non_dict_return_is_backend_error(
+    make_tree, backends, calls, script
+):
+    # _function_provider.py's own _validate_data_hash/_puppet_type_label
+    # (distinct from core.py's copy, which the path-based test above goes
+    # through via _load_file): a location-less data_hash entry calls the
+    # backend directly and validates/caches the raw result itself.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash"}]},
+    )
+    script["data_hash"] = lambda path, options: ["not", "a", "hash"]
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError) as exc:
+        h.lookup("k")
+    assert "when using location" not in str(exc.value)
+    assert (
+        "Value returned from data_hash function 'test_data_hash' has wrong "
+        "type, expects a Hash value, got Tuple" in str(exc.value)
+    )
+    assert calls[0][1] is None
+
+
+@pytest.mark.parametrize(
+    "value, label",
+    [
+        (True, "Boolean"),
+        (None, "Undef"),
+        ("x", "String"),
+        (5, "Integer"),
+        (5.0, "Float"),
+        ([], "Array"),
+        (object(), "object"),
+    ],
+    ids=["bool", "none", "str", "int", "float", "empty-array", "other"],
+)
+def test_data_hash_no_location_type_label_table(
+    make_tree, backends, script, value, label
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash"}]},
+    )
+    script["data_hash"] = lambda path, options: value
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match=re.escape("got " + label)):
+        h.lookup("k")
+
+
+def test_data_hash_no_location_called_once_and_cached(
+    make_tree, backends, calls, script
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash"}]},
+    )
+    script["data_hash"] = lambda path, options: {"k": "v"}
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v"
+    assert h.lookup("k") == "v"
+    assert len(calls) == 1
+
+
+def test_data_hash_uri_non_dict_return_is_backend_error_with_location(
+    make_tree, backends, script
+):
+    # A uri location takes the *other* branch of _validate_data_hash's own
+    # location-is-None check (unlike the plain location-less case above):
+    # `label` is the uri itself, so the message names it.
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "data_hash": "test_data_hash", "uri": "x:custom"}
+            ]
+        },
+    )
+    script["data_hash"] = lambda path, options: ["not", "a", "hash"]
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(
+        BackendError,
+        match=re.escape(
+            "Value returned from data_hash function 'test_data_hash', when "
+            "using location 'x:custom', has wrong type, expects a Hash "
+            "value, got Tuple"
+        ),
+    ):
+        h.lookup("k")
+
+
+def test_function_provider_key_lookup_is_abstract():
+    # _FunctionProvider.key_lookup is never called directly in production
+    # (every PROVIDER_CLASSES entry is a concrete subclass overriding it);
+    # exercised by direct construction/call.
+    provider = _FunctionProvider("n", None, {}, None, _EnvironmentContext(), "env")
+    with pytest.raises(NotImplementedError):
+        provider.key_lookup("root", [], None, None)
+
+
+def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
+    # _load_file returning _MISSING (a previously-cached file vanishing
+    # under revalidation) makes this location a miss, not an error.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
+        files={"data/a.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    monkeypatch.setattr(
+        h,
+        "_load_file",
+        lambda path, backend, options, invocation=None: _MISSING,
+    )
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("k")
+
+
+def test_data_hash_module_layer_prune_is_applied(tmp_path, make_tree, backends, script):
+    # `_prune` is set only for a module-owned level (core.Hiera._build_
+    # provider); a location-less data_hash entry in a module's own
+    # hiera.yaml is the only way to reach the "no location, or a uri"
+    # branch's own prune call.
+    base = make_tree(
+        {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
+        files={"data/g.yaml": "g: 1\n"},
+    )
+    modules = tmp_path / "modules"
+    mod_config = modules / "m" / "hiera.yaml"
+    mod_config.parent.mkdir(parents=True)
+    mod_config.write_text(
+        "version: 5\nhierarchy:\n  - {name: c, data_hash: test_data_hash}\n",
+        encoding="utf-8",
+    )
+    script["data_hash"] = lambda path, options: {"m::k": "v", "unqualified": "dropped"}
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    assert h.lookup("m::k") == "v"
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("unqualified")
 
 
 @pytest.mark.parametrize(
