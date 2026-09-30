@@ -68,8 +68,8 @@ classes:
 ```
 
 ```console
-$ python -m hyera classes --config hiera.yaml --scope environment=production --merge unique
-["monitoring", "base"]
+$ python -m hyera classes --config hiera.yaml --scope environment=production --merge unique --render-as json
+["monitoring","base"]
 ```
 
 ## Learn more

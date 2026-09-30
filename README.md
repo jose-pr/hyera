@@ -360,15 +360,16 @@ is the same tree, keyed the way `--render-as json --explain` renders it.
 hyera KEY [options]
 
 hyera ntp::servers --config hiera.yaml --scope environment=production
-hyera classes --merge unique --output json
+hyera classes --merge unique --render-as json
 hyera missing::key --default '(none)'
 ```
 
 Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
 first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
-`--knockout-prefix`, `--output/-o raw|json|yaml`, `--default`, plus duho's
-`-v/-q/--loglevel`. Without `--merge`, the data's `lookup_options` decides;
-an explicit `--merge`, `first` included, overrides it.
+`--knockout-prefix`, `--render-as s|json|yaml` (default `yaml`), `--default`,
+plus duho's `-v/-q/--loglevel`. Without `--merge`, the data's
+`lookup_options` decides; an explicit `--merge`, `first` included,
+overrides it.
 
 The CLI needs the `cli` extra (`pip install "hyera[cli]"`); without it the
 command prints that hint and exits 2.
@@ -554,6 +555,10 @@ with one deliberate exception:
   (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
   elsewhere), never the per-user `~/.puppetlabs/etc/code` default or a
   value discovered from `puppet.conf`.
+- **`--render-as yaml` prints `Sensitive` values redacted**, as the other
+  formats do; Puppet prints the plaintext.
+- **`--render-as s` prints hashes in Ruby 3.2's form** (`{"a"=>1}`), as
+  Puppet 8's packages do.
 
 ## Notes
 

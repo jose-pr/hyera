@@ -38,7 +38,7 @@ def test_cli_invocation(capsys):
         "role=web",
         "--scope",
         "clientcert=web01.example.com",
-        "-o",
+        "--render-as",
         "json",
         "ntp::servers",
     ]

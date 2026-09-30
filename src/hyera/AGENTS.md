@@ -743,7 +743,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `data_hash` name whose registered class is not in it is refused exactly
   like an unknown name.
 - **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
-  ("yaml",), "render": ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`.
+  ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`. (The `render`-kind `yaml`
+  name belongs to `hyera._render.YAMLRender`, a separate class -- see
+  "Rendering" below.)
   `.loads` is `hyera._yaml_loader.safe_load` (Psych's parsing rules, not
   PyYAML's own) into a plain `dict`/`list`, unadapted -- dotted-key access
   is a function over that data, not a container method; raises
@@ -790,7 +792,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `construct_mapping`'s own behavior; an unhashable key (a list/dict from a
   complex `? ... : ...` key) is frozen into a hashable tuple, recursively.
 - **`JSONBackend`** — `NAMES = {"function": ("json_data",), "format":
-  ("json",), "render": ("json",)}`, `EXTENSIONS = (".json",)`. `.loads`
+  ("json",)}`, `EXTENSIONS = (".json",)`. (The `render`-kind `json` name
+  belongs to `hyera._render.JSONRender`, a separate class -- see
+  "Rendering" below.) `.loads`
   parses the way Ruby's `json` gem (MultiJson's `JsonGem` adapter, Puppet's
   own JSON parser) does, not plain `json.loads`: `/* ... */` and `// ...`
   comments outside string literals are accepted (stripped to spaces before
@@ -1016,6 +1020,37 @@ Every class above is importable directly from `hyera` (e.g. `hyera.BackendError
 is hyera.backends.BackendError`, both paths work since `hyera.__init__`
 re-exports it too).
 
+## Rendering (`_render.py`)
+
+Three `render`-kind-only `Backend` subclasses -- Puppet's `puppet lookup
+--render-as` output, found via `Backend.new(fmt, kind="render")`. Each
+implements only `dumps(obj) -> str`; none of the Hiera 5 provider hooks or
+`loads` apply. Imported once, for its side-effect registration, right
+after `backends` in `hyera/__init__.py`.
+
+- **`StringRender`** (`s`) — `hyera._interpolation._to_puppet_str`: Ruby
+  `to_s`, the same renderer a bare `%{var}`/function-call result uses
+  (Ruby 3.2 AIO hash form `{"k"=>v}`, `Sensitive [value redacted]`).
+- **`JSONRender`** (`json`) — `json.dumps(ensure_ascii=False,
+  allow_nan=False, separators=(",", ":"))` over a projected value: a
+  `Sensitive` becomes its redacted text, a `dict` keeps insertion order (a
+  non-`str` key renders through `_to_puppet_str`), a `list`/`tuple`
+  becomes a plain `list`. A non-finite `float` raises `ValueError` with
+  Puppet's own text (`NaN not allowed in JSON`, `Infinity not allowed in
+  JSON`, `-Infinity not allowed in JSON`); anything else not representable
+  as Puppet data raises `TypeError("<type name> is not a Puppet data
+  value")`.
+- **`YAMLRender`** (`yaml`) — a `yaml.SafeDumper` subclass
+  (`explicit_start=True, default_flow_style=False, sort_keys=False,
+  allow_unicode=True`), byte-compatible with Psych's `to_yaml` for every
+  measured shape: `None` renders as an empty plain scalar; a `str` uses
+  literal style (`|`) when it contains `\n`, double-quoted style for
+  exactly `y`/`Y`/`n`/`N` or text matching `^:.` (Psych quotes these,
+  PyYAML's own resolver does not), else PyYAML's own default quoting
+  rules; a `Sensitive` renders as its redacted text; a `tuple` renders as
+  a list. A trailing `...` document-end line, when PyYAML adds one, is
+  stripped. Every render ends with exactly one trailing `\n`.
+
 ## CLI (`cli.py`)
 
 - **`main(argv=None) -> int`** — the `hyera` console-script entry point;
@@ -1031,18 +1066,33 @@ re-exports it too).
   repeatable `key=value`), `merge` (`--merge`, choice of
   `first|unique|hash|deep|array|set`, default `None`; `array`/`set` are
   legacy aliases for `unique`), `deep` (`--deep`, promotes `merge=hash` to
-  `deep`), `knockout_prefix` (`--knockout-prefix`), `output` (`--output/-o`,
-  choice of `raw|json|yaml`, default `"raw"`), `default` (`--default`).
-  `-o yaml`/`json` (and raw for a dict/list) redact `Sensitive` values the
-  same way raw text already does. Omitting `--merge` lets the data's
+  `deep`), `knockout_prefix` (`--knockout-prefix`), `render_as`
+  (`--render-as FORMAT`, default `None` meaning `"yaml"`; case-insensitive;
+  an unrecognized format exits 2 with `Unknown rendering format '<f>'`
+  before any lookup runs), `default` (`--default`). Output goes through
+  `hyera._render`'s `s`/`json`/`yaml` render backends (`Backend.new(fmt,
+  kind="render")`), the same shapes `puppet lookup --render-as` prints
+  (Ruby `to_s` for `s`, byte-compatible YAML for `yaml`, compact
+  insertion-ordered JSON for `json`); a `Sensitive` value redacts in every
+  format, including `yaml` (Puppet's own YAML leaks the plaintext). A
+  non-finite float under `--render-as json` exits 2 with Puppet's own text
+  (`NaN not allowed in JSON`, `Infinity not allowed in JSON`, `-Infinity
+  not allowed in JSON`). Output is written as UTF-8 bytes with LF line
+  endings via `_emit` (never `print`), regardless of the console or locale
+  encoding, with a trailing newline added only if the rendered text lacks
+  one (Ruby `puts` semantics); a reader that closes the pipe early raises
+  `BrokenPipeError`, silenced and reported as exit 2 with nothing on
+  stderr. Omitting `--merge` lets the data's
   `lookup_options` decide (else first-match-wins); an explicit `--merge`,
   `first` included, always overrides `lookup_options`. Exit codes: `0`
   found (or `--default` printed), `1` the key was not found (a
-  `KeyNotFoundError` and nothing else), `2` any other error. A `2` logs
-  exactly one `hyera`-logger ERROR line: `Lookup of key 'K' failed: …` for
-  a lookup failure (construction included), `Cannot render the value of
-  key 'K': …` if printing the found/default value itself fails. The
-  traceback is omitted unless `-v` or `DUHO_TRACEBACK=1` is set.
+  `KeyNotFoundError` and nothing else), `2` any other error, an unknown
+  render format, an unrenderable value or a closed output pipe. A `2` from
+  a lookup or render failure logs exactly one `hyera`-logger ERROR line:
+  `Lookup of key 'K' failed: …` for a lookup failure (construction
+  included), `Cannot render the value of key 'K': …` if printing the
+  found/default value itself fails. The traceback is omitted unless `-v`
+  or `DUHO_TRACEBACK=1` is set.
 - Env: `HYERA_MCP=stdio` runs the command as an MCP server over
   stdin/stdout (duho), exposing one tool, `hyera` (`Lookup`'s
   `_parsername_`, not its class name), whose arguments are the CLI fields

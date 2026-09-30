@@ -389,7 +389,7 @@ class Backend:
 
 
 class YAMLBackend(Backend):
-    NAMES = {"function": ("yaml_data",), "format": ("yaml",), "render": ("yaml",)}
+    NAMES = {"function": ("yaml_data",), "format": ("yaml",)}
     EXTENSIONS = (".yaml", ".yml")
 
     def loads(self, text):
@@ -501,7 +501,7 @@ def _reject_lone_surrogates(obj) -> None:
 
 
 class JSONBackend(Backend):
-    NAMES = {"function": ("json_data",), "format": ("json",), "render": ("json",)}
+    NAMES = {"function": ("json_data",), "format": ("json",)}
     EXTENSIONS = (".json",)
 
     def loads(self, text):

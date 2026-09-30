@@ -206,6 +206,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the key, the data_hash function and the file.
 - Pickling or copying a `Hiera` no longer carries its caches: the copy
   starts empty and never holds data parsed (or decrypted) by the original.
+- The CLI prints values the way `puppet lookup` does, chosen with
+  `--render-as s|json|yaml` (case-insensitive, default `yaml`): `yaml` is
+  `--- value` with no `...` line; `json` is compact, keeps the data's key
+  order and writes non-ASCII characters as UTF-8; `s` prints strings bare,
+  `true`/`false`, an empty line for a null value and Ruby's form for
+  collections (`{"a"=>1, "b"=>[nil]}`). `Sensitive` values print as
+  `Sensitive [value redacted]` in every format. Output is UTF-8 with LF
+  line ends whatever the console or locale encoding.
 
 ### Removed
 
@@ -223,11 +231,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `ScopedHiera`: `h.scoped(...)` now returns a `Hiera` bound to the derived
   scope.
 - `Hiera.cache`: call `clear_cache()` to drop cached data.
+- The CLI's `--output`/`-o` and the `raw` format: use `--render-as` (`raw`
+  is `s`).
 
 ### Fixed
 
 - Clearing cached file data no longer makes later lookups report a missing
   key; a file is re-read when needed.
+- The CLI no longer crashes with `UnicodeEncodeError` printing a non-ASCII
+  value on a non-UTF-8 stdout (Windows pipes and redirects). JSON output
+  renders hashes with mixed key types instead of failing with `TypeError`,
+  and a NaN or infinite value exits 2 with `NaN not allowed in JSON`
+  instead of printing invalid JSON. When the reader of the output goes
+  away early (`… | head -c1`), the CLI exits 2 without a traceback.
 - A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
   `a`, or a variable whose value refers to itself) raises
   `InterpolationError` "Recursive lookup detected in [a, b]" instead of

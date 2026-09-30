@@ -43,10 +43,9 @@ def test_yaml_parse_error_is_backend_error():
 def test_json_backend_names():
     assert JSONBackend.NAMES["function"] == ("json_data",)
     assert JSONBackend.NAMES["format"] == ("json",)
-    assert JSONBackend.NAMES["render"] == ("json",)
+    assert "render" not in JSONBackend.NAMES
     assert Backend.find("json_data") is JSONBackend
     assert Backend.find("json", kind="format") is JSONBackend
-    assert Backend.find("json", kind="render") is JSONBackend
 
 
 def test_json_parse_error_is_backend_error():

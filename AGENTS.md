@@ -36,6 +36,7 @@ src/hyera/
 ├── _string_converter.py    # convert, puppet_quote: value-to-string formatting (string_converter.rb)
 ├── _new_function.py        # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
 ├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
+├── _render.py              # s/json/yaml render backends: puppet lookup --render-as output
 ├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 ├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 └── cli.py                  # duho-based `hyera` console script (Lookup command, main())

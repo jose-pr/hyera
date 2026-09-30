@@ -5,11 +5,15 @@
 Designed for unattended use: no interactive prompts, deterministic output,
 and meaningful exit codes: ``0`` found (or ``--default`` printed), ``1``
 key not found, ``2`` any other error (one stderr line; ``-v`` or
-``DUHO_TRACEBACK=1`` adds the traceback).
+``DUHO_TRACEBACK=1`` adds the traceback). Output is rendered the way
+``puppet lookup --render-as s|json|yaml`` does (:mod:`hyera._render`),
+written as UTF-8 bytes with LF line endings whatever the console/locale
+encoding.
 """
 
-import json as _json
+import io as _io
 import logging as _logging
+import os as _os
 import sys as _sys
 import typing as _ty
 
@@ -25,7 +29,7 @@ from . import __version__
 from .exceptions import HieraError, KeyNotFoundError, _one_line
 from .core import Hiera
 from ._scope import Scope
-from ._types import Sensitive
+from .backends import Backend
 
 _LOGGER = _logging.getLogger(__name__)
 
@@ -70,23 +74,6 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
     return context
 
 
-def _plain(value):
-    """Convert to plain, YAML/JSON-safe types, recursively.
-
-    A :class:`~hyera.core.Sensitive` becomes its redacted text (the same
-    text raw/json output already show); a ``dict`` becomes a plain
-    ``dict``; a ``list``/``tuple`` becomes a plain ``list``. Everything
-    else passes through unchanged.
-    """
-    if isinstance(value, Sensitive):
-        return str(value)
-    if isinstance(value, dict):
-        return {k: _plain(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(v) for v in value]
-    return value
-
-
 def _describe(e) -> str:
     """One-line description of an exception for the CLI's failure log."""
     if isinstance(e, (HieraError, OSError)):
@@ -94,18 +81,43 @@ def _describe(e) -> str:
     return "{}: {}".format(type(e).__name__, _one_line(e))
 
 
-def _dump(value, fmt: str) -> str:
-    value = _plain(value)
-    if fmt == "json":
-        return _json.dumps(value, default=str, indent=2, sort_keys=True)
-    if fmt == "yaml":
-        import yaml
+def _emit(text: str) -> None:
+    """Write ``text`` to stdout the way Ruby's ``puts`` does: a trailing
+    newline is appended only if ``text`` does not already end with one.
 
-        return yaml.safe_dump(value, default_flow_style=False).rstrip("\n")
-    # raw
-    if isinstance(value, (dict, list)):
-        return _json.dumps(value, default=str)
-    return str(value)
+    Always UTF-8 bytes with LF line endings, regardless of the console or
+    locale encoding: written to ``sys.stdout.buffer`` when one exists (a
+    real console or pipe), else (a ``StringIO`` under
+    ``contextlib.redirect_stdout``, as the conformance harness uses)
+    ``sys.stdout.write`` directly. Never ``sys.stdout.reconfigure`` --
+    that would change the caller's own stream when ``main()`` runs
+    in-process.
+    """
+    if not text.endswith("\n"):
+        text += "\n"
+    buffer = getattr(_sys.stdout, "buffer", None)
+    if buffer is not None:
+        _sys.stdout.flush()
+        buffer.write(text.encode("utf-8"))
+        buffer.flush()
+    else:
+        _sys.stdout.write(text)
+        _sys.stdout.flush()
+
+
+def _silence_stdout() -> None:
+    """Redirect the stdout file descriptor to the null device.
+
+    Called after a :class:`BrokenPipeError`: the reader is already gone,
+    so nothing further should try to write to (or complain about) the
+    broken pipe, including whatever the interpreter does with stdout at
+    exit. Best-effort: a stream with no real file descriptor (a
+    ``StringIO``) just leaves this a no-op.
+    """
+    try:
+        _os.dup2(_os.open(_os.devnull, _os.O_WRONLY), _sys.stdout.fileno())
+    except (OSError, ValueError, _io.UnsupportedOperation):
+        pass
 
 
 if duho is not None:
@@ -137,8 +149,8 @@ if duho is not None:
             "duho.Arg[_ty.Optional[str], duho.NS(flags=['--knockout-prefix'])]"
         ) = None
         """Deep-merge knockout prefix (marks keys/values to remove)."""
-        output: "duho.Arg[str, duho.NS(flags=['--output', '-o']), duho.Choice('raw', 'json', 'yaml')]" = ("raw")
-        """Output format for the resolved value."""
+        render_as: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--render-as'], metavar='FORMAT')]" = (None)
+        """Output format: s, json or yaml (default yaml)."""
         default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
         """Value to print when the key is missing (otherwise exit 1)."""
         codedir: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--codedir'])]" = None
@@ -170,6 +182,10 @@ if duho is not None:
             return 2
 
         def __call__(self) -> int:
+            fmt = (self.render_as or "yaml").lower()
+            if Backend.find(fmt, kind="render") is None:
+                return self._fail("Unknown rendering format '{}'".format(fmt))
+
             try:
                 context = _parse_scope(self.scope)
             except _ScopeError as e:
@@ -194,7 +210,11 @@ if duho is not None:
                 )
 
             try:
-                print(_dump(value, self.output))
+                text = Backend.new(fmt, kind="render").dumps(value)
+                _emit(text)
+            except BrokenPipeError:
+                _silence_stdout()
+                return 2
             except Exception as e:
                 return self._fail(
                     "Cannot render the value of key '{}': {}".format(

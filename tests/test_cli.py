@@ -88,76 +88,192 @@ def mergefirst_root(make_tree):
     )
 
 
-_VALUES_EXPECTED = {
-    "str": "hello",
-    "int": 42,
-    "bool": True,
-    "flt": 1.5,
-    "nested": {"b": 2, "a": [1, {"z": 1, "y": 2}]},
-    "lst": [1, [2, 3], {"k": "v"}],
-    "secret": "Sensitive [value redacted]",
-    "secret_hash": "Sensitive [value redacted]",
+@pytest.fixture
+def render_root(make_tree):
+    """A tree exercising Puppet-shaped rendering end to end (parsing,
+    ``convert_to: Sensitive``, then ``--render-as``). ``big`` is large
+    enough (20 000 20-char strings) to overflow an OS pipe buffer, so a
+    reader that closes early forces a real ``BrokenPipeError``.
+    """
+    common_yaml = (
+        "str: one\n"
+        "nil: ~\n"
+        "nested:\n"
+        "  b: 2\n"
+        "  a:\n"
+        "    - 1\n"
+        "    - z: 1\n"
+        "      y: 2\n"
+        'unicode: "café \u2603"\n'
+        "nan: .nan\n"
+        "secret: hunter2\n"
+        "lookup_options:\n"
+        "  secret: { convert_to: Sensitive }\n"
+        "big:\n"
+    ) + "".join("  - {}\n".format("x" * 20) for _ in range(20000))
+    return make_tree(
+        {"hierarchy": [{"name": "common", "path": "common.yaml"}]},
+        files={"data/common.yaml": common_yaml},
+    )
+
+
+_RENDER_AS_EXPECTED = {
+    "str": ("one\n", "--- one\n", '"one"\n'),
+    "nil": ("\n", "---\n", "null\n"),
+    "nested": (
+        '{"b"=>2, "a"=>[1, {"z"=>1, "y"=>2}]}\n',
+        '---\nb: 2\na:\n- 1\n- z: 1\n  "y": 2\n',
+        '{"b":2,"a":[1,{"z":1,"y":2}]}\n',
+    ),
+    "secret": (
+        "Sensitive [value redacted]\n",
+        "--- Sensitive [value redacted]\n",
+        '"Sensitive [value redacted]"\n',
+    ),
+    "unicode": ("café ☃\n", "--- café ☃\n", '"café ☃"\n'),
 }
 
 
-@pytest.mark.parametrize("key", list(_VALUES_EXPECTED))
-@pytest.mark.parametrize("fmt", ["raw", "json", "yaml"])
-def test_output_formats(fmt, key, values_root, capsys):
-    rc = main(["-c", str(values_root / "hiera.yaml"), "-o", fmt, key])
+@pytest.mark.parametrize("key", list(_RENDER_AS_EXPECTED))
+@pytest.mark.parametrize("fmt,idx", [("s", 0), ("yaml", 1), ("json", 2)])
+def test_render_as(fmt, idx, key, render_root, capsys):
+    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", fmt, key])
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
+    assert out == _RENDER_AS_EXPECTED[key][idx]
 
-    expected = _VALUES_EXPECTED[key]
-    if fmt == "yaml":
-        assert yaml.safe_load(out) == expected
-    elif fmt == "json":
-        assert json.loads(out) == expected
-    else:  # raw
-        if isinstance(expected, (dict, list)):
-            assert json.loads(out) == expected
-        else:
-            assert out.strip() == str(expected)
+
+def test_default_render_is_yaml(render_root, capsys):
+    rc = main(["-c", str(render_root / "hiera.yaml"), "str"])
+    assert rc == 0
+    assert capsys.readouterr().out == "--- one\n"
+
+
+def test_render_as_is_case_insensitive(render_root, capsys):
+    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "JSON", "str"])
+    assert rc == 0
+    assert capsys.readouterr().out == '"one"\n'
+
+
+def test_unknown_render_format_exit_2(render_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "foo", "str"])
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == "Unknown rendering format 'foo'"
+
+
+def test_json_nonfinite_exit_2(render_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "json", "nan"])
+    assert rc == 2
+    assert "NaN not allowed in JSON" in _error_records(caplog)[-1].getMessage()
+
+
+@pytest.mark.parametrize(
+    "fmt,expected",
+    [("s", "fallback\n"), ("json", '"fallback"\n'), ("yaml", "--- fallback\n")],
+)
+def test_default_in_each_format(fmt, expected, render_root, capsys):
+    rc = main(
+        [
+            "nope::key",
+            "-c",
+            str(render_root / "hiera.yaml"),
+            "--default",
+            "fallback",
+            "--render-as",
+            fmt,
+        ]
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == expected
+
+
+def test_utf8_on_cp1252_stdout(render_root, monkeypatch):
+    import io
+
+    buf = io.BytesIO()
+    wrapper = io.TextIOWrapper(buf, encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", wrapper)
+    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "s", "unicode"])
+    wrapper.flush()
+    assert rc == 0
+    assert buf.getvalue() == "café ☃\n".encode("utf-8")
+
+
+def test_utf8_on_cp1252_pipe(render_root):
+    src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "hyera",
+            "-c",
+            str(render_root / "hiera.yaml"),
+            "--render-as",
+            "s",
+            "unicode",
+        ],
+        capture_output=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONPATH": src},
+        timeout=60,
+    )
+    assert proc.returncode == 0
+    assert proc.stdout == "café ☃\n".encode("utf-8")
+
+
+def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
+    src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "hyera",
+            "-c",
+            str(render_root / "hiera.yaml"),
+            "--render-as",
+            "json",
+            "big",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={**os.environ, "PYTHONPATH": src},
+    )
+    try:
+        proc.stdout.read(1)
+        proc.stdout.close()
+        err = proc.stderr.read()
+        rc = proc.wait(timeout=60)
+    finally:
+        proc.stderr.close()
+    assert err == b""
+    assert rc == 2
+
+
+@pytest.mark.parametrize("flag", ["-o", "--output"])
+def test_output_flag_removed(flag, hiera_root):
+    with pytest.raises(SystemExit) as exc:
+        main(["app::name", "-c", str(hiera_root / "hiera.yaml"), flag, "json"])
+    assert exc.value.code == 2
 
 
 def test_sensitive_redacted_in_output(values_root, capsys):
     """A ``Sensitive``-converted value is redacted in every output format,
-    including the CLI's default (raw) output, and never the wrapped secret.
+    including the CLI's default (``s``-like) output, and never the wrapped
+    secret.
     """
-    rc = main(["-c", str(values_root / "hiera.yaml"), "secret"])
+    rc = main(["-c", str(values_root / "hiera.yaml"), "--render-as", "s", "secret"])
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
     assert out.strip() == "Sensitive [value redacted]"
 
-    rc = main(["-c", str(values_root / "hiera.yaml"), "-o", "json", "secret"])
+    rc = main(["-c", str(values_root / "hiera.yaml"), "--render-as", "json", "secret"])
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
     assert json.loads(out) == "Sensitive [value redacted]"
-
-
-@pytest.mark.parametrize("fmt", ["raw", "json", "yaml"])
-def test_default_in_each_format(fmt, values_root, capsys):
-    rc = main(
-        [
-            "nope::key",
-            "-c",
-            str(values_root / "hiera.yaml"),
-            "--default",
-            "fallback",
-            "-o",
-            fmt,
-        ]
-    )
-    assert rc == 0
-    out = capsys.readouterr().out
-    if fmt == "yaml":
-        assert yaml.safe_load(out) == "fallback"
-    elif fmt == "json":
-        assert json.loads(out) == "fallback"
-    else:
-        assert out.strip() == "fallback"
 
 
 def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
@@ -167,7 +283,7 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
         str(mergefirst_root / "hiera.yaml"),
         "-s",
         "os_family=RedHat",
-        "-o",
+        "--render-as",
         "json",
     ]
 
@@ -208,6 +324,7 @@ def test_mcp_stdio_serves_lookup(hiera_root):
                     "key": "app::name",
                     "config": str(hiera_root / "hiera.yaml"),
                     "scope": ["environment=production"],
+                    "render_as": "s",
                 },
             },
         },
@@ -261,6 +378,8 @@ def test_lookup_found(hiera_root, capsys):
             str(hiera_root / "hiera.yaml"),
             "-s",
             "environment=production",
+            "--render-as",
+            "s",
         ]
     )
     assert rc == 0
@@ -274,7 +393,15 @@ def test_lookup_missing_exit_1(hiera_root):
 
 def test_lookup_missing_with_default_exit_0(hiera_root, capsys):
     rc = main(
-        ["nope::key", "-c", str(hiera_root / "hiera.yaml"), "--default", "fallback"]
+        [
+            "nope::key",
+            "-c",
+            str(hiera_root / "hiera.yaml"),
+            "--default",
+            "fallback",
+            "--render-as",
+            "s",
+        ]
     )
     assert rc == 0
     assert capsys.readouterr().out.strip() == "fallback"
@@ -291,7 +418,17 @@ def test_codedir_flag(make_tree, capsys):
     hieradata = codedir / "environments" / "production" / "hieradata"
     hieradata.mkdir(parents=True)
     (hieradata / "common.yaml").write_text("k: v\n", encoding="utf-8")
-    rc = main(["k", "-c", str(root / "hiera.yaml"), "--codedir", str(codedir)])
+    rc = main(
+        [
+            "k",
+            "-c",
+            str(root / "hiera.yaml"),
+            "--codedir",
+            str(codedir),
+            "--render-as",
+            "s",
+        ]
+    )
     assert rc == 0
     assert capsys.readouterr().out.strip() == "v"
 
@@ -322,7 +459,7 @@ def test_merge_array_alias_extension(hiera_root, capsys):
             "environment=production",
             "--merge",
             "array",
-            "-o",
+            "--render-as",
             "json",
         ]
     )
@@ -340,7 +477,7 @@ def test_unique_merge_json_output(hiera_root, capsys):
             "environment=production",
             "--merge",
             "unique",
-            "-o",
+            "--render-as",
             "json",
         ]
     )
@@ -473,10 +610,10 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
 def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
     monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
 
-    def _raise_type_error(value, fmt):
+    def _raise_type_error(self, value, **kw):
         raise TypeError("x")
 
-    monkeypatch.setattr("hyera.cli._dump", _raise_type_error)
+    monkeypatch.setattr("hyera._render.JSONRender.dumps", _raise_type_error)
 
     with caplog.at_level(logging.ERROR):
         rc = main(
@@ -486,6 +623,8 @@ def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
                 str(hiera_root / "hiera.yaml"),
                 "-s",
                 "environment=production",
+                "--render-as",
+                "json",
             ]
         )
 
@@ -531,7 +670,7 @@ def test_hocon_duration_survives_yaml_output(make_tree, capsys):
         },
         files={"data/common.conf": "dur = 10s\n"},
     )
-    rc = main(["dur", "-c", str(root / "hiera.yaml"), "-o", "yaml"])
+    rc = main(["dur", "-c", str(root / "hiera.yaml"), "--render-as", "yaml"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert out.splitlines()[0] == "10s"
+    assert out.splitlines()[0] == "--- 10s"

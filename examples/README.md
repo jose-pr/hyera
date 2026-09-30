@@ -32,7 +32,7 @@ Or, with the `cli` extra installed (`pip install "hyera[cli]"`), the
 console script or `python -m hyera` take the same argv:
 
 ```
-python -m hyera -c examples/hiera.yaml --scope role=web --scope clientcert=web01.example.com -o json ntp::servers
+python -m hyera -c examples/hiera.yaml --scope role=web --scope clientcert=web01.example.com --render-as json ntp::servers
 ```
 
 which prints `ntp::servers`'s value as JSON.

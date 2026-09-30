@@ -11,6 +11,7 @@ from .backends import (
     YAMLBackend,
     default_backends,
 )
+from . import _render  # noqa: F401  (side effect: registers s/json/yaml renderers)
 from .exceptions import (
     ConfigError,
     HieraError,
