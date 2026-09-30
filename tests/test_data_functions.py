@@ -98,6 +98,9 @@ def test_get_navigates_like_puppet(fn):
         h.get("h.a..b", "D")
     assert h.get("nope.x", "D") == "D"  # missing root
     assert h.get("0.a", "D") == "D"  # an int root can never match
+    # A bare root key (no dots at all): get_segments's own "no segments
+    # left, the root value itself is the found value" path.
+    assert h.get("h", "D") == {"x": {"p": 1, "q": 2}, "y": 3}
     with pytest.raises(TypeError, match="get\\(\\) dotted key must be a str"):
         h.get(5)
     with pytest.raises(
@@ -110,6 +113,16 @@ def test_get_navigates_like_puppet(fn):
         match=r"Found value has wrong type, expects a String value, got Integer",
     ):
         h.get("h.x.p", value_type="String")
+
+
+def test_data_functions_get_empty_navigation_direct():
+    # hyera._data_functions.get()'s own "empty navigation returns the
+    # value untouched" branch (core.Hiera.get() never calls it with an
+    # empty string -- "" parses to zero segments the same way a bare root
+    # key does, reaching get_segments directly instead).
+    from hyera._data_functions import get
+
+    assert get({"a": 1}, "") == {"a": 1}
 
 
 def test_getvar_reads_scope(fn):
