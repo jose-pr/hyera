@@ -123,6 +123,23 @@ private engine internals with no stability contract.
     (valid or not) logs Puppet's deprecation warning ("Use of 'hiera.yaml'
     version 3 is deprecated. It should be converted to version 5") unless
     `scope.strict == "off"`.
+  - **Version 4** (`backend:` instead of `data_hash:`, `path`/`paths`
+    defaulting to the entry's own `name`, one provider *per entry* — the v5
+    shape, unlike v3's backend-major one) is accepted only in the
+    environment and module layers; a global-layer version 4 config is still
+    read and validated in full first (Puppet builds its provider list as
+    part of construction), and only once that succeeds does construction
+    raise `ConfigError` ("hiera.yaml version 4 cannot be used in the global
+    layer") — a schema-invalid version 4 file at the global layer raises
+    its schema error instead, never the layer one. `backend` accepts only
+    `yaml`/`json`/`hocon` (mapped to the same `*_data` functions a v5
+    config would name); any other name raises `ConfigError` ("No data
+    provider is registered for backend '<name>'") — unlike v3, there is no
+    third-party-backend fallback for v4. A relative `datadir` (default
+    `data`, entry-level or config-level) resolves against the layer's own
+    root, joined on literally with **no interpolation at all** (unlike
+    every other version, whose `datadir` at least gets strict, method-free
+    substitution) — a literal `%` in it is never mistaken for `%{...}`.
   - **Version 5** is the schema described above: an unrecognized key
     anywhere, a missing/duplicate/non-string `name`, more than one function
     or location key, a malformed `options` entry, and the like — reporting
@@ -171,9 +188,18 @@ private engine internals with no stability contract.
     under `scope.strict="error"` it raises ("hiera.yaml version 3 cannot be
     used in an environment"/"...in a module"), otherwise it is silently
     ignored (with a once-per-file warning) and that layer contributes
-    nothing. A version-4 config outside the global layer raises "not
-    supported yet" for now. `sources()` still reports only the global
+    nothing — its schema is still fully validated first, though (a
+    schema-invalid version 3 config at any layer raises, regardless of
+    whether that layer would otherwise ignore a *valid* one). A version-4
+    config outside the global layer is read normally (see "Version 4"
+    above). `sources()` still reports only the global
     layer's candidate paths — a per-layer view belongs to `explain()`.
+    A `%{lookup()}`/`%{hiera()}`/`%{alias()}` reached while interpolating a
+    version 3 *global* layer's own data is confined to the global layer
+    (never reaching an environment or module, even for an otherwise
+    qualified key, and never a module's `default_hierarchy`) unless the
+    current environment has a real version 5 hiera.yaml — an absent,
+    ignored-version-3, or version 4 environment all count as none.
     A module's own hiera.yaml may declare `default_hierarchy`, consulted
     only for that module's own `<module>::...` keys, and only after the
     global, environment and module main hierarchies all miss (including a

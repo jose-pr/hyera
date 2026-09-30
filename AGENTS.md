@@ -101,8 +101,14 @@ hiera.yaml (Hiera 1, 2 and 3's own dialect) is read and validated against
 Puppet's v3 schema and resolved through the real backend-major provider
 build (`yaml`/`json`/`hocon`/`eyaml`, or a third-party backend registered
 under that name); `hiera3_backend` (global layer only) runs the same way.
+`version: 4` (`backend:` instead of `data_hash:`, one provider per entry)
+is read the same way in the environment/module layers, rejected (after its
+own schema validates) at the global layer; a `%{lookup()}`/`%{hiera()}`/
+`%{alias()}` inside a version 3 global layer's own data stays confined to
+the global layer unless the current environment has a real version 5
+hiera.yaml.
 
-Not implemented: hiera.yaml version 4, running a Ruby Hiera 3 backend
+Not implemented: running a Ruby Hiera 3 backend
 (a v3/`hiera3_backend` name must be a Puppet-mapped one or a registered
 Python backend), and hiera-eyaml encryptors other than PKCS7 (GPG and
 third-party plugins).

@@ -184,9 +184,24 @@ process's working directory *at construction*, never the hiera.yaml
 directory — `Hiera(..., codedir=...)`/`hyera --codedir` set `$codedir`
 (Puppet's own AIO default per platform otherwise).
 
-hiera.yaml version 4 (`backend: yaml|json|hocon` instead of `data_hash:`)
-is not implemented yet, and `hiera3_backend` follows the same rule as a v3
-`backends:` name.
+hiera.yaml version 4 (`backend: yaml|json|hocon` instead of `data_hash:`,
+`path`/`paths` defaulting to the entry's own `name`) is accepted in the
+*environment* and *module* layers only — Puppet rejects it at the global
+layer, after validating its schema (a schema-invalid version 4 file at the
+global layer raises its schema error, never the layer one). Its `datadir`
+is joined onto the config root exactly as written, with no interpolation
+at all — unlike every other version. A version 3 (or missing-`version`)
+hiera.yaml at an environment or module root is likewise still fully
+schema-validated, then ignored with a warning (or, under
+`Scope(strict="error")`, raised) rather than read — see "Layers" below.
+`hiera3_backend` follows the same backend-name rule as a v3 `backends:`
+entry, and is accepted only in the global layer.
+
+A `%{lookup()}`/`%{hiera()}`/`%{alias()}` reached while interpolating a
+version 3 *global* layer's own data stays confined to the global layer —
+never reaching an environment or module, even for an otherwise-qualified
+key — unless the current environment has a real version 5 hiera.yaml (an
+absent, ignored-version-3, or version 4 environment all count as none).
 
 ### Layers
 
@@ -226,8 +241,10 @@ module's own data that is not qualified with that module's name is dropped
 `hiera3_backend` is accepted only in the global layer's hiera.yaml. A
 version-3 (or missing-`version`) hiera.yaml at an environment or module root
 is silently ignored (with a warning); `puppet lookup`'s own `strict=error`
-raises instead. See `src/hyera/AGENTS.md`'s "Layers" entry for the full
-discovery and error rules.
+raises instead. A version 4 hiera.yaml at an environment or module root is
+read normally (it is only the global layer that rejects it). See
+`src/hyera/AGENTS.md`'s "Layers" entry for the full discovery and error
+rules.
 
 A module's own `hiera.yaml` may also declare a `default_hierarchy`
 (`default_hierarchy` is rejected everywhere else — global or environment —
@@ -452,14 +469,18 @@ detection; `%{alias()}` as the whole value keeps the value's type · merges
 plus the Hiera-3-era `reverse_deep`/`unconstrained_deep` ·
 `lookup_options` (per-key/regex merge strategy + `convert_to`) ·
 global/environment/module layers (`Hiera(..., environmentpath=,
-basemodulepath=, modulepath=)`), with `hiera3_backend` global-only and a
+basemodulepath=, modulepath=)`), with `hiera3_backend` global-only, a
 version-3/missing-`version` environment or module hiera.yaml ignored (or
-raising under `strict="error"`) ·
+raising under `strict="error"`), and hiera.yaml version 4 in the
+environment/module layers only (rejected, after schema validation, at the
+global layer) · a `%{lookup()}`/`%{hiera()}`/`%{alias()}` inside a version
+3 global layer's own data confined to the global layer unless the current
+environment has a real version 5 hiera.yaml ·
 `eyaml_lookup_key` (PKCS7 only, behind the `hyera[eyaml]` extra) ·
 `explain()`, reporting a lookup the way `puppet lookup
 --explain`/`--explain-options` does.
 
-Not implemented: lookups through hiera.yaml version 4 · running a Ruby
+Not implemented: running a Ruby
 Hiera 3 backend (a v3 `backends:`/`hiera3_backend:` name must be one of
 `yaml`/`json`/`hocon`/`eyaml`, or a third-party `hyera.Backend` registered
 under that name — see "Hiera 3 and 4 configs" above) · encrypted-value
