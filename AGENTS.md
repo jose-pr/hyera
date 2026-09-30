@@ -19,6 +19,7 @@ src/hyera/
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
 ├── _data_provider.py       # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
 ├── _location_resolver.py   # hierarchy level path resolution: Puppet interpolation rules, mapped_paths scope semantics (location_resolver.rb, hiera_config.rb)
+├── _function_provider.py   # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
 ├── _interpolation.py       # the %{...} engine: resolving functions and variable references (interpolation.rb)
 ├── _invocation.py          # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
 ├── _merge_strategy.py      # MergeStrategy: merge strategies (merge_strategy.rb, deep_merge gem's core.rb)
@@ -82,7 +83,11 @@ export with its signature, arguments, and gotchas.
 Supported: `version: 5` validation, `defaults`, `hierarchy`,
 `default_hierarchy` (module layer only),
 `name`, `path`/`paths`/`glob`/`globs`/`mapped_paths`, `datadir`,
-`data_hash` backends (yaml/json/hocon/sops), all five interpolation methods
+`data_hash` backends (yaml/json/hocon/sops), `lookup_key`/`data_dig`
+provider backends (called per key and per location with a
+`hyera.LookupContext`), hierarchy `options` (interpolated, passed to the
+backend with `path`), a location-less hierarchy entry (calls its function
+once, with no location), all five interpolation methods
 (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted subkeys, merges
 `first`/`default`/`unique`/`hash`/`deep` (with `knockout_prefix`/
 `sort_merged_arrays`/`merge_hash_arrays`), `lookup_options` (per-key/regex
@@ -90,9 +95,8 @@ merge strategy + `convert_to`), and the global/environment/module layer
 stack (`Hiera(..., environmentpath=, basemodulepath=, modulepath=)`;
 `hiera3_backend` global-only).
 
-Not implemented: `lookup_key`/`data_dig` provider backends, `uri`/`uris`
-sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
-`hiera3_backend` shim.
+Not implemented: `uri`/`uris` sources, `eyaml_lookup_key` (use the `sops`
+backend instead), and the legacy `hiera3_backend` shim.
 
 ## Develop
 
