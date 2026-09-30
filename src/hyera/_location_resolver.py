@@ -366,13 +366,19 @@ def _segment_matches(kind, value, name: str) -> bool:
     return False
 
 
-def _glob_one(root: str, pattern: str) -> "_ty.List[str]":
+def _glob_one(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
     """One already-brace-expanded pattern matched under the literal
     directory ``root``: a depth-first walk over sets of segment indices
     (:func:`_prepare_segments`), so ``**``'s "zero or more directories" and
     an ordinary wildcard share one filesystem pass. A pattern ending in
     ``/`` matches only directories, which Puppet rejects, so it is always
     ``[]``.
+
+    ``on_scandir``, when given, is called with a directory path immediately
+    before this walk actually calls ``os.scandir`` on it (never for the
+    literal-only fast path below, which never scans a directory at all) --
+    used to record which directories a listing actually depended on, for a
+    later freshness check.
     """
     if pattern.endswith("/"):
         return []
@@ -404,6 +410,8 @@ def _glob_one(root: str, pattern: str) -> "_ty.List[str]":
                 if nxt:
                     walk(child, nxt)
             return
+        if on_scandir is not None:
+            on_scandir(path)
         try:
             entries = sorted(os.scandir(path), key=lambda e: os.fsencode(e.name))
         except OSError as e:
@@ -432,17 +440,17 @@ def _glob_one(root: str, pattern: str) -> "_ty.List[str]":
     return results
 
 
-def glob(root: str, pattern: str) -> "_ty.List[str]":
+def glob(root: str, pattern: str, on_scandir=None) -> "_ty.List[str]":
     """Ruby ``Dir.glob`` for ``pattern`` under the literal directory
     ``root``: the concatenation of :func:`_glob_one` over every brace
     alternative of ``pattern``, in written order (duplicates kept, as Ruby
     keeps them).
     Results are ``os.path.join``ed absolute strings; directories are
     included here (a caller wanting files only, as every Hiera glob level
-    does, filters them out itself)."""
+    does, filters them out itself). ``on_scandir``: see :func:`_glob_one`."""
     results = []
     for p in _expand_braces(pattern):
-        results.extend(_glob_one(root, p))
+        results.extend(_glob_one(root, p, on_scandir))
     return results
 
 
@@ -468,15 +476,70 @@ def _glob_root_and_pattern(config_root: str, datadir: str, g: str):
 def _resolve_paths(datadir, declared, invocation, extension=None):
     """``path``/``paths`` (``location_resolver.rb:56-66``): each entry
     interpolates (methods disallowed), gets ``extension`` appended unless it
-    already ends with it, and joins onto ``datadir``."""
+    already ends with it, and joins onto ``datadir``.
+
+    Existence is checked through ``invocation``'s filesystem memo
+    (:meth:`~hyera._invocation.Invocation._memo_probe`), not a bare
+    ``os.path.exists``: when ``invocation`` shares a memo with the rest of
+    the current top-level lookup (``core.Hiera._location_entry_for``), this
+    is the one real probe of ``loc`` that lookup ever makes, and a caller
+    checking the same path again (to tell a directory from a plain miss)
+    reads the cached result instead of probing twice.
+    """
     results = []
     for d in declared:
         p = interpolate(_win_slash(d), invocation, allow_methods=False)
         if extension and not p.endswith(extension):
             p = p + extension
         loc = _pathname_plus(datadir, p)
-        results.append(ResolvedLocation(d, Path(loc), False, os.path.exists(loc)))
+        exists = invocation._memo_probe(loc).kind != "absent"
+        results.append(ResolvedLocation(d, Path(loc), False, exists))
     return results
+
+
+class _GlobSpec(_ty.NamedTuple):
+    """One ``glob``/``globs`` declared string, interpolated and rooted, but
+    not yet walked -- the interpolation half of ``_expand_globs``, split out
+    so a caller (``core.Hiera._location_entry_for``) can defer the actual
+    ``Dir.glob`` match listing to per-lookup materialization instead of
+    paying for it on every hierarchy build."""
+
+    original: str
+    root: str
+    pattern: str
+
+
+def _glob_specs(config_root, datadir, declared, invocation) -> "_ty.List[_GlobSpec]":
+    """Interpolate and root every declared ``glob``/``globs`` string
+    (``location_resolver.rb:43-47``'s pattern half), without walking the
+    filesystem."""
+    base = _pathname_plus(config_root, datadir)
+    specs = []
+    for raw in declared:
+        # Never _win_slash a glob string: '\' is Ruby's escape character
+        # here, not a Windows path separator.
+        interp = interpolate(raw, invocation, allow_methods=False)
+        root, pattern = _glob_root_and_pattern(config_root, datadir, interp)
+        original = _pathname_plus(base, interp)
+        specs.append(_GlobSpec(original, root, pattern))
+    return specs
+
+
+def resolve_glob_specs(level, base_path, scope, refs=None, fs_memo=None):
+    """The rooted, interpolated :class:`_GlobSpec` list for one ``glob``/
+    ``globs`` hierarchy level -- the location half of :func:`resolve_locations`
+    for this one location kind, kept separate because its own caller
+    resolves the actual matches lazily. See :func:`resolve_locations` for
+    ``refs``/``fs_memo``."""
+    strict_inv = Invocation(
+        scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
+    )
+    lenient_inv = Invocation(
+        scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
+    )
+    config_root = Path(base_path).as_posix()
+    datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)
+    return _glob_specs(config_root, datadir, level.locations, lenient_inv)
 
 
 def _expand_globs(config_root, datadir, declared, invocation):
@@ -486,15 +549,16 @@ def _expand_globs(config_root, datadir, declared, invocation):
     -- live ``datadir`` metacharacters, a rooted pattern or ``datadir``
     anchoring the walk instead. Any match that is a directory is dropped
     (``reject(&:directory?)``); a missing or unreadable directory simply
-    contributes no matches."""
-    base = _pathname_plus(config_root, datadir)
+    contributes no matches.
+
+    Eager, unlike :func:`resolve_glob_specs`: used by
+    :meth:`~hyera._hiera_config.HieraLevel.paths`, which has no lazy
+    materialization step to defer the walk to.
+    """
     results = []
-    for raw in declared:
-        # Never _win_slash a glob string: '\' is Ruby's escape character
-        # here, not a Windows path separator.
-        interp = interpolate(raw, invocation, allow_methods=False)
-        root, pattern = _glob_root_and_pattern(config_root, datadir, interp)
-        original = _pathname_plus(base, interp)
+    for original, root, pattern in _glob_specs(
+        config_root, datadir, declared, invocation
+    ):
         for match in glob(root, pattern):
             if os.path.isdir(match):
                 continue
@@ -724,16 +788,16 @@ def _expand_mapped_paths(datadir, level, invocation):
                 _no_lookup,
                 lenient=True,
                 scope_interpolations=invocation.scope_interpolations,
+                _fs_memo=invocation._fs_memo,
             )
             p = interpolate(template_norm, child_inv, allow_methods=False)
             loc = _pathname_plus(datadir, p)
-            results.append(
-                ResolvedLocation(template, Path(loc), False, os.path.exists(loc))
-            )
+            exists = child_inv._memo_probe(loc).kind != "absent"
+            results.append(ResolvedLocation(template, Path(loc), False, exists))
     return results
 
 
-def resolve_locations(level, base_path, scope, refs=None):
+def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
     """The candidate :class:`ResolvedLocation` list for one hierarchy level
     in a bound :class:`~hyera.Scope` (``hiera_config.rb:664-687``).
 
@@ -745,6 +809,11 @@ def resolve_locations(level, base_path, scope, refs=None):
     (``%{lookup(...)}`` etc.) rejected outright -- Puppet's own restriction
     on this context.
 
+    Never called for a ``glob``/``globs`` level from the main lookup
+    pipeline (see :func:`resolve_glob_specs`); still handles that kind
+    itself (eagerly) for :meth:`~hyera._hiera_config.HieraLevel.paths`,
+    which has no lazy materialization step of its own.
+
     ``refs``, when given, is a list every scope read made while resolving
     this level appends itself to (:meth:`~hyera._invocation.Invocation.
     remember_scope_lookup`), shared across every level of one hierarchy
@@ -753,9 +822,19 @@ def resolve_locations(level, base_path, scope, refs=None):
     Puppet's own single ``scope_interpolations_stable?`` check per rebuild.
     Omitted (``None``, the default), nothing is recorded -- used by
     :meth:`~hyera._hiera_config.HieraLevel.paths`, which has no cache to key.
+
+    ``fs_memo``, when given, is the current top-level lookup's filesystem
+    probe memo (:attr:`~hyera._invocation.Invocation._fs_memo`), shared so
+    every location this level (and the rest of the same hierarchy build)
+    probes is probed at most once for the whole lookup. Omitted, each
+    location probed here gets its own, unshared one-entry memo.
     """
-    strict_inv = Invocation(scope, _no_lookup, scope_interpolations=refs)
-    lenient_inv = Invocation(scope, _no_lookup, lenient=True, scope_interpolations=refs)
+    strict_inv = Invocation(
+        scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
+    )
+    lenient_inv = Invocation(
+        scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
+    )
 
     config_root = Path(base_path).as_posix()
     datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)

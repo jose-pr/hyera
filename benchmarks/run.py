@@ -167,7 +167,7 @@ def _time_calls(repeat: int, inner: int, call, *, warm: bool) -> "list[float]":
     return samples
 
 
-def _build_metrics(cfg_path: Path, quick: bool):
+def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
     """Return ``(iterations, metric_fns)``: ``iterations`` maps each metric
     name to its inner-call count (for the saved JSON); ``metric_fns`` maps it
     to ``(warm, inner, call)`` per :func:`_time_calls`.
@@ -183,13 +183,13 @@ def _build_metrics(cfg_path: Path, quick: bool):
     metrics = {}
 
     def construct_call(_i):
-        Hiera(str(cfg_path), scope=scope0)
+        Hiera(str(cfg_path), scope=scope0, revalidate=revalidate)
 
     inner = 1 if quick else 3
     iterations["construct"] = inner
     metrics["construct"] = (False, inner, construct_call)
 
-    h = Hiera(str(cfg_path), scope=scope0)
+    h = Hiera(str(cfg_path), scope=scope0, revalidate=revalidate)
 
     def first_call(_i):
         h.lookup("common::key5")
@@ -253,7 +253,7 @@ _METRIC_ORDER = (
 )
 
 
-def run(*, quick: bool) -> dict:
+def run(*, quick: bool, revalidate: bool = True) -> dict:
     """Build the tree, run every metric, and return the result dict (the
     same shape ``--save`` writes to JSON, without the file-only bookkeeping
     fields)."""
@@ -261,7 +261,7 @@ def run(*, quick: bool) -> dict:
         root = Path(tmp)
         tree = build_tree(root, quick=quick)
         cfg_path = root / "hiera.yaml"
-        repeat, iterations, metric_fns = _build_metrics(cfg_path, quick)
+        repeat, iterations, metric_fns = _build_metrics(cfg_path, quick, revalidate)
 
         results = {}
         for name in _METRIC_ORDER:
@@ -293,6 +293,7 @@ def run(*, quick: bool) -> dict:
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "iterations": iterations,
         "tree": tree,
+        "revalidate": revalidate,
         "metrics": results,
     }
 
@@ -330,9 +331,16 @@ def main(argv=None) -> int:
         default=None,
         help="where --save writes (default: benchmarks/results)",
     )
+    ap.add_argument(
+        "--revalidate",
+        choices=("on", "off"),
+        default="on",
+        help="Hiera(..., revalidate=...) for every instance this run builds (default: on)",
+    )
     args = ap.parse_args(argv)
 
-    result = run(quick=args.quick)
+    revalidate = args.revalidate == "on"
+    result = run(quick=args.quick, revalidate=revalidate)
     default_name = "hyera-{}-py{}{}".format(
         hyera.__version__, sys.version_info.major, sys.version_info.minor
     )

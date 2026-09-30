@@ -12,6 +12,8 @@ Original code: no upstream header, no ``NOTICE`` line.
 """
 
 import collections
+import os
+import stat as _stat
 import typing as _ty
 
 from ._navigation import _MISSING, sub_lookup
@@ -217,8 +219,7 @@ class _LRU:
     """A plain least-recently-used cache, ``maxsize``-bounded the same way
     as :class:`_ScopeKeyedCache` (``None`` never evicts, ``0`` disables),
     for a cache with no scope-stability question to answer -- a glob
-    listing is memoized by pattern alone (a later phase of the same plan),
-    never by scope.
+    listing is memoized by ``(root, pattern)`` alone, never by scope.
     """
 
     def __init__(self, lock, maxsize):
@@ -250,3 +251,51 @@ class _LRU:
     def __len__(self):
         with self._lock:
             return len(self._entries)
+
+
+class _Probe(_ty.NamedTuple):
+    """One ``os.stat`` result, classified: ``kind`` is ``"file"``, ``"dir"``
+    or ``"absent"``; ``sig`` is :func:`_signature` for ``"file"``/``"dir"``,
+    ``None`` for ``"absent"``."""
+
+    kind: str
+    sig: "_ty.Optional[tuple]"
+
+
+def _signature(st) -> tuple:
+    """Puppet's ``cached_file_data`` validity triple (``context.rb:22``):
+    ``(st_ino, st_mtime_ns, st_size)``, always from a real ``os.stat`` --
+    never ``DirEntry.stat()``, whose ``st_ino`` is ``0`` on Windows."""
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
+
+
+def _probe(path) -> _Probe:
+    """One ``os.stat(path)``, classified as ``("absent", None)`` for
+    anything ``os.path.exists`` would also call missing: a vanished path
+    (``FileNotFoundError``, ``NotADirectoryError``), or one ``os.stat``
+    cannot even ask about (``OSError`` for a malformed name -- Windows
+    raises this, not ``FileNotFoundError``, for a scope-interpolated
+    candidate holding a character reserved in a Windows path, e.g. a
+    literal ``"``; ``ValueError`` for an embedded NUL byte). Matching
+    ``os.path.exists``'s own leniency here matters: a mapped_paths/glob
+    candidate is built from arbitrary interpolated scope data, and a
+    genuinely unrepresentable candidate must read as "does not exist", not
+    blow up the lookup that happens to generate it.
+    """
+    try:
+        st = os.stat(path)
+    except (OSError, ValueError):
+        return _Probe("absent", None)
+    if _stat.S_ISDIR(st.st_mode):
+        return _Probe("dir", _signature(st))
+    return _Probe("file", _signature(st))
+
+
+class _FileEntry(_ty.NamedTuple):
+    """One cached, parsed data file: ``signature`` is :func:`_signature` of
+    the ``os.stat`` taken just before the read (``revalidate=True``), or
+    ``None`` (``revalidate=False``: never re-checked once read); ``data`` is
+    the parsed result."""
+
+    signature: "_ty.Optional[tuple]"
+    data: object

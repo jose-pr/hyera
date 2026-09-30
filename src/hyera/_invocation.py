@@ -8,7 +8,7 @@ callable, and the recursion-detection name stack.
 import contextlib
 import contextvars
 
-from ._cache import _ScopeRef, _freeze
+from ._cache import _ScopeRef, _freeze, _probe
 from .exceptions import InterpolationError
 
 #: The call-time ``strict`` default for a data file's non-hash rule
@@ -50,6 +50,7 @@ class Invocation:
         lenient=False,
         scope_interpolations=None,
         _name_stack=None,
+        _fs_memo=None,
     ):
         self.scope = scope
         self._lookup = lookup
@@ -69,6 +70,25 @@ class Invocation:
         #: entry (``core.Hiera._location_entry_for``/``_lookup_options_map``)
         #: passes its own fresh list here and reads it back afterwards.
         self.scope_interpolations = scope_interpolations
+        #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with
+        #: every ``Invocation`` :meth:`derive`d from this one and with every
+        #: other ``Invocation`` the same top-level lookup builds (the
+        #: ``lookup_options`` gather, a hierarchy build's own interpolation
+        #: invocations): one top-level lookup sees one filesystem snapshot
+        #: and probes each path at most once. A fresh ``{}`` when not given
+        #: (a bare ``Invocation()`` with no sharing intent -- ``sources()``,
+        #: the constructor's own pre-warm).
+        self._fs_memo = {} if _fs_memo is None else _fs_memo
+
+    def _memo_probe(self, path):
+        """The memoized :class:`~hyera._cache._Probe` for ``path``, probing
+        (one real ``os.stat``) only the first time this lookup asks about
+        it."""
+        probe = self._fs_memo.get(path)
+        if probe is None:
+            probe = _probe(path)
+            self._fs_memo[path] = probe
+        return probe
 
     def lookup(self, key):
         """Resolve ``key`` through the host's sub-lookup callable.
@@ -104,6 +124,7 @@ class Invocation:
             lenient=self.lenient,
             scope_interpolations=self.scope_interpolations,
             _name_stack=self._name_stack,
+            _fs_memo=self._fs_memo,
         )
 
     def remember_scope_lookup(self, key, root_key, segments, value, *, undefined):

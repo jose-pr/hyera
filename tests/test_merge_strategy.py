@@ -427,8 +427,8 @@ def test_merged_lookup_leaves_cache_untouched(make_tree):
     assert third == second
     assert "mutated" not in third["items"]
 
-    for data in h._file_cache.values():
-        conf = data.get("conf")
+    for entry in h._file_cache.values():
+        conf = entry.data.get("conf")
         if conf:
             assert "mutated" not in conf.get("items", [])
 

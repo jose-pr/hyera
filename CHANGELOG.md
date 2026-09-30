@@ -69,6 +69,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Hiera(..., cache_size=256)` bounds each scope-keyed cache (least recently
   used entries are dropped; `None` for no bound, `0` to disable), and
   `Hiera.clear_cache()` drops every cache, including parsed data files.
+- `Hiera(..., revalidate=True)`: each lookup re-checks the data files it
+  uses and re-reads one whose inode, modification time or size changed, as
+  Puppet does between compilations; files added or removed at
+  `path`/`paths`/`mapped_paths` locations and under globbed directories are
+  seen by the next lookup. `revalidate=False` keeps every file and glob
+  listing as first read until `clear_cache()`.
 
 ### Changed
 

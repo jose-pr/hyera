@@ -14,7 +14,7 @@ private engine internals with no stability contract.
 
 - **`Hiera(base_config, backends=None, base_path=None, *, scope=None,
   environmentpath=None, basemodulepath=(), modulepath=None,
-  cache_size=256)`**
+  cache_size=256, revalidate=True)`**
   — the main entry point. `base_config`: a file path, a file-like object, a
   pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
   `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
@@ -41,6 +41,14 @@ private engine internals with no stability contract.
   `None`, else `TypeError("cache_size must be an int or None, not
   <type>")`; a negative value raises `ValueError("cache_size must be >=
   0")`. Every layer built inside one `Hiera(...)` call shares this bound.
+  `revalidate`: whether every lookup re-checks the data files and glob
+  listings it uses (Puppet's own re-read-between-compilations, for a
+  library with no compilation of its own) — a changed file is re-read, a
+  vanished one reads as missing, a directory added to or removed from a
+  glob-matched directory is seen by the next lookup; `False` keeps every
+  file and listing as first read until `clear_cache()`. Must be a `bool`,
+  else `TypeError("revalidate must be a bool, not <type>")`. Every layer
+  built inside one `Hiera(...)` call shares it too.
   `self.scope` is set before the config loads, so a hierarchy path template
   referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
   it from the first, context-free pre-warm onward. A missing or `null`/`false`
@@ -260,11 +268,11 @@ private engine internals with no stability contract.
     applies classes to a catalog, which hyera has no notion of) — none of
     the four are implemented as methods; use `.lookup()` directly.
   - **`.clear_cache() -> None`** — drops every cached location,
-    `lookup_options` mapping and parsed data file; the next lookup re-reads
-    whatever it needs from disk. Safe to call while other threads are
-    looking things up on this instance or a `.scoped(...)` view of it (they
-    share every cache). There are no public cache attributes to inspect or
-    clear individually.
+    `lookup_options` mapping, glob listing and parsed data file; the next
+    lookup re-reads whatever it needs from disk. Safe to call while other
+    threads are looking things up on this instance or a `.scoped(...)` view
+    of it (they share every cache). There are no public cache attributes to
+    inspect or clear individually.
   - Gotcha: parsed data files are cached per `(path, strict)` for the
     instance's life — a YAML file's own non-hash validation is
     `strict`-sensitive, so the same file can be cached independently under
@@ -283,12 +291,19 @@ private engine internals with no stability contract.
     (`%{lookup(...)}` inside a `merge:` spec, say) — a sub-lookup can reach
     data the location set alone does not account for. Each of the two
     scope-keyed caches is bounded by `cache_size` (least-recently-used
-    entries dropped); none of this notices an on-disk change after first
-    load for a given set of referenced values, or on-disk changes at all
-    once `clear_cache()` has not been called. A `.scoped(...)` view shares
-    every cache with the instance it was derived from (and with every other
-    view of the same instance), by design (see `.scoped` above) — never
-    copy them expecting isolation.
+    entries dropped). With `revalidate=True` (the default) every lookup
+    still re-checks: each candidate location is re-probed once, a data file
+    whose inode, modification time or size changed is re-read, a location
+    that starts or stops existing is seen, and a glob level is re-listed
+    only when a directory it walked has itself changed — one probe per
+    candidate and one re-list per changed directory, never a full re-walk
+    of every glob on every lookup. With `revalidate=False`, files and
+    listings stay exactly as first read for a given set of referenced
+    values until `clear_cache()` — no on-disk change is seen at all.
+    Neither mode re-reads `hiera.yaml` itself; construct a new `Hiera` for
+    that. A `.scoped(...)` view shares every cache with the instance it was
+    derived from (and with every other view of the same instance), by
+    design (see `.scoped` above) — never copy them expecting isolation.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
     what it read at construction). `Hiera` (a `.scoped(...)` view included)

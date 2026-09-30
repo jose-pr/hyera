@@ -464,6 +464,10 @@ with one deliberate exception:
   every environment name resolves with no environment layer and no error --
   a library with no layers configured keeps working exactly as before this
   feature existed.
+- **A changed `hiera.yaml` is not re-read by an existing `Hiera`.** Puppet
+  re-reads it between compilations; construct a new `Hiera` to pick up a
+  changed base config. Data files and glob listings *are* re-checked, by
+  default — see `revalidate` below.
 
 ## Notes
 

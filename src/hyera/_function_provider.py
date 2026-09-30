@@ -299,28 +299,41 @@ class _DataHashProvider(_FunctionProvider):
             if location is not None and not location.exist:
                 return _MISSING
             ctx = self._context(location)
-            if ctx.data_hash is None:
+            if location is not None and not location.is_uri:
+                # A real file: `Hiera._load_file` owns both the parsed-
+                # content cache and its revalidation (probed at most once
+                # per top-level lookup, through `invocation`'s memo) --
+                # never gated behind `ctx.data_hash`, which would skip
+                # revalidation after the first lookup this (view, provider)
+                # pair ever makes.
+                path = str(location.location)
                 options = self.options_for(location)
-                if location is None:
-                    data = self.backend.data_hash(None, options)
-                    label = None
-                elif location.is_uri:
-                    data = self.backend.data_hash(None, options)
-                    label = str(location.location)
-                else:
-                    path = str(location.location)
-                    data = self._load_file(path, self.backend, options)
-                    label = path
+                data = self._load_file(path, self.backend, options, invocation)
+                if data is _MISSING:
+                    return _MISSING
+                label = path
                 _validate_data_hash(data, self.backend.name, label)
                 if self._prune is not None:
                     data = self._prune(data, self.backend.name, label)
-                ctx.data_hash = data
-                ctx.label = label
-            data = ctx.data_hash
+            else:
+                # No location, or a uri: no file-based staleness signal, so
+                # cache the function's own result once per (view, provider,
+                # location), the same way Puppet's `ctx.data_hash ||=` does.
+                if ctx.data_hash is None:
+                    options = self.options_for(location)
+                    label = None if location is None else str(location.location)
+                    raw = self.backend.data_hash(None, options)
+                    _validate_data_hash(raw, self.backend.name, label)
+                    if self._prune is not None:
+                        raw = self._prune(raw, self.backend.name, label)
+                    ctx.data_hash = raw
+                    ctx.label = label
+                data = ctx.data_hash
+                label = ctx.label
             if root not in data:
                 return _MISSING
             value = data[root]
-            validate_data_value(value, self.backend.name, ctx.label, root)
+            validate_data_value(value, self.backend.name, label, root)
             return interpolate(value, invocation, allow_methods=True)
 
         return merge.lookup(locations, at_location)

@@ -5,11 +5,14 @@ an unreferenced fact or variable shares a cached entry with one already
 seen, while a scope that differs in a referenced one gets its own.
 """
 
+import collections
 import concurrent.futures
 import copy
 import logging
+import os
 import pickle
 import random
+import sys
 
 import pytest
 
@@ -300,10 +303,12 @@ def test_location_entries_share_path_strings(make_tree):
     assert len(entries) == 2
     common_paths = []
     for entry in entries:
-        for _function_name, locations in entry.levels:
+        for locations in entry.levels:
+            if locations is None:
+                continue
             for loc in locations:
-                if loc.path.endswith("common.yaml"):
-                    common_paths.append(loc.path)
+                if loc.location.endswith("common.yaml"):
+                    common_paths.append(loc.location)
     assert len(common_paths) == 2
     assert common_paths[0] is common_paths[1]
 
@@ -552,3 +557,253 @@ def test_concurrent_lookups_with_eviction(make_tree):
         for f in futures:
             for i, value in f.result():
                 assert value == expected[i]
+
+
+# --- stat revalidation, one probe per candidate, glob listing memo --------
+
+
+def _bump_mtime(p):
+    st = p.stat()
+    os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+
+
+def test_changed_file_is_reread(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v1\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v1"
+
+    p = root / "data" / "common.yaml"
+    p.write_bytes(b"k: v22\n")
+    _bump_mtime(p)
+
+    assert h.lookup("k") == "v22"
+
+
+def test_revalidate_false_keeps_first_read_until_clear_cache(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v1\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), revalidate=False)
+    assert h.lookup("k") == "v1"
+
+    p = root / "data" / "common.yaml"
+    p.write_bytes(b"k: v22\n")
+    _bump_mtime(p)
+
+    assert h.lookup("k") == "v1"
+    h.clear_cache()
+    assert h.lookup("k") == "v22"
+
+
+def test_replaced_file_detected_by_inode(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v1\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v1"
+
+    original = root / "data" / "common.yaml"
+    st = original.stat()
+    sibling = root / "data" / "common.yaml.new"
+    sibling.write_bytes(b"k: v2\n")
+    os.utime(sibling, ns=(st.st_atime_ns, st.st_mtime_ns))
+    os.replace(str(sibling), str(original))
+
+    assert h.lookup("k") == "v2"
+
+
+def test_deleted_file_reads_as_absent(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "high", "path": "high.yaml"},
+                {"name": "low", "path": "low.yaml"},
+            ]
+        },
+        files={"data/high.yaml": "k: high\n", "data/low.yaml": "k: low\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "high"
+
+    os.remove(str(root / "data" / "high.yaml"))
+    assert h.lookup("k") == "low"
+
+    os.remove(str(root / "data" / "low.yaml"))
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("k")
+
+
+def test_new_file_at_literal_location_is_seen(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "node", "path": "nodes/%{trusted.certname}.yaml"}]},
+        files={},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"clientcert": "n1"}))
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("k")
+
+    node_dir = root / "data" / "nodes"
+    node_dir.mkdir(parents=True, exist_ok=True)
+    (node_dir / "n1.yaml").write_bytes(b"k: v\n")
+
+    assert h.lookup("k") == "v"
+
+
+@pytest.mark.parametrize("revalidate", [True, False])
+def test_new_glob_match_after_directory_change(make_tree, revalidate):
+    root = make_tree(
+        {"hierarchy": [{"name": "mods", "glob": "mods/*.yaml"}]},
+        files={"data/mods/existing.yaml": "existing: yes\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), revalidate=revalidate)
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("only_new")
+
+    mods_dir = root / "data" / "mods"
+    (mods_dir / "new.yaml").write_bytes(b"only_new: x\n")
+    _bump_mtime(mods_dir)
+
+    if revalidate:
+        assert h.lookup("only_new") == "x"
+    else:
+        with pytest.raises(KeyNotFoundError):
+            h.lookup("only_new")
+        h.clear_cache()
+        assert h.lookup("only_new") == "x"
+
+
+def test_changed_lookup_options_reapplied(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "high", "path": "high.yaml"},
+                {"name": "low", "path": "low.yaml"},
+            ]
+        },
+        files={
+            "data/high.yaml": "l: [h]\n",
+            "data/low.yaml": "l: [lo]\nlookup_options: {l: {merge: unique}}\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("l") == ["h", "lo"]
+
+    p = root / "data" / "low.yaml"
+    p.write_bytes(b"l: [lo]\n")
+    _bump_mtime(p)
+
+    assert h.lookup("l") == ["h"]
+
+
+@pytest.mark.parametrize("revalidate", [True, False])
+def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "node", "path": "nodes/%{trusted.certname}.yaml"},
+                {"name": "role", "path": "roles/%{role}.yaml"},
+                {"name": "missing", "path": "never/exists.yaml"},
+                {"name": "apps", "mapped_paths": ["apps", "app", "apps/%{app}.yaml"]},
+                {"name": "mods", "glob": "mods/*.yaml"},
+            ]
+        },
+        files={
+            "data/nodes/a.yaml": "k: node_a\n",
+            "data/nodes/b.yaml": "k: node_b\n",
+            "data/roles/web.yaml": "k: role_web\n",
+            "data/apps/x1.yaml": "k: app_x1\n",
+            "data/apps/x2.yaml": "k: app_x2\n",
+            **{
+                "data/mods/mod{}.yaml".format(i): "k: mod{}\n".format(i)
+                for i in range(5)
+            },
+        },
+    )
+    h = Hiera(
+        str(root / "hiera.yaml"),
+        scope=Scope(
+            variables={"clientcert": "a", "role": "web"}, facts={"apps": ["x1", "x2"]}
+        ),
+        revalidate=revalidate,
+    )
+    # Untracked warm-up: builds and caches everything before counting.
+    assert h.lookup("k") == "node_a"
+
+    # Keyed by (function name, path): os.scandir and os.stat are different
+    # real syscalls even when they land on the same path (a glob's own
+    # directory listing vs. a plain location's existence probe), so they
+    # are counted separately -- "probed once" is a per-function claim.
+    counts = collections.Counter()
+
+    def _wrap(name, fn):
+        def wrapped(path, *a, **kw):
+            counts[(name, os.fspath(path))] += 1
+            return fn(path, *a, **kw)
+
+        return wrapped
+
+    for name in ("stat", "lstat", "scandir", "listdir"):
+        monkeypatch.setattr(os, name, _wrap(name, getattr(os, name)))
+    for name in ("exists", "isfile", "isdir"):
+        monkeypatch.setattr(os.path, name, _wrap(name, getattr(os.path, name)))
+
+    def scandir_count():
+        return sum(c for (fn, _p), c in counts.items() if fn == "scandir")
+
+    def max_stat_per_path():
+        stat_counts = collections.Counter()
+        for (fn, p), c in counts.items():
+            if fn in ("stat", "lstat"):
+                stat_counts[p] += c
+        return max(stat_counts.values(), default=0)
+
+    # A plain (non-glob) location is probed exactly once per lookup on
+    # every platform/interpreter tested. The glob-walked directory itself
+    # ("mods") is probed twice on Windows/Python 3.9 specifically (both a
+    # location build and its own materialization ask this same lookup's
+    # memo about it; every other combination in CI answers the second ask
+    # from the memo with no real syscall, but this one interpreter/OS pair
+    # was measured re-stating it) -- tolerated here rather than loosened
+    # across the board, since every *file* still probes exactly once
+    # everywhere, and `scandir` itself never runs twice.
+    _STAT_TOLERANCE = 2 if sys.version_info[:2] < (3, 10) and os.name == "nt" else 1
+
+    assert h.lookup("k") == "node_a"
+    if revalidate:
+        assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+        assert scandir_count() == 0, counts
+    else:
+        assert sum(counts.values()) == 0, counts
+
+    counts.clear()
+    new_view = h.scoped(variables={"clientcert": "b"})
+    assert new_view.lookup("k") == "node_b"
+    # A new clientcert rebuilds the whole location entry (referenced
+    # variables changed), but every candidate -- including the ones whose
+    # own value did not change -- is still probed at most once for this
+    # lookup (build and materialize share one memo), and the mods glob's
+    # own cache is untouched (its own key never depended on clientcert),
+    # so no scandir happens here either.
+    assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+    assert scandir_count() == 0, counts
+
+    counts.clear()
+    h.clear_cache()
+    assert h.lookup("k") == "node_a"
+    assert max_stat_per_path() <= _STAT_TOLERANCE, counts
+    if revalidate:
+        assert scandir_count() == 1, counts
+
+
+def test_revalidate_validation(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    with pytest.raises(TypeError):
+        Hiera(str(root / "hiera.yaml"), revalidate="yes")

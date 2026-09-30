@@ -9,10 +9,11 @@ import json
 import logging
 import os
 import threading
-from typing import Any, NamedTuple
+import typing as _ty
+from typing import Any
 
 from . import _data_functions
-from ._cache import _ScopeKeyedCache
+from ._cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from ._data_provider import (
     _EnvironmentState,
     _IgnoredConfig,
@@ -35,7 +36,8 @@ from ._hiera_config import (
 from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
 from ._interpolation import interpolate
 from ._invocation import _STRICT, Invocation
-from ._location_resolver import resolve_locations
+from ._location_resolver import glob as _dir_glob
+from ._location_resolver import resolve_glob_specs, resolve_locations
 from ._lookup_adapter import (
     LOOKUP_OPTIONS,
     compile_patterns,
@@ -81,19 +83,70 @@ def _no_option_lookup(key, invocation):
     raise RuntimeError("hierarchy options never perform a sub-lookup")
 
 
-class _LocationEntry(NamedTuple):
-    """One layer's fully resolved hierarchy, cached in ``Hiera.
-    _location_cache``: ``key`` is this entry's own
+class _Location(_ty.NamedTuple):
+    """One resolved, non-glob hierarchy location: Puppet's
+    ``ResolvedLocation`` (``original``, ``location``, ``is_uri``, ``exist``),
+    with ``location`` always an interned ``str`` for a plain path (never a
+    ``Path``: a consumer that needs one builds it from ``.location``) or the
+    normalized ``uri`` string when ``is_uri``. Field names match
+    :class:`~hyera._location_resolver.ResolvedLocation` exactly, so a
+    :class:`~hyera._function_provider._FunctionProvider` (built from either
+    kind) never has to tell them apart.
+    """
+
+    original: str
+    location: str
+    is_uri: bool
+    exist: bool
+
+
+class _GlobLocation(_ty.NamedTuple):
+    """One ``glob``/``globs`` declared string, resolved and rooted but not
+    yet walked -- stored in a :class:`_LocationEntry` in place of a
+    :class:`_Location`; :meth:`Hiera._materialize` expands it into
+    :class:`_Location` matches at lookup time (:meth:`Hiera._glob_matches`),
+    never during the hierarchy build itself."""
+
+    original: str
+    root: str
+    pattern: str
+
+
+class _LocationEntry:
+    """One cached, resolved hierarchy: ``key`` is this entry's own
     :class:`~hyera._cache._ScopeKeyedCache` key (reused as the
     ``lookup_options`` cache's ``extra``, so a ``lookup_options`` entry is
     invalidated whenever its locations are); ``levels`` is one resolved
-    :class:`~hyera._location_resolver.ResolvedLocation` tuple -- or ``None``
-    for a location-less entry -- per hierarchy level, aligned by index with
-    the ``hierarchy`` list it was built from.
+    locations tuple -- or ``None`` for a location-less entry -- per
+    hierarchy level, aligned by index with the ``hierarchy`` list it was
+    built from, each tuple holding :class:`_Location`/:class:`_GlobLocation`.
+    ``materialized`` caches this entry's own lookup-time expansion (globs
+    walked, ``exist`` refreshed) when ``revalidate=False``, so it is
+    computed at most once per entry for the instance's life; ``None`` until
+    then, and always ``None`` (never read) when ``revalidate=True``, which
+    recomputes it fresh every lookup. A plain mutable class, not a
+    ``NamedTuple``: ``materialized`` is the one field a cached entry updates
+    in place after it was already stored.
     """
 
-    key: tuple
-    levels: tuple
+    __slots__ = ("key", "levels", "materialized")
+
+    def __init__(self, key, levels):
+        self.key = key
+        self.levels = levels
+        self.materialized = None
+
+
+class _GlobEntry(_ty.NamedTuple):
+    """One cached glob listing: ``matches`` is the interned-string tuple of
+    matched files (directories already dropped); ``dirs`` is the
+    ``((directory, (st_ino, st_mtime_ns)), ...)`` pairs the walk actually
+    called ``os.scandir`` on, used to decide whether the listing is still
+    fresh (``Hiera._glob_matches``, ``revalidate=True``) without re-walking
+    unless one of them changed."""
+
+    matches: tuple
+    dirs: tuple
 
 
 def _puppet_type_label(value) -> str:
@@ -182,6 +235,7 @@ class Hiera:
         basemodulepath=(),
         modulepath=None,
         cache_size=256,
+        revalidate=True,
     ):
         self.base_config = base_config
         if scope is None:
@@ -199,6 +253,11 @@ class Hiera:
             if cache_size < 0:
                 raise ValueError("cache_size must be >= 0")
         self.cache_size = cache_size
+        if not isinstance(revalidate, bool):
+            raise TypeError(
+                "revalidate must be a bool, not {}".format(type(revalidate).__name__)
+            )
+        self.revalidate = revalidate
 
         #: Puppet's three layer-discovery settings (``_data_provider.
         #: split_path_setting``): ``environmentpath`` stays ``None`` when
@@ -222,7 +281,7 @@ class Hiera:
         #: (:meth:`_usable`), so the warning fires once per config file.
         self._v3_warned_paths: set = set()
         #: ``(module_name, path) -> pruned data``, apart from the unpruned
-        #: ``self.cache`` a global/environment read of the same file uses.
+        #: ``_file_cache`` a global/environment read of the same file uses.
         self._pruned_cache: dict = {}
 
         self.hierarchy: "list[HieraLevel]" = []
@@ -234,7 +293,11 @@ class Hiera:
         #: disambiguates a level index across layers (the global hierarchy
         #: and an environment's/module's each start their own indexing from
         #: 0), and ``tag`` tells a module's ``default_hierarchy`` apart from
-        #: its main one (same root, a different level list).
+        #: its main one (same root, a different level list). A provider
+        #: already cached here has its own ``.locations`` refreshed in place
+        #: on every call while ``revalidate=True`` (:meth:`_provider_for`),
+        #: rather than rebuilt, so a repeated lookup on the same view still
+        #: sees a changed/added/removed file.
         self._providers: dict = {}
         #: Shared with every view (like ``_file_cache``): the file-content
         #: cache a ``lookup_key``/``data_dig`` provider's ``LookupContext.
@@ -282,24 +345,30 @@ class Hiera:
         #: ``_file_cache``: ``s -> s`` so equal paths from independent
         #: builds share one string object.
         self._paths: dict = {}
-        #: Parsed data files: ``(path, backend.strict, options) -> data``.
-        #: See ``_load_file``. Unbounded, as Puppet's own per-environment
-        #: file cache is (its size follows the data tree, not the number of
-        #: scopes seen) -- only ``clear_cache()`` empties it.
+        #: Parsed data files: ``(path, backend.strict, options) ->
+        #: _FileEntry``. See ``_load_file``. Unbounded, as Puppet's own
+        #: per-environment file cache is (its size follows the data tree,
+        #: not the number of scopes seen) -- only ``clear_cache()`` empties
+        #: it.
         self._file_cache: dict = {}
         #: Every plain path ever loaded successfully into ``_file_cache``,
         #: under any ``strict``/``options`` variant -- what ``_files_for``
         #: consults to tell a loaded location from a missing/unattempted one.
         self._loaded_paths: set = set()
+        #: Glob listings: ``(root, pattern) -> _GlobEntry``, bounded like the
+        #: two scope-keyed caches (a listing depends on directory contents,
+        #: not on scope, so a plain ``_LRU`` is enough). See
+        #: :meth:`_glob_matches`.
+        self._glob_cache = _LRU(self._cache_lock, self.cache_size)
 
     def clear_cache(self) -> None:
-        """Drop every cached location, ``lookup_options`` mapping, parsed
-        data file, per-view function-provider state and pruned module data.
-        The next lookup re-reads whatever it needs from disk. Safe to call
-        while other threads are looking things up on this instance (or a
-        ``.scoped(...)`` view of it, which shares every cache below except
-        ``_providers``, cleared on each view separately): each cache clears
-        itself under the shared lock.
+        """Drop every cached location, ``lookup_options`` mapping, glob
+        listing, parsed data file, per-view function-provider state and
+        pruned module data. The next lookup re-reads whatever it needs from
+        disk. Safe to call while other threads are looking things up on this
+        instance (or a ``.scoped(...)`` view of it, which shares every cache
+        below except ``_providers``, cleared on each view separately): each
+        cache clears itself under the shared lock.
 
         Layer/module *discovery* (``_environments``, and which ``hiera.yaml``
         each one found) is untouched -- re-reading a changed ``hiera.yaml``
@@ -308,6 +377,7 @@ class Hiera:
         """
         self._location_cache.clear()
         self._lookup_options_cache.clear()
+        self._glob_cache.clear()
         with self._cache_lock:
             self._file_cache.clear()
             self._loaded_paths.clear()
@@ -331,6 +401,7 @@ class Hiera:
             "_lookup_options_pending",
             "_paths",
             "_file_cache",
+            "_glob_cache",
         ):
             del state[name]
         return state
@@ -415,26 +486,23 @@ class Hiera:
         hierarchy file up front, same as a lookup would need to.
 
         Mirrors the source-resolution side effects of a ``get(None)`` call
-        without going through the public API's key-type check. Location
-        resolution no longer reads any file itself (:meth:`_load_file` is
-        lazy), so :meth:`_lookup_options_map` -- a hash-merge that visits
-        every main-hierarchy location regardless of whether it actually
-        defines ``lookup_options`` -- is what still makes a malformed data
-        file fail construction itself, not just a later lookup.
+        without going through the public API's key-type check. Uses a
+        one-off probe per location (no shared :attr:`~hyera._invocation.
+        Invocation._fs_memo`, since there is no top-level lookup to share
+        one with): every existing ``data_hash`` file the main hierarchy
+        visits is still read via :meth:`_load_file` (:meth:`_files_for`),
+        which is what makes a malformed data file fail construction itself,
+        not just the first lookup.
 
-        A malformed dotted reference, a navigation type mismatch reachable
-        while resolving a hierarchy path (``%{...}`` in a
-        ``path``/``paths``/``glob``/``mapped_paths`` template), or a
-        ``lookup_options``-specific problem (a non-hash value, an invalid
-        regex pattern, a bad merge/``convert_to`` entry -- all
-        :class:`~hyera.HieraLookupError`, never :class:`~hyera.BackendError`)
-        is swallowed here and logged at debug level, not raised out of the
-        constructor: Puppet raises these at lookup time, never at
-        construction, and a constructor should fail only for configuration
-        errors or a data file that cannot itself be read or parsed.
-        Swallowing a location-resolution error here also means the walk it
-        aborted was never cached, so the first real lookup retries it in
-        full and raises the same error again, now at the right time.
+        A malformed dotted reference or a navigation type mismatch
+        reachable while resolving a hierarchy path (``%{...}`` in a
+        ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
+        here and logged at debug level, not raised out of the constructor:
+        Puppet raises these at lookup time, never at construction, and a
+        constructor should fail only for configuration errors. Swallowing it
+        here also means the walk this aborts was never cached, so the first
+        real lookup retries it in full and raises the same error again, now
+        at the right time.
 
         Runs under ``self.scope.strict`` (the ``_STRICT`` ContextVar, same as
         ``lookup``/``dig``/``get``): a genuinely non-hash data file under
@@ -451,9 +519,32 @@ class Hiera:
         finally:
             _STRICT.reset(strict_token)
 
-    def _load_file(self, path, backend, options):
+    def _intern(self, p) -> str:
+        """The canonical interned ``str`` for a path-like ``p``: equal paths
+        from independent hierarchy builds (and independent glob matches)
+        share one string object, which is what makes a :class:`_Location`
+        cheap to hold in every cache entry that resolves to it."""
+        s = os.fspath(p)
+        return self._paths.setdefault(s, s)
+
+    def _load_file(self, path, backend, options, invocation=None):
         """Load ``path`` via ``backend.data_hash(path, options)``, returning
-        the parsed, cached data.
+        the parsed, cached data, or :data:`~hyera._navigation._MISSING` when
+        ``revalidate=True`` and ``path`` has vanished since it was last
+        cached (a materialized location whose ``exist`` was true earlier in
+        this same lookup, per its own memoized probe, but no longer is --
+        caught here rather than treated as a read error, the same way an
+        always-absent location is).
+
+        With ``revalidate=True`` (the default), one probe -- through
+        ``invocation``'s memo when given, a fresh one-off otherwise -- either
+        confirms a cached parse is still current (its signature unchanged)
+        or triggers a re-read, logged at debug level; ``invocation=None``
+        (``sources()``, the constructor's own pre-warm) still revalidates,
+        just without sharing the probe with anything else. With
+        ``revalidate=False``, a cached entry is returned untouched, and a
+        first read is cached with no signature at all, so it is never
+        reconsidered short of :meth:`clear_cache`.
 
         A read failure (``OSError``, e.g. the file vanished between the
         directory walk and here) becomes ``Unable to read (<path>): ...``; a
@@ -462,7 +553,12 @@ class Hiera:
         (<path>): ...``; any other non-:class:`HieraError` exception is
         wrapped the same way, naming its type. An already-pathed
         ``BackendError`` (or any other :class:`HieraError`) propagates
-        unchanged.
+        unchanged. There is no directory check here any more: a location
+        that is a directory is caught once, when it is resolved/materialized
+        (:meth:`_location_entry_for`/:meth:`_materialize`/
+        :meth:`_require_not_dir`), never reaching this method at all --
+        repeating the check here would just be a second probe of the same
+        path for the same answer.
 
         Puppet's own Hash check on the result
         (``data_hash_function_provider.rb:70-76``) runs here too, so every
@@ -472,35 +568,49 @@ class Hiera:
         ``path``: a data file's own non-hash rule (``YAMLBackend.
         _as_data_hash``'s ``strict``-sensitive raise-or-warn) must run again
         for a call whose effective ``strict`` differs from a previous one,
-        never reuse a result computed under a different strictness; ``options``
-        joins the key too, so a cache hit never skips a file function's own
-        options check (``Backend._require_path_only``) -- ``options`` is
-        Puppet ``Data``, so it always serializes. ``self._loaded_paths``
-        separately tracks which plain paths were ever read successfully, for
-        :meth:`_files_for`'s "was this location loaded" check, independent
-        of which ``strict``/``options`` variant did the loading. This is the
-        only place a location is actually read: a hierarchy build only
-        resolves and records locations now, so every location -- even one
-        visited many times across many lookups -- is parsed here at most
-        once per ``(strict, options)`` variant for the instance's life
-        (until :meth:`clear_cache`).
+        never reuse a result computed under a different strictness;
+        ``options`` joins the key too, so a cache hit never skips a file
+        function's own options check (``Backend._require_path_only``) --
+        ``options`` is Puppet ``Data``, so it always serializes.
+        ``self._loaded_paths`` separately tracks which plain paths were ever
+        read successfully, for :meth:`_files_for`'s "was this location
+        loaded" check, independent of which ``strict``/``options`` variant
+        did the loading. This is the only place a location is actually
+        read: a hierarchy build only resolves and records locations now, so
+        every location -- even one visited many times across many lookups --
+        is parsed here at most once per probe-confirmed version.
         """
         options_key = json.dumps(options, sort_keys=True)
         cache_key = (path, backend.strict, options_key)
+        probe = None
         with self._cache_lock:
-            cached = self._file_cache.get(cache_key, _MISSING)
-        if cached is not _MISSING:
-            return cached
+            entry = self._file_cache.get(cache_key)
 
-        if os.path.isdir(path):
-            # An explicit check, identical on every OS: a bare open() of a
-            # directory raises PermissionError on Windows and
-            # IsADirectoryError on POSIX, and Puppet's own message here is
-            # "Is a directory" regardless (data_hash_function_provider.rb's
-            # `read` -> `cached_file_data` -> Ruby's `io_fread`).
-            raise BackendError(
-                "Unable to read ({}): Is a directory".format(path), path=str(path)
+        if self.revalidate:
+            probe = (
+                invocation._memo_probe(path) if invocation is not None else _probe(path)
             )
+            if probe.kind == "absent":
+                if entry is not None:
+                    # A path that was cached (successfully read before) and
+                    # has since vanished reads as absent, as Puppet's next
+                    # compilation would see it -- never an error for that
+                    # alone.
+                    with self._cache_lock:
+                        self._file_cache.pop(cache_key, None)
+                        self._loaded_paths.discard(path)
+                    return _MISSING
+                # Never cached, and materialization still says this is a
+                # location to read (a glob match's own `exist` is not a
+                # fresh probe result -- a dangling symlink matches by name
+                # like any other file): attempt the read and let it fail
+                # naturally, exactly as it would have with no revalidation
+                # at all.
+            elif entry is not None and entry.signature == probe.sig:
+                return entry.data
+        elif entry is not None:
+            return entry.data
+
         try:
             data = backend.data_hash(path, dict(options))
         except BackendError as e:
@@ -522,8 +632,10 @@ class Hiera:
             ) from e
 
         _validate_data_hash(data, backend.name, path)
+        if entry is not None:
+            _LOGGER.debug("File at '%s' was changed, reloading", path)
         with self._cache_lock:
-            self._file_cache[cache_key] = data
+            self._file_cache[cache_key] = _FileEntry(probe.sig if probe else None, data)
             self._loaded_paths.add(path)
         return data
 
@@ -617,12 +729,14 @@ class Hiera:
             _LOGGER.warning("hiera.yaml version 3 found at %s was ignored", warn_text)
         return None
 
-    def _location_entry_for(self, hierarchy, base_path, scope, tag) -> _LocationEntry:
-        """The cached, fully resolved :class:`_LocationEntry` for one
-        layer's ``hierarchy`` -- valid for every scope that reads the same
-        values from the variables the hierarchy's own interpolation reads
-        (Puppet's ``scope_interpolations_stable?``), not just the exact
-        scope it was built for.
+    def _location_entry_for(
+        self, hierarchy, base_path, scope, tag, invocation=None
+    ) -> _LocationEntry:
+        """The cached :class:`_LocationEntry` for one layer's ``hierarchy``
+        -- valid for every scope that reads the same values from the
+        variables the hierarchy's own interpolation reads (Puppet's
+        ``scope_interpolations_stable?``), not just the exact scope it was
+        built for.
 
         Shared by every view derived from this instance (unlike
         ``self._providers``, see :meth:`_view`): ``base_path`` -- the owning
@@ -630,12 +744,24 @@ class Hiera:
         other's the same way :meth:`_provider_for`'s own cache key already
         does, so two providers never collide even under the same ``tag``.
 
-        This only resolves locations; it never reads a file's *content*
-        (:meth:`_load_file` is what a ``data_hash`` provider calls, lazily,
-        the first time a location's data is actually needed, and
-        :meth:`_files_for` is what eagerly loads every existing ``data_hash``
-        location for ``sources()``/the constructor's own pre-warm) -- so
-        building an entry is independent of the current ``strict`` mode. A
+        This only resolves locations, and probes each non-glob, non-uri one
+        (through ``invocation``'s filesystem memo when given, else a
+        one-off probe) to tell a directory -- which raises
+        :class:`~hyera.BackendError` right here, the same way a later lookup
+        that finds one would -- from an existing or absent plain location;
+        it never reads a file's *content* (:meth:`_load_file` is what a
+        ``data_hash`` provider calls, lazily, the first time a location's
+        data is actually needed). Building an entry is therefore
+        ``strict``-independent: two scopes reading the same variables share
+        one entry regardless of ``strict``, and a data file's own
+        strict-sensitive non-hash rule always sees whichever ``strict`` the
+        lookup that actually reads it is running under.
+
+        A ``glob``/``globs`` level's declared strings are only interpolated
+        and rooted here (:class:`_GlobLocation`); the actual match listing
+        is deferred to :meth:`_materialize`, once per lookup, so a file
+        added to (or removed from) a glob-matched directory is seen by a
+        later lookup even when this entry itself is reused unchanged. A
         hierarchy entry with no location key at all resolves to ``None``
         (:func:`~hyera._location_resolver.resolve_locations`), distinct from
         one that resolves to zero candidates.
@@ -645,22 +771,186 @@ class Hiera:
         if cached is not _MISSING:
             return cached
 
+        fs_memo = invocation._fs_memo if invocation is not None else None
         refs = []
         levels = []
         for level in hierarchy:
-            resolved = resolve_locations(level, base_path, scope, refs)
-            levels.append(None if resolved is None else tuple(resolved))
+            if level.location_key in ("glob", "globs"):
+                specs = resolve_glob_specs(level, base_path, scope, refs, fs_memo)
+                locations = tuple(
+                    _GlobLocation(spec.original, spec.root, spec.pattern)
+                    for spec in specs
+                )
+            else:
+                resolved = resolve_locations(level, base_path, scope, refs, fs_memo)
+                if resolved is None:
+                    locations = None
+                else:
+                    built = []
+                    for loc in resolved:
+                        if loc.is_uri:
+                            built.append(
+                                _Location(loc.original, loc.location, True, True)
+                            )
+                        else:
+                            path = self._intern(loc.location)
+                            built.append(
+                                _Location(
+                                    loc.original,
+                                    path,
+                                    False,
+                                    self._require_not_dir(path, invocation),
+                                )
+                            )
+                    locations = tuple(built)
+            levels.append(locations)
         key = self._location_cache.key_for(kind, refs)
         entry = _LocationEntry(key, tuple(levels))
         self._location_cache.put(key, entry)
         return entry
 
-    def _provider_for(self, tag, base_path, index, hierarchy, scope, module_name=None):
+    def _require_not_dir(self, path: str, invocation) -> bool:
+        """The memo-aware probe every plain (non-glob, non-uri) location
+        goes through, both at build time and, with ``revalidate=True``,
+        again at every materialization: ``True`` if ``path`` is currently a
+        regular file, ``False`` if absent, :class:`~hyera.BackendError`
+        ("Is a directory") if it is one -- caught here, once, rather than
+        left for :meth:`_load_file` to rediscover with a second, redundant
+        probe.
+        """
+        probe = invocation._memo_probe(path) if invocation is not None else _probe(path)
+        if probe.kind == "dir":
+            raise BackendError(
+                "Unable to read ({}): Is a directory".format(path), path=path
+            )
+        return probe.kind == "file"
+
+    def _materialize(self, entry: _LocationEntry, invocation):
+        """This entry's ``levels``, with every :class:`_GlobLocation`
+        expanded into its current file matches (:meth:`_glob_matches`) and,
+        with ``revalidate=True``, every plain location's ``exist`` refreshed
+        through a fresh probe -- Puppet re-globs and re-checks on every
+        compilation, and a library has no compilation of its own, so one
+        top-level lookup is the unit that gets one filesystem snapshot. A
+        ``uri`` location is never probed at all (Puppet never fetches or
+        stats one; it always "exists").
+
+        With ``revalidate=False`` this is computed only the first time for
+        a given entry and cached on it (``entry.materialized``), exactly as
+        first seen, until :meth:`clear_cache`.
+        """
+        if not self.revalidate and entry.materialized is not None:
+            return entry.materialized
+
+        levels = []
+        for locations in entry.levels:
+            if locations is None:
+                levels.append(None)
+                continue
+            resolved = []
+            for loc in locations:
+                if isinstance(loc, _GlobLocation):
+                    for match in self._glob_matches(loc.root, loc.pattern, invocation):
+                        resolved.append(_Location(loc.original, match, False, True))
+                elif loc.is_uri:
+                    resolved.append(loc)
+                elif self.revalidate:
+                    exist = self._require_not_dir(loc.location, invocation)
+                    resolved.append(_Location(loc.original, loc.location, False, exist))
+                else:
+                    resolved.append(loc)
+            levels.append(tuple(resolved))
+        materialized = tuple(levels)
+        if not self.revalidate:
+            entry.materialized = materialized
+        return materialized
+
+    def _glob_matches(self, root: str, pattern: str, invocation) -> tuple:
+        """The current file matches for one rooted glob pattern, memoized by
+        ``(root, pattern)`` in ``self._glob_cache`` (never by scope: a
+        listing depends on directory contents alone).
+
+        With ``revalidate=True``, a cached listing is reused only while
+        every directory the walk actually scanned still probes to the same
+        ``(st_ino, st_mtime_ns)`` pair it did when listed; otherwise (or on
+        a first call) the walker re-lists, recording exactly the
+        directories it scans this time via ``on_scandir``. A matched
+        directory is dropped the same memo-aware way a plain location's
+        existence is checked, so a match already probed while listing is
+        never probed again by :meth:`_load_file`. With ``revalidate=False``
+        a cached listing is reused unconditionally.
+        """
+        key = (root, pattern)
+        cached = self._glob_cache.get(key)
+        if cached is not _MISSING:
+            if not self.revalidate:
+                return cached.matches
+            fresh = True
+            for d, sig in cached.dirs:
+                probe = (
+                    invocation._memo_probe(d) if invocation is not None else _probe(d)
+                )
+                if probe.kind != "dir" or probe.sig[:2] != sig:
+                    fresh = False
+                    break
+            if fresh:
+                return cached.matches
+
+        dirs = []
+
+        def on_scandir(d):
+            probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
+            if probe.kind == "dir":
+                dirs.append((d, probe.sig[:2]))
+
+        raw = _dir_glob(root, pattern, on_scandir if self.revalidate else None)
+        matches = []
+        for m in raw:
+            # Only a directory is dropped here (``reject(&:directory?)``,
+            # as the eager `_expand_globs` does) -- a dangling symlink match
+            # is kept, exactly like the eager path: `_load_file` is what
+            # raises for it, when something actually tries to read it, not
+            # this listing step.
+            if self.revalidate:
+                probe = (
+                    invocation._memo_probe(m) if invocation is not None else _probe(m)
+                )
+                is_dir = probe.kind == "dir"
+            else:
+                is_dir = os.path.isdir(m)
+            if not is_dir:
+                matches.append(self._intern(m))
+        matches = tuple(matches)
+        self._glob_cache.put(key, _GlobEntry(matches, tuple(dirs)))
+        return matches
+
+    def _resolved_locations_for(
+        self, hierarchy, index, base_path, scope, tag, invocation
+    ):
+        """The current, materialized locations for one hierarchy level
+        (``hierarchy[index]``), or ``None`` for a location-less entry --
+        used by both :meth:`_build_provider` (the first build) and
+        :meth:`_provider_for` (a ``revalidate=True`` refresh of an
+        already-cached provider)."""
+        entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
+        materialized = self._materialize(entry, invocation)
+        resolved = materialized[index]
+        return None if resolved is None else list(resolved)
+
+    def _provider_for(
+        self, tag, base_path, index, hierarchy, scope, invocation, module_name=None
+    ):
         """The :class:`~hyera._function_provider._FunctionProvider` for one
         hierarchy level, bound to ``scope`` -- built once per ``(tag,
         base_path, index)`` on this instance/view and cached in
         ``self._providers`` (never shared with another view; see
-        :meth:`_view`).
+        :meth:`_view`). While ``revalidate=True``, an already-cached
+        provider has its ``.locations`` refreshed in place
+        (:meth:`_resolved_locations_for`) on every call, so a repeated
+        lookup on the same view/scope still sees a changed, added or
+        removed location -- rebuilding the whole provider (re-interpolating
+        its ``options``) would cost more than this plan's own benchmarks
+        show that revalidation needs to.
 
         ``base_path`` -- the owning layer's own root -- disambiguates a
         level index across layers (the global hierarchy and every
@@ -678,16 +968,22 @@ class Hiera:
         provider = self._providers.get(key)
         if provider is None:
             provider = self._build_provider(
-                hierarchy, index, scope, base_path, tag, module_name
+                hierarchy, index, scope, base_path, tag, invocation, module_name
             )
             self._providers[key] = provider
+        elif self.revalidate:
+            provider.locations = self._resolved_locations_for(
+                hierarchy, index, base_path, scope, tag, invocation
+            )
         return provider
 
-    def _build_provider(self, hierarchy, index, scope, base_path, tag, module_name=None):
+    def _build_provider(
+        self, hierarchy, index, scope, base_path, tag, invocation, module_name=None
+    ):
         """Build one level's provider for ``scope``: interpolate its
         ``options`` (strict mode, no method calls -- ``hiera_config.rb:691``,
         the same call ``_location_resolver`` makes for ``datadir``) and take
-        its resolved locations from :meth:`_location_entry_for` (shared,
+        its resolved locations from :meth:`_resolved_locations_for` (shared,
         referenced-variable-keyed, resolved for the whole hierarchy at
         once -- Puppet's own single ``scope_interpolations_stable?`` check
         per rebuild). Raises, and caches nothing, on a failure in either
@@ -704,9 +1000,9 @@ class Hiera:
             if raw_options
             else {}
         )
-        entry = self._location_entry_for(hierarchy, base_path, scope, tag)
-        resolved = entry.levels[index]
-        locations = None if resolved is None else list(resolved)
+        locations = self._resolved_locations_for(
+            hierarchy, index, base_path, scope, tag, invocation
+        )
         provider_cls = PROVIDER_CLASSES[level.kind]
         prune = None
         if module_name is not None:
@@ -768,7 +1064,7 @@ class Hiera:
         ``module_name``, when given, is the level's owning module: every
         ``data_hash`` result is read through :func:`~hyera._data_provider.
         prune_module_data` first (Puppet's module-data namespace rule),
-        cached per ``(module_name, path)`` apart from ``self.cache``'s own
+        cached per ``(module_name, path)`` apart from ``_file_cache``'s own
         unpruned entry -- a file shared with the global layer stays unpruned
         there. A ``lookup_key``/``data_dig`` result is never pruned (Puppet
         prunes only a ``data_hash`` function's return value,
@@ -781,7 +1077,7 @@ class Hiera:
         def at_level(entry):
             index, _level = entry
             provider = self._provider_for(
-                tag, base_path, index, hierarchy, scope, module_name
+                tag, base_path, index, hierarchy, scope, invocation, module_name
             )
             return provider.key_lookup(root, segments, invocation, strategy)
 
@@ -922,8 +1218,8 @@ class Hiera:
         """A view of this instance bound to ``self.scope.derive(...)``.
 
         The view is a full :class:`Hiera`, not a proxy: it shares this
-        instance's config, backends and caches (``cache``, ``_location_cache``,
-        ``_lookup_options_cache``, all keyed on the scope value already), so
+        instance's config, backends and caches (``_location_cache``,
+        ``_lookup_options_cache``, ``_file_cache``, ``_glob_cache``), so
         every method -- ``lookup``/``()``/``[]``/``in``, ``sources()``,
         ``format()`` -- reads the derived scope instead of ``self.scope``.
         Deriving from a view derives from *its* scope, not the original.
@@ -946,9 +1242,10 @@ class Hiera:
         view.scope = scope
         # Never shared with the instance it was derived from, or with any
         # other view: a provider's interpolated options are bound to exactly
-        # one scope (unlike ``cache``/``_location_cache``/
-        # ``_lookup_options_cache``, all keyed on the scope value itself, and
-        # ``_environment_context``, whose file cache has no scope at all).
+        # one scope (unlike ``_location_cache``/``_lookup_options_cache``/
+        # ``_file_cache``/``_glob_cache``, all keyed on the scope value
+        # itself or not at all, and ``_environment_context``, whose file
+        # cache has no scope at all).
         view._providers = {}
         return view
 
@@ -956,55 +1253,61 @@ class Hiera:
         """Resolve the ordered list of source paths for this instance's
         bound scope.
 
-        Existing files are parsed and cached and their cache-key paths
-        returned.
+        Existing files are parsed and cached and their paths returned.
 
         The filesystem walk (glob/iterdir/stat) is cached, keyed on the
         values of the variables the hierarchy's own interpolation reads
         (not the whole scope -- see :meth:`_location_entry_for`), so a merge
         lookup across many keys does not re-walk the tree for each key, and
-        a scope differing only elsewhere shares the same cached walk. This
-        shares the staleness assumption of the parsed-content cache: a
-        single instance reflects the tree as first seen for a given set of
-        referenced-variable values.
+        a scope differing only elsewhere shares the same cached walk. With
+        ``revalidate=True`` (the default) each call still re-probes every
+        candidate and re-lists any glob whose directory changed; with
+        ``revalidate=False`` it reflects the tree as first seen for this
+        scope's referenced-variable values, until :meth:`clear_cache`.
         """
         return self._sources(self.scope)
 
-    def _sources(self, scope):
-        return self._files_for(self.hierarchy, self.base_path, scope, "main")
+    def _sources(self, scope, invocation=None):
+        return self._files_for(self.hierarchy, self.base_path, scope, "main", invocation)
 
-    def _files_for(self, hierarchy, base_path, scope, tag):
+    def _files_for(self, hierarchy, base_path, scope, tag, invocation=None):
         """The ordered list of existing, successfully loaded ``data_hash``
         file paths ``hierarchy`` visits for ``scope`` -- what ``sources()``
         shows.
 
         Only a ``data_hash`` level's *path* locations are ever loaded here
-        (through :meth:`_load_file`, so they land in ``self.cache`` exactly
+        (through :meth:`_load_file`, so they land in ``_file_cache`` exactly
         as a real lookup would find them): a ``lookup_key``/``data_dig``
         function is never called without a real key, and a ``uri`` location
         is never fetched or stat'ed -- ``sources()`` keeps its documented
         meaning, "the files a lookup may read".
 
         Re-derived on every call, never cached as its own flattened list:
-        the expensive part -- resolving locations, and reading each file --
-        is already cached the referenced-variable/``(path, strict, options)``
-        way (:meth:`_location_entry_for`/:meth:`_load_file`), both shared
-        across every view of this instance, so re-walking an already-cached
-        level/location list here costs no repeated filesystem access.
+        the expensive part -- resolving/materializing locations, and
+        reading each file -- is already cached the referenced-variable/
+        ``(path, strict, options)`` way (:meth:`_location_entry_for`/
+        :meth:`_load_file`), both shared across every view of this
+        instance, so re-walking an already-cached level/location list here
+        costs no repeated filesystem access beyond what ``revalidate=True``
+        itself asks for.
         """
         paths = []
         for index, level in enumerate(hierarchy):
             if level.kind != "data_hash":
                 continue
-            provider = self._provider_for(tag, base_path, index, hierarchy, scope)
+            provider = self._provider_for(
+                tag, base_path, index, hierarchy, scope, invocation
+            )
             locations = provider.locations
             if locations is None:
                 continue
             for loc in locations:
                 if loc.is_uri or not loc.exist:
                     continue
-                path = str(loc.location)
-                self._load_file(path, level.backend, provider.options_for(loc))
+                path = loc.location
+                self._load_file(
+                    path, level.backend, provider.options_for(loc), invocation
+                )
                 if path in self._loaded_paths:
                     paths.append(path)
         return tuple(paths)
@@ -1013,16 +1316,25 @@ class Hiera:
         """The raw ``lookup_options`` value gathered from one layer's own
         hierarchy alone (a HASH-strategy gather over its locations/levels,
         never across layers) -- cached the same referenced-variable way as
-        :meth:`_location_entry_for`, plus the location entry's own key (a
-        rebuilt hierarchy invalidates any ``lookup_options`` gathered
-        against the old one) -- and never cached at all when gathering it
-        makes a sub-lookup (a sub-lookup can reach data outside this entry,
-        such as the default hierarchy or another layer, so keying on
-        referenced *variables* alone would not be sound). Gathered through
-        the location/level nesting only, never the layer stack
-        (``lookup_adapter.rb:241,346-380``); callers compose the layers and
-        validate/compile the result (:func:`~hyera._lookup_adapter.
-        validate_lookup_options`/``compile_patterns``).
+        :meth:`_location_entry_for`, plus the location entry's own key and,
+        with ``revalidate=True``, the current signature of every location it
+        materializes to (a rebuilt hierarchy, or any of its files changing,
+        invalidates any ``lookup_options`` gathered against the old state)
+        -- and never cached at all when gathering it makes a sub-lookup (a
+        sub-lookup can reach data outside this entry, such as the default
+        hierarchy or another layer, so keying on referenced *variables*
+        alone would not be sound). Gathered through the location/level
+        nesting only, never the layer stack (``lookup_adapter.rb:241,
+        346-380``); callers compose the layers and validate/compile the
+        result (:func:`~hyera._lookup_adapter.validate_lookup_options`/
+        ``compile_patterns``).
+
+        ``invocation``, the caller's own (a ``.derive()`` of the top-level
+        lookup's, with a different sub-lookup callable), shares its
+        filesystem probe memo with the location build, the materialization
+        below, and the gather's own invocation, so this whole gather costs
+        at most one real probe per location for the caller's top-level
+        lookup.
 
         Returns :data:`_LO_ABSENT` for "no location in this hierarchy
         declares ``lookup_options`` at all" -- distinct from an explicit
@@ -1043,9 +1355,27 @@ class Hiera:
         for the same ``(scope, tag, base_path)``.
         """
         scope = invocation.scope
-        entry = self._location_entry_for(hierarchy, base_path, scope, tag)
+        entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
+        materialized = self._materialize(entry, invocation)
         kind = ("lookup_options", tag, base_path)
-        extra = (entry.key,)
+        if self.revalidate:
+            versions = tuple(
+                (
+                    loc.location,
+                    (
+                        invocation._memo_probe(loc.location)
+                        if invocation is not None
+                        else _probe(loc.location)
+                    ).sig,
+                )
+                for locations in materialized
+                if locations is not None
+                for loc in locations
+                if not loc.is_uri and loc.exist
+            )
+        else:
+            versions = ()
+        extra = (entry.key, versions)
         cached = self._lookup_options_cache.get(kind, scope, extra)
         if cached is not _MISSING:
             return cached
@@ -1063,8 +1393,9 @@ class Hiera:
                 made_sub_lookup = True
                 return self._sub_lookup(key, inv)
 
+            fs_memo = invocation._fs_memo if invocation is not None else None
             gather_invocation = Invocation(
-                scope, counting_lookup, scope_interpolations=lo_refs
+                scope, counting_lookup, scope_interpolations=lo_refs, _fs_memo=fs_memo
             )
             with gather_invocation.check(LOOKUP_OPTIONS):
                 raw = self._lookup_levels(
@@ -1086,20 +1417,20 @@ class Hiera:
             self._lookup_options_cache.put(put_key, result)
         return result
 
-    def _global_lookup_options(self, scope):
+    def _global_lookup_options(self, invocation):
         """The global layer's own validated ``lookup_options``, or ``None``."""
-        meta = Invocation(scope, self._sub_lookup)
+        meta = invocation.derive(self._sub_lookup)
         raw = self._layer_options_cached(
             self._global.hierarchy, self._global.root, "main", None, meta
         )
         return validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
 
-    def _environment_lookup_options(self, state, scope):
+    def _environment_lookup_options(self, state, invocation):
         """The global and environment layers' ``lookup_options`` HASH-merged
         (global wins), or ``None`` (``lookup_adapter.rb:375-380``).
         """
-        g = self._global_lookup_options(scope)
-        meta = Invocation(scope, self._sub_lookup)
+        g = self._global_lookup_options(invocation)
+        meta = invocation.derive(self._sub_lookup)
         provider = self._usable(state.provider, meta)
         e = None
         if provider is not None:
@@ -1131,9 +1462,9 @@ class Hiera:
         """
         scope = invocation.scope
         state = self._environment(scope.environment)
-        opts = self._environment_lookup_options(state, scope)
+        opts = self._environment_lookup_options(state, invocation)
         if module_name is not None:
-            meta = Invocation(scope, self._sub_lookup)
+            meta = invocation.derive(self._sub_lookup)
             mprovider = self._usable(
                 self._module_provider(state, module_name), meta
             )
@@ -1159,8 +1490,7 @@ class Hiera:
         ``module_data_provider.rb:26-40``'s ``key_lookup_in_default``
         never touches the main options.
         """
-        scope = invocation.scope
-        meta = Invocation(scope, self._sub_lookup)
+        meta = invocation.derive(self._sub_lookup)
         raw = self._layer_options_cached(
             provider.default_hierarchy,
             provider.root,
