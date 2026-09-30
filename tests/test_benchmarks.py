@@ -1,6 +1,6 @@
 """Smoke test for ``benchmarks/run.py`` -- runs the real script, --quick, and
 checks the saved JSON's shape. No timing assertions: local numbers are
-sanity checks, never a pass/fail signal (see the repo's ``.agents/AGENTS.md``).
+sanity checks, never a pass/fail signal.
 """
 
 import json

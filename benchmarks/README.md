@@ -24,7 +24,7 @@ py -3 $ENGINEERING_OVERLAY_ROOT/tools/compare_bench.py <before.json> <after.json
 ```
 
 Local numbers are sanity checks, never release claims — see the repo's
-`AGENTS.md`/`.agents/AGENTS.md` for that rule.
+`AGENTS.md` for that rule.
 
 ## Schema
 

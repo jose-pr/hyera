@@ -32,9 +32,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import hyera  # noqa: E402
 from hyera import Hiera, Scope  # noqa: E402
 
-#: mkperf's full sizes (``.agents/reviews/2026-09-28/fixtures/
-#: critic-engineering/mkperf.py``): 771 files, 523 reachable from the base
-#: scope below (1 node + 1 role + 20 apps + 500 modules + 1 common).
+#: The full-size tree: 771 files, 523 reachable from the base scope below
+#: (1 node + 1 role + 20 apps + 500 modules + 1 common).
 _FULL = {
     "nodes": 200,
     "roles": 50,
