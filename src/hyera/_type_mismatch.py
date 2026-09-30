@@ -272,12 +272,17 @@ def _describe_variant(expected, value, path):
     # element (the shallow, whole-value mismatches on the other branches
     # are the less informative ones -- a simplification of Puppet's own
     # ``merge_descriptions``, see AGENTS.md Gotchas).
+    #
+    # The loop below always returns: `immediate` is exactly the
+    # per_branch entries where `len(sub) == 1 and sub[0].path == path`, so
+    # `len(immediate) != len(per_branch)` (the only way to reach here)
+    # guarantees at least one entry fails that same condition -- the
+    # loop's own `if`.
     for i, t, sub in per_branch:
         if len(sub) != 1 or sub[0].path != path:
             m = sub[0]
             m.path = path + [_variant(i)] + m.path[len(path) :]
             return [m]
-    return per_branch[0][2]
 
 
 def _size_mismatch(path, from_, to_, actual_n):
@@ -394,7 +399,9 @@ def describe_mismatch(name, expected, actual):
         return "{} expects a value of type Undef or {}, got {}".format(
             name, e_render, a_render
         )
-    return "{} expects {} value, got {}".format(name, _a_an(e_render), a_render)
+    return "{} expects {} {} value, got {}".format(
+        name, _a_an(e_render), e_render, a_render
+    )
 
 
 def assert_instance_of(subject, expected, value, nil_ok=False):
