@@ -133,9 +133,22 @@ class _ScopeKeyedCache:
     def get(self, kind, scope, extra=()):
         last = self._last.get(kind)
         if last is not None and last[0] is scope and last[1] == extra:
-            hit = self._replay_and_fetch(last[2], scope)
-            if hit is not _MISSING:
-                return hit
+            # Identity fast path: ``scope`` is immutable by construction, so
+            # if this is the exact same object this cache last saw for
+            # ``kind``, every reference it would replay is guaranteed to
+            # read the same value it did last time -- replaying them (each
+            # a ``scope.lookup()``, some with a sub-lookup walk) would only
+            # ever confirm what identity already guarantees. Skip straight
+            # to the one thing that can still have changed: the entry
+            # itself being evicted since (a plain dict lookup, still under
+            # the shared lock -- no scope read at all).
+            key = last[2]
+            with self._lock:
+                value = self._entries.get(key, _MISSING)
+                if value is not _MISSING:
+                    self._entries.move_to_end(key)
+                    return value
+            # Evicted since last time -- fall through to the full replay.
         with self._lock:
             known = list(self._known.get(kind, ()))
         for refs in known:

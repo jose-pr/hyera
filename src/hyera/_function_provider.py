@@ -232,6 +232,7 @@ class _FunctionProvider:
         environment_name,
         load_file=None,
         prune=None,
+        revalidate=True,
     ):
         self.name = name
         self.backend = backend
@@ -240,6 +241,12 @@ class _FunctionProvider:
         self._environment_context = environment_context
         self._environment_name = environment_name
         self._load_file = load_file
+        #: Mirrors the owning ``Hiera``'s own ``revalidate`` -- read by
+        #: :class:`_DataHashProvider` to decide whether a location already
+        #: cached on this provider's own ``_FunctionContext`` needs to go
+        #: through ``load_file`` again (probe-checked) or can be reused
+        #: outright (:meth:`_DataHashProvider.key_lookup`).
+        self._revalidate = revalidate
         #: ``(data, function_name, location) -> data``, set only for a level
         #: owned by a module (``core.Hiera._build_provider``): Puppet's
         #: module-data namespace rule
@@ -300,21 +307,32 @@ class _DataHashProvider(_FunctionProvider):
                 return _MISSING
             ctx = self._context(location)
             if location is not None and not location.is_uri:
-                # A real file: `Hiera._load_file` owns both the parsed-
-                # content cache and its revalidation (probed at most once
-                # per top-level lookup, through `invocation`'s memo) --
-                # never gated behind `ctx.data_hash`, which would skip
-                # revalidation after the first lookup this (view, provider)
-                # pair ever makes.
+                # A real file. While `self._revalidate`, `Hiera._load_file`
+                # owns both the parsed-content cache and its revalidation
+                # (probed at most once per top-level lookup, through
+                # `invocation`'s memo) and must run on every call -- gating
+                # it behind `ctx.data_hash` would skip revalidation after
+                # the first lookup this (view, provider) pair ever makes.
+                # With revalidation off there is nothing left for a repeat
+                # call to discover (the file is read at most once for the
+                # instance's life either way), so a lookup after the first
+                # skips `load_file` entirely -- no options merge, no cache
+                # key, no lock -- the same fast path a location-less/``uri``
+                # entry already gets below.
                 path = str(location.location)
-                options = self.options_for(location)
-                data = self._load_file(path, self.backend, options, invocation)
-                if data is _MISSING:
-                    return _MISSING
-                label = path
-                _validate_data_hash(data, self.backend.name, label)
-                if self._prune is not None:
-                    data = self._prune(data, self.backend.name, label)
+                if self._revalidate or ctx.data_hash is None:
+                    options = self.options_for(location)
+                    data = self._load_file(path, self.backend, options, invocation)
+                    if data is _MISSING:
+                        return _MISSING
+                    label = path
+                    _validate_data_hash(data, self.backend.name, label)
+                    if self._prune is not None:
+                        data = self._prune(data, self.backend.name, label)
+                    ctx.data_hash = data
+                    ctx.label = label
+                data = ctx.data_hash
+                label = ctx.label
             else:
                 # No location, or a uri: no file-based staleness signal, so
                 # cache the function's own result once per (view, provider,

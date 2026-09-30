@@ -283,6 +283,20 @@ class Hiera:
         #: ``(module_name, path) -> pruned data``, apart from the unpruned
         #: ``_file_cache`` a global/environment read of the same file uses.
         self._pruned_cache: dict = {}
+        #: ``module_name -> (scope, compiled)``: the single most recent
+        #: ``_retrieve_lookup_options`` result for that ``module_name``, an
+        #: identity fast path exactly like ``_ScopeKeyedCache``'s own
+        #: ``_last`` (safe because ``Scope`` is immutable -- the same scope
+        #: object always composes to the same result). Composing the three
+        #: layers' already-cached raw gathers and re-running
+        #: ``validate_lookup_options``/``compile_patterns`` (which
+        #: recompiles every ``^``-prefixed pattern's regex) on every single
+        #: lookup would otherwise repeat that work for a ``lookup_options``
+        #: mapping that never changed. A miss here (a different scope, or a
+        #: ``module_name`` not seen before) just recomputes, exactly as
+        #: before this cache existed -- never a correctness fallback to get
+        #: right, only a speedup to get to skip.
+        self._compiled_options_cache: dict = {}
 
         self.hierarchy: "list[HieraLevel]" = []
         self.default_hierarchy: "list[HieraLevel]" = []
@@ -383,6 +397,7 @@ class Hiera:
             self._loaded_paths.clear()
             self._paths.clear()
         self._pruned_cache.clear()
+        self._compiled_options_cache.clear()
         self._providers.clear()
         self._environment_context.clear()
 
@@ -1028,6 +1043,7 @@ class Hiera:
             scope.environment,
             load_file=self._load_file,
             prune=prune,
+            revalidate=self.revalidate,
         )
 
     def _pruned_module_data(self, data, module_name, function_name, path):
@@ -1340,10 +1356,13 @@ class Hiera:
         result (:func:`~hyera._lookup_adapter.validate_lookup_options`/
         ``compile_patterns``).
 
-        ``invocation``, the caller's own (a ``.derive()`` of the top-level
-        lookup's, with a different sub-lookup callable), shares its
-        filesystem probe memo with the location build, the materialization
-        below, and the gather's own invocation, so this whole gather costs
+        ``invocation``, the caller's own top-level one, passed straight
+        through (never a ``.derive()`` -- only its ``.scope``/``._fs_memo``
+        are ever read here, so deriving one first would cost an allocation
+        for nothing), shares its filesystem probe memo with the location
+        build, the materialization below, and the gather's own invocation
+        (built fresh, around ``self._sub_lookup``, only if the gather
+        itself actually runs), so this whole gather costs
         at most one real probe per location for the caller's top-level
         lookup.
 
@@ -1429,24 +1448,32 @@ class Hiera:
         return result
 
     def _global_lookup_options(self, invocation):
-        """The global layer's own validated ``lookup_options``, or ``None``."""
-        meta = invocation.derive(self._sub_lookup)
+        """The global layer's own validated ``lookup_options``, or ``None``.
+
+        Passes ``invocation`` straight through, never a ``.derive()`` of it:
+        :meth:`_layer_options_cached` only ever reads its own ``.scope``/
+        ``._fs_memo`` from what it is handed here (the gather itself builds
+        its own fresh ``Invocation`` around ``self._sub_lookup``), so
+        deriving one first would only add an allocation this hot path (every
+        lookup runs it) does not need.
+        """
         raw = self._layer_options_cached(
-            self._global.hierarchy, self._global.root, "main", None, meta
+            self._global.hierarchy, self._global.root, "main", None, invocation
         )
         return validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
 
     def _environment_lookup_options(self, state, invocation):
         """The global and environment layers' ``lookup_options`` HASH-merged
-        (global wins), or ``None`` (``lookup_adapter.rb:375-380``).
+        (global wins), or ``None`` (``lookup_adapter.rb:375-380``). See
+        :meth:`_global_lookup_options` for why ``invocation`` is passed
+        through unchanged rather than derived.
         """
         g = self._global_lookup_options(invocation)
-        meta = invocation.derive(self._sub_lookup)
-        provider = self._usable(state.provider, meta)
+        provider = self._usable(state.provider, invocation)
         e = None
         if provider is not None:
             raw = self._layer_options_cached(
-                provider.hierarchy, provider.root, "main", None, meta
+                provider.hierarchy, provider.root, "main", None, invocation
             )
             e = validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
         if g is None:
@@ -1470,16 +1497,38 @@ class Hiera:
         the environment options untouched, while one that finds an explicit
         ``lookup_options: ~`` discards them (Puppet's own ``if``/``elsif``
         with no ``else``, ``lookup_adapter.rb:358-365``).
+
+        With ``revalidate=False``, the final composed-and-compiled result is
+        itself memoized in ``self._compiled_options_cache`` by an identity
+        check on ``scope`` (see its own comment): a repeat call for the
+        exact same scope and ``module_name`` skips recomposing the layers
+        and recompiling every ``^``-prefixed pattern's regex, both of which
+        this method would otherwise redo on every single lookup even though
+        none of the underlying per-layer gathers changed. With
+        ``revalidate=True`` this fast path is skipped entirely: the
+        per-layer gathers below revalidate against an on-disk change
+        (``_layer_options_cached``'s own ``versions`` key), and this method
+        composing/compiling their result on every call is what lets that
+        revalidation actually reach a caller -- short-circuiting here on
+        scope identity alone, the same as ``revalidate=False`` safely does,
+        would silently ignore a changed ``lookup_options`` value for as
+        long as the same scope object keeps being used.
         """
         scope = invocation.scope
+        if not self.revalidate:
+            cached = self._compiled_options_cache.get(module_name)
+            if cached is not None and cached[0] is scope:
+                return cached[1]
+
         state = self._environment(scope.environment)
         opts = self._environment_lookup_options(state, invocation)
         if module_name is not None:
-            meta = invocation.derive(self._sub_lookup)
-            mprovider = self._usable(self._module_provider(state, module_name), meta)
+            mprovider = self._usable(
+                self._module_provider(state, module_name), invocation
+            )
             if mprovider is not None:
                 raw = self._layer_options_cached(
-                    mprovider.hierarchy, mprovider.root, "main", module_name, meta
+                    mprovider.hierarchy, mprovider.root, "main", module_name, invocation
                 )
                 if raw is not _LO_ABSENT:
                     m = validate_lookup_options(raw, module_name)
@@ -1489,7 +1538,10 @@ class Hiera:
                         opts = MergeStrategy.strategy("hash").merge(opts, m)
                     else:
                         opts = None
-        return compile_patterns(opts)
+        compiled = compile_patterns(opts)
+        if not self.revalidate:
+            self._compiled_options_cache[module_name] = (scope, compiled)
+        return compiled
 
     def _module_default_lookup_options(self, provider, invocation):
         """The compiled ``lookup_options`` mapping gathered from
@@ -1499,13 +1551,12 @@ class Hiera:
         ``module_data_provider.rb:26-40``'s ``key_lookup_in_default``
         never touches the main options.
         """
-        meta = invocation.derive(self._sub_lookup)
         raw = self._layer_options_cached(
             provider.default_hierarchy,
             provider.root,
             "default",
             provider.module_name,
-            meta,
+            invocation,
         )
         opts = validate_lookup_options(
             None if raw is _LO_ABSENT else raw, provider.module_name
