@@ -273,16 +273,19 @@ def _describe_variant(expected, value, path):
     # are the less informative ones -- a simplification of Puppet's own
     # ``merge_descriptions``, see AGENTS.md Gotchas).
     #
-    # The loop below always returns: `immediate` is exactly the
-    # per_branch entries where `len(sub) == 1 and sub[0].path == path`, so
-    # `len(immediate) != len(per_branch)` (the only way to reach here)
-    # guarantees at least one entry fails that same condition -- the
-    # loop's own `if`.
-    for i, t, sub in per_branch:
-        if len(sub) != 1 or sub[0].path != path:
-            m = sub[0]
-            m.path = path + [_variant(i)] + m.path[len(path) :]
-            return [m]
+    # `immediate` is exactly the per_branch entries where
+    # `len(sub) == 1 and sub[0].path == path`, so `len(immediate) !=
+    # len(per_branch)` (the only way to reach here) guarantees at least
+    # one entry fails that same condition -- `next()` below can never
+    # exhaust the generator. Written with `next()` rather than a `for`
+    # loop so that guarantee is structural (no reachable "ran out of
+    # entries" path for a branch-coverage tool to ever ask about).
+    i, t, sub = next(
+        (i, t, sub) for i, t, sub in per_branch if len(sub) != 1 or sub[0].path != path
+    )
+    m = sub[0]
+    m.path = path + [_variant(i)] + m.path[len(path) :]
+    return [m]
 
 
 def _size_mismatch(path, from_, to_, actual_n):
