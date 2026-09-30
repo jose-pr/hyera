@@ -1,0 +1,4 @@
+lookup_options:
+  u:
+    merge: unique
+u: [c]

@@ -285,6 +285,17 @@ def test_bad_config_exit_2(tmp_path):
     assert rc == 2
 
 
+def test_codedir_flag(make_tree, capsys):
+    root = make_tree(":backends: [yaml]\n:hierarchy: [common]\n", raw=True)
+    codedir = root / "code"
+    hieradata = codedir / "environments" / "production" / "hieradata"
+    hieradata.mkdir(parents=True)
+    (hieradata / "common.yaml").write_text("k: v\n", encoding="utf-8")
+    rc = main(["k", "-c", str(root / "hiera.yaml"), "--codedir", str(codedir)])
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == "v"
+
+
 def test_bad_lookup_options_merge_exits_2(make_tree, caplog):
     # A lookup_options `merge:` hash with no `strategy` key is a MergeError,
     # not caught anywhere but the CLI's own catch-all -- exit 2, not a crash.

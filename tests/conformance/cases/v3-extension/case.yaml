@@ -1,0 +1,6 @@
+description: >-
+  A v3 :extension: override (yml instead of the default yaml); an entry
+  already ending with the extension (common.yml) is not doubled.
+queries:
+  - key: k
+  - key: c

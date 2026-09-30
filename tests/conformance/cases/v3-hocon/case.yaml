@@ -1,0 +1,5 @@
+description: >-
+  A v3 config with the hocon backend, mapped to hocon_data.
+requires: [pyhocon]
+queries:
+  - key: k

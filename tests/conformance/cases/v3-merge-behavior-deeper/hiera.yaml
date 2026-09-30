@@ -1,0 +1,8 @@
+---
+:backends: [yaml]
+:yaml:
+  :datadir: data
+:hierarchy: ["%{::osfamily}", common]
+:merge_behavior: deeper
+:deep_merge_options:
+  :knockout_prefix: "--"

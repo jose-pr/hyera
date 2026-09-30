@@ -1,0 +1,16 @@
+description: >-
+  A v3 :backends: name that is neither a Puppet-mapped backend nor a
+  Python backend registered under the v3 name -- Puppet with real Hiera
+  3 installed skips it silently; hyera cannot run a Ruby Hiera 3 backend
+  at all, so this is a deliberate, documented deviation.
+queries:
+  - key: k
+    deviation:
+      id: v3-ruby-backend-unavailable
+      reason: >-
+        Ruby Hiera 3 backends cannot run in Python, so an unregistered
+        Hiera 3 backend name raises ConfigError where Puppet with Hiera 3
+        installed skips it
+      expect:
+        status: error
+        message: "Hiera 3 backend 'foo' is not available"

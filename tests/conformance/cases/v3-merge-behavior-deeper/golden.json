@@ -1,0 +1,76 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "729b4d5d826850836214b9e1f71f1adedec2c7fa9105c7093ce0a3712af413c1",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "redhat"
+    },
+    "h-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "h"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": {
+        "b": {
+          "d": 2
+        }
+      }
+    },
+    "h-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": {
+          "d": 2
+        }
+      }
+    },
+    "h-deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "h"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": {
+          "c": 1,
+          "d": 2
+        }
+      }
+    }
+  }
+}

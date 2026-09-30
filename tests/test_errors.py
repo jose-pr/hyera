@@ -178,17 +178,19 @@ def test_unparsable_config_raises_config_error(make_tree):
     )
 
 
-def test_non_mapping_config_raises_config_error(make_tree, caplog):
+def test_non_mapping_config_falls_back_to_v3_default(make_tree, caplog):
     # A hiera.yaml that parses but is not a YAML hash falls back to Puppet's
     # Hiera version 3 default config (`hiera_config.rb:139-144`), which is
-    # itself schema-valid -- so the ConfigError here is the (still
-    # unimplemented) v3 hierarchy build, not the fallback itself. The
-    # fallback's own warning is what this test actually pins.
+    # itself schema-valid -- construction succeeds (Puppet's own AIO
+    # default codedir has no matching data file at rest here, so the key
+    # is simply not found, not a `ConfigError`). The fallback's own
+    # warning is what this test actually pins.
     root = make_tree("- a\n- b\n", raw=True)
-    with pytest.raises(ConfigError) as excinfo:
-        Hiera(str(root / "hiera.yaml"))
-    assert "hiera.yaml version 3 hierarchies are not supported yet" in str(
-        excinfo.value
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("k")
+    assert any(
+        "does not contain a valid YAML hash" in r.message for r in caplog.records
     )
     assert any(
         "does not contain a valid YAML hash" in r.message for r in caplog.records

@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3d8b32aec7fa03b4c39380b2f0ff6c9c9cb93f03dfc4f14166c87c587ca82cde",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "Backend 'yaml' is defined more than once. First defined at (line: 3) (file: <case>/hiera.yaml, line: 4)"
+    }
+  }
+}

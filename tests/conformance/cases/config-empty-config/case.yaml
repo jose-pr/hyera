@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/empty_config
 queries:
   - key: k
-    divergence: spec-config/hiera-v3-config-unsupported

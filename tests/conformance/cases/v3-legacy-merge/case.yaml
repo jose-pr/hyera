@@ -5,7 +5,5 @@ description: 'A v3 config (no version key, symbol-keyed :backends:/:yaml:/ :hier
 origin: probes/h3probe
 queries:
 - key: k
-  divergence: spec-config/hiera-v3-config-unsupported
 - key: h
   merge: hash
-  divergence: spec-config/hiera-v3-config-unsupported

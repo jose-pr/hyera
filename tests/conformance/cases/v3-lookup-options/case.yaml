@@ -1,0 +1,5 @@
+description: >-
+  A v3 config whose data declares lookup_options -- still consulted,
+  same as v5.
+queries:
+  - key: u

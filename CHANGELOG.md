@@ -474,9 +474,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A hiera.yaml without `version`, or with `version: 3`, is read as version 3,
   as Puppet does, and validated against Puppet's own version 3 schema with
   Puppet's messages -- so a version 5 layout missing `version:` fails with
-  them (add `version: 5`). A version 3 config still raises `ConfigError`
-  ("hiera.yaml version 3 hierarchies are not supported yet") once it
-  validates; only the schema is implemented so far.
+  them (add `version: 5`).
+- hiera.yaml version 3 lookups (Hiera 1, 2 and 3 files) resolve as Puppet 8
+  performs them: one data provider per `backends` name, in list order, over
+  the *whole* hierarchy (not one provider per hierarchy level); per-backend
+  `datadir` (default `<codedir>/environments/%{::environment}/hieradata`,
+  resolved against the process's working directory at construction, not
+  hiera.yaml's directory) and `extension` (default `.<backend>`, `.conf`
+  for hocon, appended to each declared location unless already present);
+  `yaml`/`json`/`hocon`/`eyaml` mapped to the same `yaml_data`/`json_data`/
+  `hocon_data`/`eyaml_lookup_key` functions a v5 config would name.
+  `merge_behavior`/`deep_merge_options`/`logger` are validated but never
+  applied to a lookup, matching Puppet. `Hiera(codedir=...)`/
+  `hyera --codedir` set Puppet's `$codedir` (its own AIO default per
+  platform otherwise). A Python backend registered under a v3 name (via
+  `NAMES = {"v3": (...)}`) serves that name in `backends:` and in a v5
+  `hiera3_backend:` entry (global layer only, extension applied the same
+  way); an unregistered name -- including `sops`, which has no v3 name --
+  raises `ConfigError` (Puppet, with real Hiera 3 installed, silently
+  contributes nothing for a backend it cannot run).
 - `version: 4` raises "hiera.yaml version 4 cannot be used in the global
   layer" instead of being read as version 5.
 - Any other unsupported version raises "This runtime does not support

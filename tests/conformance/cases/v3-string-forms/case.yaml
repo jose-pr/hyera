@@ -1,0 +1,5 @@
+description: >-
+  A v3 config with :backends:/:hierarchy: given as bare Strings instead
+  of single-item Arrays.
+queries:
+  - key: k

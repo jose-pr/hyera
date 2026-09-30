@@ -1,0 +1,6 @@
+description: >-
+  A v3 :backends: list naming the same backend twice.
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: 'Backend ''yaml'' is defined more than once\. First defined at \(line: 3\)'

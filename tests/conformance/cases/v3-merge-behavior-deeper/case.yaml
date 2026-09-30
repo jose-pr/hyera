@@ -1,0 +1,14 @@
+description: >-
+  A v3 config with merge_behavior/deep_merge_options set; Puppet 8 never
+  applies them to `lookup` -- only an explicit --merge does anything, and
+  knockout_prefix is ignored either way.
+queries:
+  - key: k
+  - id: h-first
+    key: h
+  - id: h-hash
+    key: h
+    merge: hash
+  - id: h-deep
+    key: h
+    merge: deep

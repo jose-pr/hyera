@@ -32,10 +32,11 @@ from ._hiera_config import (
     HieraLevel,
     _build_hierarchies,
     _config_error,
+    _config_version,
+    _default_codedir,
     _fill_v5_defaults,
     _read_base_config,
     _read_v3,
-    _config_version,
     _validate_v5,
 )
 from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
@@ -286,6 +287,14 @@ class Hiera:
         (the default) means "use Puppet's own construction" (the
         environment's ``modules`` directory, if any, then
         ``basemodulepath``).
+    :param codedir: Puppet's ``$codedir``, consulted only by a version 3
+        hiera.yaml's default per-backend datadir
+        (``<codedir>/environments/%{::environment}/hieradata``). ``None``
+        (the default) means Puppet's own AIO default for the platform
+        (``%ALLUSERSPROFILE%\\PuppetLabs\\code`` on Windows,
+        ``/etc/puppetlabs/code`` elsewhere) — never the per-user
+        ``~/.puppetlabs/etc/code`` default, and never discovered from
+        ``puppet.conf``.
     """
 
     def __init__(
@@ -300,6 +309,7 @@ class Hiera:
         modulepath=None,
         cache_size=256,
         revalidate=True,
+        codedir=None,
     ):
         self.base_config = base_config
         #: Whether this is Puppet's own built-in default config
@@ -308,6 +318,14 @@ class Hiera:
         #: ``location_resolver.rb:63``) -- a dict or stream config is
         #: user-authored and keeps every ``Path not found`` line.
         self._is_default_config = base_config is None
+        #: Puppet's ``$codedir`` (``util/run_mode.rb``), used only by a
+        #: version 3 hierarchy's default per-backend ``datadir``
+        #: (``<codedir>/environments/%{::environment}/hieradata``). An
+        #: explicit value is made absolute against the working directory at
+        #: construction, exactly like ``base_path``.
+        self.codedir = (
+            _default_codedir() if codedir is None else Path(codedir).absolute()
+        )
         if scope is None:
             scope = Scope()
         elif not isinstance(scope, Scope):
@@ -522,6 +540,12 @@ class Hiera:
         #: ``_hiera_config._build_levels``).
         self.backends: "list[type]" = list(backends)
 
+        # Captured before reading the config: a relative version 3 datadir
+        # follows the process cwd AT CONSTRUCTION (Puppet's own
+        # ``Pathname(datadir)`` behavior, ``location_resolver.rb:56-66``),
+        # never the cwd of a later lookup.
+        cwd = Path(os.getcwd())
+
         source, self.base = _read_base_config(self.base_config, base_path)
         self.base_path = source.root
         version = _config_version(self.base, source)
@@ -536,14 +560,14 @@ class Hiera:
             # is ignored (with a warning) or raised about by
             # :meth:`_usable` instead.
             self.hierarchy, self.default_hierarchy = _read_v3(
-                self.base, source, self.scope
+                self.base, source, self.scope, self.backends, self.codedir, cwd
             )
         else:
             _fill_v5_defaults(self.base)
             _validate_v5(self.base, source)
             try:
                 self.hierarchy, self.default_hierarchy = _build_hierarchies(
-                    self.base, self.backends, source
+                    self.base, self.backends, source, scope=self.scope
                 )
             except HieraError as e:  # keep the class and text, add the file
                 e.path = e.path or source.path

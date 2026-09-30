@@ -1,0 +1,5 @@
+description: >-
+  An explicit version: 3 config written entirely with plain (non-symbol)
+  keys.
+queries:
+  - key: k

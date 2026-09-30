@@ -1,0 +1,6 @@
+description: >-
+  A version: 3 config with nothing else -- every v3 default applies
+  (backends: [yaml], hierarchy under the default codedir, which the
+  harness's isolation never populates, so the key is not found).
+queries:
+  - key: k

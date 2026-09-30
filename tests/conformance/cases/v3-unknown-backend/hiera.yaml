@@ -1,0 +1,5 @@
+---
+:backends: [foo]
+:foo:
+  :datadir: data
+:hierarchy: [common]

@@ -351,7 +351,7 @@ def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
         ),
         (
             {"hiera3_backend": "foo"},
-            "'hiera3_backend' hierarchy entries are not supported",
+            "Hiera 3 backend 'foo' is not available",
         ),
         ({"v4_data_hash": "x"}, "Unable to find 'v4_data_hash' function named 'x'"),
     ],

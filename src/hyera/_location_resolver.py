@@ -852,7 +852,8 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
         scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
     )
 
-    config_root = Path(base_path).as_posix()
+    root = base_path if level.datadir_base is None else level.datadir_base
+    config_root = Path(root).as_posix()
     datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)
     base = _pathname_plus(config_root, datadir)
 
@@ -863,7 +864,9 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
         # key that expands to zero candidates.
         return None
     if key in ("path", "paths"):
-        return _resolve_paths(base, level.locations, lenient_inv)
+        return _resolve_paths(
+            base, level.locations, lenient_inv, extension=level.extension
+        )
     if key in ("glob", "globs"):
         return _expand_globs(config_root, datadir, level.locations, lenient_inv)
     if key == "mapped_paths":

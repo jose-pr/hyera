@@ -1,0 +1,58 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6c5615977402866a38f0415ca48425a240af346a1a63d70af1f0831bf87f4247",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "json_common"
+    },
+    "u-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "u"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": [
+        "jo",
+        "jc",
+        "yo",
+        "yc"
+      ]
+    },
+    "h-hash": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "hash",
+        "h"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": {
+        "yc": 1,
+        "yo": 1,
+        "jc": 1
+      }
+    }
+  }
+}

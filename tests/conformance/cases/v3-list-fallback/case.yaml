@@ -1,0 +1,6 @@
+description: >-
+  A hiera.yaml that parses as a YAML list, not a hash: falls back to
+  Puppet's v3 default config, which the harness's isolation never
+  populates, so the key is not found.
+queries:
+  - key: k

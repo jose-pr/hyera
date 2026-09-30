@@ -141,6 +141,10 @@ if duho is not None:
         """Output format for the resolved value."""
         default: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--default'])]" = None
         """Value to print when the key is missing (otherwise exit 1)."""
+        codedir: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--codedir'])]" = None
+        """Puppet's $codedir (Puppet's own AIO default per platform if
+        omitted); consulted only by a version 3 hiera.yaml's default
+        per-backend datadir."""
 
         def _merge_spec(self):
             if self.merge is None:
@@ -174,7 +178,9 @@ if duho is not None:
 
             merge = self._merge_spec()
             try:
-                hiera = Hiera(self.config, scope=Scope(variables=context))
+                hiera = Hiera(
+                    self.config, scope=Scope(variables=context), codedir=self.codedir
+                )
                 value = hiera.lookup(self.key, merge=merge)
             except KeyNotFoundError:
                 if self.default is not None:

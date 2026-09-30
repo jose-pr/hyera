@@ -162,6 +162,11 @@ def _build(case_dir, case: dict, query: dict, golden: dict):
     hiera = Hiera(
         str(case_dir / "hiera.yaml"),
         scope=scope,
+        # Mirrors the recorder's own empty isolation `--codedir`
+        # (`_iso_args`): a version 3 config's default per-backend
+        # datadir must never depend on this box's real Puppet
+        # codedir, so it always names a directory that never exists.
+        codedir=str(case_dir / "_no_codedir"),
         **_layer_kwargs(case_dir, args),
     )
     return hiera, key
@@ -266,6 +271,7 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
         argv += ["--environmentpath", str(case_dir / "environments")]
     if (case_dir / "modules").is_dir():
         argv += ["--basemodulepath", str(case_dir / "modules")]
+    argv += ["--codedir", str(case_dir / "_no_codedir")]
     argv += ["--render-as", "json"] + list(result["argv"])
 
     out = io.StringIO()

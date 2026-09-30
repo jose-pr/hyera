@@ -422,23 +422,228 @@ def _validate_v3(data: dict, source: "_ConfigSource") -> None:
     raise ConfigError(message, path=source.path if source else None)
 
 
-def _read_v3(data: dict, source: "_ConfigSource", scope) -> "_ty.Tuple[list, list]":
+def _default_codedir() -> Path:
+    """Puppet's AIO ``$codedir`` default per platform (``util/run_mode.rb``),
+    used only for a version 3 hierarchy's default per-backend ``datadir``.
+    Not this box's own Fedora-patched ``/etc/puppet/code`` (the package's
+    own override) -- goldens never rely on the default for that reason."""
+    if os.name == "nt":
+        return (
+            Path(os.environ.get("ALLUSERSPROFILE", r"C:\ProgramData"))
+            / "PuppetLabs"
+            / "code"
+        )
+    return Path("/etc/puppetlabs/code")
+
+
+def _find_line_matching(text, pattern, start_line: int = 1) -> "_ty.Optional[int]":
+    """The first 1-based line number at or after ``start_line`` whose
+    comment-stripped text matches ``pattern`` (``hiera_config.rb:226-250``'s
+    ``find_line_matching``): a ``#`` inside a quoted string never starts a
+    comment; quote tracking does not itself span lines. ``None`` without
+    ``text`` or a match."""
+    if not text:
+        return None
+    compiled = pattern if hasattr(pattern, "search") else re.compile(pattern)
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        if lineno < start_line:
+            continue
+        in_single = in_double = False
+        stripped = raw
+        for i, ch in enumerate(raw):
+            if ch == "'" and not in_double:
+                in_single = not in_single
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+            elif ch == "#" and not in_single and not in_double:
+                stripped = raw[:i]
+                break
+        if compiled.search(stripped):
+            return lineno
+    return None
+
+
+def _v3_backend_class(name: str, source: "_ConfigSource", line=None):
+    """Resolve a Hiera 3 backend name (a v3 ``backends:`` entry, or a v5
+    ``hiera3_backend:``) against the registry's ``v3`` namespace: empty for
+    every built-in -- ``yaml``/``json``/``hocon``/``eyaml`` map to the v5
+    ``*_data``/``eyaml_lookup_key`` functions inside :func:`_v3_level_specs`
+    itself and never reach here. Only a third-party backend registered
+    under this name resolves; anything else raises, since a Ruby Hiera 3
+    backend cannot run here (recorded as the ``v3-ruby-backend-unavailable``
+    deviation in the conformance suite).
+    """
+    cls = Backend.find(name, kind="v3")
+    if cls is None:
+        raise _config_error(
+            source,
+            "Hiera 3 backend '{}' is not available: Ruby Hiera 3 backends "
+            "cannot run here, and no Backend is registered under the v3 "
+            "name '{}'".format(name, name),
+            line=line,
+        )
+    if not cls.implements("data_hash"):
+        raise _config_error(
+            source,
+            "Hiera 3 backend '{}' ({}) must implement data_hash".format(
+                name, cls.__name__
+            ),
+            line=line,
+        )
+    return cls
+
+
+_V3_NAME_RE_TEMPLATE = r"[^\w]{}(?:[^\w]|$)"
+
+
+def _v3_level_specs(data: dict, source: "_ConfigSource", codedir: Path) -> "list":
+    """One provider spec per distinct name in ``backends``, in list order
+    (``create_configured_data_providers``, ``hiera_config.rb:372-431``).
+    Assumes :func:`_fill_v3_defaults`/:func:`_validate_v3` already ran.
+    Each spec is a dict: ``name``, ``datadir``, ``extension``,
+    ``locations``, ``kind``, ``function``, ``options``, ``backend_cls``
+    (``None`` for the four built-in mappings, else the class
+    :func:`_v3_backend_class` resolved).
+    """
+    text = source.text
+    raw_backends = data["backends"]
+    names = [raw_backends] if isinstance(raw_backends, str) else list(raw_backends)
+    raw_hierarchy = data["hierarchy"]
+    locations = (
+        [raw_hierarchy] if isinstance(raw_hierarchy, str) else list(raw_hierarchy)
+    )
+
+    specs = []
+    first_line: "dict" = {}
+    for b in names:
+        name_re = _V3_NAME_RE_TEMPLATE.format(re.escape(b))
+        if b in first_line:
+            first = first_line[b]
+            second = (
+                _find_line_matching(text, name_re, start_line=first + 1)
+                if first
+                else None
+            )
+            message = "Backend '{}' is defined more than once.".format(b)
+            if second:
+                raise _config_error(
+                    source,
+                    message + " First defined at (line: {})".format(first),
+                    line=second,
+                )
+            raise _config_error(source, message, line=first)
+        line = _find_line_matching(text, name_re)
+        first_line[b] = line
+
+        conf = data.get(b) or {}
+        if "datadir" in conf:
+            datadir_value = conf["datadir"]
+            if not isinstance(datadir_value, str):
+                raise _type_error(
+                    source,
+                    "entry '{}' entry 'datadir' expects a String value, got "
+                    "{}".format(b, _ruby_type_name(datadir_value)),
+                    line=line,
+                )
+            datadir = datadir_value
+        else:
+            datadir = "{}/environments/%{{::environment}}/hieradata".format(
+                codedir.as_posix()
+            )
+        if "extension" in conf:
+            extension = "." + conf["extension"]
+        elif b == "hocon":
+            extension = ".conf"
+        else:
+            extension = "." + b
+        options_without_datadir = {k: v for k, v in conf.items() if k != "datadir"}
+
+        if b in ("yaml", "json"):
+            kind, function, options, backend_cls = (
+                "data_hash",
+                "{}_data".format(b),
+                {},
+                None,
+            )
+        elif b == "hocon":
+            kind, function, options, backend_cls = "data_hash", "hocon_data", {}, None
+        elif b == "eyaml":
+            kind, function, options, backend_cls = (
+                "lookup_key",
+                "eyaml_lookup_key",
+                options_without_datadir,
+                None,
+            )
+        else:
+            backend_cls = _v3_backend_class(b, source, line)
+            kind, function, options = "data_hash", b, options_without_datadir
+
+        specs.append(
+            {
+                "name": b,
+                "datadir": datadir,
+                "extension": extension,
+                "locations": locations,
+                "kind": kind,
+                "function": function,
+                "options": options,
+                "backend_cls": backend_cls,
+            }
+        )
+    return specs
+
+
+def _v3_levels(
+    data: dict, source: "_ConfigSource", backends, scope, codedir: Path, cwd: Path
+) -> "list":
+    """One :class:`HieraLevel` per :func:`_v3_level_specs` entry
+    (backend-major: one data source per backend, over the whole
+    hierarchy), each rooted at ``cwd`` (a relative v3 datadir follows the
+    process working directory, per Puppet's own ``Pathname(datadir)``)
+    rather than the hiera.yaml directory."""
+    levels = []
+    for spec in _v3_level_specs(data, source, codedir):
+        conf = {
+            "name": spec["name"],
+            "paths": spec["locations"],
+            "datadir": spec["datadir"],
+        }
+        if spec["options"]:
+            conf["options"] = spec["options"]
+        levels.append(
+            _build_level(
+                conf,
+                spec["kind"],
+                spec["function"],
+                backends,
+                source,
+                scope,
+                extension=spec["extension"],
+                datadir_base=cwd,
+                backend_cls=spec["backend_cls"],
+            )
+        )
+    return levels
+
+
+def _read_v3(
+    data: dict,
+    source: "_ConfigSource",
+    scope,
+    backends,
+    codedir: Path,
+    cwd: Path,
+) -> "_ty.Tuple[list, list]":
     """Read a Hiera version 3 base config (``HieraConfigV3``,
     ``hiera_config.rb:350-485``): the deprecation warning, the ``||=``
-    fill, then full schema validation.
-
-    The backend-major provider build (``create_configured_data_providers``,
-    ``hiera_config.rb:372-431``) is not implemented yet, so a config that
-    validates still raises. A later change replaces the final ``raise``
-    with the real hierarchy build and starts returning
-    ``(hierarchy_levels, default_hierarchy_levels)``.
+    fill, full schema validation, then the backend-major provider build.
+    Version 3 has no ``default_hierarchy`` concept, so the second element
+    of the returned pair is always ``[]``.
     """
     _warn_deprecated(source, 3, scope)
     _fill_v3_defaults(data)
     _validate_v3(data, source)
-    raise _config_error(
-        source, "hiera.yaml version 3 hierarchies are not supported yet"
-    )
+    return _v3_levels(data, source, backends, scope, codedir, cwd), []
 
 
 #: ``hiera_config.rb:71-73``.
@@ -879,9 +1084,28 @@ class HieraLevel(_ty.NamedTuple):
     #: The entry's own ``options``, else ``defaults``'s (never merged),
     #: exactly as declared -- interpolated per lookup, per scope, not here.
     options: "_ty.Optional[dict]" = None
+    #: A version 3/``hiera3_backend`` extension, appended to each declared
+    #: ``path``/``paths`` location (after interpolation) unless it already
+    #: ends with it (``location_resolver.rb:59-61``). ``None`` for a v4/v5
+    #: level (Puppet appends the extension for those during config reading,
+    #: not at lookup time -- see :func:`_v4_levels`/:func:`_build_levels`).
+    extension: "_ty.Optional[str]" = None
+    #: The root a version 3 level's ``datadir`` resolves against -- the
+    #: process cwd *at construction*, never the hiera.yaml
+    #: directory. ``None`` for a v4/v5 level, which uses the caller's own
+    #: ``base_path``.
+    datadir_base: "_ty.Optional[Path]" = None
 
     @classmethod
-    def new(cls, conf: dict, backend: Backend, kind: str = "data_hash") -> "HieraLevel":
+    def new(
+        cls,
+        conf: dict,
+        backend: Backend,
+        kind: str = "data_hash",
+        *,
+        extension=None,
+        datadir_base=None,
+    ) -> "HieraLevel":
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
         if location_key is None:
             locations: "_ty.Tuple[str, ...]" = ()
@@ -897,6 +1121,8 @@ class HieraLevel(_ty.NamedTuple):
             locations=locations,
             kind=kind,
             options=conf.get("options"),
+            extension=extension,
+            datadir_base=datadir_base,
         )
 
     def paths(self, base_path: Path, scope) -> "list":
@@ -1030,7 +1256,7 @@ def _function_of(entry: dict, defaults: dict):
     return None, None
 
 
-def _build_hierarchies(base, backends, source: "_ConfigSource"):
+def _build_hierarchies(base, backends, source: "_ConfigSource", *, scope=None):
     """Build ``hierarchy`` and ``default_hierarchy`` from base config.
 
     Returns ``(hierarchy_levels, default_hierarchy_levels)``. Assumes
@@ -1038,18 +1264,23 @@ def _build_hierarchies(base, backends, source: "_ConfigSource"):
     :func:`_validate_v5` already ran, so ``defaults``/``hierarchy`` are
     present and every entry has exactly one function key (its own, or one
     from ``defaults``), at most one location key, and well-typed values.
+    ``scope`` is only consulted for a ``hiera3_backend`` entry's own
+    backend construction (its ``strict``); a caller that can never reach
+    one (a version-3/missing-version layer, already rejected by
+    :func:`_validate_v5`'s global-only rule before this runs) may omit it.
     """
     hierarchy = base.get("hierarchy")
     defaults = base.get("defaults") or {}
 
     backend_levels = _build_levels(
-        hierarchy, defaults, backends, source, area="hierarchy"
+        hierarchy, defaults, backends, source, scope=scope, area="hierarchy"
     )
     default_levels = _build_levels(
         base.get("default_hierarchy") or [],
         defaults,
         backends,
         source,
+        scope=scope,
         area="default_hierarchy",
     )
 
@@ -1087,8 +1318,86 @@ def _kind_mismatch_text(backend_cls, func_name: str, kind: str) -> str:
     return "'{}' implements none of data_hash, lookup_key or data_dig".format(func_name)
 
 
+def _build_level(
+    conf: dict,
+    kind: str,
+    function: str,
+    backends,
+    source: "_ConfigSource",
+    scope,
+    *,
+    area: str = "hierarchy",
+    index: int = 0,
+    extension=None,
+    datadir_base=None,
+    backend_cls=None,
+) -> HieraLevel:
+    """Resolve one hierarchy entry's backend and build its
+    :class:`HieraLevel`.
+
+    With ``backend_cls`` given (a v3 backend, resolved by the caller
+    against the ``v3`` registry namespace -- :func:`_v3_backend_class`),
+    ``function`` is that v3 name and the function-namespace lookup below is
+    skipped entirely. Otherwise this is the v5 ``data_hash``/``lookup_key``/
+    ``data_dig`` path: ``backends`` is an allow-list of
+    :class:`~hyera.backends.Backend` subclasses -- ``function`` is resolved
+    against the process-global registry (:meth:`Backend.find`, the one
+    namespace all three share), then checked against this allow-list, so a
+    name registered by a third party but not passed to
+    ``Hiera(backends=...)`` is refused exactly like an unknown one.
+    """
+    name = conf.get("name")
+    if backend_cls is not None:
+        backend = Backend.new(
+            function, conf, kind="v3", strict=getattr(scope, "strict", None)
+        )
+    elif kind in ("data_hash", "lookup_key", "data_dig"):
+        resolved_cls = Backend.find(function, kind="function")
+        if resolved_cls is None or resolved_cls not in backends:
+            if kind == "data_hash":
+                allowed_names = [
+                    n
+                    for n in Backend.names("function")
+                    if Backend.find(n, "function") in backends
+                ]
+                raise _config_error(
+                    source,
+                    "Unable to find 'data_hash' function named '{}'; "
+                    "known: {}".format(function, ", ".join(allowed_names)),
+                ) from None
+            raise _config_error(
+                source,
+                "Unable to find '{}' function named '{}'".format(kind, function),
+            ) from None
+        if not resolved_cls.implements(kind):
+            raise _config_error(
+                source,
+                _kind_mismatch_text(resolved_cls, function, kind),
+                line=_config_line(source.text, (area, index, kind), key=True),
+            )
+        conf = dict(conf)
+        conf[kind] = function
+        backend = Backend.new(function, conf, kind="function")
+    else:
+        # Unreachable via the v5 path: _validate_v5 guarantees a function
+        # key exists. _build_levels handles hiera3_backend/v4_data_hash
+        # itself before ever calling this.
+        raise _config_error(
+            source, "Hierarchy level {!r} is missing a function key".format(name)
+        )
+    return HieraLevel.new(
+        conf, backend, kind, extension=extension, datadir_base=datadir_base
+    )
+
+
 def _build_levels(
-    hierarchy, defaults, backends, source: "_ConfigSource", area: str = "hierarchy"
+    hierarchy,
+    defaults,
+    backends,
+    source: "_ConfigSource",
+    *,
+    scope=None,
+    area: str = "hierarchy",
 ):
     """Build HieraLevel instances from hierarchy configuration.
 
@@ -1097,13 +1406,6 @@ def _build_levels(
     ``defaults``'s, never merged -- ``hiera_config.rb:690``)
     and, for a ``data_hash`` level, ``data_hash: <name>`` -- rather than
     merging every ``defaults`` key in wholesale.
-
-    ``backends`` is an allow-list of :class:`~hyera.backends.Backend`
-    subclasses: a ``data_hash``/``lookup_key``/``data_dig`` name is
-    resolved against the process-global registry (:meth:`Backend.find`,
-    the one namespace all three share), then checked against this
-    allow-list, so a name registered by a third party but not passed to
-    ``Hiera(backends=...)`` is refused exactly like an unknown one.
     """
     levels: "list[HieraLevel]" = []
     for i, level in enumerate(hierarchy):
@@ -1119,48 +1421,40 @@ def _build_levels(
         if options is not None:
             conf["options"] = options
 
-        if kind in ("data_hash", "lookup_key", "data_dig"):
-            backend_cls = Backend.find(func_name, kind="function")
-            if backend_cls is None or backend_cls not in backends:
-                if kind == "data_hash":
-                    allowed_names = [
-                        n
-                        for n in Backend.names("function")
-                        if Backend.find(n, "function") in backends
-                    ]
-                    raise _config_error(
-                        source,
-                        "Unable to find 'data_hash' function named '{}'; "
-                        "known: {}".format(func_name, ", ".join(allowed_names)),
-                    ) from None
-                raise _config_error(
+        if kind == "hiera3_backend":
+            # Global-only (_validate_v5 already rejected this entry
+            # everywhere else); replaces a v5 data_hash function with a
+            # registered v3-namespace backend, matching Puppet's own
+            # strip-then-Hiera-3-appends extension rule
+            # (hiera_config.rb:692-714, hiera/backend.rb:57-58) by giving
+            # it the same "append unless already present" extension a v3
+            # `backends:` entry gets.
+            line = _config_line(source.text, (area, i, "hiera3_backend"), key=True)
+            backend_cls = _v3_backend_class(func_name, source, line)
+            levels.append(
+                _build_level(
+                    conf,
+                    "data_hash",
+                    func_name,
+                    backends,
                     source,
-                    "Unable to find '{}' function named '{}'".format(kind, func_name),
-                ) from None
-            if not backend_cls.implements(kind):
-                raise _config_error(
-                    source,
-                    _kind_mismatch_text(backend_cls, func_name, kind),
-                    line=_config_line(source.text, (area, i, kind), key=True),
+                    scope,
+                    area=area,
+                    index=i,
+                    extension="." + func_name,
+                    backend_cls=backend_cls,
                 )
-            conf[kind] = func_name
-            backend = Backend.new(func_name, conf, kind="function")
-        elif kind == "hiera3_backend":
-            raise _config_error(
-                source,
-                "'hiera3_backend' hierarchy entries are not supported "
-                "(hierarchy '{}', backend '{}')".format(name, func_name),
             )
-        elif kind == "v4_data_hash":
+            continue
+        if kind == "v4_data_hash":
             raise _config_error(
                 source,
                 "Unable to find 'v4_data_hash' function named '{}'".format(func_name),
             ) from None
-        else:
-            # Unreachable: _validate_v5 guarantees a function key exists.
-            raise _config_error(
-                source, "Hierarchy level {!r} is missing a function key".format(name)
-            )
 
-        levels.append(HieraLevel.new(conf, backend, kind))
+        levels.append(
+            _build_level(
+                conf, kind, func_name, backends, source, scope, area=area, index=i
+            )
+        )
     return levels

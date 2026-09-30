@@ -1,0 +1,7 @@
+---
+:backends: [json, yaml]
+:json:
+  :datadir: data
+:yaml:
+  :datadir: data
+:hierarchy: ["os/%{facts.os.family}", common]

@@ -1,0 +1,6 @@
+description: >-
+  A v3 :datadir: and hierarchy entries that interpolate; an undefined
+  variable becomes an empty string, so the first hierarchy entry reads
+  a dotfile.
+queries:
+  - key: k

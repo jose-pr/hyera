@@ -1,0 +1,5 @@
+---
+:backends: [hocon]
+:hocon:
+  :datadir: data
+:hierarchy: [common]

@@ -1,0 +1,12 @@
+description: >-
+  A v3 config with two backends (json, yaml): one data provider per
+  backend over the whole hierarchy, backend-major order (json wins over
+  yaml at the same hierarchy level).
+queries:
+  - key: k
+  - id: u-unique
+    key: u
+    merge: unique
+  - id: h-hash
+    key: h
+    merge: hash

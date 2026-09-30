@@ -1,0 +1,13 @@
+description: >-
+  A v5 global hiera3_backend entry naming an unavailable Hiera 3 backend.
+queries:
+  - key: k
+    deviation:
+      id: v3-ruby-backend-unavailable
+      reason: >-
+        Ruby Hiera 3 backends cannot run in Python, so an unregistered
+        Hiera 3 backend name raises ConfigError where Puppet with Hiera 3
+        installed skips it
+      expect:
+        status: error
+        message: "Hiera 3 backend 'foo' is not available"
