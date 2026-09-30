@@ -26,24 +26,24 @@ from .types import (
     SCALAR,
     SCALAR_DATA,
     UNDEF,
-    PArrayType,
-    PBooleanType,
-    PCollectionType,
-    PEnumType,
-    PFloatType,
-    PHashType,
-    PIntegerType,
-    PNotUndefType,
-    POptionalType,
-    PPatternType,
-    PRegexpType,
-    PSensitiveType,
-    PStringType,
-    PStructElement,
-    PStructType,
-    PTupleType,
-    PTypeReferenceType,
-    PVariantType,
+    Array,
+    Boolean,
+    Collection,
+    Enum,
+    Float,
+    Hash,
+    Integer,
+    NotUndef,
+    Optional,
+    Pattern,
+    Regexp,
+    SensitiveType,
+    String,
+    StructElement,
+    Struct,
+    Tuple,
+    TypeReference,
+    Variant,
     _PNamedType,
 )
 
@@ -72,22 +72,22 @@ _UNSUPPORTED_NAMES = frozenset(["iterable", "iterator", "init", "unit"])
 _BARE_TYPES = {
     "any": lambda: ANY,
     "undef": lambda: UNDEF,
-    "notundef": lambda: PNotUndefType(),
-    "optional": lambda: POptionalType(),
+    "notundef": lambda: NotUndef(),
+    "optional": lambda: Optional(),
     "scalar": lambda: SCALAR,
     "scalardata": lambda: SCALAR_DATA,
-    "string": lambda: PStringType.DEFAULT,
-    "integer": lambda: PIntegerType.DEFAULT,
-    "float": lambda: PFloatType.DEFAULT,
+    "string": lambda: String.DEFAULT,
+    "integer": lambda: Integer.DEFAULT,
+    "float": lambda: Float.DEFAULT,
     "numeric": lambda: NUMERIC,
     "boolean": lambda: BOOLEAN,
-    "array": lambda: PArrayType(),
-    "hash": lambda: PHashType(),
+    "array": lambda: Array(),
+    "hash": lambda: Hash(),
     "collection": lambda: COLLECTION,
-    "tuple": lambda: PTupleType([]),
-    "struct": lambda: PStructType([]),
-    "variant": lambda: PVariantType([]),
-    "sensitive": lambda: PSensitiveType(),
+    "tuple": lambda: Tuple([]),
+    "struct": lambda: Struct([]),
+    "variant": lambda: Variant([]),
+    "sensitive": lambda: SensitiveType(),
     "regexp": lambda: REGEXP,
 }
 #: Names whose Puppet-cased spelling ``str.capitalize()`` gets wrong.
@@ -377,7 +377,7 @@ def _interp_qref(node):
         return ALIASES[name]
     if name in _BARE_TYPES:
         return _BARE_TYPES[name]()
-    return PTypeReferenceType(text)
+    return TypeReference(text)
 
 
 def _pretty(name_lower):
@@ -400,8 +400,8 @@ def _interp_access(node):
     if builder is not None:
         return builder(args)
     # Unknown/unmodeled name with parameters: the whole access span becomes
-    # the TypeReference text (parent Q2/Q5).
-    return PTypeReferenceType(node_text(start, end))
+    # the TypeReference text.
+    return TypeReference(node_text(start, end))
 
 
 #: Set by :func:`parse_type` for the duration of one parse, so the
@@ -452,7 +452,7 @@ def _build_integer(args):
     from_ = _int_or_default(args[0])
     to = _int_or_default(args[1]) if len(args) == 2 else None
     _check_range(from_, to)
-    return PIntegerType(from_, to)
+    return Integer(from_, to)
 
 
 def _build_float(args):
@@ -467,7 +467,7 @@ def _build_float(args):
     from_ = float(from_) if from_ is not None else None
     to = float(to) if to is not None else None
     _check_range(from_, to)
-    return PFloatType(from_, to)
+    return Float(from_, to)
 
 
 def _build_string(args):
@@ -479,11 +479,11 @@ def _build_string(args):
         )
     if len(args) == 1:
         a = _num_or_default(args[0])
-        return PStringType(a, None)
+        return String(a, None)
     a = _num_or_default(args[0])
     b = _num_or_default(args[1])
     _check_range(a, b)
-    return PStringType(a, b)
+    return String(a, b)
 
 
 def _build_boolean(args):
@@ -493,7 +493,7 @@ def _build_boolean(args):
         )
     node = args[0]
     if node[0] == "bool":
-        return PBooleanType(node[1])
+        return Boolean(node[1])
     raise HieraLookupError("Boolean parameter must be true or false")
 
 
@@ -515,14 +515,14 @@ def _build_array(args):
     if len(size_args) > 2:
         raise _NotAValidTypeSpec()
     if not size_args:
-        return PArrayType(elem)
+        return Array(elem)
     if len(size_args) == 1:
         a = _num_or_default(size_args[0])
-        return PArrayType(elem, a, None)
+        return Array(elem, a, None)
     a = _num_or_default(size_args[0])
     b = _num_or_default(size_args[1])
     _check_range(a, b)
-    return PArrayType(elem, a, b)
+    return Array(elem, a, b)
 
 
 def _build_hash(args):
@@ -536,14 +536,14 @@ def _build_hash(args):
     val = _interp_type(args[1])
     size_args = args[2:]
     if not size_args:
-        return PHashType(key, val)
+        return Hash(key, val)
     if len(size_args) == 1:
         a = _num_or_default(size_args[0])
-        return PHashType(key, val, a, None)
+        return Hash(key, val, a, None)
     a = _num_or_default(size_args[0])
     b = _num_or_default(size_args[1])
     _check_range(a, b)
-    return PHashType(key, val, a, b)
+    return Hash(key, val, a, b)
 
 
 def _build_collection(args):
@@ -552,11 +552,11 @@ def _build_collection(args):
     # `args` is never empty here (see `_build_array`'s own comment).
     if len(args) == 1:
         a = _num_or_default(args[0])
-        return PCollectionType(a, None)
+        return Collection(a, None)
     a = _num_or_default(args[0])
     b = _num_or_default(args[1])
     _check_range(a, b)
-    return PCollectionType(a, b)
+    return Collection(a, b)
 
 
 def _build_tuple(args):
@@ -576,7 +576,7 @@ def _build_tuple(args):
         # (``Tuple[1,2]``): no element types are left to build from.
         raise _NotAValidTypeSpec()
     interpreted = [_interp_type(t) for t in types]
-    return PTupleType(interpreted, size_from, size_to)
+    return Tuple(interpreted, size_from, size_to)
 
 
 def _build_struct(args):
@@ -587,8 +587,8 @@ def _build_struct(args):
     for k_node, v_node in pairs:
         key, optional = _struct_key(k_node)
         value_type = _interp_type(v_node)
-        elements.append(PStructElement(key, optional, value_type))
-    return PStructType(elements)
+        elements.append(StructElement(key, optional, value_type))
+    return Struct(elements)
 
 
 def _struct_key(node):
@@ -605,7 +605,7 @@ def _struct_key(node):
 def _build_variant(args):
     # `args` is never empty here (see `_build_array`'s own comment); a bare,
     # unparameterized `Variant` goes through `_BARE_TYPES` instead.
-    return PVariantType([_interp_type(a) for a in args])
+    return Variant([_interp_type(a) for a in args])
 
 
 def _build_enum(args):
@@ -620,7 +620,7 @@ def _build_enum(args):
             values.append(a[1])
         else:
             raise _NotAValidTypeSpec()
-    return PEnumType(values)
+    return Enum(values)
 
 
 def _build_pattern(args):
@@ -634,7 +634,7 @@ def _build_pattern(args):
             sources.append(a[1])
         else:
             raise _NotAValidTypeSpec()
-    return PPatternType(sources)
+    return Pattern(sources)
 
 
 def _build_regexp(args):
@@ -643,9 +643,9 @@ def _build_regexp(args):
     # `args` is never empty here (see `_build_array`'s own comment).
     a = args[0]
     if a[0] == "regex":
-        return PRegexpType(a[1])
+        return Regexp(a[1])
     if a[0] == "string":
-        return PRegexpType(a[1])
+        return Regexp(a[1])
     raise _NotAValidTypeSpec()
 
 
@@ -659,7 +659,7 @@ def _build_sensitive(args):
     # `args` is never empty here (see `_build_array`'s own comment); a bare,
     # unparameterized `Sensitive` goes through `_BARE_TYPES` instead, never
     # through this access-form builder at all.
-    return PSensitiveType(_interp_type(args[0]))
+    return SensitiveType(_interp_type(args[0]))
 
 
 def _literal_or_type(node):
@@ -678,7 +678,7 @@ def _build_optional(args):
                 len(args)
             )
         )
-    return POptionalType(_literal_or_type(args[0]))
+    return Optional(_literal_or_type(args[0]))
 
 
 def _build_notundef(args):
@@ -691,7 +691,7 @@ def _build_notundef(args):
     # `args` is never empty here (see `_build_array`'s own comment); a bare,
     # unparameterized `NotUndef` goes through `_BARE_TYPES` instead, never
     # through this access-form builder at all.
-    return PNotUndefType(_literal_or_type(args[0]))
+    return NotUndef(_literal_or_type(args[0]))
 
 
 _ACCESS_BUILDERS = {

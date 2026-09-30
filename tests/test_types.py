@@ -27,11 +27,11 @@ from hyera._types.mismatch import (
 from hyera._types.parser import _Parser, parse_type
 from hyera._types.types import (
     ALIASES,
-    PAnyType,
-    PEnumType,
-    PNotUndefType,
-    POptionalType,
-    PTypeReferenceType,
+    Any,
+    Enum,
+    NotUndef,
+    Optional,
+    TypeReference,
     _eql_key,
     _literal_str,
     _num_str,
@@ -284,7 +284,7 @@ def test_parser_never_parameterized_and_unsupported_with_args():
     assert str(exc_info.value) == "hiera does not support the Puppet type 'SemVer[1,2]'"
 
     ref = parse_type("Stdlib::Port[80]")
-    assert isinstance(ref, PTypeReferenceType)
+    assert isinstance(ref, TypeReference)
     assert str(ref) == "TypeReference['Stdlib::Port[80]']"
 
 
@@ -356,7 +356,7 @@ def test_aliases_and_references():
     assert rich_t.instance(Sensitive("x")) is True
 
     ref = parse_type("Stdlib::Port")
-    assert isinstance(ref, PTypeReferenceType)
+    assert isinstance(ref, TypeReference)
     assert str(ref) == "TypeReference['Stdlib::Port']"
     assert ref.instance("80") is False
 
@@ -387,7 +387,7 @@ def test_aliases_and_references():
 
 def test_any_type_base_defaults():
     any_t = parse_type("Any")
-    assert isinstance(any_t, PAnyType) and type(any_t) is PAnyType
+    assert isinstance(any_t, Any) and type(any_t) is Any
     assert any_t.assignable(parse_type("Integer")) is True
     assert any_t.assignable(any_t) is True
     assert any_t.normalize() is any_t
@@ -426,7 +426,7 @@ def test_type_key_equality_and_hash():
         assert a != "not a type"
 
     ref_a = parse_type("Stdlib::Port")
-    ref_b = PTypeReferenceType("Stdlib::Port")
+    ref_b = TypeReference("Stdlib::Port")
     assert ref_a == ref_b
     assert hash(ref_a) == hash(ref_b)
     assert ref_a._key() == ("Stdlib::Port",)
@@ -490,7 +490,7 @@ def test_assignable_across_type_family():
     assert data_t.assignable(parse_type("Integer")) is True
     # `Data`'s own Variant branch matches ScalarData, which (like most types
     # in this ported model that never override `assignable()`) falls back to
-    # PAnyType's own base implementation -- "any other PAnyType at all" --
+    # Any's own base implementation -- "any other Any at all" --
     # rather than a real structural subtype check.
     assert data_t.assignable(parse_type("Sensitive")) is True
 
@@ -535,11 +535,11 @@ def test_optional_notundef_literal_container_rendering():
     # `Optional[integer]`/`NotUndef[integer]` (a bareword *contained type
     # argument*) keep the contained value as a raw Python str, rendered
     # through the plain-string branch -- but Optional/NotUndef can also wrap
-    # a real PStringType with `.literal` set (never produced by parse_type,
+    # a real String with `.literal` set (never produced by parse_type,
     # only by infer()); that flavor renders its quoted literal directly
     # rather than recursing into the child's own (bare "String") renderer.
-    assert str(POptionalType(infer("x"))) == "Optional['x']"
-    assert str(PNotUndefType(infer("y"))) == "NotUndef['y']"
+    assert str(Optional(infer("x"))) == "Optional['x']"
+    assert str(NotUndef(infer("y"))) == "NotUndef['y']"
 
 
 def test_collection_pattern_regexp_enum_instance_and_render():
@@ -593,7 +593,8 @@ def test_numeric_and_string_range_bounds():
     # A range-bound rendered through `_num_str`, not the value's own
     # instance-check: `infer()` on a NaN/Infinity/large-exponent float turns
     # it into `Float[<that value>, <that value>]`, and the mismatch-message
-    # path (`_data_functions.py`/`_lookup_adapter.py`/`_type_mismatch.py`,
+    # path (`_lookup/data_functions.py`/`_lookup/lookup_adapter.py`/
+    # `_types/mismatch.py`,
     # all calling `infer(value)`) renders it right there.
     assert str(infer(float("nan"))) == "Float[nan, nan]"
     assert str(infer(float("inf"))) == "Float[inf, inf]"
@@ -622,7 +623,7 @@ def test_infer_edge_cases():
     assert rt.instance(RubySymbol()) is True
     assert rt.instance("x") is False
 
-    # `generalize()`'s module-level dispatcher passes a non-PAnyType value
+    # `generalize()`'s module-level dispatcher passes a non-Any value
     # (a bareword literal contained type, e.g. Optional[integer]'s "integer")
     # through unchanged, since it has no `.generalize()` of its own.
     assert generalize("integer") == "integer"
@@ -632,7 +633,7 @@ def test_num_str_and_literal_str_direct():
     # `_num_str`'s bool branch and `_literal_str`'s float/other branches are
     # unreachable through `parse_type()`: the parser's own `_num_or_default`
     # only ever hands Integer/Float range bounds a "number" or "default"
-    # node (never "bool"), and `_build_enum` only ever hands `PEnumType` a
+    # node (never "bool"), and `_build_enum` only ever hands `Enum` a
     # "string" or "bool" node -- so neither a bool bound nor a non-str/bool
     # Enum value can arise from real Puppet type-expression text. Both
     # helpers are still exercised directly, the same as every other private
@@ -644,7 +645,7 @@ def test_num_str_and_literal_str_direct():
     assert _literal_str(3.14) == "3.14"
     assert _literal_str(5) == "5"
 
-    assert str(PEnumType([3.14, 5])) == "Enum[3.14, 5]"
+    assert str(Enum([3.14, 5])) == "Enum[3.14, 5]"
 
 
 def test_eql_key_undef_sensitive_and_identity_fallback():
@@ -794,7 +795,7 @@ def test_describe_evidence_more_branches():
 
     # A Variant branch that is itself an Optional[<bareword literal>]:
     # short_name's wrapper-type case, with a raw-str `.contained` (never a
-    # real PAnyType -- `_bare_name`'s own str branch).
+    # real Any -- `_bare_name`'s own str branch).
     assert err(parse_type("Variant[Optional[integer], Boolean]"), 5) == (
         "Found value has wrong type, expects a value of type Optional[String] "
         "or Boolean, got Integer"

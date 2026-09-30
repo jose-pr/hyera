@@ -14,19 +14,19 @@ values, never function signatures.
 from ..exceptions import HieraLookupError
 from .types import (
     ANY,
-    PArrayType,
-    PEnumType,
-    PHashType,
-    PNotUndefType,
-    POptionalType,
-    PPatternType,
-    PSensitiveType,
-    PStringType,
-    PStructType,
-    PTupleType,
-    PTypeAliasType,
-    PTypeReferenceType,
-    PVariantType,
+    Array,
+    Enum,
+    Hash,
+    NotUndef,
+    Optional,
+    Pattern,
+    SensitiveType,
+    String,
+    Struct,
+    Tuple,
+    TypeAlias,
+    TypeReference,
+    Variant,
     _type_instance,
     infer_set,
 )
@@ -38,7 +38,7 @@ __all__ = ["assert_instance_of", "describe_mismatch"]
 #: also ``type_formatter.rb``'s dedicated ``string_P*`` methods for these
 #: three -- ``Type`` is the fourth in Puppet but unparameterized in this
 #: subset, so it never reaches here with a contained type).
-_WRAPPER_TYPES = (POptionalType, PNotUndefType, PSensitiveType)
+_WRAPPER_TYPES = (Optional, NotUndef, SensitiveType)
 
 
 def _is_any(t):
@@ -168,7 +168,7 @@ def _actual_literal(actual_type):
     never the type name (``string_PStringType`` never shows a value's own
     literal, but Puppet's ``PatternMismatch#message`` uses ``actual.value``
     directly)."""
-    if isinstance(actual_type, PStringType) and actual_type.literal is not None:
+    if isinstance(actual_type, String) and actual_type.literal is not None:
         return _quote(actual_type.literal)
     return short_name(actual_type)
 
@@ -184,7 +184,7 @@ def _describe(expected, value, path):
             return []
         return [_Mismatch(path, "type", expected, infer_set(value))]
 
-    if isinstance(expected, POptionalType):
+    if isinstance(expected, Optional):
         if value is None:
             return []
         inner = expected.contained if expected.contained is not None else ANY
@@ -195,7 +195,7 @@ def _describe(expected, value, path):
         m.optional = True
         return [m]
 
-    if isinstance(expected, PNotUndefType):
+    if isinstance(expected, NotUndef):
         if value is None:
             return [_Mismatch(path, "type", expected, infer_set(value))]
         if expected.contained is None:
@@ -204,30 +204,30 @@ def _describe(expected, value, path):
         # own instance set already excludes Undef): see AGENTS.md Gotchas.
         return _describe(expected.contained, value, path)
 
-    if isinstance(expected, PVariantType):
+    if isinstance(expected, Variant):
         return _describe_variant(expected, value, path)
 
-    if isinstance(expected, PArrayType):
+    if isinstance(expected, Array):
         return _describe_array(expected, value, path)
 
-    if isinstance(expected, PTupleType):
+    if isinstance(expected, Tuple):
         return _describe_tuple(expected, value, path)
 
-    if isinstance(expected, PHashType):
+    if isinstance(expected, Hash):
         return _describe_hash(expected, value, path)
 
-    if isinstance(expected, PStructType):
+    if isinstance(expected, Struct):
         return _describe_struct(expected, value, path)
 
-    if isinstance(expected, (PEnumType, PPatternType)):
+    if isinstance(expected, (Enum, Pattern)):
         if expected.instance(value):
             return []
         return [_Mismatch(path, "pattern", expected, infer_set(value))]
 
-    if isinstance(expected, PTypeReferenceType):
+    if isinstance(expected, TypeReference):
         return [_Mismatch(path, "unresolved", ref=expected.text)]
 
-    if isinstance(expected, PTypeAliasType):
+    if isinstance(expected, TypeAlias):
         # Puppet's own special case (``describe_PVariantType``): once every
         # branch of an aliased Variant fails, it reports one mismatch on
         # the alias itself, never the branches' own structural detail.
@@ -262,7 +262,7 @@ def _describe_variant(expected, value, path):
     ]
     if len(immediate) == len(per_branch):
         actual = infer_set(value)
-        if any(isinstance(t, (PEnumType, PPatternType)) for _, t, _ in per_branch):
+        if any(isinstance(t, (Enum, Pattern)) for _, t, _ in per_branch):
             return [_Mismatch(path, "pattern", expected, actual)]
         types = [t for _, t, _ in per_branch]
         return [_Mismatch(path, "type", types, actual)]
@@ -394,7 +394,7 @@ def describe_mismatch(name, expected, actual):
     :func:`assert_instance_of` with the value instead, which is what every
     caller in this codebase has."""
     e_render, a_render = _render_pair(expected, actual)
-    if isinstance(expected, POptionalType) and expected.contained is not None:
+    if isinstance(expected, Optional) and expected.contained is not None:
         e_render, _ = _render_pair(expected.contained, actual)
         return "{} expects a value of type Undef or {}, got {}".format(
             name, e_render, a_render

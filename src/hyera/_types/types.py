@@ -5,9 +5,16 @@
 """Puppet type system: the type model, Sensitive, convert_to.
 
 Ports Puppet's ``pops/types`` (``types.rb``, ``type_calculator.rb``,
-``type_formatter.rb``, ``p_sensitive_type.rb``). ``_types`` is a leaf module
-(imports only :mod:`hyera.exceptions`); ``_type_parser.py`` builds type
-instances from a Puppet type-expression string via :func:`parse_type`.
+``type_formatter.rb``, ``p_sensitive_type.rb``). This module is a leaf
+(imports only :mod:`hyera.exceptions`); :mod:`hyera._types.parser` builds
+type instances from a Puppet type-expression string via ``parse_type``.
+
+Each class here is Puppet's own type-expression name (``Any``, ``Integer``,
+``Optional``, ...) rather than Ruby's ``P<Name>Type`` (``PAnyType``,
+``PIntegerType``, ``POptionalType``, ...); the one exception is
+:class:`SensitiveType`, kept out of Ruby's bare ``Sensitive`` name because
+:class:`hyera.Sensitive` (this module's own value wrapper) already has it.
+The classes stay private.
 """
 
 import re
@@ -80,7 +87,7 @@ def _render_size_args(from_, to_):
     return [_num_str(from_), _num_str(to_)]
 
 
-class PAnyType:
+class Any:
     """Base of the ported Puppet type model (``types.rb``)."""
 
     __slots__ = ()
@@ -92,7 +99,7 @@ class PAnyType:
         return True
 
     def assignable(self, other):
-        return isinstance(other, PAnyType)
+        return isinstance(other, Any)
 
     def normalize(self):
         return self
@@ -127,17 +134,17 @@ class PAnyType:
         return hash((type(self), self._key()))
 
 
-class PUndefType(PAnyType):
+class Undef(Any):
     TYPE_NAME = "Undef"
 
     def instance(self, value):
         return value is None
 
     def assignable(self, other):
-        return isinstance(other, PUndefType)
+        return isinstance(other, Undef)
 
 
-class PNotUndefType(PAnyType):
+class NotUndef(Any):
     TYPE_NAME = "NotUndef"
 
     def __init__(self, contained=None):
@@ -151,7 +158,7 @@ class PNotUndefType(PAnyType):
         return _type_instance(self.contained, value)
 
     def assignable(self, other):
-        if isinstance(other, PUndefType):
+        if isinstance(other, Undef):
             return False
         if self.contained is None:
             return True
@@ -164,7 +171,7 @@ class PNotUndefType(PAnyType):
         return _render_container("NotUndef", self.contained, show_literal=True)
 
 
-class POptionalType(PAnyType):
+class Optional(Any):
     TYPE_NAME = "Optional"
 
     def __init__(self, contained=None):
@@ -178,7 +185,7 @@ class POptionalType(PAnyType):
         return _type_instance(self.contained, value)
 
     def assignable(self, other):
-        if isinstance(other, PUndefType):
+        if isinstance(other, Undef):
             return True
         if self.contained is None:
             return True
@@ -191,7 +198,7 @@ class POptionalType(PAnyType):
         return _render_container("Optional", self.contained, show_literal=True)
 
 
-class PScalarType(PAnyType):
+class Scalar(Any):
     TYPE_NAME = "Scalar"
 
     def instance(self, value):
@@ -200,30 +207,30 @@ class PScalarType(PAnyType):
         )
 
 
-class PScalarDataType(PScalarType):
+class ScalarData(Scalar):
     TYPE_NAME = "ScalarData"
 
     def instance(self, value):
         if isinstance(value, (bool, int, float, str)):
             return True
         if isinstance(value, list):
-            return all(PScalarDataType.instance(self, v) for v in value)
+            return all(ScalarData.instance(self, v) for v in value)
         if isinstance(value, dict):
             return all(
-                isinstance(k, str) and PScalarDataType.instance(self, v)
+                isinstance(k, str) and ScalarData.instance(self, v)
                 for k, v in value.items()
             )
         return False
 
 
-class PNumericType(PAnyType):
+class Numeric(Any):
     TYPE_NAME = "Numeric"
 
     def instance(self, value):
         return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
-class PIntegerType(PAnyType):
+class Integer(Any):
     TYPE_NAME = "Integer"
 
     def __init__(self, from_=None, to=None):
@@ -242,7 +249,7 @@ class PIntegerType(PAnyType):
         return True
 
     def assignable(self, other):
-        if not isinstance(other, PIntegerType):
+        if not isinstance(other, Integer):
             return False
         if self.from_ is not None and (other.from_ is None or other.from_ < self.from_):
             return False
@@ -251,7 +258,7 @@ class PIntegerType(PAnyType):
         return True
 
     def generalize(self):
-        return PIntegerType.DEFAULT
+        return Integer.DEFAULT
 
     def _key(self):
         return (self.from_, self.to)
@@ -264,7 +271,7 @@ class PIntegerType(PAnyType):
         return "Integer[{}, {}]".format(_num_str(self.from_), _num_str(self.to))
 
 
-class PFloatType(PAnyType):
+class Float(Any):
     TYPE_NAME = "Float"
 
     def __init__(self, from_=None, to=None):
@@ -283,7 +290,7 @@ class PFloatType(PAnyType):
         return True
 
     def assignable(self, other):
-        if not isinstance(other, PFloatType):
+        if not isinstance(other, Float):
             return False
         if self.from_ is not None and (other.from_ is None or other.from_ < self.from_):
             return False
@@ -292,7 +299,7 @@ class PFloatType(PAnyType):
         return True
 
     def generalize(self):
-        return PFloatType.DEFAULT
+        return Float.DEFAULT
 
     def _key(self):
         return (self.from_, self.to)
@@ -305,7 +312,7 @@ class PFloatType(PAnyType):
         return "Float[{}, {}]".format(_num_str(self.from_), _num_str(self.to))
 
 
-class PStringType(PAnyType):
+class String(Any):
     TYPE_NAME = "String"
 
     def __init__(self, size_from=None, size_to=None, literal=None):
@@ -335,7 +342,7 @@ class PStringType(PAnyType):
         return True
 
     def assignable(self, other):
-        if not isinstance(other, PStringType):
+        if not isinstance(other, String):
             return False
         if self.literal is not None:
             return other.literal == self.literal
@@ -353,7 +360,7 @@ class PStringType(PAnyType):
         return True
 
     def generalize(self):
-        return PStringType.DEFAULT
+        return String.DEFAULT
 
     def _key(self):
         return (self.size_from, self.size_to, self.literal)
@@ -368,12 +375,12 @@ class PStringType(PAnyType):
         return "String[{}, {}]".format(_num_str(self.size_from), _num_str(self.size_to))
 
 
-class PBooleanType(PAnyType):
+class Boolean(Any):
     TYPE_NAME = "Boolean"
 
     def __init__(self, value=None):
         #: ``None`` = unconstrained; ``True``/``False`` = exactly that value
-        #: (``PBooleanType.new(true)``/``new(false)``, what ``infer()``
+        #: (``Boolean.new(true)``/``new(false)``, what ``infer()``
         #: gives a literal ``bool``).
         self.value = value
 
@@ -383,7 +390,7 @@ class PBooleanType(PAnyType):
         return self.value is None or value == self.value
 
     def assignable(self, other):
-        if not isinstance(other, PBooleanType):
+        if not isinstance(other, Boolean):
             return False
         return self.value is None or other.value == self.value
 
@@ -399,7 +406,7 @@ class PBooleanType(PAnyType):
         return "Boolean[{}]".format("true" if self.value else "false")
 
 
-class PRegexpType(PAnyType):
+class Regexp(Any):
     TYPE_NAME = "Regexp"
 
     def __init__(self, source=None):
@@ -421,7 +428,7 @@ class PRegexpType(PAnyType):
         return "Regexp[/{}/]".format(self.source)
 
 
-class PPatternType(PAnyType):
+class Pattern(Any):
     TYPE_NAME = "Pattern"
 
     def __init__(self, sources):
@@ -440,7 +447,7 @@ class PPatternType(PAnyType):
         return "Pattern[{}]".format(", ".join("/{}/".format(s) for s in self.sources))
 
 
-class PEnumType(PAnyType):
+class Enum(Any):
     TYPE_NAME = "Enum"
 
     def __init__(self, values):
@@ -458,7 +465,7 @@ class PEnumType(PAnyType):
         return "Enum[{}]".format(", ".join(_literal_str(v) for v in self.values))
 
 
-class PCollectionType(PAnyType):
+class Collection(Any):
     TYPE_NAME = "Collection"
 
     def __init__(self, size_from=None, size_to=None):
@@ -488,7 +495,7 @@ class PCollectionType(PAnyType):
         return "Collection[{}]".format(", ".join(args))
 
 
-class PArrayType(PAnyType):
+class Array(Any):
     TYPE_NAME = "Array"
 
     def __init__(self, element_type=None, size_from=None, size_to=None):
@@ -510,7 +517,7 @@ class PArrayType(PAnyType):
 
     def generalize(self):
         elem = generalize(self.element_type) if self.element_type is not None else None
-        return PArrayType(elem)
+        return Array(elem)
 
     def _key(self):
         return (_key_of(self.element_type), self.size_from, self.size_to)
@@ -527,7 +534,7 @@ class PArrayType(PAnyType):
         return "Array[{}]".format(", ".join(parts))
 
 
-class PHashType(PAnyType):
+class Hash(Any):
     TYPE_NAME = "Hash"
 
     def __init__(self, key_type=None, value_type=None, size_from=None, size_to=None):
@@ -554,7 +561,7 @@ class PHashType(PAnyType):
     def generalize(self):
         key = generalize(self.key_type) if self.key_type is not None else None
         val = generalize(self.value_type) if self.value_type is not None else None
-        return PHashType(key, val)
+        return Hash(key, val)
 
     def _key(self):
         return (
@@ -580,7 +587,7 @@ class PHashType(PAnyType):
         return "Hash[{}]".format(", ".join(parts))
 
 
-class PTupleType(PAnyType):
+class Tuple(Any):
     TYPE_NAME = "Tuple"
 
     def __init__(self, types, size_from=None, size_to=None):
@@ -614,7 +621,7 @@ class PTupleType(PAnyType):
         return True
 
     def generalize(self):
-        return PTupleType([generalize(t) for t in self.types])
+        return Tuple([generalize(t) for t in self.types])
 
     def _key(self):
         return (tuple(_key_of(t) for t in self.types), self.size_from, self.size_to)
@@ -625,7 +632,7 @@ class PTupleType(PAnyType):
         return "Tuple[{}]".format(", ".join(parts))
 
 
-class PStructElement:
+class StructElement:
     __slots__ = ("key", "optional", "value_type")
 
     def __init__(self, key, optional, value_type):
@@ -639,7 +646,7 @@ class PStructElement:
         return _puppet_quote(self.key)
 
 
-class PStructType(PAnyType):
+class Struct(Any):
     TYPE_NAME = "Struct"
 
     def __init__(self, elements):
@@ -670,7 +677,7 @@ class PStructType(PAnyType):
         return "Struct[{{{}}}]".format(", ".join(parts))
 
 
-class PVariantType(PAnyType):
+class Variant(Any):
     TYPE_NAME = "Variant"
 
     def __init__(self, types):
@@ -683,7 +690,7 @@ class PVariantType(PAnyType):
         return any(_type_assignable(t, other) for t in self.types)
 
     def generalize(self):
-        return PVariantType([generalize(t) for t in self.types])
+        return Variant([generalize(t) for t in self.types])
 
     def _key(self):
         return tuple(_key_of(t) for t in self.types)
@@ -692,7 +699,7 @@ class PVariantType(PAnyType):
         return "Variant[{}]".format(", ".join(str(t) for t in self.types))
 
 
-class PSensitiveType(PAnyType):
+class SensitiveType(Any):
     TYPE_NAME = "Sensitive"
 
     def __init__(self, contained=None):
@@ -712,7 +719,7 @@ class PSensitiveType(PAnyType):
         return _render_container("Sensitive", self.contained)
 
 
-class PTypeReferenceType(PAnyType):
+class TypeReference(Any):
     """An unresolved type name (unknown to the static loader), Puppet's
     ``TypeReference``. Never an instance of anything."""
 
@@ -731,7 +738,7 @@ class PTypeReferenceType(PAnyType):
         return "TypeReference[{}]".format(_puppet_quote(self.text))
 
 
-class _PNamedType(PAnyType):
+class _PNamedType(Any):
     """A named-only type this subset does not model in full: no value hiera
     can hold is ever an instance, so ``instance`` is always ``False`` and
     Puppet's mismatch text ("expects a Timestamp value, got String") is
@@ -749,7 +756,7 @@ class _PNamedType(PAnyType):
         return (self.TYPE_NAME,)
 
 
-class PRuntimeType(PAnyType):
+class Runtime(Any):
     """``Runtime[<runtime>, '<name>']``. Only ``Runtime['ruby', 'Symbol']``
     is meaningful here: it is the inferred type of a
     :class:`hyera.backends.RubySymbol` (never imported directly -- matched
@@ -779,7 +786,7 @@ class PRuntimeType(PAnyType):
         return "Runtime[{}, {}]".format(self.runtime, _puppet_quote(self.runtime_name))
 
 
-class PTypeAliasType(PAnyType):
+class TypeAlias(Any):
     """One of Puppet's five static-loader aliases (``Data``, ``RichDataKey``,
     ``RichData``, ``Puppet::LookupKey``, ``Puppet::LookupValue``). Resolved
     lazily (and memoized) against its own body text, so a self-referencing
@@ -831,17 +838,15 @@ class PTypeAliasType(PAnyType):
 
 
 def _alias_expand(t, guard):
-    if isinstance(t, PTypeAliasType):
+    if isinstance(t, TypeAlias):
         return t.alias_expanded_str(guard)
-    if isinstance(t, PVariantType):
+    if isinstance(t, Variant):
         return "Variant[{}]".format(", ".join(_alias_expand(x, guard) for x in t.types))
-    if isinstance(t, PArrayType) and t.element_type is not None:
+    if isinstance(t, Array) and t.element_type is not None:
         parts = [_alias_expand(t.element_type, guard)]
         parts += _render_size_args(t.size_from, t.size_to)
         return "Array[{}]".format(", ".join(parts))
-    if isinstance(t, PHashType) and (
-        t.key_type is not None or t.value_type is not None
-    ):
+    if isinstance(t, Hash) and (t.key_type is not None or t.value_type is not None):
         parts = [
             _alias_expand(t.key_type, guard) if t.key_type is not None else "Any",
             _alias_expand(t.value_type, guard) if t.value_type is not None else "Any",
@@ -853,21 +858,21 @@ def _alias_expand(t, guard):
 
 #: Puppet's five static-loader type aliases (``static_loader.rb:30-36``).
 ALIASES = {
-    "data": PTypeAliasType(
+    "data": TypeAlias(
         "Data", "Variant[ScalarData,Undef,Hash[String,Data],Array[Data]]"
     ),
-    "richdatakey": PTypeAliasType("RichDataKey", "Variant[String,Numeric]"),
-    "richdata": PTypeAliasType(
+    "richdatakey": TypeAlias("RichDataKey", "Variant[String,Numeric]"),
+    "richdata": TypeAlias(
         "RichData",
         "Variant[Scalar,SemVerRange,Binary,Sensitive,Type,TypeSet,URI,Object,"
         "Undef,Default,Hash[RichDataKey,RichData],Array[RichData]]",
     ),
 }
-ALIASES["puppet::lookupkey"] = PTypeAliasType("Puppet::LookupKey", "RichDataKey")
-ALIASES["puppet::lookupvalue"] = PTypeAliasType("Puppet::LookupValue", "RichData")
+ALIASES["puppet::lookupkey"] = TypeAlias("Puppet::LookupKey", "RichDataKey")
+ALIASES["puppet::lookupvalue"] = TypeAlias("Puppet::LookupValue", "RichData")
 
 #: Named-only types (second tier): full detail in
-#: ``_type_parser.TYPE_MAP``; instances are always ``False``.
+#: ``_types.parser.TYPE_MAP``; instances are always ``False``.
 NAMED_ONLY_TYPES = (
     "default",
     "type",
@@ -885,17 +890,17 @@ NAMED_ONLY_TYPES = (
     "resource",
 )
 
-PIntegerType.DEFAULT = PIntegerType()
-PFloatType.DEFAULT = PFloatType()
-PStringType.DEFAULT = PStringType()
-ANY = PAnyType()
-UNDEF = PUndefType()
-SCALAR = PScalarType()
-SCALAR_DATA = PScalarDataType()
-NUMERIC = PNumericType()
-BOOLEAN = PBooleanType()
-COLLECTION = PCollectionType()
-REGEXP = PRegexpType()
+Integer.DEFAULT = Integer()
+Float.DEFAULT = Float()
+String.DEFAULT = String()
+ANY = Any()
+UNDEF = Undef()
+SCALAR = Scalar()
+SCALAR_DATA = ScalarData()
+NUMERIC = Numeric()
+BOOLEAN = Boolean()
+COLLECTION = Collection()
+REGEXP = Regexp()
 
 
 def _render_container(name, contained, show_literal=False):
@@ -906,19 +911,13 @@ def _render_container(name, contained, show_literal=False):
     golden -- these three wrapper types are the ones ``short_name`` also
     keeps one bare parameter level for). ``show_literal`` is Optional/
     NotUndef's own extra special case (``string_POptionalType``/
-    ``string_PNotUndefType`` only, NOT Sensitive): a literal ``PStringType``
+    ``string_PNotUndefType`` only, NOT Sensitive): a literal ``String``
     child prints its quoted literal value directly instead of recursing
     into the child's own (bare) renderer -- confirmed against the
     ``Optional['integer']`` oracle golden."""
-    if contained is None or (
-        isinstance(contained, PAnyType) and type(contained) is PAnyType
-    ):
+    if contained is None or (isinstance(contained, Any) and type(contained) is Any):
         return name
-    if (
-        show_literal
-        and isinstance(contained, PStringType)
-        and contained.literal is not None
-    ):
+    if show_literal and isinstance(contained, String) and contained.literal is not None:
         return "{}[{}]".format(name, _puppet_quote(contained.literal))
     if isinstance(contained, str):
         return "{}[{}]".format(name, _puppet_quote(contained))
@@ -928,7 +927,7 @@ def _render_container(name, contained, show_literal=False):
 def _key_of(t):
     if t is None:
         return None
-    if isinstance(t, PAnyType):
+    if isinstance(t, Any):
         return t._key() + (type(t).__name__,)
     return t
 
@@ -944,7 +943,7 @@ def _type_instance(t, value):
 
 def _type_assignable(t, other):
     if isinstance(t, str):
-        return isinstance(other, PStringType) and other.literal == t
+        return isinstance(other, String) and other.literal == t
     return t.assignable(other)
 
 
@@ -953,24 +952,24 @@ def infer(value):
     if value is None:
         return UNDEF
     if isinstance(value, bool):
-        return PBooleanType(value)
+        return Boolean(value)
     if isinstance(value, str):
-        return PStringType(literal=value)
+        return String(literal=value)
     if isinstance(value, int):
-        return PIntegerType(value, value)
+        return Integer(value, value)
     if isinstance(value, float):
-        return PFloatType(value, value)
+        return Float(value, value)
     if isinstance(value, Sensitive):
-        return PSensitiveType(infer(value.unwrap()))
+        return SensitiveType(infer(value.unwrap()))
     if isinstance(value, re.Pattern):
-        return PRegexpType(value.pattern)
+        return Regexp(value.pattern)
     if isinstance(value, (list, tuple)):
         return _infer_array(value)
     if isinstance(value, dict):
         return _infer_hash(value)
     cls = type(value)
     if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera.backends._yaml_loader":
-        return PRuntimeType("ruby", "Symbol")
+        return Runtime("ruby", "Symbol")
     raise TypeError("no Puppet type for {!r}".format(value))
 
 
@@ -979,11 +978,11 @@ def infer_set(value):
     and Hash get the precise Tuple/Struct shape used for mismatch
     reporting (``infer_set_Array``/``infer_set_Hash``)."""
     if isinstance(value, (list, tuple)):
-        return PTupleType([infer_set(v) for v in value]) if value else PTupleType([])
+        return Tuple([infer_set(v) for v in value]) if value else Tuple([])
     if isinstance(value, dict):
         if value and all(isinstance(k, str) and k for k in value):
-            return PStructType(
-                [PStructElement(k, False, infer_set(v)) for k, v in value.items()]
+            return Struct(
+                [StructElement(k, False, infer_set(v)) for k, v in value.items()]
             )
         return _infer_hash(value)
     return infer(value)
@@ -991,17 +990,17 @@ def infer_set(value):
 
 def _infer_array(value):
     if not value:
-        return PArrayType(None, 0, 0)
+        return Array(None, 0, 0)
     elem = _generalized_common(infer_generic(v) for v in value)
-    return PArrayType(elem, len(value), len(value))
+    return Array(elem, len(value), len(value))
 
 
 def _infer_hash(value):
     if not value:
-        return PHashType(None, None, 0, 0)
+        return Hash(None, None, 0, 0)
     keys = _generalized_common(infer_generic(k) for k in value)
     vals = _generalized_common(infer_generic(v) for v in value.values())
-    return PHashType(keys, vals, len(value), len(value))
+    return Hash(keys, vals, len(value), len(value))
 
 
 def infer_generic(value):
@@ -1009,7 +1008,7 @@ def infer_generic(value):
 
 
 def generalize(t):
-    if isinstance(t, PAnyType):
+    if isinstance(t, Any):
         return t.generalize()
     return t
 
@@ -1022,7 +1021,7 @@ def _generalized_common(types):
             uniq.append(t)
     if len(uniq) == 1:
         return uniq[0]
-    return PVariantType(uniq)
+    return Variant(uniq)
 
 
 def _eql_key(value):

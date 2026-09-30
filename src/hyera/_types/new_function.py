@@ -7,7 +7,7 @@
 ``new_instance(type_, value, *args)``: one argument already an instance of
 ``type_`` (and no ``*args``) is returned unchanged; else the type's own
 conversion runs, and the result is asserted against ``type_`` with the
-subject ``"Converted value from <type_>.new()"`` (``_type_mismatch``).
+subject ``"Converted value from <type_>.new()"`` (``_types.mismatch``).
 Types outside this subset's new()-capable tier (SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type,
 Object) raise our own "hiera does not support new()" text -- a deliberate
 deviation, not a bug, since Puppet itself does support new() for several
@@ -20,20 +20,20 @@ from ..exceptions import HieraLookupError
 from .string_converter import convert as _string_convert
 from .mismatch import assert_instance_of, short_name
 from .types import (
-    PAnyType,
-    PArrayType,
-    PBooleanType,
-    PFloatType,
-    PHashType,
-    PIntegerType,
-    PNotUndefType,
-    PNumericType,
-    POptionalType,
-    PRegexpType,
-    PSensitiveType,
-    PStringType,
-    PStructType,
-    PTupleType,
+    Any,
+    Array,
+    Boolean,
+    Float,
+    Hash,
+    Integer,
+    NotUndef,
+    Numeric,
+    Optional,
+    Regexp,
+    SensitiveType,
+    String,
+    Struct,
+    Tuple,
     Sensitive,
     _PNamedType,
     infer_generic,
@@ -71,7 +71,7 @@ _BOOL_WORDS = {
 
 def new_instance(type_, value, *args):
     """Puppet's ``new_instance(t, *args)`` (``functions/new.rb``)."""
-    if not isinstance(type_, PAnyType):
+    if not isinstance(type_, Any):
         inferred = infer_set(type_)
         raise HieraLookupError(
             "'new' parameter 'type' expects a Type value, got {}".format(
@@ -87,24 +87,24 @@ def new_instance(type_, value, *args):
 
 
 def _dispatch(type_, value, args):
-    if isinstance(type_, PIntegerType):
+    if isinstance(type_, Integer):
         return _new_integer(value, *args)
-    if isinstance(type_, PFloatType):
+    if isinstance(type_, Float):
         return _new_float(value, *args)
-    if isinstance(type_, PNumericType):
+    if isinstance(type_, Numeric):
         return _new_numeric(value, *args)
-    if isinstance(type_, PStringType):
+    if isinstance(type_, String):
         return _new_string(value, *args)
-    if isinstance(type_, PBooleanType):
+    if isinstance(type_, Boolean):
         return _new_boolean(value, *args)
-    if isinstance(type_, PSensitiveType):
+    if isinstance(type_, SensitiveType):
         return Sensitive(value)
-    if isinstance(type_, (PTupleType, PArrayType)):
+    if isinstance(type_, (Tuple, Array)):
         wrap = args[0] if args else False
         return _new_array(value, wrap)
-    if isinstance(type_, (PStructType, PHashType)):
+    if isinstance(type_, (Struct, Hash)):
         return _new_hash(value)
-    if isinstance(type_, (POptionalType, PNotUndefType)):
+    if isinstance(type_, (Optional, NotUndef)):
         if type_.contained is None:
             _not_supported(type_)
         if isinstance(type_.contained, str):
@@ -114,9 +114,9 @@ def _dispatch(type_, value, args):
             # assert_instance_of checks the result against the literal type
             # itself -- so a value equal to the literal converts cleanly and
             # anything else is a wrong-type mismatch, never "not supported".
-            return _dispatch(PStringType(), value, args)
+            return _dispatch(String(), value, args)
         return _dispatch(type_.contained, value, args)
-    if isinstance(type_, PRegexpType) or (
+    if isinstance(type_, Regexp) or (
         isinstance(type_, _PNamedType) and type_.TYPE_NAME in _OUR_UNSUPPORTED_NAMES
     ):
         raise HieraLookupError(
