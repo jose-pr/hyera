@@ -1,0 +1,55 @@
+{
+  "hyera_version": "0.0.0a0",
+  "implementation": "CPython",
+  "iterations": {
+    "construct": 3,
+    "lookup.deep.glob500": 10,
+    "lookup.first": 200,
+    "lookup.keys100": 100,
+    "lookup.scope.new_node": 20,
+    "lookup.scope.volatile": 50,
+    "repeat": 7
+  },
+  "metrics": {
+    "construct": {
+      "max_ms": 261.961867,
+      "median_ms": 228.524233,
+      "min_ms": 196.2994
+    },
+    "lookup.deep.glob500": {
+      "max_ms": 688.54718,
+      "median_ms": 664.24308,
+      "min_ms": 624.31844
+    },
+    "lookup.first": {
+      "max_ms": 0.749091,
+      "median_ms": 0.684181,
+      "min_ms": 0.594296
+    },
+    "lookup.keys100": {
+      "max_ms": 0.132516,
+      "median_ms": 0.114678,
+      "min_ms": 0.113234
+    },
+    "lookup.scope.new_node": {
+      "max_ms": 3.941165,
+      "median_ms": 3.163435,
+      "min_ms": 2.909585
+    },
+    "lookup.scope.volatile": {
+      "max_ms": 0.661302,
+      "median_ms": 0.602562,
+      "min_ms": 0.593268
+    }
+  },
+  "name": "hyera-0.0.0a0-py314-norevalidate",
+  "platform": "Windows-11-10.0.28000-SP0",
+  "processor": "ARMv8 (64-bit) Family 8 Model 2 Revision 201, Qualcomm Technologies Inc",
+  "python": "3.14.6",
+  "revalidate": false,
+  "timestamp": "2026-09-30T01:59:38+00:00",
+  "tree": {
+    "files": 771,
+    "reachable": 523
+  }
+}
