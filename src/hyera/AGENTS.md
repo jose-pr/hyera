@@ -94,12 +94,34 @@ private engine internals with no stability contract.
     back to Puppet's Hiera 3 default configuration
     (`backends: [yaml]`, `hierarchy: ['nodes/%{::trusted.certname}',
     'common']`, `merge_behavior: native`), then reads *that* as version 3.
-    A valid version 3 config still raises `ConfigError` ("hiera.yaml
-    version 3 hierarchies are not supported yet") after validation — the
-    provider build (one data source per backend, Puppet's backend-major
-    order) is not implemented yet. Every version 3 read (valid or not)
-    logs Puppet's deprecation warning ("Use of 'hiera.yaml' version 3 is
-    deprecated. It should be converted to version 5") unless
+    A schema-valid version 3 config resolves through the real
+    backend-major provider build: one data source **per listed backend
+    name**, over the whole hierarchy, in `backends:` list order — not one
+    source per hierarchy level, the v5 shape. `yaml`/`json`/`hocon` map to
+    the same `*_data` functions a v5 config would name; `eyaml` maps to
+    `eyaml_lookup_key`; any other name must be a third-party
+    `hyera.Backend` registered under it in the `"v3"` registry namespace
+    (`NAMES = {"v3": (...)}`, resolved only against `data_hash`), else
+    `ConfigError` ("Hiera 3 backend '<name>' is not available") — Puppet,
+    with real Hiera 3 installed, would instead skip that backend silently
+    (the `v3-ruby-backend-unavailable` conformance deviation). A relative
+    per-backend `datadir` (default
+    `<codedir>/environments/%{::environment}/hieradata`) resolves against
+    the process's working directory *at construction*, not hiera.yaml's
+    own directory (`Hiera(..., codedir=...)`/`hyera --codedir` set
+    `$codedir`; Puppet's own AIO default per platform otherwise, never the
+    per-user default or a `puppet.conf` lookup). The per-backend
+    `:extension:` (default `.<backend>`, `.conf` for hocon) is appended to
+    each declared `path`/`paths` entry, after interpolation, unless it
+    already ends with it. `merge_behavior`/`deep_merge_options`/`logger`
+    are validated but never applied — only an explicit `merge=` changes
+    anything, matching Puppet. A `hiera3_backend` entry in a v5 hierarchy
+    (global layer only) follows the same backend-name rule, with the
+    entry's declared extension stripped and the backend's own re-appended
+    (so `path: common` and `path: common.<name>` both read the same file,
+    Puppet's own Hiera-3-appends-again behavior). Every version 3 read
+    (valid or not) logs Puppet's deprecation warning ("Use of 'hiera.yaml'
+    version 3 is deprecated. It should be converted to version 5") unless
     `scope.strict == "off"`.
   - **Version 5** is the schema described above: an unrecognized key
     anywhere, a missing/duplicate/non-string `name`, more than one function

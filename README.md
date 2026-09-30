@@ -150,6 +150,44 @@ fail-closed backstop, so an undiscovered gap in the text scanner still
 cannot read a file or reach the network for a form the active mode does
 not intend to resolve.
 
+### Hiera 3 and 4 configs
+
+A hiera.yaml without a `version` key, or with `version: 3` (Hiera 1, 2 and 3
+are the same dialect to Puppet), is read and validated against Puppet's own
+version 3 schema, then resolved with Puppet's backend-major provider order:
+one data source per listed `backends` name, over the *whole* hierarchy, in
+list order.
+
+```yaml
+---
+:backends:
+  - yaml
+:yaml:
+  :datadir: data
+  :extension: yaml
+:hierarchy:
+  - "nodes/%{::trusted.certname}"
+  - common
+```
+
+`yaml`/`json`/`hocon`/`eyaml` map onto the same `YAMLBackend`/`JSONBackend`/
+`HOCONBackend`/`EyamlBackend` a v5 `data_hash: yaml_data` etc. would use;
+any other name must be a third-party `hyera.Backend` registered under that
+name in the `"v3"` namespace (`NAMES = {"v3": (...)}`), or it raises
+`ConfigError` (see "Differences from Puppet" below — Puppet, with real
+Hiera 3 installed, would instead skip that backend silently).
+`merge_behavior`/`deep_merge_options`/`logger` are validated but never
+applied, matching Puppet: only an explicit `merge=`/`--merge` changes how
+results combine. A relative `datadir` (including the default,
+`<codedir>/environments/%{::environment}/hieradata`) resolves against the
+process's working directory *at construction*, never the hiera.yaml
+directory — `Hiera(..., codedir=...)`/`hyera --codedir` set `$codedir`
+(Puppet's own AIO default per platform otherwise).
+
+hiera.yaml version 4 (`backend: yaml|json|hocon` instead of `data_hash:`)
+is not implemented yet, and `hiera3_backend` follows the same rule as a v3
+`backends:` name.
+
 ### Layers
 
 `hiera.yaml` above is the *global* layer. Puppet also reads an
@@ -421,9 +459,11 @@ raising under `strict="error"`) ·
 `explain()`, reporting a lookup the way `puppet lookup
 --explain`/`--explain-options` does.
 
-Not implemented: lookups through hiera.yaml version 3/4 (schema validation is
-done; a file without `version` is version 3) · `hiera3_backend` legacy shim ·
-encrypted-value `convert_to` beyond
+Not implemented: lookups through hiera.yaml version 4 · running a Ruby
+Hiera 3 backend (a v3 `backends:`/`hiera3_backend:` name must be one of
+`yaml`/`json`/`hocon`/`eyaml`, or a third-party `hyera.Backend` registered
+under that name — see "Hiera 3 and 4 configs" above) · encrypted-value
+`convert_to` beyond
 `Sensitive` · hiera-eyaml encryptors other than PKCS7 (GPG and third-party
 plugins) · reading `environment.conf`'s `modulepath`/`environment_data_provider`,
 or metadata.json's deprecated `data_provider`, both superseded here by the
@@ -484,6 +524,15 @@ with one deliberate exception:
   re-reads it between compilations; construct a new `Hiera` to pick up a
   changed base config. Data files and glob listings *are* re-checked, by
   default — see `revalidate` below.
+- **An unregistered Hiera 3 backend name raises `ConfigError`.** Puppet,
+  with real Hiera 3 installed, silently contributes nothing for a
+  `backends:`/`hiera3_backend:` name it cannot run; hyera cannot run a
+  Ruby Hiera 3 backend at all, so this is a deliberate, documented
+  deviation rather than a silent miss.
+- **`codedir` defaults to Puppet's AIO system location for the platform**
+  (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
+  elsewhere), never the per-user `~/.puppetlabs/etc/code` default or a
+  value discovered from `puppet.conf`.
 
 ## Notes
 

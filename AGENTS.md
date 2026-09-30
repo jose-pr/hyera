@@ -95,11 +95,17 @@ dotted subkeys, merges `first`/`default`/`unique`/`hash`/`deep` (with
 `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`), `lookup_options`
 (per-key/regex merge strategy + `convert_to`), the global/environment/
 module layer stack (`Hiera(..., environmentpath=, basemodulepath=,
-modulepath=)`; `hiera3_backend` global-only), and `eyaml_lookup_key` (PKCS7
-only, behind the `hyera[eyaml]` extra).
+modulepath=)`), and `eyaml_lookup_key` (PKCS7
+only, behind the `hyera[eyaml]` extra). A versionless or `version: 3`
+hiera.yaml (Hiera 1, 2 and 3's own dialect) is read and validated against
+Puppet's v3 schema and resolved through the real backend-major provider
+build (`yaml`/`json`/`hocon`/`eyaml`, or a third-party backend registered
+under that name); `hiera3_backend` (global layer only) runs the same way.
 
-Not implemented: the legacy `hiera3_backend` shim, and hiera-eyaml
-encryptors other than PKCS7 (GPG and third-party plugins).
+Not implemented: hiera.yaml version 4, running a Ruby Hiera 3 backend
+(a v3/`hiera3_backend` name must be a Puppet-mapped one or a registered
+Python backend), and hiera-eyaml encryptors other than PKCS7 (GPG and
+third-party plugins).
 
 ## Develop
 
