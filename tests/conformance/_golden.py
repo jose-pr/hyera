@@ -45,11 +45,28 @@ QUERY_FIELDS = (
     "divergence",
     "deviation",
     "note",
+    "explain",
 )
 #: The subset of QUERY_FIELDS that changes what is asked of Puppet. Editing
 #: anything else (divergence, deviation, ordered, error_match, error_class,
-#: description, origin, note) never invalidates a recording.
-PUPPET_FIELDS = ("id", "key", "merge", "default", "type", "puppet_args", "hash_inspect")
+#: description, origin, note) never invalidates a recording. `explain` is
+#: included only when a query actually sets it, so every pre-existing
+#: query's digest is unchanged by its addition.
+PUPPET_FIELDS = (
+    "id",
+    "key",
+    "merge",
+    "default",
+    "type",
+    "puppet_args",
+    "hash_inspect",
+    "explain",
+)
+#: Values a query's ``explain`` field may take: ``data`` -> ``--explain``,
+#: ``options`` -> ``--explain-options``. ``--explain --explain-options``
+#: prints exactly what ``--explain`` alone prints (measured against the
+#: oracle), so there is no third value.
+EXPLAIN_KINDS = ("data", "options")
 
 #: A canonical review-finding id, or ``new/<slug>``.
 _DIVERGENCE_ID_RE = re.compile(r"^[a-z0-9-]+/[a-z0-9._-]+$")
@@ -103,7 +120,7 @@ def lookup_argv(case: dict, query: dict) -> list:
 
     Order: DEFAULT_PUPPET_ARGS (unless a case/query ``--strict`` replaces
     it), case ``puppet_args``, query ``puppet_args``, merge flags,
-    ``--type``, ``--default``, key(s).
+    ``--type``, ``--default``, ``--explain``/``--explain-options``, key(s).
     """
     case_args = case.get("puppet_args") or []
     query_args = query.get("puppet_args") or []
@@ -117,6 +134,11 @@ def lookup_argv(case: dict, query: dict) -> list:
         args.extend(["--type", query["type"]])
     if query.get("default") is not None:
         args.extend(["--default", str(query["default"])])
+    explain = query.get("explain")
+    if explain == "data":
+        args.append("--explain")
+    elif explain == "options":
+        args.append("--explain-options")
     key = query["key"]
     if isinstance(key, list):
         args.extend(str(k) for k in key)
@@ -183,6 +205,41 @@ def normalize_message(line: str, case_dir: Path, root: "str | None" = None) -> s
         line = line.replace(root, "<iso>")
     line = re.sub(r"^(Error|Warning): (Could not run: )?", "", line)
     return line.strip()
+
+
+def normalize_paths(text: str, case_dir: Path, root: "str | None" = None) -> str:
+    """Quote-preserving path normalization for explain text/tree strings.
+
+    An explain line such as ``Path "/abs/…/cases/<case>/data/a.yaml"`` would
+    have its opening quote swallowed by :func:`normalize_message`'s ``\\S*``
+    lead-in, so this uses a charclass that stops at a quote/paren/space
+    instead. Unlike :func:`normalize_message` this never strips an
+    ``Error:``/``Warning:`` prefix and never applies :func:`aio_inspect` --
+    explain's own hash dump uses `` => `` verbatim (see D10.4 in the plan).
+    """
+    text = re.sub(
+        r'[^\s"\'(]*[\\/]cases[\\/]' + re.escape(case_dir.name), "<case>", text
+    )
+    if root:
+        text = text.replace(root, "<iso>")
+    return text
+
+
+def normalize_tree_paths(obj, case_dir: Path, root: "str | None" = None):
+    """:func:`normalize_paths` applied recursively to every string leaf of a
+    JSON-like structure (explain's ``tree``), including dict keys."""
+    if isinstance(obj, str):
+        return normalize_paths(obj, case_dir, root)
+    if isinstance(obj, list):
+        return [normalize_tree_paths(v, case_dir, root) for v in obj]
+    if isinstance(obj, dict):
+        return {
+            (
+                normalize_paths(k, case_dir, root) if isinstance(k, str) else k
+            ): normalize_tree_paths(v, case_dir, root)
+            for k, v in obj.items()
+        }
+    return obj
 
 
 def aio_inspect(obj):
@@ -318,6 +375,23 @@ def lint_case(case_dir: Path) -> "list[str]":
                 and "status" in dev["expect"]
             ):
                 problems.append("query {}: malformed deviation".format(query_id(q)))
+        if "explain" in q:
+            if q["explain"] not in EXPLAIN_KINDS:
+                problems.append(
+                    "query {}: explain must be one of {}".format(
+                        query_id(q), EXPLAIN_KINDS
+                    )
+                )
+            if q.get("hash_inspect"):
+                problems.append(
+                    "query {}: explain queries never set hash_inspect".format(
+                        query_id(q)
+                    )
+                )
+            if "deviation" in q:
+                problems.append(
+                    "query {}: explain queries never set deviation".format(query_id(q))
+                )
     dupes = sorted({i for i in ids if ids.count(i) > 1})
     if dupes:
         problems.append("duplicate query ids: {}".format(dupes))
@@ -365,6 +439,41 @@ def lint_case(case_dir: Path) -> "list[str]":
     hits = _leak_hits(golden_text)
     if hits:
         problems.append("golden.json leaks host/path patterns: {}".format(hits))
+
+    for q in queries:
+        qid = query_id(q)
+        res = results.get(qid, {})
+        status = res.get("status")
+        if q.get("explain"):
+            if status == "explained":
+                if not isinstance(res.get("tree"), dict):
+                    problems.append(
+                        "query {}: explained result must have a dict tree".format(qid)
+                    )
+                text = res.get("text")
+                if not (
+                    isinstance(text, list) and all(isinstance(t, str) for t in text)
+                ):
+                    problems.append(
+                        "query {}: explained result must have a list-of-str text".format(
+                            qid
+                        )
+                    )
+            elif status == "error":
+                if not isinstance(res.get("message"), str):
+                    problems.append(
+                        "query {}: error result must have a message".format(qid)
+                    )
+            elif status is not None:
+                problems.append(
+                    "query {}: explain result status must be explained or error, got {!r}".format(
+                        qid, status
+                    )
+                )
+        elif status == "explained":
+            problems.append(
+                "query {}: a non-explain query never has status explained".format(qid)
+            )
 
     for q in queries:
         em = q.get("error_match")

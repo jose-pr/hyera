@@ -6,6 +6,7 @@ is a known, explained difference and runs as a strict xfail, so fixing it
 turns the run red until the marker is removed (XPASS(strict) fails).
 """
 
+import difflib
 import re
 import sys
 
@@ -20,7 +21,7 @@ from _golden import (
     read_golden,
     lint_case,
 )
-from _ours import AdapterUnsupported, canonical, expected, run_api
+from _ours import AdapterUnsupported, canonical, expected, run_api, run_explain
 
 
 def _divergence_marks(query):
@@ -84,8 +85,9 @@ def test_api_matches_puppet(case_dir, case, query):
     golden = read_golden(case_dir)
     golden_result = golden["results"][query_id(query)]
     want = expected(query, golden_result)
+    runner = run_explain if query.get("explain") else run_api
     try:
-        actual = run_api(case_dir, case, query, golden)
+        actual = runner(case_dir, case, query, golden)
     except AdapterUnsupported as e:
         pytest.fail("adapter does not support this query yet: {}".format(e))
 
@@ -94,6 +96,21 @@ def test_api_matches_puppet(case_dir, case, query):
         assert canonical(actual["value"], query.get("ordered")) == canonical(
             want["value"], query.get("ordered")
         )
+    elif want["status"] == "explained":
+        assert canonical(actual["tree"], query.get("ordered")) == canonical(
+            want["tree"], query.get("ordered")
+        )
+        if actual["text"] != want["text"]:
+            diff = "\n".join(
+                difflib.unified_diff(
+                    want["text"],
+                    actual["text"],
+                    lineterm="",
+                    fromfile="puppet",
+                    tofile="ours",
+                )
+            )
+            pytest.fail(diff)
     elif want["status"] == "error":
         error_match = query.get("error_match")
         if error_match:

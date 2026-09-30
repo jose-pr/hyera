@@ -6,12 +6,14 @@ until the CLI learns them (the change that does sets the constant to
 ``None`` in the same commit it removes this file's blanket marker).
 """
 
+import difflib
+
 import pytest
 
 pytest.importorskip("duho")
 
 from _golden import case_dirs, load_case, query_id, read_golden
-from _ours import CLI_CHANNEL_DIVERGENCE, canonical, expected, run_cli
+from _ours import CLI_CHANNEL_DIVERGENCE, canonical, expected, run_cli, run_cli_explain
 
 
 def _cli_params():
@@ -40,10 +42,26 @@ def test_cli_matches_puppet(case_dir, case, query):
     golden_result = golden["results"][query_id(query)]
     want = expected(query, golden_result)
 
-    actual = run_cli(case_dir, case, query, golden)
+    runner = run_cli_explain if query.get("explain") else run_cli
+    actual = runner(case_dir, case, query, golden)
 
     assert actual["status"] == want["status"], (actual, want)
     if want["status"] == "found":
         assert canonical(actual["value"], query.get("ordered")) == canonical(
             want["value"], query.get("ordered")
         )
+    elif want["status"] == "explained":
+        assert canonical(actual["tree"], query.get("ordered")) == canonical(
+            want["tree"], query.get("ordered")
+        )
+        if actual["text"] != want["text"]:
+            diff = "\n".join(
+                difflib.unified_diff(
+                    want["text"],
+                    actual["text"],
+                    lineterm="",
+                    fromfile="puppet",
+                    tofile="ours",
+                )
+            )
+            pytest.fail(diff)

@@ -143,6 +143,37 @@ def _layer_kwargs(case_dir, args):
     return kwargs
 
 
+def _build(case_dir, case: dict, query: dict, golden: dict):
+    """Build the :class:`hyera.Hiera` instance a query is resolved through,
+    exactly as ``run_api``/``run_explain`` both need it: scope from the
+    case's facts/environment/strict, layered per the case's own
+    ``environments``/``modules`` (and any golden ``--modulepath``
+    override)."""
+    key, env, strict = _check_common(case_dir, case, query)
+    args = _puppet_args(case, query)
+    facts = _load_facts(case_dir)
+    scope = Scope(
+        facts=facts,
+        environment=env,
+        server_facts={"serverversion": golden["puppet_version"]},
+        strict=strict,
+        node_name=golden["node"],
+    )
+    hiera = Hiera(
+        str(case_dir / "hiera.yaml"),
+        scope=scope,
+        **_layer_kwargs(case_dir, args),
+    )
+    return hiera, key
+
+
+def _lookup_kwargs(query: dict) -> dict:
+    kwargs = {"value_type": query.get("type"), "merge": query.get("merge")}
+    if query.get("default") is not None:
+        kwargs["default_value"] = query["default"]
+    return kwargs
+
+
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one query through :class:`hyera.Hiera`, projected like Puppet.
 
@@ -167,28 +198,10 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     same way ``allow_nan=False`` does here) is a harness-projection concern,
     not a hyera-behavior one, so only that call is guarded.
     """
-    key, env, strict = _check_common(case_dir, case, query)
-    args = _puppet_args(case, query)
-    merge = query.get("merge")
     try:
         with _chdir(case_dir):
-            facts = _load_facts(case_dir)
-            scope = Scope(
-                facts=facts,
-                environment=env,
-                server_facts={"serverversion": golden["puppet_version"]},
-                strict=strict,
-                node_name=golden["node"],
-            )
-            hiera = Hiera(
-                str(case_dir / "hiera.yaml"),
-                scope=scope,
-                **_layer_kwargs(case_dir, args),
-            )
-            kwargs = {"value_type": query.get("type"), "merge": merge}
-            if query.get("default") is not None:
-                kwargs["default_value"] = query["default"]
-            value = hiera.lookup(key, **kwargs)
+            hiera, key = _build(case_dir, case, query, golden)
+            value = hiera.lookup(key, **_lookup_kwargs(query))
     except KeyNotFoundError as e:
         # The recorder's own "not_found" heuristic (_NOT_FOUND in record.py)
         # matches only Puppet's *singular* miss message ("the name"); a
@@ -207,6 +220,31 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     except ValueError as e:
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
     return {"status": "found", "value": rendered}
+
+
+def run_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
+    """Resolve one ``explain:`` query through :class:`hyera.Hiera.explain`,
+    projected like ``puppet lookup --explain``/``--explain-options``.
+
+    Raises :class:`AdapterUnsupported` while ``hyera.Hiera`` has no
+    ``explain`` attribute (this harness lands ahead of the API it exercises,
+    per the plan's own phase order). Once it exists, mirrors ``run_api``:
+    ``Hiera(...)``/``.explain(...)`` share one try/except, so a construction-
+    time ``ConfigError`` reports the same as a lookup-time one.
+    """
+    if not hasattr(Hiera, "explain"):
+        raise AdapterUnsupported("explain")
+    try:
+        with _chdir(case_dir):
+            hiera, key = _build(case_dir, case, query, golden)
+            kwargs = _lookup_kwargs(query)
+            kwargs["explain_options"] = query["explain"] == "options"
+            result = hiera.explain(key, **kwargs)
+    except HieraError as e:
+        return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
+    tree = _golden.normalize_tree_paths(as_puppet_json(result.to_hash()), case_dir)
+    text = [_golden.normalize_paths(l, case_dir) for l in result.text().splitlines()]
+    return {"status": "explained", "tree": tree, "text": text}
 
 
 def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
@@ -249,3 +287,52 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
     if rc == 2:
         return {"status": "error"}
     raise AssertionError("unexpected hyera CLI exit code {!r}".format(rc))
+
+
+def run_cli_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
+    """Resolve one ``explain:`` query through ``hyera.cli.main``, in-process,
+    twice: once for the tree (``--render-as json``) and once for the text
+    (``--render-as s``), the same way ``record.py`` calls real Puppet twice.
+
+    Pre-wired under `CLI_CHANNEL_DIVERGENCE` like every other CLI-channel
+    query -- ``cli_puppet_lookup_parity`` only needs to add the flags and
+    flip the constant, not touch this function.
+    """
+    result = golden["results"][_golden.query_id(query)]
+    base_argv = [
+        "--hiera_config",
+        str(case_dir / "hiera.yaml"),
+        "--facts",
+        str(case_dir / "facts.yaml"),
+        "--node",
+        _golden.NODE,
+    ]
+    if (case_dir / "environments").is_dir():
+        base_argv += ["--environmentpath", str(case_dir / "environments")]
+    if (case_dir / "modules").is_dir():
+        base_argv += ["--basemodulepath", str(case_dir / "modules")]
+
+    def _call(render_as):
+        argv = base_argv + ["--render-as", render_as] + list(result["argv"])
+        out = io.StringIO()
+        with _chdir(case_dir), contextlib.redirect_stdout(out):
+            rc = _cli_main(argv)
+        return rc, out.getvalue()
+
+    try:
+        rc_json, out_json = _call("json")
+        rc_s, out_s = _call("s")
+    except SystemExit as e:
+        return {"status": "usage", "code": e.code}
+
+    if rc_json == 0 and rc_s == 0:
+        tree = _golden.normalize_tree_paths(
+            json.loads(out_json) if out_json.strip() else {}, case_dir
+        )
+        text = [_golden.normalize_paths(l, case_dir) for l in out_s.splitlines()]
+        return {"status": "explained", "tree": tree, "text": text}
+    if rc_json == 2 or rc_s == 2:
+        return {"status": "error"}
+    raise AssertionError(
+        "unexpected hyera CLI exit codes {!r}/{!r}".format(rc_json, rc_s)
+    )

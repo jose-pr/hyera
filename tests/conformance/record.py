@@ -38,6 +38,8 @@ from _golden import (
     load_case,
     lookup_argv,
     normalize_message,
+    normalize_paths,
+    normalize_tree_paths,
     query_id,
     read_golden,
     write_golden,
@@ -162,6 +164,33 @@ def record_query(
     ]
     if warnings:
         result["warnings"] = warnings
+    if query.get("explain"):
+        # Never the --explain miss-vs-error fallback used below: --explain/
+        # --explain-options is already in `tail` (via lookup_argv), and a
+        # swallowed LookupError is Puppet's last text line, not an
+        # ambiguous silent miss -- rc is 0 whenever the report itself
+        # printed (application/lookup.rb:305-335).
+        errors = [l for l in err.splitlines() if l.startswith("Error:")]
+        if rc != 0 or errors or not out.strip():
+            result["status"] = "error"
+            result["message"] = normalize_message(
+                errors[0] if errors else (out.strip() or err.strip()), case_dir, root
+            )
+        else:
+            _, s_out, s_err = _run(runner, case_dir, base + ["--render-as", "s"] + tail)
+            result["status"] = "explained"
+            result["tree"] = normalize_tree_paths(json.loads(out), case_dir, root)
+            result["text"] = [
+                normalize_paths(l, case_dir, root) for l in s_out.splitlines()
+            ]
+        hits = _leak_scan(result, root, identities)
+        if hits:
+            raise SystemExit(
+                "refusing to record a leaking result for {}::{}: {}".format(
+                    case_dir.name, query_id(query), hits
+                )
+            )
+        return result
     if rc == 0 and out.strip():
         result["status"] = "found"
         result["value"] = json.loads(out)
