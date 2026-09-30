@@ -83,6 +83,21 @@ def test_sops_missing_binary(monkeypatch, tmp_path):
         backend.data_hash(tmp_path / "secret.yaml", {})
 
 
+def test_sops_start_failure_wraps_oserror(monkeypatch, tmp_path):
+    # The executable was found by shutil.which but could not actually be
+    # started (permission denied, not actually executable, ...):
+    # subprocess.run itself raises OSError, distinct from a non-zero exit
+    # or a timeout.
+    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+
+    def _raise(*a, **k):
+        raise OSError("boom")
+
+    monkeypatch.setattr("hyera.backends.subprocess.run", _raise)
+    with pytest.raises(BackendError, match="boom"):
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+
+
 def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
     monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
 
@@ -114,11 +129,33 @@ def test_hocon_backend(make_tree):
             "defaults": {"data_hash": "hocon_data"},
             "hierarchy": [{"name": "c", "path": "common.conf"}],
         },
-        files={"data/common.conf": "k = v\nn { a = 1 }\n"},
+        files={
+            "data/common.conf": "k = v\nn { a = 1 }\n"
+            "hn { a = [ {b = 1}, {b = 2} ] }\n"
+        },
     )
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("k") == "v"
     assert h.lookup("n.a") == 1
+    # A list of objects, not just a scalar or one nested int: both Puppet
+    # and ours give hn.a.1.b == 2 (dotted sub-lookup into a list index into
+    # a hash) and the same list-of-dicts shape for the whole value.
+    assert h.lookup("hn.a.1.b") == 2
+    assert h.lookup("hn") == {"a": [{"b": 1}, {"b": 2}]}
+
+
+def test_hocon_backend_syntax_error_names_the_file(make_tree):
+    pytest.importorskip("pyhocon")
+    root = make_tree(
+        {
+            "defaults": {"data_hash": "hocon_data"},
+            "hierarchy": [{"name": "c", "path": "common.conf"}],
+        },
+        files={"data/common.conf": "k = { unterminated\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="common.conf"):
+        h.lookup("k")
 
 
 def test_hocon_backend_missing_dep_errors(monkeypatch):

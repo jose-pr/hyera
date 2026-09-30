@@ -674,12 +674,30 @@ def test_invalid_scope_exit_2(hiera_root):
     assert rc == 2
 
 
-def test_module_entrypoint_smoke(monkeypatch):
-    # `python -m hyera` wires through to cli.main.
-    monkeypatch.setattr(sys, "argv", ["hyera", "--help"])
+def test_module_entrypoint_smoke(monkeypatch, hiera_root, capsys):
+    # `python -m hyera` wires through to cli.main and actually runs a real
+    # lookup (not just `--help`, which never reaches the lookup path at
+    # all) -- this run counts toward branch coverage, in-process.
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "hyera",
+            "--render-as",
+            "json",
+            "--hiera_config",
+            str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
+            "-s",
+            "environment=production",
+            "app::name",
+        ],
+    )
     with pytest.raises(SystemExit) as exc:
         runpy.run_module("hyera", run_name="__main__")
-    assert exc.value.code == 0  # --help exits 0
+    assert exc.value.code == 0
+    assert json.loads(capsys.readouterr().out) == "myapp"
 
 
 def test_version_names_hyera(capsys):

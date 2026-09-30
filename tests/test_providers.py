@@ -15,7 +15,14 @@ import time
 
 import pytest
 
-from hyera import BackendError, ConfigError, Hiera, InterpolationError, Scope
+from hyera import (
+    BackendError,
+    ConfigError,
+    Hiera,
+    InterpolationError,
+    LookupContext,
+    Scope,
+)
 from hyera._invocation import Invocation
 from hyera._lookup_adapter import extract_lookup_options_for_key
 from hyera.backends import Backend, HOCONBackend, JSONBackend, SopsBackend, YAMLBackend
@@ -368,7 +375,8 @@ def test_lookup_context_cache_api(make_tree, backends, script):
     )
     seen = {}
 
-    def fn(key, options, context):
+    def fn(key, options, context: LookupContext):
+        assert isinstance(context, LookupContext)
         context.cache("side", 123)
         seen["has"] = context.cache_has_key("side")
         seen["value"] = context.cached_value("side")
@@ -482,6 +490,39 @@ def test_provider_value_rich_data_validated(make_tree, backends, script):
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(
         BackendError, match="has wrong type, expects Puppet::LookupValue"
+    ):
+        h.lookup("k")
+
+
+def test_provider_value_rich_data_validated_no_location(make_tree, backends, script):
+    # A location-less lookup_key entry: the "when using location '...'"
+    # clause is omitted entirely from the message, not rendered empty.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "lookup_key": "test_lookup_key"}]},
+    )
+    script["lookup_key"] = lambda key, options, context: {True: 1}
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError) as exc:
+        h.lookup("k")
+    assert "when using location" not in str(exc.value)
+    assert "has wrong type, expects Puppet::LookupValue" in str(exc.value)
+
+
+def test_data_hash_non_dict_return_is_backend_error(make_tree, backends, script):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash", "path": "a.yaml"}]},
+        files={"data/a.yaml": "x"},
+    )
+    script["data_hash"] = lambda path, options: ["not", "a", "hash"]
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(
+        BackendError,
+        match=(
+            "Value returned from data_hash function 'test_data_hash', when "
+            "using location '.*a\\.yaml', has wrong type, expects a Hash "
+            # A non-empty list infers as Tuple (Array is the empty-list case).
+            "value, got Tuple"
+        ),
     ):
         h.lookup("k")
 

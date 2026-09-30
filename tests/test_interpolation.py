@@ -172,6 +172,14 @@ def test_lenient_invocation_warns(caplog):
     )
 
 
+def test_recursive_lookup_raises_interpolation_error(make_tree):
+    h = _hiera(make_tree, "rec: \"%{lookup('rec')}\"\n")
+    with pytest.raises(
+        InterpolationError, match=r"Recursive lookup detected in \[rec\]"
+    ):
+        h.lookup("rec")
+
+
 def test_cli_recursion_exits_2(make_tree, caplog):
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},

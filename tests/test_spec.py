@@ -3,7 +3,7 @@ mapped_paths, default_hierarchy, convert_to."""
 
 import pytest
 
-from hyera import ConfigError, Hiera, Scope, Sensitive
+from hyera import ConfigError, Hiera, MergeSpec, Scope, Sensitive
 
 # --- version ---------------------------------------------------------
 
@@ -183,8 +183,8 @@ def test_lookup_options_merged_once_per_context(make_tree):
     assert h.lookup("classes") == ["web", "base"]
     assert h.lookup("other") == ["x"]
     assert h.lookup("classes") == ["web", "base"]
-    # Three default-merge lookups, but lookup_options is merged at most once.
-    assert calls.count("lookup_options") <= 1
+    # Three default-merge lookups, but lookup_options is merged exactly once.
+    assert calls.count("lookup_options") == 1
 
 
 def test_lookup_options_cache_is_per_context(make_tree):
@@ -271,3 +271,18 @@ def test_mapped_paths(make_tree):
 # config-default-hierarchy-global conformance golden instead of a unit
 # test: Puppet rejects it outright ("only allowed in the module layer"),
 # which every hand-written assertion here contradicted.
+
+
+def test_merge_spec_accepts_its_documented_shapes(make_tree):
+    # MergeSpec (Hiera.lookup's merge= type) is Union[str, Mapping[str,
+    # Any], None]; pin that all three shapes it documents are accepted,
+    # not just whichever one an existing test happened to pass.
+    root = _two_level(make_tree, "classes: [web]\n", "classes: [base]\n")
+    h = Hiera(str(root / "hiera.yaml"))
+
+    def _merged(merge: MergeSpec):
+        return h.lookup("classes", merge=merge)
+
+    assert _merged(None) == ["web"]
+    assert _merged("unique") == ["web", "base"]
+    assert _merged({"strategy": "unique"}) == ["web", "base"]
