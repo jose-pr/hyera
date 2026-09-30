@@ -81,6 +81,25 @@ def test_referenced_variable_change_rebuilds(make_tree, monkeypatch):
     assert calls[0] // 1 == 2  # one level -> one resolve_locations call per build
 
 
+def test_sub_lookup_becoming_unstable_falls_through_to_a_real_rebuild(make_tree):
+    # _read_ref's own sub_lookup-raises-HieraLookupError case (the
+    # location-cache replay's scope-stability check, not the "referenced
+    # variable simply changed value" case above): a later scoped view
+    # whose referenced variable is no longer walkable the same way as a
+    # cached ref combo's earlier scope is marked unstable, not mistaken for
+    # a match -- the real rebuild runs and raises Puppet's own error.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "x1/%{x.y}.yaml"}]},
+        files={"data/x1/1.yaml": "k: v1\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"x": {"y": 1}}))
+    assert h.lookup("k") == "v1"
+
+    unstable_view = h.scoped(variables={"x": "notadict"})
+    with pytest.raises(HieraError, match="Data Provider type mismatch: Got String"):
+        unstable_view.lookup("k")
+
+
 def test_type_tagged_values_do_not_collide(make_tree):
     root = make_tree(
         {"hierarchy": [{"name": "v", "path": "v/%{x}.yaml"}]},
@@ -803,3 +822,29 @@ def test_revalidate_validation(make_tree):
     )
     with pytest.raises(TypeError):
         Hiera(str(root / "hiera.yaml"), revalidate="yes")
+
+
+def test_freeze_unsupported_type_never_matches_itself():
+    from hyera import Sensitive
+    from hyera._cache import _freeze
+
+    # An object _freeze has no dedicated case for (anything besides
+    # bool/int/float/str/None/dict/list/tuple) freezes to a fresh sentinel
+    # every call, on purpose: a cache key built from it can never spuriously
+    # match a later one, so it simply never gets reused.
+    assert _freeze(Sensitive("x")) != _freeze(Sensitive("x"))
+
+
+def test_lru_evicts_oldest_past_maxsize_and_reports_len():
+    import threading
+
+    from hyera._cache import _LRU
+
+    lru = _LRU(threading.Lock(), maxsize=2)
+    lru.put("a", 1)
+    lru.put("b", 2)
+    lru.put("c", 3)
+    assert len(lru) == 2
+    assert lru.get("a", "gone") == "gone"
+    assert lru.get("b") == 2
+    assert lru.get("c") == 3
