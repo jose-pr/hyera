@@ -26,6 +26,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead of raising on a miss.
 - `Hiera.getvar(dotted, default_value=None, block=None)`, Puppet's
   `getvar()` over the scope.
+- Environment and module layers: `Hiera(..., environmentpath=...,
+  basemodulepath=..., modulepath=...)` reads `<environment>/hiera.yaml`
+  for the scope's environment, and `<module>/hiera.yaml` for keys
+  qualified `module::`, exactly as `puppet lookup` does. A lookup merge
+  spans the global, environment and module layers.
+- Module data keys not qualified with the module's own name are ignored,
+  with a warning naming the module, function and location.
+- A version 3 (or missing-`version`) hiera.yaml in an environment or
+  module is ignored, with a warning; under `Scope(strict="error")` it
+  raises instead.
+- `hiera3_backend` is accepted only in the global hiera.yaml; the same key
+  at an environment or module root raises `ConfigError`.
+- A named environment directory that does not exist (with
+  `environmentpath` set) raises `ConfigError`.
+- `lookup_options` declared in an environment's or a module's data now
+  apply, merged with the global layer's own (global wins over environment,
+  which wins over module, per key). A module's `lookup_options` key or
+  `^`-prefixed pattern that does not start with that module's own name
+  raises `HieraLookupError`.
 
 ### Changed
 

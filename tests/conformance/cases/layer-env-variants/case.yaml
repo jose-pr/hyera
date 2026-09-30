@@ -7,65 +7,49 @@ queries:
   - id: v3env-env_only
     key: env_only
     puppet_args: ["--environment", "v3env"]
-    divergence: spec-layers-backends/no-config-layers
   - id: v3env-g_only
     key: g_only
     puppet_args: ["--environment", "v3env"]
-    divergence: spec-layers-backends/no-config-layers
   - id: noconf-env_only
     key: env_only
     puppet_args: ["--environment", "noconf"]
-    divergence: spec-layers-backends/no-config-layers
   - id: noconf-ncmod
     key: ncmod::k
     puppet_args: ["--environment", "noconf"]
-    divergence: spec-layers-backends/no-config-layers
   - id: noconf-g_env
     key: g_env
     puppet_args: ["--environment", "noconf"]
-    divergence: spec-layers-backends/no-config-layers
   - id: emptyconf-g_only
     key: g_only
     puppet_args: ["--environment", "emptyconf"]
-    divergence: spec-layers-backends/no-config-layers
   - id: v3env-strict-error
     key: env_only
     puppet_args: ["--environment", "v3env", "--strict", "error"]
     error_match: "cannot be used in an environment"
     error_class: ConfigError
-    divergence: spec-layers-backends/no-config-layers
   - id: h3benv-g_only
     key: g_only
     puppet_args: ["--environment", "h3benv"]
     error_match: "'hiera3_backend' is only allowed in the global layer"
     error_class: ConfigError
-    divergence: spec-layers-backends/no-config-layers
   - id: staging-env_only
     key: env_only
     puppet_args: ["--environment", "staging"]
     error_match: "'default_hierarchy' is only allowed in the module layer"
     error_class: ConfigError
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - id: staging-g_only
     key: g_only
     puppet_args: ["--environment", "staging"]
     error_match: "'default_hierarchy' is only allowed in the module layer"
     error_class: ConfigError
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - id: v5nover-g_only
     key: g_only
     puppet_args: ["--environment", "v5nover"]
     error_class: ConfigError
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-config/hiera-v3-config-unsupported
+    divergence: spec-config/hiera-v3-config-unsupported
   - id: v4env-env_only
     key: env_only
     puppet_args: ["--environment", "v4env"]
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - critic-puppet-coverage/config-v4-and-symbol-keys-unsupported
+    divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported

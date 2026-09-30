@@ -22,7 +22,8 @@ from _golden import SENSITIVE_JSON
 CLI_CHANNEL_DIVERGENCE = "spec-layers-backends/cli-flag-parity"
 
 #: puppet_args flags this adapter understands well enough to translate.
-_KNOWN_PUPPET_FLAGS = ("--strict", "--environment")
+_KNOWN_PUPPET_FLAGS = ("--strict", "--environment", "--modulepath")
+_MODULEPATH_FLAG = "--modulepath"
 
 
 class AdapterUnsupported(Exception):
@@ -107,10 +108,23 @@ def _check_common(case_dir, case, query):
     if bad:
         raise AdapterUnsupported("unrecognized puppet flag(s): {}".format(bad))
     strict = _flag_value(args, "--strict") or "warning"
-    if (case_dir / "environments").is_dir() or (case_dir / "modules").is_dir():
-        raise AdapterUnsupported("spec-layers-backends/no-config-layers")
     env = _flag_value(args, "--environment") or "production"
     return key, env, strict
+
+
+def _layer_kwargs(case_dir, args):
+    """The three layer keywords for a query's argv, mirroring the recorder's
+    own ``--environmentpath ./environments --basemodulepath ./modules`` plus
+    a golden's own ``--modulepath`` override (Puppet-on-Linux syntax: a
+    single value split on ``:``)."""
+    kwargs = {
+        "environmentpath": [case_dir / "environments"],
+        "basemodulepath": [case_dir / "modules"],
+    }
+    modulepath = _flag_value(args, _MODULEPATH_FLAG)
+    if modulepath is not None:
+        kwargs["modulepath"] = [case_dir / p for p in modulepath.split(":")]
+    return kwargs
 
 
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
@@ -138,6 +152,7 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     not a hyera-behavior one, so only that call is guarded.
     """
     key, env, strict = _check_common(case_dir, case, query)
+    args = _puppet_args(case, query)
     merge = query.get("merge")
     try:
         facts = _load_facts(case_dir)
@@ -148,7 +163,9 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
             strict=strict,
             node_name=golden["node"],
         )
-        hiera = Hiera(str(case_dir / "hiera.yaml"), scope=scope)
+        hiera = Hiera(
+            str(case_dir / "hiera.yaml"), scope=scope, **_layer_kwargs(case_dir, args)
+        )
         kwargs = {"value_type": query.get("type"), "merge": merge}
         if query.get("default") is not None:
             kwargs["default_value"] = query["default"]

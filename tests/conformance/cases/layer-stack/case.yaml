@@ -6,90 +6,55 @@ description: >-
   modules plus a basemodulepath.
 queries:
   - key: g_only
-    divergence: spec-layers-backends/no-config-layers
   - key: g_env
-    divergence: spec-layers-backends/no-config-layers
   - key: g_ref_env
-    divergence: spec-layers-backends/no-config-layers
   - key: env_only
-    divergence: spec-layers-backends/no-config-layers
   - key: env_ref_mod
-    divergence: spec-layers-backends/no-config-layers
   - key: shared_lo
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::lo_both
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::only_mod
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::mn
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::ref_env
-    divergence: spec-layers-backends/no-config-layers
   - key: basemod::k
-    divergence: spec-layers-backends/no-config-layers
   - key: dhbad::main
-    divergence: spec-layers-backends/no-config-layers
   - key: dhmain::inmain
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::dup
-    divergence: spec-layers-backends/no-config-layers
   - key: othermod::k
-    divergence: spec-layers-backends/no-config-layers
   - key: Upper::k
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod
-    divergence: spec-layers-backends/no-config-layers
   - key: v3mod::k
-    divergence: spec-layers-backends/no-config-layers
   - key: unq2
-    divergence: spec-layers-backends/no-config-layers
   - id: basemod-modulepath
     key: basemod::k
     puppet_args: ["--modulepath", "./environments/production/modules"]
-    divergence: spec-layers-backends/no-config-layers
   - id: mymod-modulepath
     key: mymod::only_mod
     puppet_args: ["--modulepath", "./modules"]
-    divergence: spec-layers-backends/no-config-layers
   - key: h3bmod::k
     error_match: "'hiera3_backend' is only allowed in the global layer"
     error_class: ConfigError
-    divergence: spec-layers-backends/no-config-layers
   - id: v3mod-strict-error
     key: v3mod::k
     puppet_args: ["--strict", "error"]
     error_match: "cannot be used in a module"
     error_class: ConfigError
-    divergence: spec-layers-backends/no-config-layers
   - key: g_ref
-    divergence: spec-layers-backends/no-config-layers
   - key: g_alias
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::env_lo
-    divergence: spec-layers-backends/no-config-layers
   - key: mymod::modlo
-    divergence: spec-layers-backends/no-config-layers
   - key: badlo::k
     error_match: "all lookup_options keys must start with module name 'badlo'"
     error_class: HieraLookupError
-    divergence: spec-layers-backends/no-config-layers
   - key: badpat::k
     error_match: "all lookup_options patterns must match a key starting with module name 'badpat'"
     error_class: HieraLookupError
-    divergence: spec-layers-backends/no-config-layers
   - key: dhmain::indefault
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - id: dhmain::k-deep
     key: dhmain::k
     merge: deep
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: dhbad::k
     error_match: "all lookup_options keys must start with module name 'dhbad'"
     error_class: HieraLookupError
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics

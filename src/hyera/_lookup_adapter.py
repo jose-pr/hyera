@@ -53,16 +53,41 @@ def validate_data_value(value, function_name, location, root_key) -> None:
         )
 
 
-def validate_lookup_options(options):
-    """Puppet's ``LookupAdapter#validate_lookup_options`` (:298-300).
+def validate_lookup_options(options, module_name=None):
+    """Puppet's ``LookupAdapter#validate_lookup_options`` (:298-315).
 
     ``None`` (no ``lookup_options`` key at all) passes through unchanged;
     anything other than a hash raises, naming Puppet's own message.
+
+    With a ``module_name``, every key must be qualified with that module's
+    own name: a ``^``-prefixed pattern's prefix (up to the ``::`` a real
+    module key would have) must equal ``"<module_name>::"``, or "all
+    lookup_options patterns must match a key starting with module name
+    '<module_name>'"; any other key must itself start with
+    ``"<module_name>::"``, or "all lookup_options keys must start with
+    module name '<module_name>'". A non-``str`` key counts as unqualified
+    either way (Ruby would crash with ``NoMethodError`` there; this is the
+    closest faithful outcome).
     """
     if options is None:
         return None
     if not isinstance(options, dict):
         raise HieraLookupError("value of lookup_options must be a hash")
+    if module_name is None:
+        return options
+    prefix = module_name + "::"
+    for key in options:
+        if isinstance(key, str) and key.startswith("^"):
+            if key[1 : 1 + len(prefix)] != prefix:
+                raise HieraLookupError(
+                    "all lookup_options patterns must match a key starting "
+                    "with module name '{}'".format(module_name)
+                )
+        elif not (isinstance(key, str) and key.startswith(prefix)):
+            raise HieraLookupError(
+                "all lookup_options keys must start with module name "
+                "'{}'".format(module_name)
+            )
     return options
 
 

@@ -153,6 +153,47 @@ fail-closed backstop, so an undiscovered gap in the text scanner still
 cannot read a file or reach the network for a form the active mode does
 not intend to resolve.
 
+### Layers
+
+`hiera.yaml` above is the *global* layer. Puppet also reads an
+*environment* layer and, for a `module::key`-shaped lookup, a *module*
+layer — pass `environmentpath`/`basemodulepath`/`modulepath` to `Hiera(...)`
+to enable them:
+
+```
+.
+├── hiera.yaml                          # global
+├── data/common.yaml
+└── environments/
+    └── production/
+        ├── hiera.yaml                  # environment (scope.environment)
+        ├── data/common.yaml
+        └── modules/
+            └── mymod/
+                ├── hiera.yaml          # module (mymod::* keys only)
+                └── data/common.yaml
+```
+
+```python
+h = Hiera(
+    "hiera.yaml",
+    environmentpath="./environments",
+    basemodulepath="./modules",
+)
+h.lookup("mymod::setting")  # global, then environment, then mymod's own hiera.yaml
+```
+
+The lookup order, at every level, is global then environment then module —
+a merge (`merge="unique"`, `merge="deep"`, ...) spans all three. A key not
+qualified `<module>::...` never reaches the module layer at all, and a
+module's own data that is not qualified with that module's name is dropped
+(with a warning) rather than leaking into another module's namespace.
+`hiera3_backend` is accepted only in the global layer's hiera.yaml. A
+version-3 (or missing-`version`) hiera.yaml at an environment or module root
+is silently ignored (with a warning); `puppet lookup`'s own `strict=error`
+raises instead. See `src/hyera/AGENTS.md`'s "Layers" entry for the full
+discovery and error rules.
+
 ### Merging and `lookup_options`
 
 Pass `merge=` to `lookup()` — one of Puppet's strategy names, or a hash of
@@ -194,6 +235,11 @@ match. An invalid pattern, or a `lookup_options` value that is not a hash,
 raises `HieraLookupError` for the whole lookup. An entry that is a string
 applies no options and stops the search (a matching pattern for the same
 key is never tried); any other non-hash, non-string entry raises.
+
+With layers configured, `lookup_options` from the global, environment and
+module data all apply to the same key — global wins over environment, which
+wins over module — and a module's own keys/patterns must start with
+`<module>::`.
 
 An explicit `merge=` argument overrides only the *merge* `lookup_options`
 would have picked; `convert_to` always applies. `convert_to` takes
@@ -302,13 +348,20 @@ detection; `%{alias()}` as the whole value keeps the value's type · merges
 `first`/`default`/`unique`/
 `hash`/`deep` with `knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`,
 plus the Hiera-3-era `reverse_deep`/`unconstrained_deep` ·
-`lookup_options` (per-key/regex merge strategy + `convert_to`).
+`lookup_options` (per-key/regex merge strategy + `convert_to`) ·
+global/environment/module layers (`Hiera(..., environmentpath=,
+basemodulepath=, modulepath=)`), with `hiera3_backend` global-only and a
+version-3/missing-`version` environment or module hiera.yaml ignored (or
+raising under `strict="error"`).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
 3) · `lookup_key`/`data_dig` provider backends (such entries raise
 `ConfigError`) · `uri`/`uris`
 sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
-`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`.
+`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`
+· reading `environment.conf`'s `modulepath`/`environment_data_provider`, or
+metadata.json's deprecated `data_provider`, both superseded here by the
+explicit `modulepath=` keyword.
 
 ## Differences from Puppet
 
@@ -351,6 +404,12 @@ with one deliberate exception:
 - **Glob wildcards are case-sensitive and results sort by byte order on
   every OS, as on Puppet's Linux servers; Ruby on Windows matches glob
   wildcards case-insensitively.**
+- **`environmentpath=None` (the default) means no environment directories
+  at all.** Puppet always has an `environmentpath`, so an environment name
+  it cannot find always raises; here, with no `environmentpath` configured,
+  every environment name resolves with no environment layer and no error --
+  a library with no layers configured keeps working exactly as before this
+  feature existed.
 
 ## Notes
 

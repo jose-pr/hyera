@@ -9,6 +9,7 @@ Ports Puppet's ``pops/lookup/hiera_config.rb``.
 """
 
 import copy
+import logging
 import os
 import re
 import typing as _ty
@@ -20,6 +21,8 @@ from .backends import Backend, YAMLBackend, has_hocon
 from .exceptions import BackendError, ConfigError
 from ._location_resolver import resolve_locations
 from ._yaml_loader import symkeys_to_string
+
+_LOGGER = logging.getLogger(__name__)
 
 #: Puppet's built-in default configuration, used when hiera.yaml does not
 #: exist (``hiera_config.rb:728-740``, ``HieraConfigV5::DEFAULT_CONFIG_HASH``).
@@ -101,13 +104,24 @@ def _ruby_type_name(value) -> str:
 _VERSION_LEADING_INT = re.compile(r"\s*[+-]?\d+")
 
 
-def _select_version(data: dict, source: "_ConfigSource") -> None:
-    """Puppet's version dispatch (``hiera_config.rb:153-167``).
+def _select_version(
+    data: dict, source: "_ConfigSource", *, layer: str = "global"
+) -> int:
+    """Puppet's version dispatch (``hiera_config.rb:153-167``), returning the
+    resolved version.
 
-    Raises :class:`ConfigError` for anything but a literal Integer ``5``.
-    Version 3/4 parsing is not implemented yet; here both a missing
-    ``version`` (Hiera 3's own signal) and an explicit ``3``/``4`` just name
-    what they are, unsupported for now.
+    At the global layer (``layer="global"``), anything but a literal Integer
+    ``5`` raises :class:`ConfigError` -- version 3/4 parsing at the global
+    layer is not implemented yet, so a missing ``version`` (Hiera 3's own
+    signal) and an explicit ``3``/``4`` just name what they are, unsupported
+    for now. Outside the global layer (``"environment"``/``"module"``), a
+    missing ``version`` or an explicit ``3`` is not an error here: it
+    returns ``3`` and leaves the ignore-or-raise decision to
+    :meth:`~hyera.core.Hiera._usable`, applied with the invocation's own
+    ``strict`` at the point the layer is actually consulted
+    (``environment_data_provider.rb``/``module_data_provider.rb``). A
+    version 4 there raises "not supported yet" (``hiera_v3_v4_configs``
+    replaces this). Any other version raises the same way at every layer.
     """
     v = data.get("version")
     _v3_text = (
@@ -115,7 +129,9 @@ def _select_version(data: dict, source: "_ConfigSource") -> None:
         "'version' is version 3)"
     )
     if v is None:
-        raise _config_error(source, _v3_text)
+        if layer == "global":
+            raise _config_error(source, _v3_text)
+        return 3
     if isinstance(v, bool) or not isinstance(v, (int, float, str)):
         raise _type_error(
             source,
@@ -138,13 +154,17 @@ def _select_version(data: dict, source: "_ConfigSource") -> None:
                     _ruby_type_name(v)
                 ),
             )
-        return
+        return 5
     if n == 3:
-        raise _config_error(source, _v3_text)
+        if layer == "global":
+            raise _config_error(source, _v3_text)
+        return 3
     if n == 4:
-        raise _config_error(
-            source, "hiera.yaml version 4 cannot be used in the global layer"
-        )
+        if layer == "global":
+            raise _config_error(
+                source, "hiera.yaml version 4 cannot be used in the global layer"
+            )
+        raise _config_error(source, "hiera.yaml version 4 is not supported yet")
     raise _config_error(
         source, "This runtime does not support hiera.yaml version {}".format(n)
     )
@@ -441,7 +461,12 @@ def _validate_defaults_issues(defaults: dict, source: "_ConfigSource") -> None:
 
 
 def _validate_hierarchy_issues(
-    entries: list, area: str, defaults: dict, source: "_ConfigSource"
+    entries: list,
+    area: str,
+    defaults: dict,
+    source: "_ConfigSource",
+    *,
+    layer: str = "global",
 ) -> None:
     """``validate_hierarchy`` (``hiera_config.rb:764-800``), for ``hierarchy``,
     ``plan_hierarchy`` or ``default_hierarchy`` in turn."""
@@ -463,6 +488,17 @@ def _validate_hierarchy_issues(
                 "can be defined in hierarchy '{}'".format(name),
             )
         if "hiera3_backend" in entry:
+            if layer != "global":
+                # issues.rb:833-835 -- checked before the replaced-by-
+                # data_hash rule below, and applies regardless of whether
+                # this backend name has a data_hash replacement.
+                raise _config_error(
+                    source,
+                    "'hiera3_backend' is only allowed in the global layer",
+                    line=_config_line(
+                        source.text, (area, i, "hiera3_backend"), key=True
+                    ),
+                )
             backend_name = entry["hiera3_backend"]
             replaceable = backend_name in ("json", "yaml") or (
                 backend_name == "hocon" and has_hocon()
@@ -513,24 +549,37 @@ def _check_duplicate_names(entries: list, area: str, source: "_ConfigSource") ->
         seen[name] = i
 
 
-def _validate_v5(data: dict, source: "_ConfigSource") -> None:
+def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") -> None:
     """Validate ``data`` against Puppet's hiera.yaml version 5 schema, in
     Puppet's own order: the whole-document type pass, then ``defaults``'
     issues, then each hierarchy's issues, then duplicate names. Reports only
     the first mismatch; assumes :func:`_fill_v5_defaults`
     already ran, so ``defaults``/``hierarchy`` are present.
+
+    ``layer`` (``"global"``/``"environment"``/``"module"``) gates the one
+    rule that differs by layer here: ``hiera3_backend`` is global-only. The
+    matching ``default_hierarchy``-is-module-only rule is a later plan's
+    edit to this function.
     """
     _check_top(data, source)
     defaults = data.get("defaults") or {}
     _validate_defaults_issues(defaults, source)
     _validate_hierarchy_issues(
-        data.get("hierarchy") or [], "hierarchy", defaults, source
+        data.get("hierarchy") or [], "hierarchy", defaults, source, layer=layer
     )
     _validate_hierarchy_issues(
-        data.get("plan_hierarchy") or [], "plan_hierarchy", defaults, source
+        data.get("plan_hierarchy") or [],
+        "plan_hierarchy",
+        defaults,
+        source,
+        layer=layer,
     )
     _validate_hierarchy_issues(
-        data.get("default_hierarchy") or [], "default_hierarchy", defaults, source
+        data.get("default_hierarchy") or [],
+        "default_hierarchy",
+        defaults,
+        source,
+        layer=layer,
     )
     _check_duplicate_names(data.get("hierarchy") or [], "hierarchy", source)
     _check_duplicate_names(
@@ -579,7 +628,9 @@ class HieraLevel(_ty.NamedTuple):
         return [loc.location for loc in resolve_locations(self, base_path, scope)]
 
 
-def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":
+def _read_base_config(
+    base_config, base_path, *, layer: str = "global"
+) -> "_ty.Tuple[_ConfigSource, dict]":
     """Load the base configuration (``HieraConfig.create``, ``hiera_config.rb:127-168``).
 
     Returns ``(source, base)``: ``base`` is a dict this call owns outright
@@ -588,6 +639,13 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     dict passed in is never mutated. Raises :class:`ConfigError`
     (``.path`` set for a path- or stream-configured hiera.yaml) on any read,
     parse, or top-level-shape problem.
+
+    At the global layer, a file that parses but is not a YAML hash raises.
+    Outside it (``layer="environment"``/``"module"``), the same case instead
+    logs Puppet's own warning and returns an empty ``base`` (``hiera_config.
+    rb:143``), which :func:`_select_version` then reads as version 3 --
+    left, like any other version-3 layer config, for
+    :meth:`~hyera.core.Hiera._usable` to ignore or raise about.
     """
     if base_config is None:
         # Puppet's missing-file default (`hiera_config.rb:147-149`): no file
@@ -663,6 +721,13 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
         base = symkeys_to_string(base)
 
     if not isinstance(base, dict):
+        if layer != "global":
+            _LOGGER.warning(
+                "%s: File exists but does not contain a valid YAML hash. "
+                "Falling back to Hiera version 3 default config",
+                source.label,
+            )
+            return source, {}
         raise _config_error(
             source,
             "File exists but does not contain a valid YAML hash; Puppet "

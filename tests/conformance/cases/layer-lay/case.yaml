@@ -6,36 +6,21 @@ description: >-
 origin: verify-spec-layers-backends/lay
 queries:
   - key: top
-    divergence: spec-layers-backends/no-config-layers
   - key: envkey
-    divergence: spec-layers-backends/no-config-layers
   - key: envos
-    divergence: spec-layers-backends/no-config-layers
   - key: mm::onlymod
-    divergence: spec-layers-backends/no-config-layers
   - key: mm::envmod
-    divergence: spec-layers-backends/no-config-layers
   - key: unq
-    divergence: spec-layers-backends/no-config-layers
   - key: mm::darr
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: mm::dopt
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: mm::h
-    divergence: spec-layers-backends/no-config-layers
   - id: mm::h-deep
     key: mm::h
     merge: deep
-    divergence: spec-layers-backends/no-config-layers
   - key: mm::arr
-    divergence: spec-layers-backends/no-config-layers
   - id: mm::darr-unique
     key: mm::darr
     merge: unique
-    divergence:
-      - spec-layers-backends/no-config-layers
-      - spec-layers-backends/default-hierarchy-semantics
+    divergence: spec-layers-backends/default-hierarchy-semantics

@@ -12,7 +12,8 @@ private engine internals with no stability contract.
 
 ## Engine
 
-- **`Hiera(base_config, backends=None, base_path=None, *, scope=None)`**
+- **`Hiera(base_config, backends=None, base_path=None, *, scope=None,
+  environmentpath=None, basemodulepath=(), modulepath=None)`**
   — the main entry point. `base_config`: a file path, a file-like object, a
   pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
   `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
@@ -64,6 +65,56 @@ private engine internals with no stability contract.
   `BackendError` (`.path` names it) for a data file that cannot be read or
   parsed. Context-free hierarchy levels are loaded by the constructor, so a
   `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
+  - **Layers.** `hiera.yaml` (`base_config`) is the *global* layer. Two more,
+    optional, keyword-only layers sit alongside it, exactly as `puppet
+    lookup` reads them: an *environment* layer, `<environmentpath>/
+    <scope.environment>/hiera.yaml`, and a *module* layer,
+    `<modulepath>/<module>/hiera.yaml`, consulted only for a key qualified
+    `<module>::...`. `environmentpath`/`basemodulepath`/`modulepath` each
+    take Puppet's setting shape: a single path, an iterable of paths, or a
+    string of paths joined by `os.pathsep`; every entry is made absolute
+    against the current working directory at construction (a relative
+    `environmentpath="envs"` therefore depends on `os.getcwd()` at that
+    moment, not later). `environmentpath=None` (the default) means **no**
+    environment directories at all — every environment name then resolves
+    with no environment layer and no error, a deliberate difference from
+    Puppet (which always has an `environmentpath`); see "Differences from
+    Puppet" in the README. `basemodulepath` defaults to `()`. `modulepath`,
+    when given, *replaces* the whole modulepath (the environment's own
+    `modules` directory included) for every environment, exactly like
+    Puppet's `--modulepath`; `None` (the default) means Puppet's own
+    per-environment construction, `<environment>/modules` (if the
+    environment has a root) followed by `basemodulepath`.
+
+    The environment is always `scope.environment` (default `"production"`)
+    — there is no separate argument — so `.scoped(environment=...)` reads a
+    different environment layer, sharing this instance's caches. With
+    `environmentpath` set, an environment name other than `"production"`
+    that is not found in any entry raises `ConfigError` ("Could not find a
+    directory environment named '<name>' anywhere in the path: <path>. Does
+    the directory exist?"); a missing `"production"` directory is not an
+    error (Puppet's static default environment). A module is found by an
+    exact, case-sensitive directory name (`os.listdir`, never a
+    filesystem `.is_dir()` probe), so a `Mymod` directory never matches a
+    `mymod::` key even on a case-insensitive filesystem (Windows/macOS). A
+    key inside a module's data that is not itself qualified with that
+    module's name is dropped, with a warning naming the module, the
+    function and the location, once per module file this instance ever
+    reads that way; an unqualified key at the top of a lookup (no `::`)
+    never reaches the module layer at all. `hiera3_backend` is accepted
+    only in the global layer's hiera.yaml; the same key at an environment
+    or module root raises `ConfigError` ("'hiera3_backend' is only allowed
+    in the global layer"), at load time. A version-3 (or missing-`version`)
+    hiera.yaml at an environment or module root is not an error by itself:
+    under `scope.strict="error"` it raises ("hiera.yaml version 3 cannot be
+    used in an environment"/"...in a module"), otherwise it is silently
+    ignored (with a once-per-file warning) and that layer contributes
+    nothing. A version-4 config outside the global layer raises "not
+    supported yet" for now. `sources()` still reports only the global
+    layer's candidate paths — a per-layer view belongs to `explain()`.
+    To look up a single module's own data with no global or environment
+    config at all: `Hiera({"version": 5, "hierarchy": []},
+    modulepath=["/path/to/modules"])`.
   - **`.lookup(name, value_type=None, merge=None, default_value=<unset>, *,
     default_values_hash=None, override=None, block=None)`** — Puppet's
     `lookup()`, against the instance's bound scope. Five equivalent call
@@ -835,6 +886,19 @@ re-exports it too).
   even under an explicit `merge=` — because an explicit `merge=` replaces
   only the *merge* `lookup_options` would have picked; its `convert_to`
   still runs on the result either way.
+- With layers configured, `lookup_options` entries declared in the global,
+  environment and module data all apply to the same key, gathered and HASH-
+  merged in that priority order — global wins over environment, which wins
+  over module, per key (an environment or module with no entry for a key
+  leaves the higher layer's entry untouched, rather than blanking it). A
+  module's own `lookup_options` keys and `^`-prefixed patterns must be
+  qualified with that module's own name (`<module>::...`), else
+  `HieraLookupError` ("all lookup_options keys must start with module name
+  '<module>'" / "...patterns must match a key starting with module name
+  '<module>'"), raised whenever that module's options are read at all — not
+  only for the one offending key. A module's own options apply to that
+  module's keys found in *any* layer (global, environment or module data
+  alike), not only its own.
 - A found root value that is not Puppet RichData — a hash keyed by anything
   other than a `String`/numeric (a boolean, `~`, or a nested collection), or
   a Ruby symbol (`hyera.backends.RubySymbol`) anywhere in the structure —

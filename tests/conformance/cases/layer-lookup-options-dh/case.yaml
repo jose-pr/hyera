@@ -7,8 +7,8 @@ puppet_args:
 - production
 queries:
 - key: mymod::c
-  divergence: spec-layers-backends/no-config-layers
+  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::k
-  divergence: spec-layers-backends/no-config-layers
+  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::j
-  divergence: spec-layers-backends/no-config-layers
+  divergence: spec-layers-backends/default-hierarchy-semantics

@@ -17,6 +17,7 @@ src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
 ├── core.py                 # Hiera: entry point and engine (data_hash_function_provider.rb, data_provider.rb)
 ├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
+├── _data_provider.py       # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
 ├── _location_resolver.py   # hierarchy level path resolution: Puppet interpolation rules, mapped_paths scope semantics (location_resolver.rb, hiera_config.rb)
 ├── _interpolation.py       # the %{...} engine: resolving functions and variable references (interpolation.rb)
 ├── _invocation.py          # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
@@ -54,7 +55,7 @@ with its source path template(s)), and pre-warms the context-free cache.
 `h(...)`/`h[...]`/`name in h`) resolves each candidate name's *root* key
 against the hierarchy nested the way Puppet's provider stack does —
 locations within a level, levels within the hierarchy, then the
-(mostly-empty, for now) global/environment/module layer stack — reducing at
+global/environment/module layer stack (`_data_provider.py`) — reducing at
 each layer with a `MergeStrategy` (first-match by default), fully resolving
 interpolation and hiera function calls in the found root value before it is
 merged, then digging any dotted sub-key out of the merged result exactly
@@ -83,8 +84,10 @@ Supported: `version: 5` validation, `defaults`, `hierarchy`/`default_hierarchy`,
 `data_hash` backends (yaml/json/hocon/sops), all five interpolation methods
 (`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted subkeys, merges
 `first`/`default`/`unique`/`hash`/`deep` (with `knockout_prefix`/
-`sort_merged_arrays`/`merge_hash_arrays`), and `lookup_options` (per-key/regex
-merge strategy + `convert_to`).
+`sort_merged_arrays`/`merge_hash_arrays`), `lookup_options` (per-key/regex
+merge strategy + `convert_to`), and the global/environment/module layer
+stack (`Hiera(..., environmentpath=, basemodulepath=, modulepath=)`;
+`hiera3_backend` global-only).
 
 Not implemented: `lookup_key`/`data_dig` provider backends, `uri`/`uris`
 sources, `eyaml_lookup_key` (use the `sops` backend instead), and the legacy
