@@ -34,6 +34,17 @@ def _hiera(make_tree, common, **variables):
     return Hiera(str(root / "hiera.yaml"), scope=scope)
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["a%{}b", "a%{::}b", 'a%{""}b', "a%{''}b", 'a%{"::"}b', "a%{'::'}b"],
+)
+def test_empty_interpolation_variants_resolve_to_empty_string(text):
+    # An *empty* quoted/unquoted name (not sub-key syntax) always resolves
+    # to "" without a scope lookup at all -- every spelling Puppet accepts.
+    inv = Invocation(Scope(), lambda k, i: None)
+    assert interpolate(text, inv) == "ab"
+
+
 def test_value_with_backslash_is_literal(make_tree):
     # An interpolated value is inserted literally, never treated as a re.sub
     # replacement template, so a backslash (e.g. a Windows path) is preserved
@@ -135,6 +146,12 @@ def test_render_values():
     assert _to_puppet_str(None) == ""
     assert _to_puppet_str(Sensitive("x")) == "Sensitive [value redacted]"
     assert _to_puppet_str([Sensitive("x")]) == "[#<Sensitive [value redacted]>]"
+    # Both functions' own otherwise-unmodeled-type fallback (a RubySymbol,
+    # or any other object neither renders specially): plain str().
+    from hyera._yaml_loader import RubySymbol
+
+    assert _to_puppet_str(RubySymbol("x")) == ":x"
+    assert _ruby_inspect(RubySymbol("x")) == ":x"
 
 
 def test_method_syntax_not_allowed():
@@ -224,6 +241,30 @@ def test_unshare_copies_every_position():
     assert u["p"] is not x
 
 
+def test_shared_dict_anchor_interpolated_once():
+    # _interpolate's own dict-shaped memo cache hit -- distinct from the
+    # list-shaped one test_anchor_interpolated_once_and_shared above
+    # already exercises.
+    shared = {"x": "%{k}"}
+    inv = Invocation(Scope(variables={"k": "v"}), lambda name, i: None)
+    result = interpolate({"p": shared, "q": shared}, inv)
+    assert result == {"p": {"x": "v"}, "q": {"x": "v"}}
+    assert result["p"] is result["q"]
+
+
+def test_interpolated_hash_key_unhashable_raises():
+    # A hash key that interpolates (through alias(), which preserves the
+    # looked-up value's own type instead of stringifying it) to something
+    # Python can't hash -- Ruby has no such restriction, so this is this
+    # port's own defensive check, not a Puppet-fidelity one.
+    def sub_lookup(name, invocation):
+        return [1, 2] if name == "arr" else None
+
+    inv = Invocation(Scope(), sub_lookup)
+    with pytest.raises(InterpolationError, match="not hashable"):
+        interpolate({"%{alias('arr')}": "x"}, inv)
+
+
 def _format_hiera(make_tree):
     return _hiera(
         make_tree,
@@ -262,6 +303,29 @@ def test_format_renders_like_puppet(make_tree):
 def test_format_whole_alias_returns_value(make_tree):
     h = _format_hiera(make_tree)
     assert h.format("%{alias('arr')}") == ["x", "y"]
+
+
+def test_format_embedded_alias_rejected(make_tree):
+    # alias() is only permitted when it is the entire string, matching
+    # Puppet's own restriction -- distinct from the already-tested
+    # whole-string case just above.
+    h = _format_hiera(make_tree)
+    with pytest.raises(
+        InterpolationError,
+        match="'alias' interpolation is only permitted if the expression "
+        "is equal to the entire string",
+    ):
+        h.format("x%{alias('arr')}y")
+
+
+def test_scope_ref_numeric_root_rejected():
+    # A purely-digit root (%{0.x}) parses as an Integer segment, not a
+    # variable name -- Scope variable names are always strings.
+    inv = Invocation(Scope(), lambda k, i: None)
+    with pytest.raises(
+        InterpolationError, match="Scope variable name 0 is a Integer, not a string"
+    ):
+        interpolate("%{0.x}", inv)
 
 
 def test_format_rejects_non_str(make_tree):
