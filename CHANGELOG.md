@@ -232,6 +232,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hides errors too). A missing key prints nothing and exits 1, as in
   Puppet; the message is logged at debug level. `-v`, `-d` or
   `DUHO_TRACEBACK=1` add the traceback to a `2`-exit error.
+- `Hiera(...)` reads only its configuration file. Data files are read by
+  the first lookup that needs them, so a malformed data file raises
+  `BackendError` from `lookup()` instead of from the constructor. To
+  validate data eagerly, look up any key.
 
 ### Removed
 

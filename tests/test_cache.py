@@ -51,13 +51,15 @@ def test_unreferenced_variable_shares_location_entry(make_tree, monkeypatch):
         str(root / "hiera.yaml"),
         scope=Scope(variables={"clientcert": "n1"}, facts={"uptime_seconds": 0}),
     )
-    builds_after_construct = calls[0] // 2
+    first_view = h.scoped(facts={"uptime_seconds": 0})
+    assert first_view.lookup("k") == "node_n1"
+    builds_after_first_lookup = calls[0] // 2
 
-    for i in range(50):
+    for i in range(1, 50):
         view = h.scoped(facts={"uptime_seconds": i})
         assert view.lookup("k") == "node_n1"
 
-    assert calls[0] // 2 == builds_after_construct
+    assert calls[0] // 2 == builds_after_first_lookup
     assert len(h._location_cache) == 1
 
 
@@ -295,6 +297,7 @@ def test_location_entries_share_path_strings(make_tree):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"clientcert": "a"}))
+    assert h.lookup("k") == "a"
     v = h.scoped(variables={"clientcert": "b"})
     assert v.lookup("k") == "b"
 
@@ -420,7 +423,6 @@ def test_cache_size_zero_caches_nothing(make_tree, monkeypatch):
     calls = _counting_resolver(monkeypatch)
     h = Hiera(str(root / "hiera.yaml"), cache_size=0)
     builds_before = calls[0]
-    assert builds_before > 0  # construction itself already rebuilt
 
     for _ in range(3):
         assert h.lookup("k") == "v"
@@ -466,8 +468,6 @@ def test_internal_keyerror_is_not_a_miss(make_tree, monkeypatch):
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
         files={"data/common.yaml": "k: v\n"},
     )
-    # Construct first: the pre-warm's own lookup_options gather parses
-    # every file while the real backend is still in place.
     h = Hiera(str(root / "hiera.yaml"))
 
     def broken_data_hash(self, path, options):

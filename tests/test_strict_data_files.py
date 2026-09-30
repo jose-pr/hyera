@@ -4,9 +4,7 @@ not once and for all: the same file, on the same ``Hiera`` instance, raises
 under a ``strict="error"`` scope and warns-and-falls-through under
 ``strict="warning"``, in either order -- guards the ``(path, backend.strict)``
 cache key in ``core.Hiera._load_file`` against caching the *adapted* result
-under a bare path, which would freeze whichever strictness ran first
-(construction's own pre-warm, always under the library's ``"warning"``
-default, included).
+under a bare path, which would freeze whichever strictness ran first.
 """
 
 import logging
@@ -24,11 +22,12 @@ def _non_hash_tree(make_tree):
 
 
 def test_strict_error_then_warning(make_tree, caplog):
+    root = _non_hash_tree(make_tree)
+    h = Hiera(str(root / "hiera.yaml"))
+
     with caplog.at_level(logging.WARNING):
-        root = _non_hash_tree(make_tree)
-        h = Hiera(str(root / "hiera.yaml"))
-    # Construction's own pre-warm already ran once under the library's
-    # "warning" default (independent of any scope passed to .scoped below).
+        with pytest.raises(KeyError):
+            h.scoped(strict="warning").lookup("k")
     assert any(
         "file does not contain a valid yaml hash" in r.getMessage()
         for r in caplog.records
@@ -51,8 +50,7 @@ def test_strict_warning_then_error(make_tree):
         h.scoped(strict="warning").lookup("k")
 
     # A later error-strict lookup on the very same instance still raises --
-    # the warning-strict attempt above (and construction's own pre-warm, run
-    # under the same "warning" default) must not have cached its way past
-    # the non-hash rule for "error" too.
+    # the warning-strict attempt above must not have cached its way past the
+    # non-hash rule for "error" too.
     with pytest.raises(BackendError, match="file does not contain a valid yaml hash"):
         h.scoped(strict="error").lookup("k")

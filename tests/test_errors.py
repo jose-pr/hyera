@@ -238,8 +238,9 @@ def test_data_parse_error_raises_backend_error(make_tree):
             "data/other.yaml": "k: [unclosed\nz: 2\n",
         },
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(BackendError) as excinfo:
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("anything")
     assert not isinstance(excinfo.value, ConfigError)
     assert excinfo.value.path.endswith("other.yaml")
     assert str(excinfo.value).startswith("Unable to parse (")
@@ -256,8 +257,9 @@ def test_json_parse_error_names_file(make_tree):
         {"hierarchy": [{"name": "j", "path": "first.json", "data_hash": "json_data"}]},
         files={"data/first.json": ""},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(BackendError) as excinfo:
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("anything")
     assert re.search(
         r"^Unable to parse \(.*first\.json\): Expecting value at line 1 column 1$",
         str(excinfo.value),
@@ -281,7 +283,29 @@ def test_backend_exception_wrapped_with_path(make_tree, monkeypatch):
         },
         files={"data/one.yaml": "k: v\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"), backends=[BrokenBackend])
     with pytest.raises(BackendError) as excinfo:
-        Hiera(str(root / "hiera.yaml"), backends=[BrokenBackend])
+        h.lookup("anything")
     assert isinstance(excinfo.value.__cause__, ValueError)
     assert excinfo.value.path is not None
+
+
+def test_data_file_errors_surface_on_lookup(make_tree):
+    # Puppet reads data only inside a lookup (`hiera_config.rb:127` builds
+    # the config without touching data; `data_hash_function_provider.rb`
+    # reads a location only when a lookup reaches it). `Hiera(...)` must
+    # not read `common.yaml` at all, so a malformed data file cannot fail
+    # construction -- it fails the first lookup that reaches it, every
+    # time, not only once.
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "a: [\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+
+    with pytest.raises(BackendError) as excinfo:
+        h.lookup("k")
+    assert str(excinfo.value.path).endswith("common.yaml")
+
+    with pytest.raises(BackendError):
+        h.lookup("k")

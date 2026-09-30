@@ -207,10 +207,11 @@ def test_method_syntax_in_locations_raises(make_tree, hierarchy):
         {"hierarchy": hierarchy},
         files={"data/common.yaml": "k: common\n"},
     )
-    # Method syntax is a hiera.yaml problem: it surfaces from the
-    # constructor's own pre-warm, not only from a later .get().
+    # Method syntax is a hiera.yaml problem, but interpolating a location
+    # template happens lazily on the first lookup, not in the constructor.
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
     with pytest.raises(ConfigError, match="method syntax is not allowed"):
-        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
+        h.lookup("k")
 
 
 def test_method_syntax_in_datadir_raises(make_tree):
@@ -223,8 +224,9 @@ def test_method_syntax_in_datadir_raises(make_tree):
         },
         files={"data/common.yaml": "k: common\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(ConfigError, match="method syntax is not allowed"):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("k")
 
 
 # --- mapped_paths collection semantics ------------------------------------
@@ -325,8 +327,9 @@ def test_mapped_paths_scalar_collection_raises(make_tree, collection, match):
             ]
         },
     )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": collection}))
     with pytest.raises(ConfigError, match=match):
-        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": collection}))
+        h.lookup("k")
 
 
 def test_mapped_item_is_a_local_variable_top_scope_still_reachable(make_tree):
@@ -373,10 +376,11 @@ def test_path_directory_location_raises(make_tree):
         {"hierarchy": [{"name": "d", "path": "confd"}]},
         files={"data/confd/a.yaml": "k: a\n"},
     )
-    # A directory location is a data-file problem: it surfaces from the
-    # constructor's own pre-warm (BackendError is not swallowed there).
+    # A directory location is a data-file problem: it surfaces on the first
+    # lookup, not from the constructor.
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(BackendError, match="Is a directory"):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("k")
 
 
 def test_mapped_paths_directory_location_raises(make_tree):
@@ -384,8 +388,9 @@ def test_mapped_paths_directory_location_raises(make_tree):
         {"hierarchy": [{"name": "m", "mapped_paths": ["roles", "role", "r/%{role}"]}]},
         files={"data/r/web/in.yaml": "k: in\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
     with pytest.raises(BackendError, match="Is a directory"):
-        Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web"]}))
+        h.lookup("k")
 
 
 def test_glob_over_a_directory_drops_it(make_tree):

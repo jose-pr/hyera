@@ -110,8 +110,7 @@ class Invocation:
         #: ``lookup_options`` gather, a hierarchy build's own interpolation
         #: invocations): one top-level lookup sees one filesystem snapshot
         #: and probes each path at most once. A fresh ``{}`` when not given
-        #: (a bare ``Invocation()`` with no sharing intent -- ``sources()``,
-        #: the constructor's own pre-warm).
+        #: (a bare ``Invocation()`` with no sharing intent -- ``sources()``).
         self._fs_memo = {} if _fs_memo is None else _fs_memo
 
     def _memo_probe(self, path):

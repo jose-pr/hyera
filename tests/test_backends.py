@@ -173,10 +173,11 @@ def test_json_non_hash_raises_backend_error(make_tree, top, label):
         {"hierarchy": [{"name": "j", "path": "first.json", "data_hash": "json_data"}]},
         files={"data/first.json": json.dumps(top).encode("utf-8")},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(
         BackendError, match="expects a Hash value, got {}".format(label)
     ):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("anything")
 
 
 def test_yaml_non_hash_warns_and_falls_through(make_tree, caplog):

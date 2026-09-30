@@ -51,7 +51,7 @@ private engine internals with no stability contract.
   built inside one `Hiera(...)` call shares it too.
   `self.scope` is set before the config loads, so a hierarchy path template
   referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
-  it from the first, context-free pre-warm onward. A missing or `null`/`false`
+  it from the first lookup onward. A missing or `null`/`false`
   `defaults`/`hierarchy` is filled
   with Puppet's own defaults (`{datadir: data, data_hash: yaml_data}` /
   `[{name: Common, path: common.yaml}]`) rather than raising; a hierarchy
@@ -72,16 +72,16 @@ private engine internals with no stability contract.
   Puppet's own arity/parameter-type text ("Unable to find" for an
   unregistered name). A hierarchy entry with no location key at all calls
   its function once, with no location, instead of contributing nothing.
-  Raises `ConfigError` for anything about `hiera.yaml` — missing,
-  unreadable, a directory, unparsable, an unsupported `version` (an
-  explicit `1`, `2`, `6` or other non-3/4/5 value as "This runtime does not
-  support hiera.yaml version N"; `4` at the global layer as "cannot be used
-  in the global layer"), or any violation of Puppet's schema for the
-  resolved version — with Puppet's own message and, where known, `.path`
-  and `.line` — and `BackendError` (`.path` names it) for a data file that
-  cannot be read or parsed. Context-free hierarchy levels are loaded by the
-  constructor, so a `BackendError` can come from `Hiera(...)` itself, not
-  only from a lookup.
+  Raises `ConfigError` for a missing, unreadable, or invalid `hiera.yaml` —
+  a directory, unparsable, an unsupported `version` (an explicit `1`, `2`,
+  `6` or other non-3/4/5 value as "This runtime does not support hiera.yaml
+  version N"; `4` at the global layer as "cannot be used in the global
+  layer"), or any violation of Puppet's schema for the resolved version —
+  with Puppet's own message and, where known, `.path` and `.line`. Data
+  files are read by lookups: a malformed or non-hash data file raises
+  `BackendError` (`.path` names it) from the first lookup whose scope
+  reaches it. Every lookup reads all data files of its scope first, to
+  gather `lookup_options`, so looking up any key validates them.
   - **Version 3** (Hiera 1, 2 and 3: a file without `version`, and an
     explicit `version: 3`, are the same dialect to Puppet) is read and
     validated against Puppet's own v3 schema (`backends`, `logger`,

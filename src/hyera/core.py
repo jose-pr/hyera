@@ -609,47 +609,6 @@ class Hiera:
         # failure at construction instead.
         self._environment(self.scope.environment)
 
-        # Pre-load/cache the bound scope's own data.
-        self._prewarm()
-
-    def _prewarm(self) -> None:
-        """Resolve the bound scope's own locations and read every main
-        hierarchy file up front, same as a lookup would need to.
-
-        Mirrors the source-resolution side effects of a ``get(None)`` call
-        without going through the public API's key-type check. Uses a
-        one-off probe per location (no shared :attr:`~hyera._invocation.
-        Invocation._fs_memo`, since there is no top-level lookup to share
-        one with): every existing ``data_hash`` file the main hierarchy
-        visits is still read via :meth:`_load_file` (:meth:`_files_for`),
-        which is what makes a malformed data file fail construction itself,
-        not just the first lookup.
-
-        A malformed dotted reference or a navigation type mismatch
-        reachable while resolving a hierarchy path (``%{...}`` in a
-        ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
-        here and logged at debug level, not raised out of the constructor:
-        Puppet raises these at lookup time, never at construction, and a
-        constructor should fail only for configuration errors. Swallowing it
-        here also means the walk this aborts was never cached, so the first
-        real lookup retries it in full and raises the same error again, now
-        at the right time.
-
-        Runs under ``self.scope.strict`` (the ``_STRICT`` ContextVar, same as
-        ``lookup``/``dig``/``get``): a genuinely non-hash data file under
-        ``strict="error"`` raises here as :class:`~hyera.BackendError` and is
-        NOT caught by the except clause below (matching the documented
-        constructor contract -- a data file that cannot be read or parsed
-        can fail construction itself).
-        """
-        strict_token = _STRICT.set(self.scope.strict)
-        try:
-            self._sources(self.scope)
-        except (HieraLookupError, InterpolationError) as e:
-            _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
-        finally:
-            _STRICT.reset(strict_token)
-
     def _intern(self, p) -> str:
         """The canonical interned ``str`` for a path-like ``p``: equal paths
         from independent hierarchy builds (and independent glob matches)
@@ -671,8 +630,8 @@ class Hiera:
         ``invocation``'s memo when given, a fresh one-off otherwise -- either
         confirms a cached parse is still current (its signature unchanged)
         or triggers a re-read, logged at debug level; ``invocation=None``
-        (``sources()``, the constructor's own pre-warm) still revalidates,
-        just without sharing the probe with anything else. With
+        (``sources()``) still revalidates, just without sharing the probe
+        with anything else. With
         ``revalidate=False``, a cached entry is returned untouched, and a
         first read is cached with no signature at all, so it is never
         reconsidered short of :meth:`clear_cache`.

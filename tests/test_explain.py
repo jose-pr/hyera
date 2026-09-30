@@ -75,9 +75,9 @@ def test_explain_reraises_data_file_errors(tmp_path, make_tree):
     (mod_dir / "hiera.yaml").write_bytes(
         b"version: 5\nhierarchy:\n  - name: c\n    path: c.yaml\n"
     )
-    # A malformed module data file is never touched by the constructor's own
-    # pre-warm (which only visits the *global* hierarchy), so it fails at
-    # explain/lookup time, exactly what this test needs to exercise. Genuine
+    # A malformed module data file is never touched by construction (which
+    # reads no data file at all), so it fails at explain/lookup time,
+    # exactly what this test needs to exercise. Genuine
     # YAML syntax breakage (not just a non-hash top level, which the default
     # strict="warning" only warns about) always raises.
     (mod_dir / "data" / "c.yaml").write_bytes(b"k: [1, 2\n")

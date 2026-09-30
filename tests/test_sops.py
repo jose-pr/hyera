@@ -233,9 +233,10 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
         encoding="utf-8",
     )
 
+    h = Hiera(str(config))
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(BackendError) as excinfo:
-            Hiera(str(config))
+            h.lookup("anything")
 
     exc = excinfo.value
     seen = []
@@ -305,9 +306,10 @@ def test_sops_parse_error_plaintext_absent_via_hiera_and_logs(
     )
     config = root / "hiera.yaml"
 
+    h = Hiera(str(config))
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(BackendError) as excinfo:
-            Hiera(str(config))
+            h.lookup("anything")
 
     exc = excinfo.value
     seen = []

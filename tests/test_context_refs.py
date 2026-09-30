@@ -100,8 +100,8 @@ def test_partial_nested_ref_in_path_probes_empty_segment(make_tree):
 def test_scalar_walked_as_container_raises(make_tree):
     # A non-dict variable: walking `.certname` into it is a Puppet type
     # mismatch, not a silent level skip. Construction itself still succeeds
-    # (the constructor only pre-warms the cache; a lookup-time error there
-    # is swallowed and deferred to the first real lookup, which raises it).
+    # (a hierarchy location is only resolved on the first real lookup,
+    # which raises it).
     root = make_tree(
         """\
         version: 5

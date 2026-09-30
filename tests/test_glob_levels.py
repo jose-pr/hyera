@@ -114,6 +114,7 @@ def test_dangling_link_match_raises_backend_error(make_tree):
     else:
         os.symlink(str(root / "gone"), str(link))
 
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(BackendError) as exc:
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("anything")
     assert str(exc.value.path).replace(os.sep, "/").endswith("a.yaml")
