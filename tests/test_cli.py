@@ -1,5 +1,7 @@
 """CLI behavior and exit codes (unattended-friendly)."""
 
+import contextlib
+import io
 import json
 import logging
 import os
@@ -1307,6 +1309,60 @@ def test_scope_flag_values_are_yaml(flags_root, capsys):
     assert capsys.readouterr().out == '0|false|1|["a", "b"]\n'
 
 
+def test_scope_flag_dotted_segments_share_an_existing_hash():
+    from hyera.cli import _parse_scope
+
+    # A second --scope reusing an already-built nested Hash segment (not
+    # the scalar-conflict case test_scope_flag_errors covers) is never an
+    # error.
+    assert _parse_scope(["a.b=1", "a.c=2"]) == {"a": {"b": 1, "c": 2}}
+
+
+def test_emit_falls_back_to_plain_write_without_a_buffer_attr():
+    # _emit's own fallback for a stdout with no `.buffer` (a StringIO
+    # under contextlib.redirect_stdout, as the conformance harness uses,
+    # or a genuine one here) -- real sys.stdout (even under pytest's
+    # capsys) always has one, so no in-process CLI test exercises this any
+    # other way; the subprocess-based BrokenPipeError test below covers
+    # the real-console path but isn't measured (a child process's own
+    # coverage isn't traced by this run).
+    from hyera.cli import _emit, _silence_stdout
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _emit("hello")
+    assert buf.getvalue() == "hello\n"
+
+    # _silence_stdout's own best-effort no-op: a StringIO has no real file
+    # descriptor, so `.fileno()` raises `io.UnsupportedOperation`.
+    with contextlib.redirect_stdout(io.StringIO()):
+        _silence_stdout()  # must not raise
+
+
+def test_main_without_duho_prints_hint_and_exits_2(monkeypatch, capsys):
+    # duho is a module-level name, None only when the "cli" extra's own
+    # import failed at module load time (not reproducible by breaking the
+    # import after the fact) -- the downstream check this guards is
+    # exercised directly instead.
+    import hyera.cli as cli
+
+    monkeypatch.setattr(cli, "duho", None)
+    rc = cli.main(["k"])
+    assert rc == 2
+    assert 'pip install "hyera[cli]"' in capsys.readouterr().err
+
+
+def test_parse_scope_empty_item_and_empty_value_direct():
+    from hyera.cli import _parse_scope, _parse_scope_value
+
+    # An empty value (--scope k=) is None -- distinct from the yaml_data
+    # loader's own empty-document False.
+    assert _parse_scope_value("") is None
+    # An empty item (an empty string among the --scope values) is skipped
+    # outright, not a parse error.
+    assert _parse_scope(["", "a=1"]) == {"a": 1}
+
+
 @pytest.mark.parametrize(
     "case,scope_arg",
     [("noequals", "noequals"), ("eqx", "=x"), ("nested-under-scalar", None)],
@@ -1387,6 +1443,20 @@ def test_hiera_config_default_falls_back_to_puppet_default(
     rc = main(["--facts", "facts.yaml", "--node", "n", "k", "--render-as", "s"])
     assert rc == 0
     assert capsys.readouterr().out == "v\n"
+
+
+def test_hiera_config_default_with_no_hiera_yaml_uses_builtin_default(
+    tmp_path, monkeypatch
+):
+    # Distinct from the case above (whose tmp tree has its own real
+    # hiera.yaml, found by the "default_path exists" branch): with no
+    # --hiera_config and no hiera.yaml in the cwd at all, base_path falls
+    # back to the cwd itself for Hiera's own Puppet-default config, rather
+    # than crashing on a missing file.
+    (tmp_path / "facts.yaml").write_text("role: web\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    rc = main(["--facts", "facts.yaml", "--node", "n", "nosuchkey", "--render-as", "s"])
+    assert rc == 1
 
 
 @pytest.mark.parametrize(
