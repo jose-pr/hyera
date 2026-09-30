@@ -16,7 +16,7 @@ import typing as _ty
 
 from pathlib_next import Path
 
-from ._hiera_config import (
+from .hiera_config import (
     _build_hierarchies,
     _config_version,
     _fill_v3_defaults,
@@ -27,7 +27,7 @@ from ._hiera_config import (
     _validate_v5,
     _warn_deprecated,
 )
-from ._lookup_adapter import LOOKUP_OPTIONS
+from .._lookup.lookup_adapter import LOOKUP_OPTIONS
 
 _LOGGER = logging.getLogger(__name__)
 

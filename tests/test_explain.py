@@ -1,7 +1,7 @@
 """``Hiera.explain()``: the engine hooks wired through the lookup pipeline,
 and the public method built on top of them.
 
-The renderer itself (``hyera._explain``) has its own byte-exact tests
+The renderer itself (``hyera._output.explain``) has its own byte-exact tests
 against recorded Puppet goldens (``tests/test_explain_render.py``); these
 exercise the *hooks* -- that a real lookup across merges, interpolation,
 overrides/defaults, layers and the default config produces a sensible,
@@ -10,7 +10,7 @@ lookup sees.
 """
 
 import hyera
-import hyera._explain
+import hyera._output.explain
 from hyera import (
     BackendError,
     ExplainResult,
@@ -194,7 +194,7 @@ def test_lookup_records_nothing_without_explain(make_tree, monkeypatch):
     def boom(self, *a, **k):
         raise AssertionError("Explainer.push must never run for an ordinary lookup")
 
-    monkeypatch.setattr(hyera._explain.Explainer, "push", boom)
+    monkeypatch.setattr(hyera._output.explain.Explainer, "push", boom)
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"x": "1"}))
     assert h.lookup("arr", merge="unique") == ["a", "b"]
     assert h.lookup("facts_ref") == "1"

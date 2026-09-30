@@ -6,10 +6,10 @@
 # See NOTICE.
 """Location resolution: expanding hierarchy levels into candidate source paths.
 
-Resolves a :class:`~hyera._hiera_config.HieraLevel`'s ``path``/``paths``/
+Resolves a :class:`~hyera._config.hiera_config.HieraLevel`'s ``path``/``paths``/
 ``glob``/``globs``/``mapped_paths`` declarations into concrete filesystem
 candidates, using the same ``%{...}`` interpolation engine as data values
-(:mod:`hyera._interpolation`) instead of a private ``str.format`` grammar --
+(:mod:`hyera._lookup.interpolation`) instead of a private ``str.format`` grammar --
 matching Puppet's own ``location_resolver.rb`` and the location half of
 ``hiera_config.rb``.
 """
@@ -23,14 +23,14 @@ import typing as _ty
 
 from pathlib_next import Path
 
-from ._interpolation import (
+from .._lookup.interpolation import (
     _ruby_inspect_str,
     _scope_lookup,
     _to_puppet_str,
     interpolate,
 )
-from ._invocation import Invocation
-from .exceptions import ConfigError
+from .._lookup.invocation import Invocation
+from ..exceptions import ConfigError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -495,7 +495,7 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
     already ends with it, and joins onto ``datadir``.
 
     Existence is checked through ``invocation``'s filesystem memo
-    (:meth:`~hyera._invocation.Invocation._memo_probe`), not a bare
+    (:meth:`~hyera._lookup.invocation.Invocation._memo_probe`), not a bare
     ``os.path.exists``: when ``invocation`` shares a memo with the rest of
     the current top-level lookup (``core.Hiera._location_entry_for``), this
     is the one real probe of ``loc`` that lookup ever makes, and a caller
@@ -568,7 +568,7 @@ def _expand_globs(config_root, datadir, declared, invocation):
     contributes no matches.
 
     Eager, unlike :func:`resolve_glob_specs`: used by
-    :meth:`~hyera._hiera_config.HieraLevel.paths`, which has no lazy
+    :meth:`~hyera._config.hiera_config.HieraLevel.paths`, which has no lazy
     materialization step to defer the walk to.
     """
     results = []
@@ -827,20 +827,20 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
 
     Never called for a ``glob``/``globs`` level from the main lookup
     pipeline (see :func:`resolve_glob_specs`); still handles that kind
-    itself (eagerly) for :meth:`~hyera._hiera_config.HieraLevel.paths`,
+    itself (eagerly) for :meth:`~hyera._config.hiera_config.HieraLevel.paths`,
     which has no lazy materialization step of its own.
 
     ``refs``, when given, is a list every scope read made while resolving
-    this level appends itself to (:meth:`~hyera._invocation.Invocation.
+    this level appends itself to (:meth:`~hyera._lookup.invocation.Invocation.
     remember_scope_lookup`), shared across every level of one hierarchy
     build by the caller (``core.Hiera._location_entry_for``) so the whole
     hierarchy's build is keyed on one combined reference set, matching
     Puppet's own single ``scope_interpolations_stable?`` check per rebuild.
     Omitted (``None``, the default), nothing is recorded -- used by
-    :meth:`~hyera._hiera_config.HieraLevel.paths`, which has no cache to key.
+    :meth:`~hyera._config.hiera_config.HieraLevel.paths`, which has no cache to key.
 
     ``fs_memo``, when given, is the current top-level lookup's filesystem
-    probe memo (:attr:`~hyera._invocation.Invocation._fs_memo`), shared so
+    probe memo (:attr:`~hyera._lookup.invocation.Invocation._fs_memo`), shared so
     every location this level (and the rest of the same hierarchy build)
     probes is probed at most once for the whole lookup. Omitted, each
     location probed here gets its own, unshared one-entry memo.

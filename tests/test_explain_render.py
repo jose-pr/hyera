@@ -1,4 +1,4 @@
-"""``hyera._explain``: the ported ``explainer.rb`` tree and its text
+"""``hyera._output.explain``: the ported ``explainer.rb`` tree and its text
 rendering. No engine code is exercised here -- every tree is built by hand
 with direct ``push``/``accept_*`` calls, the same primitives a lookup's
 ``Invocation`` will call once the hooks land.
@@ -13,7 +13,7 @@ import collections
 import json
 from pathlib import Path
 
-from hyera._explain import (
+from hyera._output.explain import (
     Explainer,
     _dump_value,
     _Location,

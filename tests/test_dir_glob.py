@@ -10,7 +10,7 @@ import threading
 
 import pytest
 
-from hyera._location_resolver import (
+from hyera._config.location_resolver import (
     _entry_is_dir,
     _expand_braces,
     _glob_one,

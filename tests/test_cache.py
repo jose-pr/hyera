@@ -826,7 +826,7 @@ def test_revalidate_validation(make_tree):
 
 def test_freeze_unsupported_type_never_matches_itself():
     from hyera import Sensitive
-    from hyera._cache import _freeze
+    from hyera._lookup.cache import _freeze
 
     # An object _freeze has no dedicated case for (anything besides
     # bool/int/float/str/None/dict/list/tuple) freezes to a fresh sentinel
@@ -838,7 +838,7 @@ def test_freeze_unsupported_type_never_matches_itself():
 def test_lru_evicts_oldest_past_maxsize_and_reports_len():
     import threading
 
-    from hyera._cache import _LRU
+    from hyera._lookup.cache import _LRU
 
     lru = _LRU(threading.Lock(), maxsize=2)
     lru.put("a", 1)

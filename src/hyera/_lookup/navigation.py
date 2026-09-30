@@ -13,7 +13,7 @@ import contextlib
 import functools
 import re
 
-from .exceptions import HieraLookupError
+from ..exceptions import HieraLookupError
 
 
 class _Unset:

@@ -13,9 +13,9 @@ import shutil
 import subprocess
 import typing as _ty
 
-from . import _yaml_loader
-from .backends import _reject_json_constant
-from .exceptions import BackendError
+from ..backends import _yaml_loader as _yaml_loader
+from ..backends._json import _reject_json_constant
+from ..exceptions import BackendError
 
 #: The four trusted-identity facts Puppet requires all-or-nothing
 #: (``application/lookup.rb:12`` ``TRUSTED_INFORMATION_FACTS``).

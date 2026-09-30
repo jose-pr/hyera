@@ -8,7 +8,7 @@ Designed for unattended use: no interactive prompts, deterministic output,
 and meaningful exit codes: 0 found (or --default printed), 1
 key not found, 2 any other error (one stderr line; -v or
 DUHO_TRACEBACK=1 adds the traceback). Output is rendered the way
-puppet lookup --render-as s|json|yaml does (hyera._render),
+puppet lookup --render-as s|json|yaml does (hyera._output.render),
 written as UTF-8 bytes with LF line endings whatever the console/locale
 encoding.
 """
@@ -31,9 +31,9 @@ except ModuleNotFoundError as _e:
 from . import __version__
 from .exceptions import BackendError, HieraError, KeyNotFoundError, _one_line
 from .core import Hiera
-from ._facts import load_facts
-from ._scope import Scope
-from ._type_parser import parse_type
+from ._scope.facts import load_facts
+from ._scope.scope import Scope
+from ._types.parser import parse_type
 from .backends import Backend
 
 __all__ = ["main"]

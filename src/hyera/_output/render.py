@@ -14,9 +14,9 @@ import re as _re
 
 import yaml as _yaml
 
-from .backends import Backend
-from ._interpolation import _to_puppet_str
-from ._types import Sensitive
+from ..backends import Backend
+from .._lookup.interpolation import _to_puppet_str
+from .._types.types import Sensitive
 
 __all__ = ["StringRender", "JSONRender", "YAMLRender"]
 

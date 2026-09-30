@@ -2,7 +2,7 @@
 
 Hiera 5 defines a dotted reference as nested key access. Both values and
 hierarchy locations resolve a dotted reference through the same
-interpolation engine (``hyera._interpolation.interpolate``, over a bound
+interpolation engine (``hyera._lookup.interpolation.interpolate``, over a bound
 ``Scope``) -- locations with ``allow_methods=False``, including for the
 README's own lead example config.
 """

@@ -9,10 +9,10 @@ methods wrapping this module).
 
 import re
 
-from ._interpolation import _ruby_inspect
-from ._navigation import split_key
-from ._types import infer
-from .exceptions import HieraLookupError
+from .interpolation import _ruby_inspect
+from .navigation import split_key
+from .._types.types import infer
+from ..exceptions import HieraLookupError
 
 #: getvar.rb:50 -- must start with a valid (optionally ``::``-qualified)
 #: Puppet variable name, immediately followed by ``.`` or the end of the

@@ -16,9 +16,9 @@ import json
 import re
 import typing as _ty
 
-from ._interpolation import unshare
-from ._navigation import _MISSING
-from .exceptions import MergeError
+from .interpolation import unshare
+from .navigation import _MISSING
+from ..exceptions import MergeError
 
 #: The type of every public ``merge=`` argument: a strategy name
 #: (``"first"``/``"unique"``/``"hash"``/``"deep"``/...), a
@@ -226,8 +226,8 @@ class MergeStrategy:
         """merge_strategy.rb:126-151.
 
         A value that actually enters a merge (two or more contributing
-        variants) is passed through :func:`~hyera._interpolation.unshare`
-        first -- :func:`~hyera._interpolation.interpolate` may return a
+        variants) is passed through :func:`~hyera._lookup.interpolation.unshare`
+        first -- :func:`~hyera._lookup.interpolation.interpolate` may return a
         value where two positions are the *same* object (a reused YAML
         anchor), and this strategy's own ``merge``/``convert_value`` mutate
         their higher-priority accumulator in place; unsharing first is what

@@ -11,7 +11,7 @@ from .backends import (
     YAMLBackend,
     default_backends,
 )
-from . import _render  # noqa: F401  (side effect: registers s/json/yaml renderers)
+from ._output import render as _render  # noqa: F401 (registers s/json/yaml renderers)
 from .exceptions import (
     ConfigError,
     HieraError,
@@ -21,12 +21,12 @@ from .exceptions import (
     MergeError,
 )
 from .core import Hiera
-from ._explain import ExplainResult
-from ._facts import facts_from_facter, load_facts
-from ._hiera_config import HieraLevel
-from ._merge_strategy import MergeSpec
-from ._scope import Scope
-from ._types import Sensitive
+from ._output.explain import ExplainResult
+from ._scope.facts import facts_from_facter, load_facts
+from ._config.hiera_config import HieraLevel
+from ._lookup.merge_strategy import MergeSpec
+from ._scope.scope import Scope
+from ._types.types import Sensitive
 
 __version__ = "0.0.0a0"
 

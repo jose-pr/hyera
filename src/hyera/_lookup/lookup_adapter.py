@@ -10,10 +10,10 @@ Ports Puppet's ``lookup_adapter.rb`` and the RichData check in
 import re
 import typing as _ty
 
-from .exceptions import HieraLookupError
-from ._new_function import new_instance
-from ._type_parser import parse_type
-from ._types import _ruby_regex, infer
+from ..exceptions import HieraLookupError
+from .._types.new_function import new_instance
+from .._types.parser import parse_type
+from .._types.types import _ruby_regex, infer
 
 #: The reserved data key holding per-key merge/convert_to options.
 LOOKUP_OPTIONS = "lookup_options"
@@ -118,7 +118,7 @@ def compile_patterns(options):
     """Puppet's ``LookupAdapter#compile_patterns`` (:317-330).
 
     A key starting with ``^`` is a Ruby regex, compiled through
-    :func:`hyera._types._ruby_regex`; anything else, including a non-``str``
+    :func:`hyera._types.types._ruby_regex`; anything else, including a non-``str``
     key, is an exact match. An invalid pattern raises immediately (no
     rescue, as in Puppet), naming the pattern.
     """
@@ -188,12 +188,12 @@ def convert_result(key, convert_to, value, invocation=None):
     (which then fails its own "expects a Type value" check). An empty list's
     first element is ``None``, same as an explicit ``convert_to: ~``.
 
-    A ``str`` first element is parsed with :func:`hyera._type_parser.parse_type`;
+    A ``str`` first element is parsed with :func:`hyera._types.parser.parse_type`;
     a parse failure re-raises as "Invalid data type in lookup_options for
     key '<key>' could not parse '<source>', error: '<msg>" (the unbalanced
     quote is Puppet's own format string, verbatim). The (possibly parsed)
     type and the remaining arguments then go to
-    :func:`hyera._new_function.new_instance`; its failure re-raises as "The
+    :func:`hyera._types.new_function.new_instance`; its failure re-raises as "The
     convert_to lookup_option for key '<key>' raised error: <msg>".
 
     ``invocation``, when given, reports the applied conversion as explain
@@ -222,7 +222,7 @@ def convert_result(key, convert_to, value, invocation=None):
         type_ = type_arg
 
     if invocation is not None:
-        from ._string_converter import convert as _puppet_string
+        from .._types.string_converter import convert as _puppet_string
 
         invocation.report_text(
             lambda: "Applying convert_to lookup_option with arguments "

@@ -18,7 +18,7 @@ import re
 
 import yaml
 
-from .exceptions import BackendError
+from ..exceptions import BackendError
 
 __all__ = ["RubySymbol", "symkeys_to_string", "safe_load"]
 

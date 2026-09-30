@@ -23,7 +23,7 @@ def _install_recorder(
     """Patch ``shutil.which``/``subprocess.run`` and record every call."""
     calls = []
     which_path = str(tmp_path / "bin" / "sops.exe")
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _name: which_path)
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _name: which_path)
 
     def _run(args, **kwargs):
         calls.append((args, kwargs))
@@ -31,7 +31,7 @@ def _install_recorder(
             args, returncode, stdout=stdout, stderr=stderr
         )
 
-    monkeypatch.setattr("hyera.backends.subprocess.run", _run)
+    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _run)
     return calls, which_path
 
 
@@ -115,10 +115,10 @@ def test_sops_refuses_relative_which_result(monkeypatch, tmp_path):
     # relative path even with NoDefaultCurrentDirectoryInExePath set; running
     # whatever that resolves to would be the same implicit-cwd exposure the
     # absolute-path hardening elsewhere in this module is meant to close.
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: ".\\sops.EXE")
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: ".\\sops.EXE")
     called = []
     monkeypatch.setattr(
-        "hyera.backends.subprocess.run", lambda *a, **k: called.append((a, k))
+        "hyera.backends._sops.subprocess.run", lambda *a, **k: called.append((a, k))
     )
 
     with pytest.raises(BackendError, match="relative"):
@@ -128,10 +128,12 @@ def test_sops_refuses_relative_which_result(monkeypatch, tmp_path):
 
 
 def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: r"C:\tools\sops.CMD")
+    monkeypatch.setattr(
+        "hyera.backends._sops.shutil.which", lambda _n: r"C:\tools\sops.CMD"
+    )
     called = []
     monkeypatch.setattr(
-        "hyera.backends.subprocess.run", lambda *a, **k: called.append((a, k))
+        "hyera.backends._sops.subprocess.run", lambda *a, **k: called.append((a, k))
     )
 
     with pytest.raises(BackendError, match="batch"):
@@ -259,10 +261,10 @@ def test_sops_timeout_chain_free(monkeypatch, tmp_path):
         )
 
     monkeypatch.setattr(
-        "hyera.backends.shutil.which",
+        "hyera.backends._sops.shutil.which",
         lambda _n: str(tmp_path / "bin" / "sops.exe"),
     )
-    monkeypatch.setattr("hyera.backends.subprocess.run", _timeout)
+    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _timeout)
 
     with pytest.raises(BackendError) as excinfo:
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})

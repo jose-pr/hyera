@@ -1,4 +1,4 @@
-"""``hyera._navigation``: Puppet's dotted-key ``split_key``/``sub_lookup``.
+"""``hyera._lookup.navigation``: Puppet's dotted-key ``split_key``/``sub_lookup``.
 
 Behavioral acceptance for these two functions runs through the
 ``dotted-navigation`` conformance case; this module unit-tests the parser
@@ -12,7 +12,7 @@ import pytest
 
 from hyera import Hiera, Scope
 from hyera.exceptions import HieraLookupError
-from hyera._navigation import (
+from hyera._lookup.navigation import (
     _MISSING,
     _ruby_class,
     join_key,

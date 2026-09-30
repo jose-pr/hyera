@@ -113,7 +113,7 @@ def test_load_facts_trusted_facts_all_or_none(tmp_path):
 
 
 def test_facts_from_facter_runs_bare_facter_j(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
     calls = []
 
     class _Proc:
@@ -125,7 +125,7 @@ def test_facts_from_facter_runs_bare_facter_j(monkeypatch):
         calls.append((args, kwargs))
         return _Proc()
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", _run)
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", _run)
     result = facts_from_facter(timeout=5)
 
     assert result == {"os": {"family": "Debian"}}
@@ -135,93 +135,93 @@ def test_facts_from_facter_runs_bare_facter_j(monkeypatch):
 
 
 def test_facts_from_facter_missing_binary(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: None)
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: None)
     with pytest.raises(BackendError, match="facter executable not found"):
         facts_from_facter()
 
 
 def test_facts_from_facter_nonzero_exit_surfaces_stderr(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     class _Proc:
         returncode = 1
         stdout = b""
         stderr = b"no facts collected"
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="no facts collected"):
         facts_from_facter()
 
 
 def test_facts_from_facter_timeout(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     def _raise(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd="facter", timeout=30)
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", _raise)
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", _raise)
     with pytest.raises(BackendError, match="timed out"):
         facts_from_facter()
 
 
 def test_facts_from_facter_oserror(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     def _raise(*args, **kwargs):
         raise OSError("boom")
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", _raise)
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", _raise)
     with pytest.raises(BackendError, match="Failed to run facter: boom"):
         facts_from_facter()
 
 
 def test_facts_from_facter_bad_utf8_output(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     class _Proc:
         returncode = 0
         stdout = b"\xff\xfe"
         stderr = b""
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="facter output is not valid UTF-8"):
         facts_from_facter()
 
 
 def test_facts_from_facter_bad_json_output(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     class _Proc:
         returncode = 0
         stdout = b"{not json"
         stderr = b""
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="facter output is not valid JSON"):
         facts_from_facter()
 
 
 def test_facts_from_facter_nan_constant_output(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     class _Proc:
         returncode = 0
         stdout = b'{"a": NaN}'
         stderr = b""
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="facter output is not valid JSON"):
         facts_from_facter()
 
 
 def test_facts_from_facter_non_object_output(monkeypatch):
-    monkeypatch.setattr("hyera._facts.shutil.which", lambda _n: "/usr/bin/facter")
+    monkeypatch.setattr("hyera._scope.facts.shutil.which", lambda _n: "/usr/bin/facter")
 
     class _Proc:
         returncode = 0
         stdout = b"[1, 2, 3]"
         stderr = b""
 
-    monkeypatch.setattr("hyera._facts.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera._scope.facts.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="not a JSON object"):
         facts_from_facter()

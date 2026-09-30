@@ -12,8 +12,8 @@ form -- what every container renders its elements with), and the small
 
 import re
 
-from .exceptions import HieraLookupError
-from ._types import Sensitive
+from ..exceptions import HieraLookupError
+from .types import Sensitive
 
 __all__ = ["convert", "puppet_quote"]
 
@@ -200,7 +200,7 @@ def convert(value, string_formats=None):
 
 
 def _short(value):
-    from ._types import infer
+    from .types import infer
 
     return infer(value).name
 

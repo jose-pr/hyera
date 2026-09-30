@@ -19,7 +19,12 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from hyera import BackendError, EyamlBackend
-from hyera._eyaml import _decode64, _has_encrypted_token, _pkcs7_decrypt, decrypt_string
+from hyera.backends._eyaml import (
+    _decode64,
+    _has_encrypted_token,
+    _pkcs7_decrypt,
+    decrypt_string,
+)
 from hyera.backends import Backend
 
 FIXTURE = (
@@ -92,7 +97,7 @@ def _envelope(
     iv_len: int = 16,
 ) -> bytes:
     """Hand-build a minimal PKCS7 ``EnvelopedData`` ``ContentInfo`` blob
-    encrypted to ``pubkey`` -- the encoder side of :func:`hyera._eyaml.
+    encrypted to ``pubkey`` -- the encoder side of :func:`hyera.backends._eyaml.
     _pkcs7_decrypt`'s decoder, used only by these tests."""
     if content_oid is None:
         content_oid = _AES_OIDS[bits]
@@ -442,7 +447,7 @@ def test_decrypted_value_cached_per_key(public_key, tmp_path, monkeypatch):
     (tmp_path / "hiera.yaml").write_text(hiera_yaml, encoding="utf-8")
 
     calls = []
-    from hyera import _eyaml as eyaml_mod
+    from hyera.backends import _eyaml as eyaml_mod
 
     real = eyaml_mod.decrypt_string
 

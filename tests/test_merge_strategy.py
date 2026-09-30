@@ -1,4 +1,4 @@
-"""Unit tests for the Puppet MergeStrategy port (``hyera._merge_strategy``).
+"""Unit tests for the Puppet MergeStrategy port (``hyera._lookup.merge_strategy``).
 
 Pure Python-level tests: no Puppet oracle, no I/O. Every rule cites the
 Ruby source line it mirrors in ``_merge_strategy.py`` itself.
@@ -9,7 +9,7 @@ import re
 import pytest
 
 from hyera import Hiera, HieraError, MergeError
-from hyera._merge_strategy import (
+from hyera._lookup.merge_strategy import (
     _MISSING,
     DeepMergeStrategy,
     DefaultMergeStrategy,
@@ -134,7 +134,7 @@ def test_ruby_equality():
 
 
 def test_is_data_puppet_type_name_and_ruby_inspect_fallbacks():
-    from hyera._merge_strategy import _is_data, _puppet_type_name, _ruby_inspect
+    from hyera._lookup.merge_strategy import _is_data, _puppet_type_name, _ruby_inspect
 
     marker = object()
     assert _is_data(marker) is False
@@ -143,7 +143,7 @@ def test_is_data_puppet_type_name_and_ruby_inspect_fallbacks():
 
 
 def test_ruby_class_name_eq_cmp_direct():
-    from hyera._merge_strategy import _ruby_class_name, _ruby_cmp, _ruby_eq
+    from hyera._lookup.merge_strategy import _ruby_class_name, _ruby_cmp, _ruby_eq
 
     assert _ruby_class_name([1, 2]) == "Array"
     marker = object()
@@ -160,7 +160,7 @@ def test_ruby_class_name_eq_cmp_direct():
 
 
 def test_clear_or_nil_direct():
-    from hyera._merge_strategy import _clear_or_nil
+    from hyera._lookup.merge_strategy import _clear_or_nil
 
     assert _clear_or_nil("x") == ""
     assert _clear_or_nil(object()) is None
@@ -181,7 +181,7 @@ def test_subclass_without_key_is_not_registered():
     # subclass that sets its own KEY -- every real strategy in this module
     # does, so an intermediate/abstract subclass with no KEY of its own is
     # the only way to exercise the "skip" side.
-    from hyera._merge_strategy import _STRATEGIES
+    from hyera._lookup.merge_strategy import _STRATEGIES
 
     class _NoKeyStrategy(MergeStrategy):
         pass
@@ -206,7 +206,7 @@ def test_merge_strategy_base_is_abstract_and_first_found_never_rejects():
 
 
 def test_unique_value_problem_nested_array_item():
-    from hyera._merge_strategy import UniqueMergeStrategy, _ruby_class_name
+    from hyera._lookup.merge_strategy import UniqueMergeStrategy, _ruby_class_name
 
     assert UniqueMergeStrategy.INSTANCE._value_problem([1, object()]) == (
         "expects a value of type Scalar or Array, got Array[object]"
@@ -562,7 +562,7 @@ def test_hidden_strategy_keys():
 
 
 def test_ruby_join_split():
-    from hyera._merge_strategy import _ruby_join, _ruby_split
+    from hyera._lookup.merge_strategy import _ruby_join, _ruby_split
 
     assert _ruby_join(["a", "b"], ",") == "a,b"
     assert _ruby_join([["a", "b"], "c"], ",") == "a,b,c"  # nested, recursive

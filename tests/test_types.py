@@ -14,18 +14,18 @@ import pytest
 import yaml
 
 from hyera import HieraLookupError, Sensitive
-from hyera._lookup_adapter import convert_result
-from hyera._new_function import new_instance
-from hyera._string_converter import convert as _string_convert
-from hyera._string_converter import puppet_quote as _puppet_quote
-from hyera._type_mismatch import (
+from hyera._lookup.lookup_adapter import convert_result
+from hyera._types.new_function import new_instance
+from hyera._types.string_converter import convert as _string_convert
+from hyera._types.string_converter import puppet_quote as _puppet_quote
+from hyera._types.mismatch import (
     _a_an,
     _size_text,
     assert_instance_of,
     describe_mismatch,
 )
-from hyera._type_parser import _Parser, parse_type
-from hyera._types import (
+from hyera._types.parser import _Parser, parse_type
+from hyera._types.types import (
     ALIASES,
     PAnyType,
     PEnumType,
@@ -370,7 +370,7 @@ def test_aliases_and_references():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._yaml_loader"
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
 
 
@@ -436,7 +436,7 @@ def test_type_key_equality_and_hash():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._yaml_loader"
     rt_a, rt_b = infer(RubySymbol()), infer(RubySymbol())
     assert rt_a == rt_b
     assert hash(rt_a) == hash(rt_b)
@@ -617,7 +617,7 @@ def test_infer_edge_cases():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._yaml_loader"
     rt = infer(RubySymbol())
     assert rt.instance(RubySymbol()) is True
     assert rt.instance("x") is False
@@ -1078,7 +1078,7 @@ def test_new_dispatch_optional_notundef_bare_and_literal_contained():
     # type_.instance(value): return value") would otherwise skip _dispatch
     # entirely here, since any non-None value trivially satisfies a bare
     # Optional/NotUndef's own instance() check.
-    from hyera._new_function import _dispatch
+    from hyera._types.new_function import _dispatch
 
     # A bare Optional/NotUndef (no contained type argument at all) is not
     # actually new()-able on its own -- Puppet has no meaningful
@@ -1094,7 +1094,7 @@ def test_new_dispatch_optional_notundef_bare_and_literal_contained():
 
 
 def test_new_integer_binary_literal():
-    from hyera._new_function import new_instance
+    from hyera._types.new_function import new_instance
 
     assert new_instance(parse_type("Integer"), "0b101") == 5
 
@@ -1102,7 +1102,7 @@ def test_new_integer_binary_literal():
 def test_new_dispatch_integer_int_passthrough_and_empty_dict():
     # _dispatch directly (same fast-path reason as the Optional/NotUndef
     # case above -- an int already satisfies Integer's own instance()).
-    from hyera._new_function import _dispatch
+    from hyera._types.new_function import _dispatch
 
     assert _dispatch(parse_type("Integer"), 5, ()) == 5
     # An empty dict: the named-args loop runs zero times (every non-empty
@@ -1116,7 +1116,7 @@ def test_new_dispatch_float_and_numeric_from_int_and_unsupported_type():
     # _dispatch directly, for the same reason as above: an int already
     # satisfies Numeric's own instance() check (unlike Float's, so that
     # one call goes through new_instance() normally).
-    from hyera._new_function import _dispatch, new_instance
+    from hyera._types.new_function import _dispatch, new_instance
 
     assert new_instance(parse_type("Float"), 5) == 5.0
     assert _dispatch(parse_type("Numeric"), 5, ()) == 5

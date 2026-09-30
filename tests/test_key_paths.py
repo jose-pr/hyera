@@ -23,7 +23,7 @@ import pytest
 import hyera
 from hyera import Hiera, KeyNotFoundError
 from hyera.exceptions import HieraLookupError
-from hyera._navigation import join_key, split_key
+from hyera._lookup.navigation import join_key, split_key
 
 _HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
 
@@ -204,7 +204,7 @@ def _conformance_module(name):
 
 def _tuple_candidates(golden):
     """``(case_dir, case, query, path)`` for every conformance query whose
-    ``key`` needs more than :func:`~hyera._navigation.split_key`'s
+    ``key`` needs more than :func:`~hyera._lookup.navigation.split_key`'s
     single-segment identity -- multiple segments, or a quote -- and whose
     split segments start with a ``str`` root (an int-root query has no
     tuple-path equivalent at all: a tuple path's own root is always a

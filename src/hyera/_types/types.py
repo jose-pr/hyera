@@ -769,7 +769,7 @@ class PRuntimeType(PAnyType):
             self.runtime == "ruby"
             and self.runtime_name == "Symbol"
             and cls.__name__ == "RubySymbol"
-            and cls.__module__ == "hyera._yaml_loader"
+            and cls.__module__ == "hyera.backends._yaml_loader"
         )
 
     def _key(self):
@@ -796,7 +796,7 @@ class PTypeAliasType(PAnyType):
     @property
     def resolved_type(self):
         if self._resolved is None:
-            from ._type_parser import parse_type as _parse
+            from .parser import parse_type as _parse
 
             self._resolved = _parse(self._body_text)
         return self._resolved
@@ -969,7 +969,7 @@ def infer(value):
     if isinstance(value, dict):
         return _infer_hash(value)
     cls = type(value)
-    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera._yaml_loader":
+    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera.backends._yaml_loader":
         return PRuntimeType("ruby", "Symbol")
     raise TypeError("no Puppet type for {!r}".format(value))
 

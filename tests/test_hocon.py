@@ -36,7 +36,8 @@ import threading
 import pytest
 
 from hyera import BackendError, Hiera, default_backends
-from hyera.backends import HOCONBackend, _hocon_parser, has_hocon
+from hyera.backends import HOCONBackend, has_hocon
+from hyera.backends._hocon import _hocon_parser
 
 
 @pytest.fixture

@@ -158,10 +158,10 @@ def test_public_signatures_are_annotated():
 
 
 def test_unset_sentinel_is_stable():
-    """The ``<unset>`` default-value sentinel (:class:`hyera._navigation.
+    """The ``<unset>`` default-value sentinel (:class:`hyera._lookup.navigation.
     _Unset`) renders readably, and survives ``copy``/``pickle`` by
     identity -- a plain ``object()`` would do neither."""
-    from hyera._navigation import _MISSING
+    from hyera._lookup.navigation import _MISSING
 
     assert repr(_MISSING) == "<unset>"
     assert copy.deepcopy(_MISSING) is _MISSING

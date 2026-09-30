@@ -503,7 +503,7 @@ since Hiera data is dynamic.
 
 Puppet's top scope, as one immutable, hashable value, bound to every
 `Hiera` instance, views included (`Hiera(..., scope=...)`, `.scope`,
-`.scoped(...)`). Logger `hyera._scope`.
+`.scoped(...)`). Logger `hyera._scope.scope`.
 
 - **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None, environment=None, strict='warning', node_name=None)`**
   — every argument keyword-only. `variables`/`facts`/`server_facts`/`trusted`
@@ -965,7 +965,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   There is no `IniBackend`: see `SopsBackend` above for why `ini` is
   parsed as JSON instead.
 - **Rendering** — three `render`-kind-only, private `Backend` subclasses
-  (`hyera._render`), found the same way (`Backend.new(fmt, kind="render")`):
+  (`hyera._output.render`), found the same way (`Backend.new(fmt, kind="render")`):
   Puppet's `puppet lookup --render-as` output. Each implements only
   `dumps(obj) -> str`; none of the Hiera 5 provider hooks or `loads`
   apply. `s` renders Ruby `to_s` (Ruby 3.2 AIO hash form `{"k"=>v}`,
@@ -1244,7 +1244,7 @@ Not supported:
 
 - Debug trace: with the `hyera` logger at `DEBUG` (and a handler attached),
   each `lookup`/`dig`/`get`/`explain` call logs one record on the
-  `hyera._explain` logger: `Lookup of '<key>'` followed by the same report
+  `hyera._output.explain` logger: `Lookup of '<key>'` followed by the same report
   `explain()` returns, each line indented two spaces. Each
   `%{lookup()}`/`%{hiera()}`/`%{alias()}` encountered while resolving a
   value logs its own record first, in the order it actually runs. With

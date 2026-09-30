@@ -24,7 +24,7 @@ import pytest
 from pathlib_next import Path
 
 from hyera import Backend, ConfigError, Hiera, KeyNotFoundError, Scope
-from hyera._hiera_config import (
+from hyera._config.hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
     _ConfigSource,
     _default_codedir,
@@ -34,8 +34,8 @@ from hyera._hiera_config import (
     _v3_level_specs,
     _validate_v4,
 )
-from hyera._invocation import Invocation
-from hyera._yaml_loader import RubySymbol
+from hyera._lookup.invocation import Invocation
+from hyera.backends._yaml_loader import RubySymbol
 
 
 @pytest.mark.parametrize(

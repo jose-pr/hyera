@@ -7,8 +7,8 @@ import os
 import pytest
 
 from hyera import BackendError, ConfigError, Hiera, InterpolationError, Scope
-from hyera._hiera_config import HieraLevel
-from hyera._location_resolver import _no_lookup, _pathname_plus
+from hyera._config.hiera_config import HieraLevel
+from hyera._config.location_resolver import _no_lookup, _pathname_plus
 from hyera.core import _no_option_lookup
 
 # --- _pathname_plus (Ruby Pathname#+) ---------------------------------
@@ -162,8 +162,8 @@ def test_resolve_paths_extension(make_tree):
         files={"data/x.yaml": "k: found\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    from hyera._location_resolver import _resolve_paths
-    from hyera._invocation import Invocation
+    from hyera._config.location_resolver import _resolve_paths
+    from hyera._lookup.invocation import Invocation
 
     inv = Invocation(Scope(), lambda k, i: None, lenient=True)
     (loc,) = _resolve_paths(str(root / "data"), ["x"], inv, extension=".yaml")
@@ -307,7 +307,7 @@ def test_mapped_collection_items_scalar_type_error_direct(value, rendered):
     # a ConfigError naming the Ruby type. Exercised directly -- a scope
     # variable can hold any of these, but not every one has a recorded
     # Puppet-oracle case.
-    from hyera._location_resolver import _mapped_collection_items
+    from hyera._config.location_resolver import _mapped_collection_items
     from hyera.exceptions import ConfigError
 
     with pytest.raises(ConfigError) as exc:
@@ -323,7 +323,7 @@ def test_mapped_collection_items_other_type_error_direct():
     # project's own scope values can otherwise be): a plain Python
     # type name and str(), matching what any unmodeled object falls back
     # to elsewhere in this codebase too.
-    from hyera._location_resolver import _mapped_collection_items
+    from hyera._config.location_resolver import _mapped_collection_items
     from hyera.exceptions import ConfigError
 
     marker = object()

@@ -225,7 +225,7 @@ def test_exist_finds_a_local_layer_variable():
 
 
 def test_sanitize_fact_key_rejects_a_list():
-    from hyera._scope import _sanitize_fact_key
+    from hyera._scope.scope import _sanitize_fact_key
 
     with pytest.raises(TypeError, match="a list cannot be used as a fact key"):
         _sanitize_fact_key(["a"])

@@ -11,9 +11,9 @@ own result is interpolated again.
 import re
 from decimal import Decimal
 
-from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
-from ._types import Sensitive
-from .exceptions import ConfigError, HieraLookupError, InterpolationError, _issue_coded
+from .navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
+from .._types.types import Sensitive
+from ..exceptions import ConfigError, HieraLookupError, InterpolationError, _issue_coded
 
 #: One ``%{...}`` occurrence (``interpolation.rb:51``'s
 #: ``/%\{([^}]*)\}/``). Takes any text up to the first ``}``, stripped
@@ -183,7 +183,7 @@ def interpolate(value, invocation, allow_methods=True):
     ``float``, already-native structures with no string inside) passes
     through unchanged.
 
-    ``invocation`` is a :class:`~hyera._invocation.Invocation`.
+    ``invocation`` is a :class:`~hyera._lookup.invocation.Invocation`.
     ``allow_methods=False`` (used for hierarchy locations) still allows a
     plain ``%{var}``/``%{scope('var')}`` reference; only an explicit method
     call (``%{lookup(...)}``, ``%{hiera(...)}``, ``%{alias(...)}``,
@@ -343,7 +343,7 @@ def _scope_lookup(key, inv, subject):
     """``%{scope(...)}``/a plain ``%{var}`` reference
     (``interpolation.rb:87-121``): resolve ``key``'s root against
     ``inv.scope``, then any dotted sub-navigation via
-    :func:`~hyera._navigation.sub_lookup`.
+    :func:`~hyera._lookup.navigation.sub_lookup`.
 
     A root present in ``inv.override_values`` wins outright (recorded with
     ``undefined=False``, as Puppet records it: an override always defines
@@ -355,7 +355,7 @@ def _scope_lookup(key, inv, subject):
     genuinely unbound, per :meth:`~hyera.Scope.exist`) then falls back to
     ``inv.default_values`` when the root is there, else stays ``None`` --
     once resolved, this whole reference is recorded via
-    :meth:`~hyera._invocation.Invocation.remember_scope_lookup` (Puppet's
+    :meth:`~hyera._lookup.invocation.Invocation.remember_scope_lookup` (Puppet's
     ``interpolation.rb:119``), so a cache keyed on referenced variables can
     tell whether this same reference would read the same value for another
     scope.

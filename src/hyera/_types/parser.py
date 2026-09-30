@@ -14,8 +14,8 @@ regex literals, and unary minus.
 import functools
 import re
 
-from .exceptions import HieraLookupError
-from ._types import (
+from ..exceptions import HieraLookupError
+from .types import (
     ALIASES,
     ANY,
     BOOLEAN,

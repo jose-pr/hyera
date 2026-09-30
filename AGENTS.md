@@ -22,32 +22,42 @@ src/hyera/
 ├── py.typed                 # PEP 561 marker: the package ships inline types
 ├── AGENTS.md                 # the shipped API header -- every export, signature and gotcha
 ├── core.py                    # Hiera: entry point and lookup engine (data_hash_function_provider.rb, data_provider.rb)
-├── _hiera_config.py            # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
-├── _data_provider.py            # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
-├── _location_resolver.py         # hierarchy level path resolution: interpolation rules, mapped_paths, glob (location_resolver.rb, hiera_config.rb)
-├── _function_provider.py          # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
-├── _cache.py                       # scope-keyed caching: Puppet's scope-interpolation stability check
-├── _navigation.py                   # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
-├── _interpolation.py                 # the %{...} engine: resolving functions and variable references (interpolation.rb)
-├── _invocation.py                     # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
-├── _merge_strategy.py                  # merge strategies for accumulating values across the hierarchy (merge_strategy.rb, deep_merge gem's core.rb)
-├── _lookup_adapter.py                   # lookup_options matching + convert_result (lookup_adapter.rb)
-├── _lookup_function.py                   # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
-├── _data_functions.py                     # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
-├── _explain.py                             # explain()'s tree and text rendering (pops/lookup/explainer.rb)
-├── _scope.py                                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
-├── _facts.py                                 # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
-├── _types.py                                  # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
-├── _type_parser.py                             # parse_type: Puppet type-expression parser (type_parser.rb)
-├── _type_mismatch.py                            # type mismatch messages and instance assertion (type_mismatch_describer.rb, type_asserter.rb)
-├── _string_converter.py                          # value-to-string conversion: String.new()'s engine (string_converter.rb)
-├── _new_function.py                               # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
-├── backends.py                                     # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend (functions/yaml_data.rb)
-├── _eyaml.py                                        # eyaml_lookup_key: token scanning, PKCS7 key loading, a bounds-checked PKCS7 decrypt
-├── _render.py                                        # s/json/yaml CLI render backends: puppet lookup --render-as output
-├── _yaml_loader.py                                    # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
-├── exceptions.py                                       # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
-└── cli.py                                                # duho-based hyera console script (Lookup command, main())
+├── exceptions.py                # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
+├── cli.py                         # duho-based hyera console script (Lookup command, main())
+├── _config/                        # base hiera.yaml, hierarchy/location resolution, layer discovery
+│   ├── hiera_config.py               # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
+│   ├── location_resolver.py           # hierarchy level path resolution: interpolation rules, mapped_paths, glob (location_resolver.rb, hiera_config.rb)
+│   └── data_provider.py                # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
+├── _lookup/                          # dispatch, interpolation, merge, navigation, caching
+│   ├── function_provider.py           # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
+│   ├── cache.py                        # scope-keyed caching: Puppet's scope-interpolation stability check
+│   ├── navigation.py                    # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
+│   ├── interpolation.py                  # the %{...} engine: resolving functions and variable references (interpolation.rb)
+│   ├── invocation.py                      # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
+│   ├── merge_strategy.py                   # merge strategies for accumulating values across the hierarchy (merge_strategy.rb, deep_merge gem's core.rb)
+│   ├── lookup_adapter.py                    # lookup_options matching + convert_result (lookup_adapter.rb)
+│   ├── lookup_function.py                    # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
+│   └── data_functions.py                      # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
+├── _types/                          # the Puppet type model: type objects, parsing, mismatch, conversion
+│   ├── types.py                       # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+│   ├── parser.py                       # parse_type: Puppet type-expression parser (type_parser.rb)
+│   ├── mismatch.py                      # type mismatch messages and instance assertion (type_mismatch_describer.rb, type_asserter.rb)
+│   ├── string_converter.py               # value-to-string conversion: String.new()'s engine (string_converter.rb)
+│   └── new_function.py                    # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
+├── _scope/                          # scope and fact sources bound to a lookup
+│   ├── scope.py                       # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
+│   └── facts.py                        # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
+├── _output/                          # the explain tree and CLI render backends
+│   ├── explain.py                      # explain()'s tree and text rendering (pops/lookup/explainer.rb)
+│   └── render.py                        # s/json/yaml CLI render backends: puppet lookup --render-as output
+└── backends/                          # self-registering Backend registry (same import path: hyera.backends)
+    ├── __init__.py                      # Backend, registry, default_backends; re-exports every public backend class
+    ├── _yaml.py                          # YAMLBackend, Puppet-only (functions/yaml_data.rb)
+    ├── _json.py                           # JSONBackend
+    ├── _hocon.py                           # HOCONBackend, has_hocon (the private pyhocon parser copy)
+    ├── _sops.py                             # SopsBackend, DotenvBackend
+    ├── _eyaml.py                             # EyamlBackend: token scanning, PKCS7 key loading, a bounds-checked PKCS7 decrypt
+    └── _yaml_loader.py                        # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 
 tests/
 ├── conftest.py              # make_tree: a valid Hiera 5 tree on disk, LF/UTF-8, per test
@@ -97,7 +107,7 @@ directly. `src/hyera/AGENTS.md` is the shipped API header (see
 arguments and gotchas, so a consuming agent skips the source.
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
-levels use hyera's own Ruby `Dir.glob` port in `_location_resolver.py`, never
+levels use hyera's own Ruby `Dir.glob` port in `_config/location_resolver.py`, never
 `Path.glob`.
 
 ## How it fits together
@@ -110,7 +120,7 @@ is read until the first lookup that needs it. `Hiera.lookup(name, ...)`
 resolves each candidate name's *root* key against the hierarchy, nested the
 way Puppet's provider stack does: locations within a level, levels within
 the hierarchy, then the global/environment/module layer stack
-(`_data_provider.py`) — reducing at each layer with a `MergeStrategy`
+(`_config/data_provider.py`) — reducing at each layer with a `MergeStrategy`
 (first-match by default), fully resolving interpolation and hiera function
 calls in the found root value *before* it is merged (`core.py` resolves each
 level in turn, then merges — it never accumulates raw values across levels
@@ -122,14 +132,14 @@ Backends register under one or more Hiera `data_hash`/`lookup_key`/
 [`README.md`](README.md#backends)) and only need to implement
 `read_file`/`load` (or, for a provider backend, a function hook taking a
 `hyera.LookupContext`); every backend parses into plain `dict`/`list`, and
-`_navigation.py` (`split_key`/`sub_lookup`, ported from Puppet's own
+`_lookup/navigation.py` (`split_key`/`sub_lookup`, ported from Puppet's own
 `sub_lookup.rb`) is what makes an `"a.b.0.c"`-style dotted key or `%{...}`
 reference navigate that data uniformly, rather than a container method.
 
 The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
 `Hiera.lookup`, mirroring `puppet lookup`'s own flags (see
 [`README.md`](README.md#command-line)), designed for unattended use: no
-interactive prompts, deterministic output through the `_render.py` registry,
+interactive prompts, deterministic output through the `_output/render.py` registry,
 and exit codes `0` (found), `1` (key missing) and `2` (any other error).
 `HYERA_MCP=stdio hyera` serves the same command as an MCP tool over stdio.
 

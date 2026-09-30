@@ -16,10 +16,10 @@ of them.
 
 import re
 
-from .exceptions import HieraLookupError
-from ._string_converter import convert as _string_convert
-from ._type_mismatch import assert_instance_of, short_name
-from ._types import (
+from ..exceptions import HieraLookupError
+from .string_converter import convert as _string_convert
+from .mismatch import assert_instance_of, short_name
+from .types import (
     PAnyType,
     PArrayType,
     PBooleanType,

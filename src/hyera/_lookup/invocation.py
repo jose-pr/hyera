@@ -9,12 +9,12 @@ import contextlib
 import contextvars
 import typing as _ty
 
-from ._cache import _ScopeRef, _freeze, _probe
-from ._scope import Scope
-from .exceptions import InterpolationError
+from .cache import _ScopeRef, _freeze, _probe
+from .._scope.scope import Scope
+from ..exceptions import InterpolationError
 
 #: A lookup's host sub-lookup callable: ``(key, invocation) -> value``, or
-#: ``hyera._navigation._MISSING`` for a miss. Resolves ``%{hiera()}``/
+#: ``hyera._lookup.navigation._MISSING`` for a miss. Resolves ``%{hiera()}``/
 #: ``%{lookup()}``/``%{alias()}`` and is what :meth:`Invocation.lookup`
 #: delegates to.
 _LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
@@ -49,7 +49,7 @@ class Invocation:
     Create exactly one per top-level lookup (``Hiera.lookup``/``.format``);
     never share one across threads or across independent lookups. ``lookup``
     is the host's sub-lookup callable, ``(key, invocation) -> value |
-    hyera._navigation._MISSING``, used to resolve ``%{hiera()}``/
+    hyera._lookup.navigation._MISSING``, used to resolve ``%{hiera()}``/
     ``%{lookup()}``/``%{alias()}``.
     """
 
@@ -77,7 +77,7 @@ class Invocation:
             {} if default_values is None else default_values
         )
         self.lenient = lenient
-        #: The :class:`~hyera._explain.Explainer` this lookup's recording
+        #: The :class:`~hyera._output.explain.Explainer` this lookup's recording
         #: hooks report to, or ``None`` (the overwhelming common case: no
         #: explanation was asked for, so every hook below is a no-op).
         #: Shared, unchanged, with every ``Invocation`` :meth:`derive`d from
@@ -126,7 +126,7 @@ class Invocation:
         self._fs_memo = {} if _fs_memo is None else _fs_memo
 
     def _memo_probe(self, path):
-        """The memoized :class:`~hyera._cache._Probe` for ``path``, probing
+        """The memoized :class:`~hyera._lookup.cache._Probe` for ``path``, probing
         (one real ``os.stat``) only the first time this lookup asks about
         it."""
         probe = self._fs_memo.get(path)
@@ -349,7 +349,7 @@ class Invocation:
     def emit_debug_info(self, preamble: str) -> None:
         """Puppet's ``Lookup.lookup``'s own debug emission
         (``pops/lookup.rb:62,66``): a no-op unless :attr:`explainer` is a
-        :class:`~hyera._explain._DebugExplainer` -- checked by duck type
+        :class:`~hyera._output.explain._DebugExplainer` -- checked by duck type
         (``hasattr``), not ``isinstance``, so this module never imports
         ``_explain`` at all."""
         emit = getattr(self.explainer, "emit_debug_info", None)

@@ -79,7 +79,7 @@ def test_non_puppet_data_hash_names_are_rejected(make_tree, name):
 
 
 def test_sops_missing_binary(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: None)
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: None)
     backend = SopsBackend({})
     with pytest.raises(BackendError, match="sops executable not found"):
         backend.data_hash(tmp_path / "secret.yaml", {})
@@ -90,36 +90,36 @@ def test_sops_start_failure_wraps_oserror(monkeypatch, tmp_path):
     # started (permission denied, not actually executable, ...):
     # subprocess.run itself raises OSError, distinct from a non-zero exit
     # or a timeout.
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
 
     def _raise(*a, **k):
         raise OSError("boom")
 
-    monkeypatch.setattr("hyera.backends.subprocess.run", _raise)
+    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _raise)
     with pytest.raises(BackendError, match="boom"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
 
 def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
 
     class _Proc:
         returncode = 1
         stdout = b""
         stderr = b"decryption failed: no key"
 
-    monkeypatch.setattr("hyera.backends.subprocess.run", lambda *a, **k: _Proc())
+    monkeypatch.setattr("hyera.backends._sops.subprocess.run", lambda *a, **k: _Proc())
     with pytest.raises(BackendError, match="decryption failed: no key"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
 
 def test_sops_timeout(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends.shutil.which", lambda _n: "/usr/bin/sops")
+    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
 
     def _raise(*a, **k):
         raise subprocess.TimeoutExpired(cmd="sops", timeout=30)
 
-    monkeypatch.setattr("hyera.backends.subprocess.run", _raise)
+    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _raise)
     with pytest.raises(BackendError, match="timed out"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
@@ -173,6 +173,55 @@ def test_hocon_backend_missing_dep_errors(monkeypatch):
         HOCONBackend().loads("k = v")
     with pytest.raises(BackendError, match="pyhocon"):
         Backend.new("hocon_data", {})
+
+
+def test_default_backends_and_registry_order_unchanged_by_the_package_split():
+    """``default_backends()`` order and every ``NAMES`` registry lookup are
+    pinned to the values captured before the private-module/backends-package
+    reorganization: the split into concern packages (``_config``/``_lookup``/
+    ``_types``/``_scope``/``_output``) and ``hyera.backends`` becoming a
+    package must not silently reorder or drop a registration."""
+    assert [c.__name__ for c in default_backends()] == [
+        "YAMLBackend",
+        "JSONBackend",
+        "HOCONBackend",
+        "SopsBackend",
+        "EyamlBackend",
+    ]
+
+    def _name_map(kind):
+        registry = Backend._REGISTRY.get(kind, {"exact": {}, "patterns": []})
+        exact = {name: cls.__name__ for name, cls in registry["exact"].items()}
+        patterns = [
+            (pattern.display, cls.__name__) for pattern, cls in registry["patterns"]
+        ]
+        return exact, patterns
+
+    assert _name_map("function") == (
+        {
+            "yaml_data": "YAMLBackend",
+            "json_data": "JSONBackend",
+            "hocon_data": "HOCONBackend",
+            "sops_data": "SopsBackend",
+            "sops": "SopsBackend",
+            "eyaml_lookup_key": "EyamlBackend",
+        },
+        [("sops_<yaml|json|ini|dotenv>", "SopsBackend")],
+    )
+    assert _name_map("v3") == ({}, [])
+    assert _name_map("format") == (
+        {
+            "yaml": "YAMLBackend",
+            "json": "JSONBackend",
+            "hocon": "HOCONBackend",
+            "dotenv": "DotenvBackend",
+        },
+        [],
+    )
+    assert _name_map("render") == (
+        {"s": "StringRender", "json": "JSONRender", "yaml": "YAMLRender"},
+        [],
+    )
 
 
 def test_unknown_backend_raises_config_error(make_tree):
@@ -404,8 +453,8 @@ def test_hocon_include_guard_import_time_failure_is_swallowed(monkeypatch):
     def _boom(module=None):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(backends, "_install_hocon_include_guard", _boom)
-    backends._try_install_hocon_include_guard()  # must not raise
+    monkeypatch.setattr(backends._hocon, "_install_hocon_include_guard", _boom)
+    backends._hocon._try_install_hocon_include_guard()  # must not raise
 
 
 # ---------------------------------------------------------------------------

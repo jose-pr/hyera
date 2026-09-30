@@ -8,12 +8,12 @@ wrapping this module).
 
 import typing as _ty
 
-from ._explain import _debug_preamble
-from ._invocation import _STRICT
-from ._navigation import _MISSING
-from ._type_parser import parse_type
-from ._type_mismatch import assert_instance_of
-from .exceptions import HieraLookupError, KeyNotFoundError, _escapes
+from .._output.explain import _debug_preamble
+from .invocation import _STRICT
+from .navigation import _MISSING
+from .._types.parser import parse_type
+from .._types.mismatch import assert_instance_of
+from ..exceptions import HieraLookupError, KeyNotFoundError, _escapes
 
 #: The keyword-equivalent option names a form-4/5 options hash may carry
 #: (never ``"name"``, which is form 4's own key, and never ``"block"``,
@@ -162,7 +162,7 @@ def parse_call(
     223``), normalized to one shape. Every call-shape problem raises
     ``TypeError``, as Python itself reports a bad argument; everything
     data/string-shaped (an unparsable ``value_type``) is left to
-    :func:`~hyera._type_parser.parse_type`, which raises
+    :func:`~hyera._types.parser.parse_type`, which raises
     ``hyera.HieraLookupError``.
     """
     if isinstance(name, dict):
@@ -251,7 +251,7 @@ def lookup(call: LookupCall, invocation, search):
     ``call.value_type``, when given, asserts every one of these outcomes
     with Puppet's own subject text.
 
-    Binds :data:`~hyera._invocation._STRICT` from ``invocation.scope.strict``
+    Binds :data:`~hyera._lookup.invocation._STRICT` from ``invocation.scope.strict``
     for the whole call and resets it in ``finally`` -- the one place that
     binding happens, so every caller that reaches the engine through here
     reads the bound scope's own strictness, the same way ``core.Hiera._get``
@@ -307,7 +307,7 @@ def nested_lookup(key, invocation, search):
     (``%{hiera()}``/``%{lookup()}``/``%{alias()}``): ``interpolation.
     rb:77-86`` -- the override hash, else a full lookup with ``merge=None``,
     else the default values hash, else a miss. Named apart from
-    :func:`~hyera._navigation.sub_lookup` (a different kind of "sub"
+    :func:`~hyera._lookup.navigation.sub_lookup` (a different kind of "sub"
     lookup: this one is a full nested Hiera lookup, not a dig into an
     already-found value).
     """

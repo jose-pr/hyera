@@ -858,7 +858,7 @@ def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
     def _raise_type_error(self, value, **kw):
         raise TypeError("x")
 
-    monkeypatch.setattr("hyera._render.JSONRender.dumps", _raise_type_error)
+    monkeypatch.setattr("hyera._output.render.JSONRender.dumps", _raise_type_error)
 
     with caplog.at_level(logging.ERROR):
         rc = main(
@@ -1256,7 +1256,7 @@ def _warning_records(caplog):
     return [
         r
         for r in caplog.records
-        if r.name == "hyera._scope" and r.levelno == logging.WARNING
+        if r.name == "hyera._scope.scope" and r.levelno == logging.WARNING
     ]
 
 

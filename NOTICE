@@ -10,23 +10,24 @@ license is included at LICENSES/puppet-Apache-2.0.txt.
 
 The files ported from Puppet are:
 
-    src/hyera/core.py             (from puppet/pops/lookup/data_hash_function_provider.rb, data_provider.rb)
-    src/hyera/_hiera_config.py    (from puppet/pops/lookup/hiera_config.rb)
-    src/hyera/_location_resolver.py (from puppet/pops/lookup/location_resolver.rb, hiera_config.rb)
-    src/hyera/_interpolation.py   (from puppet/pops/lookup/interpolation.rb)
-    src/hyera/_navigation.py      (from puppet/pops/lookup/sub_lookup.rb, lookup_key.rb)
-    src/hyera/_lookup_adapter.py  (from puppet/pops/lookup/lookup_adapter.rb)
-    src/hyera/_merge_strategy.py  (from puppet/pops/merge_strategy.rb)
-    src/hyera/backends.py         (from puppet/functions/yaml_data.rb)
-    src/hyera/_yaml_loader.py     (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
-    src/hyera/_types.py           (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
-    src/hyera/_type_parser.py     (from puppet/pops/types/type_parser.rb)
-    src/hyera/_type_mismatch.py   (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)
-    src/hyera/_string_converter.py (from puppet/pops/types/string_converter.rb)
-    src/hyera/_new_function.py    (from puppet/functions/new.rb)
-    src/hyera/_scope.py           (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
-                                    context/trusted_information.rb, node/facts.rb)
-    src/hyera/_facts.py           (from puppet/application/lookup.rb, util/yaml.rb)
+    src/hyera/core.py                    (from puppet/pops/lookup/data_hash_function_provider.rb, data_provider.rb)
+    src/hyera/_config/hiera_config.py    (from puppet/pops/lookup/hiera_config.rb)
+    src/hyera/_config/location_resolver.py (from puppet/pops/lookup/location_resolver.rb, hiera_config.rb)
+    src/hyera/_lookup/interpolation.py   (from puppet/pops/lookup/interpolation.rb)
+    src/hyera/_lookup/navigation.py      (from puppet/pops/lookup/sub_lookup.rb, lookup_key.rb)
+    src/hyera/_lookup/lookup_adapter.py  (from puppet/pops/lookup/lookup_adapter.rb)
+    src/hyera/_lookup/merge_strategy.py  (from puppet/pops/merge_strategy.rb)
+    src/hyera/backends/__init__.py       (from puppet/functions/yaml_data.rb)
+    src/hyera/backends/_yaml.py          (from puppet/functions/yaml_data.rb)
+    src/hyera/backends/_yaml_loader.py   (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
+    src/hyera/_types/types.py            (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+    src/hyera/_types/parser.py           (from puppet/pops/types/type_parser.rb)
+    src/hyera/_types/mismatch.py         (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)
+    src/hyera/_types/string_converter.py (from puppet/pops/types/string_converter.rb)
+    src/hyera/_types/new_function.py     (from puppet/functions/new.rb)
+    src/hyera/_scope/scope.py            (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
+                                           context/trusted_information.rb, node/facts.rb)
+    src/hyera/_scope/facts.py            (from puppet/application/lookup.rb, util/yaml.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -40,7 +41,7 @@ included at LICENSES/deep_merge-MIT.txt.
 
 The files ported from deep_merge are:
 
-    src/hyera/_merge_strategy.py  (from deep_merge/lib/deep_merge/core.rb)
+    src/hyera/_lookup/merge_strategy.py  (from deep_merge/lib/deep_merge/core.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -53,8 +54,8 @@ at LICENSES/psych-MIT.txt.
 
 The files ported from Psych are:
 
-    src/hyera/_yaml_loader.py  (from psych/lib/psych/scalar_scanner.rb,
-                                 psych/lib/psych/visitors/to_ruby.rb)
+    src/hyera/backends/_yaml_loader.py  (from psych/lib/psych/scalar_scanner.rb,
+                                          psych/lib/psych/visitors/to_ruby.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -68,7 +69,7 @@ which is included at LICENSES/uri-BSD-2-Clause.txt.
 
 The files ported from uri are:
 
-    src/hyera/_location_resolver.py  (from uri/lib/uri/rfc3986_parser.rb)
+    src/hyera/_config/location_resolver.py  (from uri/lib/uri/rfc3986_parser.rb)
 
 Each was modified by jose-pr and carries a notice saying so. Modifications
 and all other files in this project are licensed under the MIT License

@@ -15,12 +15,12 @@ import typing as _ty
 
 from pathlib_next import Path
 
-from ._explain import _LocationRef
-from ._interpolation import interpolate, unshare
-from ._invocation import Invocation
-from ._lookup_adapter import validate_data_value
-from ._navigation import _MISSING, key_to_a, undig
-from .exceptions import BackendError
+from .._output.explain import _LocationRef
+from .interpolation import interpolate, unshare
+from .invocation import Invocation
+from .lookup_adapter import validate_data_value
+from .navigation import _MISSING, key_to_a, undig
+from ..exceptions import BackendError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
 
@@ -32,7 +32,7 @@ _NULL_CONTEXT = contextlib.nullcontext()
 
 
 def _location_ref(location) -> _LocationRef:
-    """A :class:`~hyera._explain._LocationRef` for one resolved location
+    """A :class:`~hyera._output.explain._LocationRef` for one resolved location
     (``core._Location``/``_location_resolver.ResolvedLocation`` -- both
     ``(original, location, is_uri, exist)``-shaped). The path form always
     renders POSIX (``Path.as_posix()``), matching what Ruby's ``Pathname``
@@ -98,10 +98,10 @@ def _validate_data_hash(data, name, location) -> None:
 def _validate_provider_value(value, kind, name, location) -> None:
     """The ``lookup_key``/``data_dig`` value check
     (``{lookup_key,data_dig}_function_provider.rb``'s own ``assert_value_type``,
-    the same RichData rule as :func:`~hyera._lookup_adapter.validate_data_value`
+    the same RichData rule as :func:`~hyera._lookup.lookup_adapter.validate_data_value`
     but worded for a scalar return rather than a hash entry)."""
-    from ._lookup_adapter import _lookup_value_type
-    from ._types import infer
+    from .lookup_adapter import _lookup_value_type
+    from .._types.types import infer
 
     t = _lookup_value_type()
     if t.instance(value):
@@ -322,7 +322,7 @@ class _FunctionProvider:
 
     ``locations`` is ``None`` for a location-less entry (the function is
     called once, with no location) or a list of
-    :class:`~hyera._location_resolver.ResolvedLocation` (possibly empty,
+    :class:`~hyera._config.location_resolver.ResolvedLocation` (possibly empty,
     meaning the function is never called at all).
     """
 
@@ -356,7 +356,7 @@ class _FunctionProvider:
         #: ``(data, function_name, location) -> data``, set only for a level
         #: owned by a module (``core.Hiera._build_provider``): Puppet's
         #: module-data namespace rule
-        #: (:func:`~hyera._data_provider.prune_module_data`) applied to a
+        #: (:func:`~hyera._config.data_provider.prune_module_data`) applied to a
         #: ``data_hash`` result only -- a ``lookup_key``/``data_dig`` value
         #: is never pruned (``data_hash_function_provider.rb:72``).
         self._prune = prune
@@ -386,8 +386,8 @@ class _FunctionProvider:
         """Reduce this level's locations for ``root`` (plus, for a
         ``data_dig`` provider only, its sub-navigation ``segments``) with
         ``merge`` (an already-resolved
-        :class:`~hyera._merge_strategy.MergeStrategy`), returning the merged
-        root value or :data:`~hyera._navigation._MISSING`.
+        :class:`~hyera._lookup.merge_strategy.MergeStrategy`), returning the merged
+        root value or :data:`~hyera._lookup.navigation._MISSING`.
 
         ``segments`` is accepted by every kind so the level loop can call
         them uniformly, but only :class:`_DataDigProvider` reads it --

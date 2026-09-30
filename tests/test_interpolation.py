@@ -5,15 +5,15 @@ import logging
 import pytest
 
 from hyera import ConfigError, Hiera, InterpolationError, Scope, Sensitive
-from hyera._interpolation import (
+from hyera._lookup.interpolation import (
     _float_to_s,
     _ruby_inspect,
     _to_puppet_str,
     interpolate,
     unshare,
 )
-from hyera._invocation import Invocation
-from hyera._navigation import _MISSING
+from hyera._lookup.invocation import Invocation
+from hyera._lookup.navigation import _MISSING
 from hyera.cli import main as _cli_main
 
 
@@ -148,7 +148,7 @@ def test_render_values():
     assert _to_puppet_str([Sensitive("x")]) == "[#<Sensitive [value redacted]>]"
     # Both functions' own otherwise-unmodeled-type fallback (a RubySymbol,
     # or any other object neither renders specially): plain str().
-    from hyera._yaml_loader import RubySymbol
+    from hyera.backends._yaml_loader import RubySymbol
 
     assert _to_puppet_str(RubySymbol("x")) == ":x"
     assert _ruby_inspect(RubySymbol("x")) == ":x"

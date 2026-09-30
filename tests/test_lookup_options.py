@@ -1,6 +1,6 @@
 """``lookup_options`` matching: Ruby regex search semantics, entry shapes,
 invalid patterns, and merged pattern order (ports ``lookup_adapter.rb``
-:249-330 via :mod:`hyera._lookup_adapter`)."""
+:249-330 via :mod:`hyera._lookup.lookup_adapter`)."""
 
 import pytest
 
@@ -124,7 +124,7 @@ def test_patterns_follow_merged_order(make_tree):
 
 
 def test_validate_lookup_options_module_prefix_direct():
-    from hyera._lookup_adapter import validate_lookup_options
+    from hyera._lookup.lookup_adapter import validate_lookup_options
 
     # A "^"-prefixed key whose own prefix DOES match the module name: the
     # loop keeps checking the rest of the keys instead of raising.
@@ -135,7 +135,7 @@ def test_validate_lookup_options_module_prefix_direct():
 
 
 def test_validate_data_value_no_location_direct():
-    from hyera._lookup_adapter import validate_data_value
+    from hyera._lookup.lookup_adapter import validate_data_value
 
     # The location-less message clause (a data_hash function called with
     # no path/uri at all) -- distinct from the "when using location"
@@ -152,7 +152,7 @@ def test_validate_data_value_no_location_direct():
 
 
 def test_convert_result_list_spec_and_non_string_type_arg_direct():
-    from hyera._lookup_adapter import convert_result
+    from hyera._lookup.lookup_adapter import convert_result
 
     # convert_to as a list (type plus new()'s extra arguments), and a
     # non-string first element (already a type-shaped value, skipping

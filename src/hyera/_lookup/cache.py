@@ -16,8 +16,8 @@ import os
 import stat as _stat
 import typing as _ty
 
-from ._navigation import _MISSING, sub_lookup
-from .exceptions import HieraLookupError
+from .navigation import _MISSING, sub_lookup
+from ..exceptions import HieraLookupError
 
 __all__ = []
 
@@ -93,7 +93,7 @@ def _read_ref(scope, ref):
     raise the real error).
     """
     v = scope.lookup(ref.root)
-    if v is _MISSING:  # Scope.UNDEFINED is hyera._navigation._MISSING.
+    if v is _MISSING:  # Scope.UNDEFINED is hyera._lookup.navigation._MISSING.
         return (True, _freeze(None))
     if ref.segments and v is not None:
         try:
@@ -187,7 +187,7 @@ class _ScopeKeyedCache:
     def key_for(self, kind, recorded, extra=()):
         """Build the cache key a fresh build's own ``recorded`` list (an
         iterable of ``(ref, (undefined, frozen))`` pairs, as
-        :meth:`~hyera._invocation.Invocation.remember_scope_lookup` appends
+        :meth:`~hyera._lookup.invocation.Invocation.remember_scope_lookup` appends
         them) should be stored under: deduped by ``ref.key``, first kept.
         """
         seen = set()

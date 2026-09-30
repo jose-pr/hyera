@@ -12,7 +12,7 @@ from hyera import Hiera
 
 
 def _explain_records(caplog):
-    return [r for r in caplog.records if r.name == "hyera._explain"]
+    return [r for r in caplog.records if r.name == "hyera._output.explain"]
 
 
 def test_lookup_logs_one_trace(make_tree, caplog):
@@ -100,9 +100,9 @@ def test_no_trace_above_debug(make_tree, caplog, monkeypatch):
     def boom(self, *a, **k):
         raise AssertionError("_DebugExplainer must never be built below DEBUG")
 
-    import hyera._explain
+    import hyera._output.explain
 
-    monkeypatch.setattr(hyera._explain._DebugExplainer, "__init__", boom)
+    monkeypatch.setattr(hyera._output.explain._DebugExplainer, "__init__", boom)
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("k") == "v"
     assert not _explain_records(caplog)

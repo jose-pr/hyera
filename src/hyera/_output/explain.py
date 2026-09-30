@@ -16,9 +16,9 @@ import copy
 import logging
 import typing as _ty
 
-from ._interpolation import _ruby_inspect, _to_puppet_str
-from ._navigation import join_key
-from .exceptions import HieraError
+from .._lookup.interpolation import _ruby_inspect, _to_puppet_str
+from .._lookup.navigation import join_key
+from ..exceptions import HieraError
 
 __all__ = ["ExplainResult"]  # everything else here is private.
 
@@ -47,7 +47,7 @@ def _dump_value(parts: list, indent: str, value) -> None:
     """``ExplainTreeNode#dump_value`` (``explainer.rb:125-156``): a Hash or
     Array gets its own multi-line, two-space-per-level layout; anything else
     renders through the one Ruby ``inspect`` port already shared with
-    interpolation (:func:`hyera._interpolation._ruby_inspect`), so the two
+    interpolation (:func:`hyera._lookup.interpolation._ruby_inspect`), so the two
     can never disagree on how a scalar prints.
     """
     if isinstance(value, dict):
@@ -710,7 +710,7 @@ class _DebugExplainer(Explainer):
     ``wrapped`` (a real ``Explainer``, when an actual ``explain()`` call is
     also in progress) is given.
 
-    ``wrapped is None`` (an ordinary ``.lookup()`` with the ``hyera._explain``
+    ``wrapped is None`` (an ordinary ``.lookup()`` with the ``hyera._output.explain``
     logger at ``DEBUG``): this instance is its own root, exactly like a
     bare ``Explainer()`` -- built and thrown away once the trace is logged.
     ``wrapped`` given (``Hiera.explain()`` also has ``DEBUG`` on): every
@@ -756,7 +756,7 @@ class _DebugExplainer(Explainer):
 def _debug_preamble(names) -> str:
     """Puppet's ``debug_preamble`` (``pops/lookup.rb:71-78``): ``Lookup of
     'a'`` for one name, ``Lookup of 'a', 'b'`` for several. A tuple key
-    path renders as :func:`~hyera._navigation.join_key`'s dotted
+    path renders as :func:`~hyera._lookup.navigation.join_key`'s dotted
     text, same as everywhere else a name reaches text."""
     return "Lookup of " + ", ".join(
         "'{}'".format(join_key(n) if isinstance(n, tuple) else n) for n in names

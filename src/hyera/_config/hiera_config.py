@@ -15,11 +15,11 @@ import typing as _ty
 import yaml
 from pathlib_next import Path
 
-from .backends import Backend, YAMLBackend, has_hocon
-from .exceptions import BackendError, ConfigError
-from ._location_resolver import resolve_locations
-from ._scope import Scope
-from ._yaml_loader import RubySymbol, symkeys_to_string
+from ..backends import Backend, YAMLBackend, has_hocon
+from ..exceptions import BackendError, ConfigError
+from .location_resolver import resolve_locations
+from .._scope.scope import Scope
+from ..backends._yaml_loader import RubySymbol, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1268,7 +1268,7 @@ class HieraLevel(_ty.NamedTuple):
     """One hierarchy entry, stored exactly as written in hiera.yaml --
     ``locations`` are never interpolated or normalized here; that happens
     per lookup, against a bound :class:`~hyera.Scope`
-    (:func:`~hyera._location_resolver.resolve_locations`)."""
+    (:func:`~hyera._config.location_resolver.resolve_locations`)."""
 
     name: str
     backend: Backend

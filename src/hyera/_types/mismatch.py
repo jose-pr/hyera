@@ -11,8 +11,8 @@ Callable/signature describing is not ported: hiera asserts
 values, never function signatures.
 """
 
-from .exceptions import HieraLookupError
-from ._types import (
+from ..exceptions import HieraLookupError
+from .types import (
     ANY,
     PArrayType,
     PEnumType,

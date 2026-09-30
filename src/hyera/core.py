@@ -12,9 +12,9 @@ from typing import Any
 
 from pathlib_next import Path
 
-from . import _data_functions
-from ._cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
-from ._data_provider import (
+from ._lookup import data_functions as _data_functions
+from ._lookup.cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
+from ._config.data_provider import (
     _EnvironmentState,
     _IgnoredConfig,
     _Provider,
@@ -24,9 +24,9 @@ from ._data_provider import (
     prune_module_data,
     split_path_setting,
 )
-from . import _explain
-from ._explain import Explainer, ExplainResult, _ProviderRef, _DebugExplainer
-from ._hiera_config import (
+from ._output import explain as _explain
+from ._output.explain import Explainer, ExplainResult, _ProviderRef, _DebugExplainer
+from ._config.hiera_config import (
     HieraLevel,
     _build_hierarchies,
     _config_error,
@@ -38,12 +38,12 @@ from ._hiera_config import (
     _read_v4,
     _validate_v5,
 )
-from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
-from ._interpolation import interpolate
-from ._invocation import _STRICT, Invocation
-from ._location_resolver import glob as _dir_glob
-from ._location_resolver import resolve_glob_specs, resolve_locations
-from ._lookup_adapter import (
+from ._lookup.function_provider import PROVIDER_CLASSES, _EnvironmentContext
+from ._lookup.interpolation import interpolate
+from ._lookup.invocation import _STRICT, Invocation
+from ._config.location_resolver import glob as _dir_glob
+from ._config.location_resolver import resolve_glob_specs, resolve_locations
+from ._lookup.lookup_adapter import (
     LOOKUP_OPTIONS,
     compile_patterns,
     convert_result,
@@ -51,15 +51,21 @@ from ._lookup_adapter import (
     validate_data_value,
     validate_lookup_options,
 )
-from ._lookup_function import lookup as _lookup_call, nested_lookup, parse_call
-from ._merge_strategy import MergeStrategy
-from ._navigation import _MISSING, join_key, parse_lookup_key, split_key, sub_lookup
-from ._scope import Scope
-from ._type_mismatch import assert_instance_of
-from ._type_parser import parse_type
+from ._lookup.lookup_function import lookup as _lookup_call, nested_lookup, parse_call
+from ._lookup.merge_strategy import MergeStrategy
+from ._lookup.navigation import (
+    _MISSING,
+    join_key,
+    parse_lookup_key,
+    split_key,
+    sub_lookup,
+)
+from ._scope.scope import Scope
+from ._types.mismatch import assert_instance_of
+from ._types.parser import parse_type
 from .backends import Backend, default_backends
 from .exceptions import _escapes
-from ._merge_strategy import MergeSpec
+from ._lookup.merge_strategy import MergeSpec
 
 __all__ = ["Hiera"]
 
@@ -75,13 +81,13 @@ _PathSpec = _ty.Union[
 #: through each layer in turn, merged the same way as levels/locations
 #: within a layer. All three layers are wired through
 #: :meth:`Hiera._lookup_layers`; ``environment``/``module`` contribute
-#: :data:`~hyera._navigation._MISSING` when no usable config exists there.
+#: :data:`~hyera._lookup.navigation._MISSING` when no usable config exists there.
 _LAYERS = ("global", "environment", "module")
 
 #: Sentinel distinguishing "no location in this layer's own hierarchy
 #: declares ``lookup_options`` at all" from an explicit ``lookup_options: ~``
-#: (``None``) -- needed because :class:`~hyera._cache._ScopeKeyedCache`
-#: already uses :data:`~hyera._navigation._MISSING` to mean "not cached yet"
+#: (``None``) -- needed because :class:`~hyera._lookup.cache._ScopeKeyedCache`
+#: already uses :data:`~hyera._lookup.navigation._MISSING` to mean "not cached yet"
 #: (:meth:`Hiera._layer_options_cached`).
 _LO_ABSENT = object()
 
@@ -113,7 +119,7 @@ class _ExplainOptionsMemo:
 
 def _no_option_lookup(key, invocation):
     """The ``lookup`` callable for a hierarchy level's ``options``
-    :class:`~hyera._invocation.Invocation`. Unreachable in practice: options
+    :class:`~hyera._lookup.invocation.Invocation`. Unreachable in practice: options
     interpolate with ``allow_methods=False``, which rejects every method
     call (``%{hiera()}``/``%{lookup()}``/``%{alias()}``) -- the only way a
     sub-lookup would ever be attempted -- before it could reach this
@@ -127,8 +133,8 @@ class _Location(_ty.NamedTuple):
     with ``location`` always an interned ``str`` for a plain path (never a
     ``Path``: a consumer that needs one builds it from ``.location``) or the
     normalized ``uri`` string when ``is_uri``. Field names match
-    :class:`~hyera._location_resolver.ResolvedLocation` exactly, so a
-    :class:`~hyera._function_provider._FunctionProvider` (built from either
+    :class:`~hyera._config.location_resolver.ResolvedLocation` exactly, so a
+    :class:`~hyera._lookup.function_provider._FunctionProvider` (built from either
     kind) never has to tell them apart.
     """
 
@@ -152,7 +158,7 @@ class _GlobLocation(_ty.NamedTuple):
 
 class _LocationEntry:
     """One cached, resolved hierarchy: ``key`` is this entry's own
-    :class:`~hyera._cache._ScopeKeyedCache` key (reused as the
+    :class:`~hyera._lookup.cache._ScopeKeyedCache` key (reused as the
     ``lookup_options`` cache's ``extra``, so a ``lookup_options`` entry is
     invalidated whenever its locations are); ``levels`` is one resolved
     locations tuple -- or ``None`` for a location-less entry -- per
@@ -223,7 +229,7 @@ def _validate_data_hash(data, name, path) -> None:
 
 
 def _provider_ref(provider) -> _ProviderRef:
-    """A :class:`~hyera._explain._ProviderRef` for one layer's provider
+    """A :class:`~hyera._output.explain._ProviderRef` for one layer's provider
     (``configured_data_provider.rb:33-39``, ``hiera_config.rb:284-286``):
     ``Global``/``Environment Data Provider (hiera configuration version
     N)``, or ``Module "<m>" Data Provider (...)``; a config path (never for
@@ -243,9 +249,9 @@ def _provider_ref(provider) -> _ProviderRef:
 
 
 def _debug_explainer(explainer=None):
-    """The ``explainer`` a root :class:`~hyera._invocation.Invocation`
-    should actually carry: wrapped in a :class:`~hyera._explain._DebugExplainer`
-    while the ``hyera._explain`` logger allows ``DEBUG`` (checked once per
+    """The ``explainer`` a root :class:`~hyera._lookup.invocation.Invocation`
+    should actually carry: wrapped in a :class:`~hyera._output.explain._DebugExplainer`
+    while the ``hyera._output.explain`` logger allows ``DEBUG`` (checked once per
     top-level call, matching Puppet's own ``Puppet[:debug]`` read at
     ``Invocation.new``), else ``explainer`` unchanged (``None`` for an
     ordinary lookup with no explicit ``explain()`` in progress).
@@ -652,7 +658,7 @@ class Hiera:
 
     def _load_file(self, path, backend, options, invocation=None):
         """Load ``path`` via ``backend.data_hash(path, options)``, returning
-        the parsed, cached data, or :data:`~hyera._navigation._MISSING` when
+        the parsed, cached data, or :data:`~hyera._lookup.navigation._MISSING` when
         ``revalidate=True`` and ``path`` has vanished since it was last
         cached (a materialized location whose ``exist`` was true earlier in
         this same lookup, per its own memoized probe, but no longer is --
@@ -763,7 +769,7 @@ class Hiera:
         return data
 
     def _environment(self, name):
-        """The cached :class:`~hyera._data_provider._EnvironmentState` for
+        """The cached :class:`~hyera._config.data_provider._EnvironmentState` for
         environment ``name`` (``puppet.rb:213-233``): discovered on first
         use, then reused by every later lookup and by every
         :meth:`scoped` view (``self._environments`` is shared, since
@@ -831,8 +837,8 @@ class Hiera:
     def _usable(self, provider, invocation):
         """A layer provider ready to be walked, or ``None``.
 
-        ``None``/a real :class:`~hyera._data_provider._Provider` pass
-        through unchanged. An :class:`~hyera._data_provider._IgnoredConfig`
+        ``None``/a real :class:`~hyera._config.data_provider._Provider` pass
+        through unchanged. An :class:`~hyera._config.data_provider._IgnoredConfig`
         (a version-3, or missing-version, config outside the global layer)
         is Puppet's own per-use decision (``environment_data_provider.
         rb:15-26``/``module_data_provider.rb:64-75``): under
@@ -890,7 +896,7 @@ class Hiera:
         added to (or removed from) a glob-matched directory is seen by a
         later lookup even when this entry itself is reused unchanged. A
         hierarchy entry with no location key at all resolves to ``None``
-        (:func:`~hyera._location_resolver.resolve_locations`), distinct from
+        (:func:`~hyera._config.location_resolver.resolve_locations`), distinct from
         one that resolves to zero candidates.
         """
         kind = ("locations", tag, base_path)
@@ -1076,7 +1082,7 @@ class Hiera:
     def _provider_for(
         self, tag, base_path, index, hierarchy, scope, invocation, module_name=None
     ):
-        """The :class:`~hyera._function_provider._FunctionProvider` for one
+        """The :class:`~hyera._lookup.function_provider._FunctionProvider` for one
         hierarchy level, bound to ``scope`` -- built once per ``(tag,
         base_path, index)`` on this instance/view and cached in
         ``self._providers`` (never shared with another view; see
@@ -1095,7 +1101,7 @@ class Hiera:
         additionally tells a module's ``default_hierarchy`` apart from its
         main one, since both share the same root. ``module_name`` -- set
         only for a level in a module's own hierarchy -- makes a
-        ``data_hash`` result go through :func:`~hyera._data_provider.
+        ``data_hash`` result go through :func:`~hyera._config.data_provider.
         prune_module_data` (Puppet's module-data namespace rule); it plays
         no part in the cache key, since a level's owning module never
         changes once built.
@@ -1190,16 +1196,16 @@ class Hiera:
 
         ``hierarchy``/``base_path`` are one layer's own hierarchy and root
         (``self._hierarchy``/``self._base_path`` for the global layer, or a
-        :class:`~hyera._data_provider._Provider`'s own ``hierarchy``/
+        :class:`~hyera._config.data_provider._Provider`'s own ``hierarchy``/
         ``root``); ``tag`` names which of that layer's hierarchies (its
         main one, or -- for a module -- its ``default_hierarchy``), for
         provider caching (:meth:`_provider_for`). ``strategy`` is an
-        already resolved :class:`~hyera._merge_strategy.MergeStrategy`.
-        Returns the merged root value, or :data:`~hyera._navigation._MISSING`
+        already resolved :class:`~hyera._lookup.merge_strategy.MergeStrategy`.
+        Returns the merged root value, or :data:`~hyera._lookup.navigation._MISSING`
         on a miss.
 
         ``module_name``, when given, is the level's owning module: every
-        ``data_hash`` result is read through :func:`~hyera._data_provider.
+        ``data_hash`` result is read through :func:`~hyera._config.data_provider.
         prune_module_data` first (Puppet's module-data namespace rule),
         cached per ``(module_name, path)`` apart from ``_file_cache``'s own
         unpruned entry -- a file shared with the global layer stays unpruned
@@ -1242,7 +1248,7 @@ class Hiera:
         layer runs only for a qualified key (``module_name`` set), the
         usable provider (if any) of that module in the same environment.
         A layer with no usable provider contributes
-        :data:`~hyera._navigation._MISSING`, so every layer is always tried
+        :data:`~hyera._lookup.navigation._MISSING`, so every layer is always tried
         in order, as Puppet's own multi-variant reduce does.
 
         ``invocation.global_only`` (already set, inherited from an outer
@@ -1366,7 +1372,7 @@ class Hiera:
         version 3, and there is no *version 5* environment provider for
         ``scope.environment`` -- an absent environment, an ignored version
         3 one, and a version 4 one all count as none (only a real
-        :class:`~hyera._data_provider._Provider` with ``version == 5``
+        :class:`~hyera._config.data_provider._Provider` with ``version == 5``
         disqualifies global-only)."""
         if self._global.version != 3:
             return False
@@ -1379,7 +1385,7 @@ class Hiera:
 
         ``lookup_options`` and a ``"lookup_options."``-prefixed key always
         miss without reaching any data (``lookup_adapter.rb:48-52``) -- the
-        one place that rule is enforced (:class:`~hyera._invocation.
+        one place that rule is enforced (:class:`~hyera._lookup.invocation.
         Invocation` no longer duplicates it). Otherwise: ``lookup_options``
         for the key's root is fetched *always*, even when ``merge`` is
         given explicitly -- only the *merge* it names is then skipped,
@@ -1393,7 +1399,7 @@ class Hiera:
         whose *dig* misses -- and only for a qualified key whose own module
         has a ``default_hierarchy``, :meth:`_lookup_default_in_module` is
         consulted the same way (``lookup_adapter.rb:73-79``). A final miss
-        returns :data:`~hyera._navigation._MISSING`; a found value has
+        returns :data:`~hyera._lookup.navigation._MISSING`; a found value has
         ``convert_to`` applied, if the options set one -- from the main
         hierarchy's ``lookup_options`` either way, even when the value came
         from the default hierarchy fallback.
@@ -1406,7 +1412,7 @@ class Hiera:
         verbatim too -- ``parse_lookup_key``/``split_key`` never run for
         one. Every place ``key`` reaches text below (explain/debug
         output, a sub-lookup type-mismatch message, a ``convert_to``
-        error) uses ``text_key``, :func:`~hyera._navigation.join_key`'s
+        error) uses ``text_key``, :func:`~hyera._lookup.navigation.join_key`'s
         rendering for a tuple -- the same text the equivalent quoted
         dotted string would produce -- so a tuple path and that string
         report byte-identical messages (``key`` itself unchanged, for the
@@ -1471,7 +1477,7 @@ class Hiera:
         return value
 
     def _sub_lookup(self, key, invocation):
-        """The host callable behind an :class:`~hyera._invocation.Invocation`
+        """The host callable behind an :class:`~hyera._lookup.invocation.Invocation`
         (``%{hiera()}``/``%{lookup()}``/``%{alias()}``): a full lookup of
         ``key`` -- its own ``lookup_options``, ``default_hierarchy``
         fallback and ``convert_to`` all apply exactly as a top-level
@@ -1481,7 +1487,7 @@ class Hiera:
         The override hash and the default values hash still apply, exactly
         as a top-level lookup of the same key would see them
         (``interpolation.rb:77-86``). Returns
-        :data:`~hyera._navigation._MISSING` on a miss instead of raising.
+        :data:`~hyera._lookup.navigation._MISSING` on a miss instead of raising.
         """
         return nested_lookup(key, invocation, self._search_and_merge)
 
@@ -1623,7 +1629,7 @@ class Hiera:
         alone would not be sound). Gathered through the location/level
         nesting only, never the layer stack (``lookup_adapter.rb:241,
         346-380``); callers compose the layers and validate/compile the
-        result (:func:`~hyera._lookup_adapter.validate_lookup_options`/
+        result (:func:`~hyera._lookup.lookup_adapter.validate_lookup_options`/
         ``compile_patterns``).
 
         ``invocation``, the caller's own top-level one, passed straight
@@ -1780,7 +1786,7 @@ class Hiera:
         ``None``), a port of ``lookup_adapter.rb:346-372``.
 
         A module's own options are qualified against its name
-        (:func:`~hyera._lookup_adapter.validate_lookup_options`) and
+        (:func:`~hyera._lookup.lookup_adapter.validate_lookup_options`) and
         gathered from its pruned data (which keeps ``lookup_options``),
         never merged with the global/environment options wholesale --
         module wins per key, through the same HASH strategy, but only when
@@ -1883,7 +1889,7 @@ class Hiera:
         a module's own ``default_hierarchy``, consulted only after the main
         stack (and its dig) misses.
 
-        :data:`~hyera._navigation._MISSING` when ``module_name`` is
+        :data:`~hyera._lookup.navigation._MISSING` when ``module_name`` is
         ``None`` (an unqualified key never reaches a module's default
         hierarchy either), the module has no usable provider, or its
         ``default_hierarchy`` is empty. The merge strategy comes only from

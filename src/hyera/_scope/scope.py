@@ -16,8 +16,8 @@ import threading
 import typing as _ty
 from collections.abc import Mapping
 
-from ._navigation import _MISSING, _ruby_class
-from .exceptions import InterpolationError
+from .._lookup.navigation import _MISSING, _ruby_class
+from ..exceptions import InterpolationError
 
 _LOGGER = logging.getLogger(__name__)
 

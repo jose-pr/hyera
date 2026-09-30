@@ -101,7 +101,7 @@ class KeyNotFoundError(HieraLookupError, KeyError):
     working. ``name`` is the key string, or list of key strings, that was
     tried; a list of one uses the singular message form. A name may also
     be a tuple key path: ``.name`` keeps it exactly as given, but
-    the message text renders it as :func:`~hyera._navigation.join_key`'s
+    the message text renders it as :func:`~hyera._lookup.navigation.join_key`'s
     dotted form, same as the equivalent quoted string would read.
 
     A bare tuple *path* is never passed here directly -- it would be
@@ -113,9 +113,9 @@ class KeyNotFoundError(HieraLookupError, KeyError):
     """
 
     def __init__(self, name: _ty.Union[str, _ty.Sequence[str]]) -> None:
-        # Deferred to avoid a module-load cycle (`_navigation` imports
+        # Deferred to avoid a module-load cycle (`_lookup.navigation` imports
         # `HieraLookupError` from this module).
-        from ._navigation import join_key
+        from ._lookup.navigation import join_key
 
         def _text(n):
             return join_key(n) if isinstance(n, tuple) else n

@@ -24,10 +24,10 @@ from hyera import (
     LookupContext,
     Scope,
 )
-from hyera._function_provider import _EnvironmentContext, _FunctionProvider
-from hyera._invocation import Invocation
-from hyera._lookup_adapter import extract_lookup_options_for_key
-from hyera._navigation import _MISSING
+from hyera._lookup.function_provider import _EnvironmentContext, _FunctionProvider
+from hyera._lookup.invocation import Invocation
+from hyera._lookup.lookup_adapter import extract_lookup_options_for_key
+from hyera._lookup.navigation import _MISSING
 from hyera.backends import Backend, HOCONBackend, JSONBackend, SopsBackend, YAMLBackend
 
 
@@ -1023,14 +1023,14 @@ def test_uris_walked_in_order(make_tree, backends, calls, script):
     ],
 )
 def test_ruby_uri_to_s(raw, expected):
-    from hyera._location_resolver import _ruby_uri
+    from hyera._config.location_resolver import _ruby_uri
 
     assert _ruby_uri(raw) == expected
 
 
 @pytest.mark.parametrize("raw", ["a b", "http://a%2", "http://u@h/p#f g"])
 def test_bad_uri_raises_config_error(raw):
-    from hyera._location_resolver import _ruby_uri
+    from hyera._config.location_resolver import _ruby_uri
 
     with pytest.raises(
         ConfigError, match=re.escape('bad URI (is not URI?): "{}"'.format(raw))
