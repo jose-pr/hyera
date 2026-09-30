@@ -1,0 +1,9 @@
+description: >-
+  `uris` (a list) interpolates each entry and hands the entry's function
+  options["uri"] for the first candidate; a data_hash file function still
+  rejects it, same as a single `uri`.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared"

@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: u, uris: ["http://a.invalid/%{facts.os.family}", "mailto:x@y"]}
+  - {name: common, path: common.yaml}

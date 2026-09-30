@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3ab17e5983194a2cad631c326b5819ed72206284ed748e5008432372c67cf911",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "bad URI (is not URI?): \"http://example.invalid/a b\""
+    }
+  }
+}

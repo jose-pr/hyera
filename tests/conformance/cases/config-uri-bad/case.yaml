@@ -1,0 +1,8 @@
+description: >-
+  A `uri` that fails Ruby's URI() grammar (an unescaped space) is a Puppet
+  config error, independent of any data_hash function.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'bad URI \(is not URI\?\): "http://example\.invalid/a b"'

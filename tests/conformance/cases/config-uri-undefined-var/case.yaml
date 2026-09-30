@@ -1,0 +1,9 @@
+description: >-
+  An undefined variable in a `uri` is lenient like any other location
+  (warn and resolve to ''), which then still reaches the file function's
+  own path-only rejection.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' one of 'path'"
