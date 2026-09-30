@@ -126,6 +126,93 @@ def test_ruby_equality():
     assert _eql_key({"a": 1}) != _eql_key({"a": 1.0})
     assert _eql_key({"a": 1, "b": 2}) == _eql_key({"b": 2, "a": 1})
 
+    # An object with no Ruby equivalent: keyed by identity, matching
+    # Ruby's default Object#hash/#eql?.
+    marker = object()
+    assert _eql_key(marker) == ("id", id(marker))
+    assert _eql_key(marker) != _eql_key(object())
+
+
+def test_is_data_puppet_type_name_and_ruby_inspect_fallbacks():
+    from hyera._merge_strategy import _is_data, _puppet_type_name, _ruby_inspect
+
+    marker = object()
+    assert _is_data(marker) is False
+    assert _puppet_type_name(marker) == "object"
+    assert _ruby_inspect({"a": 1, "b": [1, 2]}) == '{"a"=>1, "b"=>[1, 2]}'
+
+
+def test_ruby_class_name_eq_cmp_direct():
+    from hyera._merge_strategy import _ruby_class_name, _ruby_cmp, _ruby_eq
+
+    assert _ruby_class_name([1, 2]) == "Array"
+    marker = object()
+    assert _ruby_class_name(marker) == "object"
+
+    assert _ruby_eq([1, 2], [1, 2]) is True
+    assert _ruby_eq([1, 2], [1, 3]) is False
+    assert _ruby_eq([1, 2], [1, 2, 3]) is False
+
+    # A per-element comparison failing partway through stops immediately.
+    assert _ruby_cmp([1, "a"], [1, 2]) is None
+    # Equal-so-far elements fall through to a length tiebreak.
+    assert _ruby_cmp([1, 2, 3], [1, 2]) == 1
+
+
+def test_clear_or_nil_direct():
+    from hyera._merge_strategy import _clear_or_nil
+
+    assert _clear_or_nil("x") == ""
+    assert _clear_or_nil(object()) is None
+
+
+def test_unpack_arrays_with_a_non_array_dest():
+    # unpack_arrays (array_split_char) joins/re-splits dest too, but only
+    # when dest is itself an Array -- a scalar dest is left alone before
+    # the rest of the merge decides what to do with it.
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "unpack_arrays": ","}
+    )
+    assert strategy.merge({"l": ["a,b"]}, {"l": "x"}) == {"l": ["a", "b"]}
+
+
+def test_subclass_without_key_is_not_registered():
+    # __init_subclass__ only registers (and instantiates INSTANCE for) a
+    # subclass that sets its own KEY -- every real strategy in this module
+    # does, so an intermediate/abstract subclass with no KEY of its own is
+    # the only way to exercise the "skip" side.
+    from hyera._merge_strategy import _STRATEGIES
+
+    class _NoKeyStrategy(MergeStrategy):
+        pass
+
+    assert _NoKeyStrategy.INSTANCE is None
+    assert "_NoKeyStrategy" not in _STRATEGIES
+    assert all(cls is not _NoKeyStrategy for cls in _STRATEGIES.values())
+
+
+def test_merge_strategy_base_is_abstract_and_first_found_never_rejects():
+    # MergeStrategy's own checked_merge()/_value_problem() are abstract
+    # (every concrete strategy overrides both) -- exercised by direct
+    # construction/call. FirstFoundStrategy overrides only _value_problem
+    # (never checked_merge, since it "never merges" per its own docstring).
+    base = MergeStrategy({})
+    with pytest.raises(NotImplementedError):
+        base.checked_merge(1, 2)
+    with pytest.raises(NotImplementedError):
+        base._value_problem(1)
+
+    assert FirstFoundStrategy.INSTANCE._value_problem(1) is None
+
+
+def test_unique_value_problem_nested_array_item():
+    from hyera._merge_strategy import UniqueMergeStrategy, _ruby_class_name
+
+    assert UniqueMergeStrategy.INSTANCE._value_problem([1, object()]) == (
+        "expects a value of type Scalar or Array, got Array[object]"
+    )
+    assert _ruby_class_name(None) == "NilClass"
+
 
 def test_unique_flattens_recursively():
     strategy = UniqueMergeStrategy.INSTANCE
@@ -340,6 +427,12 @@ def test_sort_merged_arrays_and_errors():
     assert sort_error([None], [1]) == "comparison of Integer with nil failed"
     assert sort_error([1.5], ["a"]) == "comparison of String with 1.5 failed"
     assert sort_error([1.0, "b"], [1]) == "comparison of Float with String failed"
+    # Named in original-index order (not whatever order cmp_to_key happens
+    # to probe an incomparable pair in) -- the reverse ordering from the
+    # cases above.
+    assert sort_error({"l": [1]}, {"l": ["a", 2]}) == (
+        "comparison of String with 2 failed"
+    )
 
 
 def test_deep_options_validation():
@@ -547,6 +640,36 @@ def test_keep_array_duplicates():
     assert strategy.merge({"l": ["a", "a"]}, {"l": ["b", "a"]}) == {
         "l": ["b", "a", "a", "a"]
     }
+
+    # dest is missing the key entirely: src_value merges with its own
+    # empty dup (additive) instead of with itself, so the source's own
+    # duplicates survive rather than deduping against an identical copy.
+    assert strategy.merge({"l": [1, 1, 2]}, {}) == {"l": [1, 1, 2]}
+
+
+def test_overwrite_unmergeable_scalar_source_wins_over_falsy_dest():
+    strategy = MergeStrategy.strategy(
+        {
+            "strategy": "unconstrained_deep",
+            "overwrite_unmergeable": True,
+            "merge_nil_values": True,
+        }
+    )
+    # A Ruby-falsy dest (nil -- an empty Hash/Array is truthy in Ruby,
+    # unlike Python) is replaced outright by a scalar source, never merged
+    # into. Nested in a dict, a missing/falsy dest key instead recurses
+    # with a dup of the source as dest (always truthy if source is), so
+    # this only fires at deep_merge's own top level.
+    assert strategy.merge(5, None) == 5
+
+
+def test_extend_existing_arrays_with_a_hash_source():
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "extend_existing_arrays": True}
+    )
+    # source is a Hash and dest is a (non-Hash) Array: the whole source
+    # gets pushed onto dest, rather than merged key by key.
+    assert strategy.merge({"k": {"a": 1}}, {"k": [1]}) == {"k": [1, {"a": 1}]}
 
 
 def test_reverse_deep_lower_wins():
