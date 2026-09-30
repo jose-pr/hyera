@@ -13,7 +13,8 @@ private engine internals with no stability contract.
 ## Engine
 
 - **`Hiera(base_config, backends=None, base_path=None, *, scope=None,
-  environmentpath=None, basemodulepath=(), modulepath=None)`**
+  environmentpath=None, basemodulepath=(), modulepath=None,
+  cache_size=256)`**
   — the main entry point. `base_config`: a file path, a file-like object, a
   pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
   `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
@@ -33,6 +34,13 @@ private engine internals with no stability contract.
   `None` (the default) means `Scope()` — Puppet's own defaults (no facts,
   `$environment` `"production"`, the local `$trusted` hash). Anything other
   than a `Scope`/`None` raises `TypeError("scope must be a hyera.Scope")`.
+  `cache_size`: the bound on each scope-keyed cache (resolved hierarchy
+  locations, merged `lookup_options`) — least-recently-used entries dropped
+  once a new one would exceed it; `None` never evicts; `0` disables caching
+  outright (every lookup rebuilds). Must be an `int` (not a `bool`) or
+  `None`, else `TypeError("cache_size must be an int or None, not
+  <type>")`; a negative value raises `ValueError("cache_size must be >=
+  0")`. Every layer built inside one `Hiera(...)` call shares this bound.
   `self.scope` is set before the config loads, so a hierarchy path template
   referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
   it from the first, context-free pre-warm onward. A missing or `null`/`false`
@@ -251,26 +259,36 @@ private engine internals with no stability contract.
     `h.lookup(k, None, "hash")`; `hiera_include(k)` has no equivalent (it
     applies classes to a catalog, which hyera has no notion of) — none of
     the four are implemented as methods; use `.lookup()` directly.
-  - Gotcha: a single `Hiera` instance caches parsed file contents (`.cache`,
-    keyed by file path and the `strict` value that loaded it — a YAML
-    file's own non-hash validation is `strict`-sensitive, so the same file
-    can be cached independently under two different `strict` values).
-    Resolved hierarchy locations are cached per the values of the
-    variables their own interpolation reads (as Puppet's
-    `scope_interpolations_stable?` — for example `%{trusted.certname}`,
-    `%{facts.os.family}`, or a `mapped_paths` collection), not per the
-    whole scope: two scopes that differ only in an unreferenced fact or
-    variable (a volatile timestamp, an unrelated top-scope value) share one
-    cached entry, while `True`, `1` and `1.0` never do. The merged
-    `lookup_options` mapping is cached per set of locations plus the
-    variables its own interpolation reads, and never cached at all when
-    that interpolation makes a sub-lookup (`%{lookup(...)}` inside a
-    `merge:` spec, say) — a sub-lookup can reach data the location set
-    alone does not account for. None of this notices an on-disk change
-    after first load for a given set of referenced values. A `.scoped(...)`
-    view shares every cache with the instance it was derived from (and with
-    every other view of the same instance), by design (see `.scoped`
-    above) — never copy them expecting isolation.
+  - **`.clear_cache() -> None`** — drops every cached location,
+    `lookup_options` mapping and parsed data file; the next lookup re-reads
+    whatever it needs from disk. Safe to call while other threads are
+    looking things up on this instance or a `.scoped(...)` view of it (they
+    share every cache). There are no public cache attributes to inspect or
+    clear individually.
+  - Gotcha: parsed data files are cached per `(path, strict)` for the
+    instance's life — a YAML file's own non-hash validation is
+    `strict`-sensitive, so the same file can be cached independently under
+    two different `strict` values — and unbounded, like Puppet's own
+    per-environment file cache: its size follows the data tree, not the
+    number of scopes seen, and only `clear_cache()` empties it. Resolved
+    hierarchy locations are cached per the values of the variables their
+    own interpolation reads (as Puppet's `scope_interpolations_stable?` —
+    for example `%{trusted.certname}`, `%{facts.os.family}`, or a
+    `mapped_paths` collection), not per the whole scope: two scopes that
+    differ only in an unreferenced fact or variable (a volatile timestamp,
+    an unrelated top-scope value) share one cached entry, while `True`, `1`
+    and `1.0` never do. The merged `lookup_options` mapping is cached per
+    set of locations plus the variables its own interpolation reads, and
+    never cached at all when that interpolation makes a sub-lookup
+    (`%{lookup(...)}` inside a `merge:` spec, say) — a sub-lookup can reach
+    data the location set alone does not account for. Each of the two
+    scope-keyed caches is bounded by `cache_size` (least-recently-used
+    entries dropped); none of this notices an on-disk change after first
+    load for a given set of referenced values, or on-disk changes at all
+    once `clear_cache()` has not been called. A `.scoped(...)` view shares
+    every cache with the instance it was derived from (and with every other
+    view of the same instance), by design (see `.scoped` above) — never
+    copy them expecting isolation.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
     what it read at construction). `Hiera` (a `.scoped(...)` view included)

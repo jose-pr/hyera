@@ -97,6 +97,10 @@ class _EnvironmentContext:
     def __init__(self):
         self._cache: dict = {}
 
+    def clear(self) -> None:
+        """Drop every cached file (``Hiera.clear_cache()``)."""
+        self._cache.clear()
+
     def cached_file_data(self, path, parse=None):
         path = os.fspath(path)
         try:

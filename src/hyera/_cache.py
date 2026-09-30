@@ -11,6 +11,7 @@ value.
 Original code: no upstream header, no ``NOTICE`` line.
 """
 
+import collections
 import typing as _ty
 
 from ._navigation import _MISSING, sub_lookup
@@ -108,12 +109,18 @@ class _ScopeKeyedCache:
     exact scope it was built for.
 
     ``lock`` is shared with every other cache on the same :class:`~hyera.Hiera`
-    instance (one lock per instance, not per cache).
+    instance (one lock per instance, not per cache). ``maxsize`` bounds the
+    number of entries: least-recently-used dropped once a ``put`` would
+    exceed it; ``None`` never evicts; ``0`` makes every ``put`` a no-op, so
+    every ``get`` misses and every lookup rebuilds. Only dict/``_known``/
+    ``_last`` mutation happens under the lock -- a rebuild (the caller's own
+    work between a miss and its ``put``) never holds it.
     """
 
-    def __init__(self, lock):
+    def __init__(self, lock, maxsize=256):
         self._lock = lock
-        self._entries = {}
+        self.maxsize = maxsize
+        self._entries = collections.OrderedDict()
         #: kind -> [refs tuple, ...], most recent first, at most
         #: :data:`_MAX_KNOWN`.
         self._known = {}
@@ -153,9 +160,10 @@ class _ScopeKeyedCache:
             if undefined and not ref.lenient:
                 return _MISSING
         with self._lock:
-            value = self._entries.get(key, _MISSING)
-        if value is _MISSING:
-            return _MISSING
+            if key not in self._entries:
+                return _MISSING
+            value = self._entries[key]
+            self._entries.move_to_end(key)
         for ref, (undefined, _frozen) in zip(refs, sig):
             if undefined and ref.lenient:
                 scope.lookupvar(ref.root, lenient=True)
@@ -179,9 +187,15 @@ class _ScopeKeyedCache:
         return (kind, extra, tuple(refs), tuple(sig))
 
     def put(self, key, value):
+        if self.maxsize == 0:
+            return
         kind, _extra, refs, _sig = key
         with self._lock:
             self._entries[key] = value
+            self._entries.move_to_end(key)
+            if self.maxsize is not None:
+                while len(self._entries) > self.maxsize:
+                    self._entries.popitem(last=False)
             known = self._known.setdefault(kind, [])
             if refs in known:
                 known.remove(refs)
@@ -193,6 +207,45 @@ class _ScopeKeyedCache:
             self._entries.clear()
             self._known.clear()
             self._last.clear()
+
+    def __len__(self):
+        with self._lock:
+            return len(self._entries)
+
+
+class _LRU:
+    """A plain least-recently-used cache, ``maxsize``-bounded the same way
+    as :class:`_ScopeKeyedCache` (``None`` never evicts, ``0`` disables),
+    for a cache with no scope-stability question to answer -- a glob
+    listing is memoized by pattern alone (a later phase of the same plan),
+    never by scope.
+    """
+
+    def __init__(self, lock, maxsize):
+        self._lock = lock
+        self.maxsize = maxsize
+        self._entries = collections.OrderedDict()
+
+    def get(self, key, default=_MISSING):
+        with self._lock:
+            if key not in self._entries:
+                return default
+            self._entries.move_to_end(key)
+            return self._entries[key]
+
+    def put(self, key, value):
+        if self.maxsize == 0:
+            return
+        with self._lock:
+            self._entries[key] = value
+            self._entries.move_to_end(key)
+            if self.maxsize is not None:
+                while len(self._entries) > self.maxsize:
+                    self._entries.popitem(last=False)
+
+    def clear(self):
+        with self._lock:
+            self._entries.clear()
 
     def __len__(self):
         with self._lock:

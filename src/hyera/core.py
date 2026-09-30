@@ -181,6 +181,7 @@ class Hiera:
         environmentpath=None,
         basemodulepath=(),
         modulepath=None,
+        cache_size=256,
     ):
         self.base_config = base_config
         if scope is None:
@@ -188,6 +189,16 @@ class Hiera:
         elif not isinstance(scope, Scope):
             raise TypeError("scope must be a hyera.Scope")
         self.scope = scope
+        if cache_size is not None:
+            if isinstance(cache_size, bool) or not isinstance(cache_size, int):
+                raise TypeError(
+                    "cache_size must be an int or None, not {}".format(
+                        type(cache_size).__name__
+                    )
+                )
+            if cache_size < 0:
+                raise ValueError("cache_size must be >= 0")
+        self.cache_size = cache_size
 
         #: Puppet's three layer-discovery settings (``_data_provider.
         #: split_path_setting``): ``environmentpath`` stays ``None`` when
@@ -216,31 +227,47 @@ class Hiera:
 
         self.hierarchy: "list[HieraLevel]" = []
         self.default_hierarchy: "list[HieraLevel]" = []
-        #: ``(path, backend.strict, options) -> loaded data``. See
-        #: ``_load_file``. Still unbounded and public in this phase; bounding
-        #: and privatizing it is a later phase of the same plan.
-        self.cache: dict = {}
-        #: Every plain path ever loaded successfully into ``self.cache``,
-        #: under any ``strict``/``options`` variant -- what ``_files_for``
-        #: consults to tell a loaded location from a missing/unattempted one.
-        self._loaded_paths: set = set()
-        #: One lock, shared by every scope-keyed cache below -- dict/
-        #: ``_known``/``_last`` mutation only, never held across a rebuild.
+        #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
+        #: keyed by ``(tag, base_path, level index)`` -- never shared with
+        #: another view (see :meth:`_view`), since a provider's interpolated
+        #: options are bound to exactly one scope. ``base_path``
+        #: disambiguates a level index across layers (the global hierarchy
+        #: and an environment's/module's each start their own indexing from
+        #: 0), and ``tag`` tells a module's ``default_hierarchy`` apart from
+        #: its main one (same root, a different level list).
+        self._providers: dict = {}
+        #: Shared with every view (like ``_file_cache``): the file-content
+        #: cache a ``lookup_key``/``data_dig`` provider's ``LookupContext.
+        #: cached_file_data`` reads through.
+        self._environment_context = _EnvironmentContext()
+
+        self._init_caches()
+
+        self._load_config(
+            default_backends() if backends is None else backends, base_path
+        )
+
+    def _init_caches(self) -> None:
+        """(Re)create every cache and the lock they share -- called from
+        ``__init__`` and from :meth:`__setstate__` (a copy/unpickle starts
+        with every cache empty). One lock covers dict/``_known``/``_last``
+        mutation on all of them; a rebuild itself never runs under it.
+        """
         self._cache_lock = threading.Lock()
         #: Resolved hierarchy locations for one ``(tag, base_path)`` layer,
         #: keyed on the values of the variables their own interpolation
         #: reads (``_cache.py``), not on the whole scope -- see
         #: ``_location_entry_for``. Shared by every view derived from this
-        #: instance (unlike ``_providers`` below, see ``_view``), since
+        #: instance (unlike ``_providers`` above, see ``_view``), since
         #: ``base_path`` -- the owning layer's own root -- disambiguates a
         #: layer's hierarchy from any other's, the same way ``_providers``'
         #: own cache key already does.
-        self._location_cache = _ScopeKeyedCache(self._cache_lock)
+        self._location_cache = _ScopeKeyedCache(self._cache_lock, self.cache_size)
         #: The ``lookup_options`` value gathered from one layer's own
         #: hierarchy alone (never merged across layers), keyed the same way,
         #: plus the location entry it was built against. See
         #: ``_layer_options_cached``.
-        self._lookup_options_cache = _ScopeKeyedCache(self._cache_lock)
+        self._lookup_options_cache = _ScopeKeyedCache(self._cache_lock, self.cache_size)
         #: ``(scope, tag, base_path)`` tuples whose ``lookup_options`` gather
         #: is currently running on this instance -- guards against a value
         #: inside ``lookup_options`` that sub-looks-up a key whose own
@@ -251,44 +278,66 @@ class Hiera:
         #: marker is removed in ``finally`` so a gather that raises does not
         #: wedge future lookups.
         self._lookup_options_pending: set = set()
-        #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
-        #: keyed by ``(tag, base_path, level index)`` -- never shared with
-        #: another view (see :meth:`_view`), since a provider's interpolated
-        #: options are bound to exactly one scope. ``base_path``
-        #: disambiguates a level index across layers (the global hierarchy
-        #: and an environment's/module's each start their own indexing from
-        #: 0), and ``tag`` tells a module's ``default_hierarchy`` apart from
-        #: its main one (same root, a different level list).
-        self._providers: dict = {}
-        #: Shared with every view (like ``cache``): the file-content cache a
-        #: ``lookup_key``/``data_dig`` provider's ``LookupContext.
-        #: cached_file_data`` reads through.
-        self._environment_context = _EnvironmentContext()
+        #: Interned path strings, shared by every location entry and by
+        #: ``_file_cache``: ``s -> s`` so equal paths from independent
+        #: builds share one string object.
+        self._paths: dict = {}
+        #: Parsed data files: ``(path, backend.strict, options) -> data``.
+        #: See ``_load_file``. Unbounded, as Puppet's own per-environment
+        #: file cache is (its size follows the data tree, not the number of
+        #: scopes seen) -- only ``clear_cache()`` empties it.
+        self._file_cache: dict = {}
+        #: Every plain path ever loaded successfully into ``_file_cache``,
+        #: under any ``strict``/``options`` variant -- what ``_files_for``
+        #: consults to tell a loaded location from a missing/unattempted one.
+        self._loaded_paths: set = set()
 
-        self._load_config(
-            default_backends() if backends is None else backends, base_path
-        )
+    def clear_cache(self) -> None:
+        """Drop every cached location, ``lookup_options`` mapping, parsed
+        data file, per-view function-provider state and pruned module data.
+        The next lookup re-reads whatever it needs from disk. Safe to call
+        while other threads are looking things up on this instance (or a
+        ``.scoped(...)`` view of it, which shares every cache below except
+        ``_providers``, cleared on each view separately): each cache clears
+        itself under the shared lock.
+
+        Layer/module *discovery* (``_environments``, and which ``hiera.yaml``
+        each one found) is untouched -- re-reading a changed ``hiera.yaml``
+        during an instance's life is out of this method's scope, same as the
+        base config itself.
+        """
+        self._location_cache.clear()
+        self._lookup_options_cache.clear()
+        with self._cache_lock:
+            self._file_cache.clear()
+            self._loaded_paths.clear()
+            self._paths.clear()
+        self._pruned_cache.clear()
+        self._providers.clear()
+        self._environment_context.clear()
 
     def __getstate__(self):
-        """Drop what a pickle/``copy.copy``/``copy.deepcopy`` cannot (or
-        should not) carry: a ``threading.Lock`` is never picklable, and a
-        freshly rebuilt, empty pair of scope-keyed caches sharing a fresh
-        lock is a perfectly valid starting state for the copy -- the next
-        lookup rebuilds whatever it needs. ``self.cache`` (parsed files,
-        including sops-decrypted values) is unaffected and still copies, as
-        documented.
+        """Drop every cache and the lock they share -- a ``threading.Lock``
+        is never picklable, and a freshly rebuilt, empty set of caches is a
+        perfectly valid starting state for a pickle/``copy.copy``/
+        ``copy.deepcopy``: the next lookup rebuilds whatever it needs,
+        including re-reading (and, for sops, re-decrypting) every data file.
         """
         state = self.__dict__.copy()
-        del state["_cache_lock"]
-        del state["_location_cache"]
-        del state["_lookup_options_cache"]
+        for name in (
+            "_cache_lock",
+            "_location_cache",
+            "_lookup_options_cache",
+            "_lookup_options_pending",
+            "_paths",
+            "_file_cache",
+        ):
+            del state[name]
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self._cache_lock = threading.Lock()
-        self._location_cache = _ScopeKeyedCache(self._cache_lock)
-        self._lookup_options_cache = _ScopeKeyedCache(self._cache_lock)
+        self._init_caches()
 
     def format(self, text: str) -> Any:
         """Interpolate ``text`` against this instance's bound scope, exactly
@@ -362,26 +411,35 @@ class Hiera:
         self._prewarm()
 
     def _prewarm(self) -> None:
-        """Load and cache the source files for the bound scope up front,
-        same as ``sources()`` would.
+        """Resolve the bound scope's own locations and read every main
+        hierarchy file up front, same as a lookup would need to.
 
         Mirrors the source-resolution side effects of a ``get(None)`` call
-        without going through the public API's key-type check.
+        without going through the public API's key-type check. Location
+        resolution no longer reads any file itself (:meth:`_load_file` is
+        lazy), so :meth:`_lookup_options_map` -- a hash-merge that visits
+        every main-hierarchy location regardless of whether it actually
+        defines ``lookup_options`` -- is what still makes a malformed data
+        file fail construction itself, not just a later lookup.
 
-        A malformed dotted reference or a navigation type mismatch
-        reachable while resolving a hierarchy path (``%{...}`` in a
-        ``path``/``paths``/``glob``/``mapped_paths`` template) is swallowed
-        here and logged at debug level, not raised out of the constructor:
-        Puppet raises these at lookup time, never at construction, and a
-        constructor should fail only for configuration errors. Swallowing it
-        here also means the walk this aborts was never cached (``_files_for``
-        only caches a *completed* walk), so the first real lookup retries it
-        in full and raises the same error again, now at the right time.
+        A malformed dotted reference, a navigation type mismatch reachable
+        while resolving a hierarchy path (``%{...}`` in a
+        ``path``/``paths``/``glob``/``mapped_paths`` template), or a
+        ``lookup_options``-specific problem (a non-hash value, an invalid
+        regex pattern, a bad merge/``convert_to`` entry -- all
+        :class:`~hyera.HieraLookupError`, never :class:`~hyera.BackendError`)
+        is swallowed here and logged at debug level, not raised out of the
+        constructor: Puppet raises these at lookup time, never at
+        construction, and a constructor should fail only for configuration
+        errors or a data file that cannot itself be read or parsed.
+        Swallowing a location-resolution error here also means the walk it
+        aborted was never cached, so the first real lookup retries it in
+        full and raises the same error again, now at the right time.
 
         Runs under ``self.scope.strict`` (the ``_STRICT`` ContextVar, same as
         ``lookup``/``dig``/``get``): a genuinely non-hash data file under
         ``strict="error"`` raises here as :class:`~hyera.BackendError` and is
-        NOT caught by the except clause above (matching the documented
+        NOT caught by the except clause below (matching the documented
         constructor contract -- a data file that cannot be read or parsed
         can fail construction itself).
         """
@@ -394,8 +452,8 @@ class Hiera:
             _STRICT.reset(strict_token)
 
     def _load_file(self, path, backend, options):
-        """Load ``path`` via ``backend.data_hash(path, options)``, caching
-        the parsed result and returning it.
+        """Load ``path`` via ``backend.data_hash(path, options)``, returning
+        the parsed, cached data.
 
         A read failure (``OSError``, e.g. the file vanished between the
         directory walk and here) becomes ``Unable to read (<path>): ...``; a
@@ -420,48 +478,54 @@ class Hiera:
         Puppet ``Data``, so it always serializes. ``self._loaded_paths``
         separately tracks which plain paths were ever read successfully, for
         :meth:`_files_for`'s "was this location loaded" check, independent
-        of which ``strict``/``options`` variant did the loading.
+        of which ``strict``/``options`` variant did the loading. This is the
+        only place a location is actually read: a hierarchy build only
+        resolves and records locations now, so every location -- even one
+        visited many times across many lookups -- is parsed here at most
+        once per ``(strict, options)`` variant for the instance's life
+        (until :meth:`clear_cache`).
         """
         options_key = json.dumps(options, sort_keys=True)
         cache_key = (path, backend.strict, options_key)
-        if cache_key not in self.cache:
-            if os.path.isdir(path):
-                # An explicit check, identical on every OS: a bare open()
-                # of a directory raises PermissionError on Windows and
-                # IsADirectoryError on POSIX, and Puppet's own message here
-                # is "Is a directory" regardless (data_hash_function_
-                # provider.rb's `read` -> `cached_file_data` -> Ruby's
-                # `io_fread`).
-                raise BackendError(
-                    "Unable to read ({}): Is a directory".format(path),
-                    path=str(path),
-                )
-            try:
-                data = backend.data_hash(path, dict(options))
-            except BackendError as e:
-                if e.path is None:
-                    raise BackendError(
-                        "Unable to parse ({}): {}".format(path, e),
-                        path=str(path),
-                    ) from e
-                raise
-            except HieraError:
-                raise
-            except OSError as e:
-                raise BackendError(
-                    "Unable to read ({}): {}".format(path, e.strerror or e),
-                    path=str(path),
-                ) from e
-            except Exception as e:
-                raise BackendError(
-                    "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
-                    path=str(path),
-                ) from e
+        with self._cache_lock:
+            cached = self._file_cache.get(cache_key, _MISSING)
+        if cached is not _MISSING:
+            return cached
 
-            _validate_data_hash(data, backend.name, path)
-            self.cache[cache_key] = data
+        if os.path.isdir(path):
+            # An explicit check, identical on every OS: a bare open() of a
+            # directory raises PermissionError on Windows and
+            # IsADirectoryError on POSIX, and Puppet's own message here is
+            # "Is a directory" regardless (data_hash_function_provider.rb's
+            # `read` -> `cached_file_data` -> Ruby's `io_fread`).
+            raise BackendError(
+                "Unable to read ({}): Is a directory".format(path), path=str(path)
+            )
+        try:
+            data = backend.data_hash(path, dict(options))
+        except BackendError as e:
+            if e.path is None:
+                raise BackendError(
+                    "Unable to parse ({}): {}".format(path, e), path=str(path)
+                ) from e
+            raise
+        except HieraError:
+            raise
+        except OSError as e:
+            raise BackendError(
+                "Unable to read ({}): {}".format(path, e.strerror or e), path=str(path)
+            ) from e
+        except Exception as e:
+            raise BackendError(
+                "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
+                path=str(path),
+            ) from e
+
+        _validate_data_hash(data, backend.name, path)
+        with self._cache_lock:
+            self._file_cache[cache_key] = data
             self._loaded_paths.add(path)
-        return self.cache[cache_key]
+        return data
 
     def _environment(self, name):
         """The cached :class:`~hyera._data_provider._EnvironmentState` for

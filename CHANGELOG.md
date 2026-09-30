@@ -66,6 +66,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raises `HieraLookupError`.
 - `examples/`: a runnable Hiera 5 configuration, data tree and facts file,
   with a lookup script and the equivalent CLI invocation.
+- `Hiera(..., cache_size=256)` bounds each scope-keyed cache (least recently
+  used entries are dropped; `None` for no bound, `0` to disable), and
+  `Hiera.clear_cache()` drops every cache, including parsed data files.
 
 ### Changed
 
@@ -172,6 +175,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A found value that is not Puppet RichData (a hash key that is a boolean,
   a null or a collection; a Ruby symbol) raises `HieraLookupError` naming
   the key, the data_hash function and the file.
+- Pickling or copying a `Hiera` no longer carries its caches: the copy
+  starts empty and never holds data parsed (or decrypted) by the original.
 
 ### Removed
 
@@ -188,9 +193,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Hiera.has(key)`: use `key in h`.
 - `ScopedHiera`: `h.scoped(...)` now returns a `Hiera` bound to the derived
   scope.
+- `Hiera.cache`: call `clear_cache()` to drop cached data.
 
 ### Fixed
 
+- Clearing cached file data no longer makes later lookups report a missing
+  key; a file is re-read when needed.
 - A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
   `a`, or a variable whose value refers to itself) raises
   `InterpolationError` "Recursive lookup detected in [a, b]" instead of
