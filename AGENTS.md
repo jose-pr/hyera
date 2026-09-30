@@ -124,6 +124,9 @@ third-party plugins).
   `cli` and `hocon` extras, so nothing else needs adding by hand.
 - Benchmarks: `<py> benchmarks/run.py [--save]` (see `benchmarks/README.md`).
 - Format: `<py> -m black --check src/ tests/ benchmarks/ examples/`.
+- Types: `<py> -m pyright --verifytypes hyera --ignoreexternal` must report
+  100% and no symbol without a docstring (CI job `types`, Python 3.9 and
+  3.14).
 - Package: built with `hatchling`. The PyPI distribution, the import
   package and the console script are all `hyera`. `hyera[cli]` pulls in
   `duho` for the console script, `hyera[hocon]` pulls in `pyhocon` for
@@ -131,8 +134,10 @@ third-party plugins).
 - **Version**: lives in exactly one place, `src/hyera/__init__.py`
   (`__version__`); `[tool.hatch.version]` reads it to build the package.
   Bump it in the same commit as the CHANGELOG entry for that release.
-- **CI**: `test.yml` runs the full OS/Python matrix, a `black --check`, and
-  a `floors` job that installs every declared dependency at its floor
+- **CI**: `test.yml` runs the full OS/Python matrix, a `black --check`, a
+  `types` job (`pyright --verifytypes`, Python 3.9 and 3.14) gating the
+  100%-typed/fully-docstringed claim, and a `floors` job that installs
+  every declared dependency at its floor
   (`pyproject.toml`'s `>=` bound) on the oldest supported Python, so a floor
   that stops working is caught before a release does.
 - **Releases**: tags are SemVer (`v1.0.0`, `v1.0.0-rc.1`); the PEP 440 form

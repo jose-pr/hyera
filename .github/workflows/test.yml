@@ -72,6 +72,33 @@ jobs:
         # backend tests skipped is not a verified run.
         run: python -m pytest -q -rs
 
+  # Type-completeness gate: every symbol hyera exports has a known type and a
+  # docstring (pyright --verifytypes).
+  types:
+    name: Types (pyright, py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package with dev tooling
+        run: python -m pip install -e ".[dev]"
+      - name: Print pyright version
+        run: python -m pyright --version
+      - name: Check type completeness
+        run: |
+          python -m pyright --pythonpath "$(which python)" --verifytypes hyera --ignoreexternal > verifytypes.txt || { cat verifytypes.txt; exit 1; }
+          cat verifytypes.txt
+          grep -q "Functions without docstring: 0" verifytypes.txt
+          grep -q "Classes without docstring: 0" verifytypes.txt
+
   # The declared floors, exercised: every runtime dependency and feature extra
   # installed AT the lower bound pyproject.toml declares (`>=X.Y.0` -> `==X.Y.0`),
   # on the oldest supported Python. The matrix above only ever gets the newest

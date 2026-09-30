@@ -52,7 +52,7 @@ eyaml = ["cryptography>=50.0,<51"]
 # extras -- without pyhocon/duho/cryptography the HOCON/CLI/eyaml tests
 # silently skip instead of running. `hatchling` is left out: build isolation
 # supplies it.
-dev = ["hyera[cli,hocon,eyaml]", "black", "build", "pytest", "twine"]
+dev = ["hyera[cli,hocon,eyaml]", "black", "build", "pytest", "twine", "pyright[nodejs]"]
 docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 [project.scripts]
@@ -102,6 +102,3 @@ filterwarnings = ["error"]
 # syntax the floor cannot parse.
 [tool.black]
 target-version = ["py39"]
-
-[tool.pyright]
-reportPrivateImportUsage = false
