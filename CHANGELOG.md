@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `lookup_key` and `data_dig` hierarchy entries call the named backend per
+  key and per location with Puppet's hierarchy `options` and a
+  `hyera.LookupContext` (`interpolate`, `not_found`, `explain`, `cache`,
+  `cache_all`, `cache_has_key`, `cached_value`, `cached_entries`,
+  `cached_file_data`, `environment_name`, `module_name`); a hierarchy entry
+  with no location key calls its function once, with no location.
 - The `default` merge strategy (first match, as in Puppet).
 - The `reverse_deep` and `unconstrained_deep` merge strategies, which
   Puppet accepts for Hiera 3 data. `unconstrained_deep` also takes
@@ -58,6 +64,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The `merge` passed to `lookup()` does not apply there — the merge comes
   from the `lookup_options` in the default hierarchy's own data, while
   `convert_to` from the main `lookup_options` still applies.
+- Hierarchy `options` are interpolated (strict mode, no method calls) and
+  passed to the backend with `path`/`uri`. A `yaml_data`, `json_data`,
+  `hocon_data` or `sops_data` entry that sets any option, or has no path
+  location, raises `ConfigError` with Puppet's message; such options used
+  to be ignored and a location-less entry contributed nothing. A backend
+  named under a hierarchy key whose hook it does not implement raises
+  `ConfigError` with Puppet's message instead of "not supported yet".
 - Interpolation in data values follows Puppet's rules: one left-to-right
   pass (`%{literal('%')}{x}` yields the literal `%{x}`, and a substituted
   value is never scanned again); whitespace inside `%{ }` is ignored; hash

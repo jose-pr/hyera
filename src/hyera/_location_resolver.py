@@ -30,16 +30,20 @@ _WINDOWS = os.name == "nt"
 
 
 class ResolvedLocation(_ty.NamedTuple):
-    """One candidate source path: the declared (uninterpolated) template,
-    the resolved filesystem path, and whether it exists.
+    """One candidate source: the declared (uninterpolated) template, the
+    resolved location, whether it is a ``uri``/``uris`` location (a plain
+    string, never a filesystem path) and whether it exists.
 
     ``exist=False`` candidates are kept (never silently omitted) so a future
     ``explain`` can show them; callers that only want real files filter on
-    ``.exist``.
+    ``.exist``. A ``uri`` location is always ``exist=True`` (Puppet never
+    fetches or stats it -- a provider decides what it means) and ``location``
+    is a plain ``str``, not a :class:`~pathlib_next.Path`.
     """
 
     original: str
-    location: "Path"
+    location: "_ty.Union[Path, str]"
+    is_uri: bool
     exist: bool
 
 
@@ -463,7 +467,7 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
         if extension and not p.endswith(extension):
             p = p + extension
         loc = _pathname_plus(datadir, p)
-        results.append(ResolvedLocation(d, Path(loc), os.path.exists(loc)))
+        results.append(ResolvedLocation(d, Path(loc), False, os.path.exists(loc)))
     return results
 
 
@@ -486,7 +490,7 @@ def _expand_globs(config_root, datadir, declared, invocation):
         for match in glob(root, pattern):
             if os.path.isdir(match):
                 continue
-            results.append(ResolvedLocation(original, Path(match), True))
+            results.append(ResolvedLocation(original, Path(match), False, True))
     return results
 
 
@@ -540,7 +544,9 @@ def _expand_mapped_paths(datadir, level, invocation):
         child_inv = Invocation(child_scope, _no_lookup, lenient=True)
         p = interpolate(template_norm, child_inv, allow_methods=False)
         loc = _pathname_plus(datadir, p)
-        results.append(ResolvedLocation(template, Path(loc), os.path.exists(loc)))
+        results.append(
+            ResolvedLocation(template, Path(loc), False, os.path.exists(loc))
+        )
     return results
 
 
@@ -564,11 +570,16 @@ def resolve_locations(level, base_path, scope):
     base = _pathname_plus(config_root, datadir)
 
     key = level.location_key
+    if key is None:
+        # No location key at all: the caller (a function provider) calls
+        # its function once, with no location -- distinct from a location
+        # key that expands to zero candidates.
+        return None
     if key in ("path", "paths"):
         return _resolve_paths(base, level.locations, lenient_inv)
     if key in ("glob", "globs"):
         return _expand_globs(config_root, datadir, level.locations, lenient_inv)
     if key == "mapped_paths":
         return _expand_mapped_paths(base, level, lenient_inv)
-    # "uri"/"uris"/None: no locations yet (uri handling is not implemented).
+    # "uri"/"uris": not implemented yet.
     return []

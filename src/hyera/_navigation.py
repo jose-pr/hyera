@@ -145,6 +145,36 @@ def sub_lookup(
     return value
 
 
+def key_to_a(root, segments) -> "Tuple[Union[str, int], ...]":
+    """A ``data_dig`` function's full key argument (``lookup_key.rb:76-83``):
+    the root plus every sub-navigation segment, in order."""
+    return (root,) + tuple(segments)
+
+
+def undig(segments, value) -> object:
+    """Rebuild a nested structure from ``value`` so that digging ``segments``
+    back out of it (:func:`sub_lookup`) returns ``value`` again
+    (``lookup_key.rb:64-74``).
+
+    A ``data_dig`` function already receives the full key
+    (:func:`key_to_a`) and returns the value found at that exact path --
+    the leaf, not a root-keyed hash. Wrapping it back up by ``segments``
+    (an ``int`` segment builds a list just long enough to hold ``value`` at
+    that index, anything else a single-key dict) lets the generic
+    per-level/per-location merge treat a ``data_dig`` result exactly like a
+    ``data_hash`` root value, with the caller's own :func:`sub_lookup` over
+    the same ``segments`` recovering the original leaf after the merge.
+    """
+    for segment in reversed(segments):
+        if isinstance(segment, int) and not isinstance(segment, bool):
+            lst = [None] * (segment + 1)
+            lst[segment] = value
+            value = lst
+        else:
+            value = {segment: value}
+    return value
+
+
 @functools.lru_cache(maxsize=4096)
 def parse_lookup_key(key: str) -> "Tuple[str, Tuple[Union[str, int], ...]]":
     """Split a lookup key into its root and sub-navigation segments

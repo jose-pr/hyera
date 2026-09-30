@@ -41,9 +41,20 @@ def validate_data_value(value, function_name, location, root_key) -> None:
     keyed by anything other than a ``String``/numeric (a boolean, ``nil``,
     or a nested collection), and a Ruby symbol anywhere in the structure.
     A found ``None`` root value itself is valid (``Undef`` is RichData).
+
+    ``location`` is ``None`` for a location-less hierarchy entry (a
+    ``data_hash`` function called with no ``path``/``uri`` at all); the
+    "when using location" clause is then omitted entirely, matching
+    Puppet's own conditional message.
     """
     t = _lookup_value_type()
     if not t.instance(value):
+        if location is None:
+            raise HieraLookupError(
+                "Value for key '{}', in hash returned from data_hash "
+                "function '{}', has wrong type, expects Puppet::LookupValue, "
+                "got {}".format(root_key, function_name, infer(value))
+            )
         raise HieraLookupError(
             "Value for key '{}', in hash returned from data_hash function "
             "'{}', when using location '{}', has wrong type, expects "

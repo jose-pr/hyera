@@ -49,12 +49,14 @@ private engine internals with no stability contract.
   exactly like `hierarchy`'s. Each entry uses its own function
   key (`data_hash`/`lookup_key`/`data_dig`/`hiera3_backend`/
   `v4_data_hash`), falling back to `defaults` only when the entry names
-  none (`defaults` is never merged into an entry wholesale); `lookup_key`
-  and `data_dig` entries raise `ConfigError` for now ("not supported yet"
-  for a registered function name, "Unable to find" for an unregistered
-  one) — a level that used a `lookup_key` function under `data_hash:
-  yaml_data` defaults used to silently read its file as plain YAML,
-  returning eyaml ciphertext as the value. Raises `ConfigError` for anything
+  none (`defaults` is never merged into an entry wholesale). A registered
+  `lookup_key`/`data_dig` function is called per key and per location
+  through a `hyera.LookupContext` (see Backends below); naming a function
+  that does not implement the requested kind raises `ConfigError` with
+  Puppet's own arity/parameter-type text ("Unable to find" for an
+  unregistered name). A hierarchy entry with no location key at all calls
+  its function once, with no location, instead of contributing nothing.
+  Raises `ConfigError` for anything
   about `hiera.yaml` — missing, unreadable, a directory, unparsable,
   non-mapping (naming the Hiera 3 fallback this runtime does not support
   yet), an unsupported `version` (only a literal Integer `5` is accepted; a
@@ -509,11 +511,54 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `__cause__`/`__context__` holds the original); `.dump(obj, fp, **kw)`
   writes `.dumps(...)`.
 - **Hiera 5 provider hooks** — `.data_hash(path, options)` (base:
-  `._as_data_hash(self.load(path), path)`); `._as_data_hash(parsed, path)`
-  adapts a parsed document into hiera data (base: identity; `YAMLBackend`
-  overrides it for the non-Hash rule). `.lookup_key(key, options, context)`
-  / `.data_dig(key_segments, options, context)` raise `NotImplementedError`
-  in the base (no built-in implements them yet).
+  `._require_path_only(path, options)` then `._as_data_hash(self.load(path),
+  path)`); `._as_data_hash(parsed, path)` adapts a parsed document into
+  hiera data (base: identity; `YAMLBackend` overrides it for the non-Hash
+  rule). `._require_path_only(path, options)` — Puppet's
+  `Struct[{path=>String[1]}]` contract every built-in file function
+  (`yaml_data`/`json_data`/`hocon_data`/`sops_data`) follows: raises
+  `ConfigError("'<name>' one of 'path', 'paths' 'glob', 'globs' or
+  'mapped_paths' must be declared in hiera.yaml when using this data_hash
+  function")` when `path is None` or `options` carries anything besides the
+  `path` key `data_hash` itself received (a `uri` location, or any
+  user-declared hierarchy option) — before any file is read.
+  `.lookup_key(key, options, context)` / `.data_dig(key_segments, options,
+  context)` raise `NotImplementedError` in the base; a backend that
+  overrides either is called per key and per location with a
+  `hyera.LookupContext` as `context` (below). Neither hook's return value is
+  interpolated by the engine — call `context.interpolate(value)` yourself;
+  signal a miss with `context.not_found()`, never a sentinel return value.
+  `options` carries `path` (a `str`) or `uri` (the declared string,
+  uninterpolated fetch) for a located entry, or neither for a location-less
+  one — the same mapping a `data_hash` hook receives.
+- **`LookupContext`** (in `hyera` and `hyera.backends`; Puppet's public
+  `Context`, `pops/lookup/context.rb:126-206`) — the `context` argument a
+  `lookup_key`/`data_dig` hook receives, one per hierarchy entry and
+  location, scoped to the `Hiera`/`h.scoped(...)` view the lookup runs
+  against (never shared with another view, same as the provider itself):
+  - `.interpolate(value)` — `%{...}` interpolation with method calls
+    allowed, against the current lookup's scope.
+  - `.not_found()` — raises internally (a `BaseException` subclass, so a
+    backend's own `except Exception:` cannot swallow it); never returns.
+  - `.explain(producer)` — a no-op until an explain facility exists;
+    `producer` (a zero-argument callable) is never invoked.
+  - `.cache(key, value)` / `.cache_all(mapping)` / `.cache_has_key(key)` /
+    `.cached_value(key)` (`None` when absent) / `.cached_entries()` (an
+    iterator of `(key, value)` pairs) — a per-location cache private to this
+    hierarchy entry, living for the bound view's lifetime; a
+    `lookup_key`/`data_dig` result a hook itself cached (`.cache(key, ...)`)
+    is returned from that cache on a later call for the same key, and a copy
+    (never the cached object) leaves the cache each time, so a caller
+    mutating a returned list/dict never corrupts it. A miss
+    (`context.not_found()`) is never cached — a later call for the same key
+    calls the hook again.
+  - `.cached_file_data(path, parse=None)` — reads and, if `parse` is given,
+    parses `path` once, revalidated by `(inode, mtime_ns, size)` on every
+    call (not by content); shared by every hierarchy entry on the same
+    `Hiera` instance (like the `data_hash` file cache), never per-location.
+  - `.environment_name` (the scope's `environment`, `"production"` when
+    unset) / `.module_name` (always `None` here — a future layers plan
+    passes its module name through).
 - **`default_backends() -> list[type[Backend]]`** — the distinct classes
   registered in the `function` namespace, in definition order:
   `[YAMLBackend, JSONBackend, HOCONBackend, SopsBackend]`.
@@ -803,6 +848,16 @@ re-exports it too).
 
 ## Gotchas
 
+- The engine interpolates a `data_hash` value (methods allowed) but never a
+  `lookup_key`/`data_dig` result — a backend that wants interpolation calls
+  `context.interpolate(value)` itself. `lookup_key`/`data_dig` providers and
+  their `LookupContext` caches are per scope-binding object (`Hiera`/
+  `h.scoped(...)` view), never shared with another view; `cached_file_data`
+  is per `Hiera` instance, shared by every hierarchy entry. A backend's
+  `context.not_found()` raises a `BaseException` subclass
+  (`hyera._function_provider._NotFound`), not `Exception` — a backend
+  wrapping its own logic in `except Exception:` does not accidentally
+  swallow it.
 - A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
   `a`; a variable whose value refers to itself; a chain `a` -> `b` -> `a`)
   raises `InterpolationError` "Recursive lookup detected in [a, b]" (the

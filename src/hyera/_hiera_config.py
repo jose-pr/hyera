@@ -612,9 +612,15 @@ class HieraLevel(_ty.NamedTuple):
     #: as written for a plural one, and ``(collection_var, item_var,
     #: template)`` for ``mapped_paths``.
     locations: "_ty.Tuple[str, ...]"
+    #: This entry's resolved function kind: ``"data_hash"``, ``"lookup_key"``
+    #: or ``"data_dig"``.
+    kind: str = "data_hash"
+    #: The entry's own ``options``, else ``defaults``'s (never merged),
+    #: exactly as declared -- interpolated per lookup, per scope, not here.
+    options: "_ty.Optional[dict]" = None
 
     @classmethod
-    def new(cls, conf: dict, backend: Backend) -> "HieraLevel":
+    def new(cls, conf: dict, backend: Backend, kind: str = "data_hash") -> "HieraLevel":
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
         if location_key is None:
             locations: "_ty.Tuple[str, ...]" = ()
@@ -628,12 +634,19 @@ class HieraLevel(_ty.NamedTuple):
             datadir=conf["datadir"],
             location_key=location_key,
             locations=locations,
+            kind=kind,
+            options=conf.get("options"),
         )
 
     def paths(self, base_path: Path, scope) -> "list":
-        """The candidate source paths for this level in a bound
-        :class:`~hyera.Scope`."""
-        return [loc.location for loc in resolve_locations(self, base_path, scope)]
+        """The candidate source (file) paths for this level in a bound
+        :class:`~hyera.Scope`. A location-less entry, or one using ``uri``/
+        ``uris`` (which never resolve to a filesystem path), yields ``[]``.
+        """
+        resolved = resolve_locations(self, base_path, scope)
+        if resolved is None:
+            return []
+        return [loc.location for loc in resolved if not loc.is_uri]
 
 
 def _read_base_config(
@@ -776,15 +789,54 @@ def _build_hierarchies(base, backends, source: "_ConfigSource"):
     hierarchy = base.get("hierarchy")
     defaults = base.get("defaults") or {}
 
-    backend_levels = _build_levels(hierarchy, defaults, backends, source)
+    backend_levels = _build_levels(
+        hierarchy, defaults, backends, source, area="hierarchy"
+    )
     default_levels = _build_levels(
-        base.get("default_hierarchy") or [], defaults, backends, source
+        base.get("default_hierarchy") or [],
+        defaults,
+        backends,
+        source,
+        area="default_hierarchy",
     )
 
     return backend_levels, default_levels
 
 
-def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
+def _kind_mismatch_text(backend_cls, func_name: str, kind: str) -> str:
+    """Puppet's function-arity/parameter-type text when a hierarchy level
+    names a function that does not implement the kind it is used as
+    (``lookup_key_function_provider.rb``/``data_dig_function_provider.rb``/
+    ``data_hash_function_provider.rb``'s own dispatch by arity): the same
+    text Puppet raises on every lookup, reported here once at level build.
+    Only called when ``not backend_cls.implements(kind)``.
+    """
+    has_dh = backend_cls.implements("data_hash")
+    has_lk = backend_cls.implements("lookup_key")
+    has_dd = backend_cls.implements("data_dig")
+    if not (has_dh or has_lk or has_dd):
+        return "'{}' implements none of data_hash, lookup_key or data_dig".format(
+            func_name
+        )
+    if kind == "data_hash":
+        return "'{}' expects 3 arguments, got 2".format(func_name)
+    if has_dh:
+        return "'{}' expects 2 arguments, got 3".format(func_name)
+    if kind == "data_dig" and has_lk:
+        return "'{}' parameter 'key' expects a String value, got Tuple".format(
+            func_name
+        )
+    if kind == "lookup_key" and has_dd:
+        return (
+            "'{}' parameter 'key_segments' expects an Array value, got "
+            "String".format(func_name)
+        )
+    return "'{}' implements none of data_hash, lookup_key or data_dig".format(func_name)
+
+
+def _build_levels(
+    hierarchy, defaults, backends, source: "_ConfigSource", area: str = "hierarchy"
+):
     """Build HieraLevel instances from hierarchy configuration.
 
     Each entry's conf is built explicitly -- ``name``, its one location
@@ -801,7 +853,7 @@ def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
     ``Hiera(backends=...)`` is refused exactly like an unknown one.
     """
     levels: "list[HieraLevel]" = []
-    for level in hierarchy:
+    for i, level in enumerate(hierarchy):
         name = level.get("name")
         kind, func_name = _function_of(level, defaults)
         datadir = level.get("datadir") or defaults.get("datadir") or "data"
@@ -814,33 +866,32 @@ def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
         if options is not None:
             conf["options"] = options
 
-        if kind == "data_hash":
+        if kind in ("data_hash", "lookup_key", "data_dig"):
             backend_cls = Backend.find(func_name, kind="function")
             if backend_cls is None or backend_cls not in backends:
-                allowed_names = [
-                    n
-                    for n in Backend.names("function")
-                    if Backend.find(n, "function") in backends
-                ]
-                raise _config_error(
-                    source,
-                    "Unable to find 'data_hash' function named '{}'; known: "
-                    "{}".format(func_name, ", ".join(allowed_names)),
-                ) from None
-            conf["data_hash"] = func_name
-            backend = Backend.new(func_name, conf, kind="function")
-        elif kind in ("lookup_key", "data_dig"):
-            backend_cls = Backend.find(func_name, kind="function")
-            if backend_cls is None or backend_cls not in backends:
+                if kind == "data_hash":
+                    allowed_names = [
+                        n
+                        for n in Backend.names("function")
+                        if Backend.find(n, "function") in backends
+                    ]
+                    raise _config_error(
+                        source,
+                        "Unable to find 'data_hash' function named '{}'; "
+                        "known: {}".format(func_name, ", ".join(allowed_names)),
+                    ) from None
                 raise _config_error(
                     source,
                     "Unable to find '{}' function named '{}'".format(kind, func_name),
                 ) from None
-            raise _config_error(
-                source,
-                "'{}' hierarchy entries are not supported yet (hierarchy "
-                "'{}', function '{}')".format(kind, name, func_name),
-            )
+            if not backend_cls.implements(kind):
+                raise _config_error(
+                    source,
+                    _kind_mismatch_text(backend_cls, func_name, kind),
+                    line=_config_line(source.text, (area, i, kind), key=True),
+                )
+            conf[kind] = func_name
+            backend = Backend.new(func_name, conf, kind="function")
         elif kind == "hiera3_backend":
             raise _config_error(
                 source,
@@ -858,5 +909,5 @@ def _build_levels(hierarchy, defaults, backends, source: "_ConfigSource"):
                 source, "Hierarchy level {!r} is missing a function key".format(name)
             )
 
-        levels.append(HieraLevel.new(conf, backend))
+        levels.append(HieraLevel.new(conf, backend, kind))
     return levels

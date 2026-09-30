@@ -334,7 +334,7 @@ def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
     [
         (
             {"lookup_key": "yaml_data"},
-            "'lookup_key' hierarchy entries are not supported yet",
+            "'yaml_data' expects 2 arguments, got 3",
         ),
         (
             {"hiera3_backend": "foo"},

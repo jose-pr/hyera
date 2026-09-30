@@ -22,6 +22,7 @@ from typing import NamedTuple
 import yaml
 
 from .exceptions import BackendError, ConfigError, _one_line
+from ._function_provider import LookupContext
 from ._yaml_loader import RubySymbol, safe_load, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ __all__ = [
     "DotenvBackend",
     "BackendError",
     "RubySymbol",
+    "LookupContext",
     "has_hocon",
     "default_backends",
 ]
@@ -321,11 +323,11 @@ class Backend:
                 text = content if isinstance(content, str) else content.decode("utf-8")
             else:
                 reader = getattr(source, "read_bytes", None)
-                data = (
-                    reader()
-                    if reader is not None
-                    else open(os.fspath(source), "rb").read()
-                )
+                if reader is not None:
+                    data = reader()
+                else:
+                    with open(os.fspath(source), "rb") as fh:
+                        data = fh.read()
                 text = data.decode("utf-8")
             return self.loads(text)
         except UnicodeDecodeError as e:
@@ -341,9 +343,31 @@ class Backend:
 
     # -- Hiera 5 provider hooks ---------------------------------------------
 
+    def _require_path_only(self, path, options) -> None:
+        """Puppet's ``Struct[{path=>String[1]}]`` dispatch contract on the
+        built-in file functions (``yaml_data.rb:18-21,42-44`` and its
+        ``json_data``/``hocon_data``/``sops_data`` siblings): the function
+        accepts a single ``path`` location and no hierarchy ``options`` at
+        all. Raised whenever there is no path location, or ``options``
+        carries anything besides the ``path`` :meth:`~Backend.data_hash`
+        itself received (a ``uri`` location, or any user-declared option)."""
+        if path is None or set(options) - {"path"}:
+            raise ConfigError(
+                "'{}' one of 'path', 'paths' 'glob', 'globs' or "
+                "'mapped_paths' must be declared in hiera.yaml when using "
+                "this data_hash function".format(self.name)
+            )
+
     def data_hash(self, path, options):
         """The ``data_hash`` provider hook: parse the whole file at
-        ``path`` and adapt it into hiera data (see :meth:`_as_data_hash`)."""
+        ``path`` and adapt it into hiera data (see :meth:`_as_data_hash`).
+
+        The base implementation is a *file* function: it accepts only a
+        single ``path`` location and no hierarchy ``options``
+        (:meth:`_require_path_only`), Puppet's own ``yaml_data``/
+        ``json_data``/``hocon_data`` contract.
+        """
+        self._require_path_only(path, options)
         return self._as_data_hash(self.load(path), path)
 
     def _as_data_hash(self, parsed, path):
@@ -1518,6 +1542,7 @@ class SopsBackend(Backend):
         self.format = format
 
     def data_hash(self, path, options):
+        self._require_path_only(path, options)
         fmt = self.format or _sops_format(str(path))
         if fmt is None:
             raise ConfigError(

@@ -113,3 +113,9 @@ class Invocation:
             yield
         finally:
             self._name_stack.pop()
+
+    def report_text(self, producer) -> None:
+        """Puppet's ``Context#explain``/``invocation.rb``'s ``report_text``:
+        a no-op until an explain facility subscribes to it. ``producer`` is
+        a zero-argument callable a caller (a ``LookupContext.explain``) would
+        only ever invoke lazily, so nothing here calls it either."""

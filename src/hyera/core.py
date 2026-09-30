@@ -5,6 +5,7 @@
 # Modified by jose-pr. See NOTICE.
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
+import json
 import logging
 import os
 from typing import Any
@@ -29,6 +30,7 @@ from ._hiera_config import (
     _select_version,
     _validate_v5,
 )
+from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
 from ._interpolation import interpolate
 from ._invocation import _STRICT, Invocation
 from ._location_resolver import resolve_locations
@@ -58,6 +60,16 @@ _LOGGER = logging.getLogger(__name__)
 #: :meth:`Hiera._lookup_layers`; ``environment``/``module`` contribute
 #: :data:`~hyera._navigation._MISSING` when no usable config exists there.
 _LAYERS = ("global", "environment", "module")
+
+
+def _no_option_lookup(key, invocation):
+    """The ``lookup`` callable for a hierarchy level's ``options``
+    :class:`~hyera._invocation.Invocation`. Unreachable in practice: options
+    interpolate with ``allow_methods=False``, which rejects every method
+    call (``%{hiera()}``/``%{lookup()}``/``%{alias()}``) -- the only way a
+    sub-lookup would ever be attempted -- before it could reach this
+    callable."""
+    raise RuntimeError("hierarchy options never perform a sub-lookup")
 
 
 def _puppet_type_label(value) -> str:
@@ -201,6 +213,20 @@ class Hiera:
         #: (:meth:`_module_default_lookup_options`) -- never merged with
         #: ``_lookup_options_cache``'s own entries.
         self._default_lo_cache: dict = {}
+        #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
+        #: keyed by ``(tag, base_path, level index)`` -- never shared with
+        #: another view (see :meth:`_view`), since a provider's options/
+        #: locations are interpolated against exactly one bound scope.
+        #: ``base_path`` disambiguates a level index across layers (the
+        #: global hierarchy and an environment's/module's each start their
+        #: own indexing from 0), and ``tag`` tells a module's
+        #: ``default_hierarchy`` apart from its main one (same root, a
+        #: different level list).
+        self._providers: dict = {}
+        #: Shared with every view (like ``cache``): the file-content cache a
+        #: ``lookup_key``/``data_dig`` provider's ``LookupContext.
+        #: cached_file_data`` reads through.
+        self._environment_context = _EnvironmentContext()
 
         self._load_config(
             default_backends() if backends is None else backends, base_path
@@ -303,7 +329,7 @@ class Hiera:
         ``(path, strict)`` entries consistent with what a later ``.lookup()``
         call on the same, unscoped instance will look for: ``Hiera.lookup``/
         ``in``/``.sources`` all reuse this same ``self.scope`` object, whose
-        resolved source-path list ``_levels_for`` caches per scope value --
+        resolved source-path list ``_files_for`` caches per scope value --
         without this, that cache hit would skip ``_load_file`` entirely on a
         later call, leaving ``self.cache`` holding only the pre-warm's own
         strict variant.
@@ -316,8 +342,9 @@ class Hiera:
         finally:
             _STRICT.reset(strict_token)
 
-    def _load_file(self, path, backend):
-        """Load ``path`` via ``backend.data_hash(...)``, caching the result.
+    def _load_file(self, path, backend, options):
+        """Load ``path`` via ``backend.data_hash(path, options)``, caching
+        the parsed result and returning it.
 
         A read failure (``OSError``, e.g. the file vanished between the
         directory walk and here) becomes ``Unable to read (<path>): ...``; a
@@ -332,16 +359,20 @@ class Hiera:
         (``data_hash_function_provider.rb:70-76``) runs here too, so every
         backend -- third-party ones included -- gets it.
 
-        Cached per ``(path, backend.strict)``, not per bare ``path``: a data
-        file's own non-hash rule (``YAMLBackend._as_data_hash``'s
-        ``strict``-sensitive raise-or-warn) must run again for a call whose
-        effective ``strict`` differs from a previous one, never reuse a
-        result computed under a different strictness. ``self._loaded_paths``
+        Cached per ``(path, backend.strict, options)``, not per bare
+        ``path``: a data file's own non-hash rule (``YAMLBackend.
+        _as_data_hash``'s ``strict``-sensitive raise-or-warn) must run again
+        for a call whose effective ``strict`` differs from a previous one,
+        never reuse a result computed under a different strictness; ``options``
+        joins the key too, so a cache hit never skips a file function's own
+        options check (``Backend._require_path_only``) -- ``options`` is
+        Puppet ``Data``, so it always serializes. ``self._loaded_paths``
         separately tracks which plain paths were ever read successfully, for
         :meth:`_files_for`'s "was this location loaded" check, independent
-        of which ``strict`` variant did the loading.
+        of which ``strict``/``options`` variant did the loading.
         """
-        cache_key = (path, backend.strict)
+        options_key = json.dumps(options, sort_keys=True)
+        cache_key = (path, backend.strict, options_key)
         if cache_key not in self.cache:
             if os.path.isdir(path):
                 # An explicit check, identical on every OS: a bare open()
@@ -355,7 +386,7 @@ class Hiera:
                     path=str(path),
                 )
             try:
-                data = backend.data_hash(path, dict(backend.conf.get("options") or {}))
+                data = backend.data_hash(path, dict(options))
             except BackendError as e:
                 if e.path is None:
                     raise BackendError(
@@ -379,7 +410,7 @@ class Hiera:
             _validate_data_hash(data, backend.name, path)
             self.cache[cache_key] = data
             self._loaded_paths.add(path)
-        return path
+        return self.cache[cache_key]
 
     def _environment(self, name):
         """The cached :class:`~hyera._data_provider._EnvironmentState` for
@@ -471,56 +502,69 @@ class Hiera:
             _LOGGER.warning("hiera.yaml version 3 found at %s was ignored", warn_text)
         return None
 
-    def _lookup_levels(self, root, levels, invocation, strategy, module_name=None):
-        """Puppet's per-location/per-level reduce (``data_hash_function_
-        provider.rb:26-33`` over a level's locations,
-        ``configured_data_provider.rb:49-61`` over the hierarchy's levels)
-        on the bare root key only -- never a dotted key. Digging a dotted
-        key's segments out of the result is the caller's job
-        (:meth:`_search_and_merge`), done exactly once, after this merge
-        completes, never per location or per level.
+    def _provider_for(self, tag, base_path, index, level, scope, module_name=None):
+        """The :class:`~hyera._function_provider._FunctionProvider` for one
+        hierarchy level, bound to ``scope`` -- built once per ``(tag,
+        base_path, index)`` on this instance/view and cached in
+        ``self._providers`` (never shared with another view; see
+        :meth:`_view`).
 
-        ``levels`` is a tuple of ``(function_name, locations)`` pairs, one
-        per hierarchy level (:meth:`_levels_for`); ``strategy`` is an
-        already resolved :class:`~hyera._merge_strategy.MergeStrategy`.
-        Returns the merged root value, or :data:`~hyera._navigation._MISSING`
-        on a miss.
-
-        ``module_name``, when given, reads every location through
-        :func:`~hyera._data_provider.prune_module_data` first (Puppet's
-        module-data namespace rule), cached per ``(module_name, path)``
-        apart from ``self.cache``'s own unpruned entry -- a file shared with
-        the global layer stays unpruned there.
-
-        A found value that is ``None`` (data explicitly set to ``~``) is a
-        genuine value, not a miss (``data_hash_function_provider.rb:58-62``):
-        only an absent root key is. Every found root value is checked
-        against Puppet's ``LookupValue`` RichData rule
-        (:func:`~hyera._lookup_adapter.validate_data_value`) before it is
-        interpolated, so a bad *sibling* key in the same file never breaks
-        this lookup.
+        ``base_path`` -- the owning layer's own root -- disambiguates a
+        level index across layers (the global hierarchy and every
+        environment's/module's own each start indexing from 0) the same way
+        :meth:`_files_for`'s ``_source_cache`` key already does; ``tag``
+        additionally tells a module's ``default_hierarchy`` apart from its
+        main one, since both share the same root. ``module_name`` -- set
+        only for a level in a module's own hierarchy -- makes a
+        ``data_hash`` result go through :func:`~hyera._data_provider.
+        prune_module_data` (Puppet's module-data namespace rule); it plays
+        no part in the cache key, since a level's owning module never
+        changes once built.
         """
+        key = (tag, base_path, index)
+        provider = self._providers.get(key)
+        if provider is None:
+            provider = self._build_provider(level, scope, base_path, module_name)
+            self._providers[key] = provider
+        return provider
 
-        def at_location(entry):
-            function_name, path = entry
-            data = self.cache.get((path, _STRICT.get()), _MISSING)
-            if data is _MISSING:
-                return _MISSING
-            if module_name is not None:
-                data = self._pruned_module_data(data, module_name, function_name, path)
-            if not isinstance(data, dict) or root not in data:
-                return _MISSING
-            value = data[root]
-            validate_data_value(value, function_name, path, root)
-            return interpolate(value, invocation)
-
-        def at_level(level):
-            function_name, locations = level
-            return strategy.lookup(
-                [(function_name, loc) for loc in locations], at_location
+    def _build_provider(self, level: HieraLevel, scope, base_path, module_name=None):
+        """Build one level's provider for ``scope``: interpolate its
+        ``options`` (strict mode, no method calls -- ``hiera_config.rb:691``,
+        the same call ``_location_resolver`` makes for ``datadir``) and
+        resolve its locations against ``base_path`` (its owning layer's own
+        root), once. Raises, and caches nothing, on a failure in either
+        step.
+        """
+        raw_options = level.options or {}
+        options = (
+            interpolate(
+                raw_options,
+                Invocation(scope, _no_option_lookup, lenient=False),
+                allow_methods=False,
             )
+            if raw_options
+            else {}
+        )
+        resolved = resolve_locations(level, base_path, scope)
+        locations = None if resolved is None else list(resolved)
+        provider_cls = PROVIDER_CLASSES[level.kind]
+        prune = None
+        if module_name is not None:
 
-        return strategy.lookup(levels, at_level)
+            def prune(data, function_name, path, _mod=module_name):
+                return self._pruned_module_data(data, _mod, function_name, path)
+
+        return provider_cls(
+            level.name,
+            level.backend,
+            options,
+            locations,
+            self._environment_context,
+            scope.environment,
+            load_file=self._load_file,
+            prune=prune,
+        )
 
     def _pruned_module_data(self, data, module_name, function_name, path):
         key = (module_name, path)
@@ -530,11 +574,61 @@ class Hiera:
             self._pruned_cache[key] = pruned
         return pruned
 
-    def _levels_for_provider(self, provider, scope, tag):
-        """:meth:`_levels_for`, resolved against ``provider``'s own root."""
-        return self._levels_for(provider.hierarchy, provider.root, scope, tag)
+    def _lookup_levels(
+        self,
+        root,
+        hierarchy,
+        base_path,
+        tag,
+        scope,
+        invocation,
+        strategy,
+        segments=(),
+        module_name=None,
+    ):
+        """Puppet's per-location/per-level reduce (``function_provider.rb``
+        over a level's locations, ``configured_data_provider.rb:49-61`` over
+        the hierarchy's levels) on the bare root key only -- never a dotted
+        key. Digging a dotted key's segments out of the result is the
+        caller's job (:meth:`_search_and_merge`), done exactly once, after
+        this merge completes, never per location or per level (a
+        ``data_dig`` provider is the one exception: it receives ``segments``
+        directly, since Puppet's own ``data_dig`` functions are handed the
+        full key).
 
-    def _lookup_layers(self, root, module_name, invocation, strategy):
+        ``hierarchy``/``base_path`` are one layer's own hierarchy and root
+        (``self.hierarchy``/``self.base_path`` for the global layer, or a
+        :class:`~hyera._data_provider._Provider`'s own ``hierarchy``/
+        ``root``); ``tag`` names which of that layer's hierarchies (its
+        main one, or -- for a module -- its ``default_hierarchy``), for
+        provider caching (:meth:`_provider_for`). ``strategy`` is an
+        already resolved :class:`~hyera._merge_strategy.MergeStrategy`.
+        Returns the merged root value, or :data:`~hyera._navigation._MISSING`
+        on a miss.
+
+        ``module_name``, when given, is the level's owning module: every
+        ``data_hash`` result is read through :func:`~hyera._data_provider.
+        prune_module_data` first (Puppet's module-data namespace rule),
+        cached per ``(module_name, path)`` apart from ``self.cache``'s own
+        unpruned entry -- a file shared with the global layer stays unpruned
+        there. A ``lookup_key``/``data_dig`` result is never pruned (Puppet
+        prunes only a ``data_hash`` function's return value,
+        ``data_hash_function_provider.rb:72``).
+
+        A found value that is ``None`` (data explicitly set to ``~``) is a
+        genuine value, not a miss: only an absent root key is.
+        """
+
+        def at_level(entry):
+            index, level = entry
+            provider = self._provider_for(
+                tag, base_path, index, level, scope, module_name
+            )
+            return provider.key_lookup(root, segments, invocation, strategy)
+
+        return strategy.lookup(list(enumerate(hierarchy)), at_level)
+
+    def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
         """Puppet's provider stack (``lookup_adapter.rb:332-340``): reduce
         ``_LAYERS``, one provider per layer.
 
@@ -546,17 +640,18 @@ class Hiera:
         :data:`~hyera._navigation._MISSING`, so every layer is always tried
         in order, as Puppet's own multi-variant reduce does.
         """
+        scope = invocation.scope
 
         def at_layer(layer):
             if layer == "global":
                 provider = self._global
             elif layer == "environment":
-                state = self._environment(invocation.scope.environment)
+                state = self._environment(scope.environment)
                 provider = self._usable(state.provider, invocation)
             elif layer == "module":
                 if module_name is None:
                     return _MISSING
-                state = self._environment(invocation.scope.environment)
+                state = self._environment(scope.environment)
                 provider = self._usable(
                     self._module_provider(state, module_name), invocation
                 )
@@ -564,10 +659,17 @@ class Hiera:
                 return _MISSING
             if provider is None:
                 return _MISSING
-            levels = self._levels_for_provider(provider, invocation.scope, "main")
             mod = provider.module_name if provider.place == "Module" else None
             return self._lookup_levels(
-                root, levels, invocation, strategy, module_name=mod
+                root,
+                provider.hierarchy,
+                provider.root,
+                "main",
+                scope,
+                invocation,
+                strategy,
+                segments,
+                module_name=mod,
             )
 
         return strategy.lookup(_LAYERS, at_layer)
@@ -587,11 +689,12 @@ class Hiera:
         the key's environment, then -- for a qualified key -- its module) on
         the bare root key; a dotted key's segments are dug out of the merged
         root value exactly once (never per location, per level or per
-        layer). On a miss -- including a hit whose *dig* misses -- and only
-        for a qualified key whose own module has a ``default_hierarchy``,
-        :meth:`_lookup_default_in_module` is consulted the same way
-        (``lookup_adapter.rb:73-79``). A final miss returns
-        :data:`~hyera._navigation._MISSING`; a found value has
+        layer -- except a ``data_dig`` provider, which is handed them
+        directly; see :meth:`_lookup_levels`). On a miss -- including a hit
+        whose *dig* misses -- and only for a qualified key whose own module
+        has a ``default_hierarchy``, :meth:`_lookup_default_in_module` is
+        consulted the same way (``lookup_adapter.rb:73-79``). A final miss
+        returns :data:`~hyera._navigation._MISSING`; a found value has
         ``convert_to`` applied, if the options set one -- from the main
         hierarchy's ``lookup_options`` either way, even when the value came
         from the default hierarchy fallback.
@@ -611,12 +714,16 @@ class Hiera:
         )
 
         with invocation.check(key):
-            value = self._lookup_layers(root, module_name, invocation, strategy)
+            value = self._lookup_layers(
+                root, module_name, invocation, strategy, segments
+            )
         if value is not _MISSING and segments:
             value = sub_lookup(key, segments, value)
 
         if value is _MISSING:
-            value = self._lookup_default_in_module(key, root, module_name, invocation)
+            value = self._lookup_default_in_module(
+                key, root, segments, module_name, invocation
+            )
             if value is not _MISSING and segments:
                 value = sub_lookup(key, segments, value)
 
@@ -678,6 +785,12 @@ class Hiera:
         view = object.__new__(type(self))
         view.__dict__.update(self.__dict__)
         view.scope = scope
+        # Never shared with the instance it was derived from, or with any
+        # other view: a provider's interpolated options/locations are bound
+        # to exactly one scope (unlike ``cache``/``_source_cache``/
+        # ``_lookup_options_cache``, all keyed on the scope value itself, and
+        # ``_environment_context``, whose file cache has no scope at all).
+        view._providers = {}
         return view
 
     def sources(self):
@@ -698,26 +811,17 @@ class Hiera:
     def _sources(self, scope):
         return self._files_for(self.hierarchy, self.base_path, scope, "main")
 
-    def _levels_for(self, hierarchy, base_path, scope, tag):
-        """Every location each hierarchy level visits, one ``(function_name,
-        locations)`` pair per level.
+    def _files_for(self, hierarchy, base_path, scope, tag):
+        """The ordered list of existing, successfully loaded ``data_hash``
+        file paths ``hierarchy`` visits for ``scope`` -- what ``sources()``
+        shows.
 
-        A location entry is a loaded cache-key path (an existing file,
-        already read through :meth:`_load_file`) or the plain
-        (unloaded/non-existent) candidate path itself -- a "missing"
-        location, still a location Puppet's own strategy reduce sees (see
-        ``at_location`` in :meth:`_lookup_levels`, which maps anything not
-        in ``self.cache`` to a miss). A ``path``/``paths``/mapped location
-        that names a directory still reaches :meth:`_load_file`, which
-        raises :class:`~hyera.BackendError`; a glob's matches never include
-        a directory (:func:`~hyera._location_resolver.resolve_locations`
-        drops them) and always exist.
-
-        ``function_name`` is the level's ``data_hash`` function name
-        (``level.backend.name``), reported by :func:`~hyera._lookup_adapter.
-        validate_data_value` in a RichData error -- the same name
-        :meth:`_load_file` already uses for the "returned from data_hash
-        function" Hash check.
+        Only a ``data_hash`` level's *path* locations are ever loaded here
+        (through :meth:`_load_file`, so they land in ``self.cache`` exactly
+        as a real lookup would find them): a ``lookup_key``/``data_dig``
+        function is never called without a real key, and a ``uri`` location
+        is never fetched or stat'ed -- ``sources()`` keeps its documented
+        meaning, "the files a lookup may read".
 
         Cached per ``(tag, base_path, scope)`` (the filesystem walk --
         glob/stat -- is what's expensive, not the reduce over the result),
@@ -733,30 +837,24 @@ class Hiera:
         if cached is not None:
             return cached
 
-        levels = []
-        for level in hierarchy:
-            locations = []
-            for loc in resolve_locations(level, base_path, scope):
-                if loc.exist:
-                    locations.append(self._load_file(loc.location, level.backend))
-                else:
-                    locations.append(loc.location)
-            levels.append((level.backend.name, tuple(locations)))
-        levels = tuple(levels)
-        self._source_cache[cache_key] = levels
-        return levels
-
-    def _files_for(self, hierarchy, base_path, scope, tag):
-        """The flattened, loaded-only view of :meth:`_levels_for` -- exactly
-        what the old per-file walk returned, and what ``sources()`` shows."""
-        return [
-            path
-            for _function_name, locations in self._levels_for(
-                hierarchy, base_path, scope, tag
-            )
-            for path in locations
-            if path in self._loaded_paths
-        ]
+        paths = []
+        for index, level in enumerate(hierarchy):
+            if level.kind != "data_hash":
+                continue
+            provider = self._provider_for(tag, base_path, index, level, scope)
+            locations = provider.locations
+            if locations is None:
+                continue
+            for loc in locations:
+                if loc.is_uri or not loc.exist:
+                    continue
+                path = str(loc.location)
+                self._load_file(path, level.backend, provider.options_for(loc))
+                if path in self._loaded_paths:
+                    paths.append(path)
+        paths = tuple(paths)
+        self._source_cache[cache_key] = paths
+        return paths
 
     def _layer_lookup_options(self, provider, invocation):
         """The reserved ``lookup_options`` key's raw value across
@@ -768,12 +866,14 @@ class Hiera:
         apart). A module provider's pruned data keeps ``lookup_options``
         (:func:`~hyera._data_provider.prune_module_data` special-cases it).
         """
-        levels = self._levels_for_provider(provider, invocation.scope, "main")
         mod = provider.module_name if provider.place == "Module" else None
         with invocation.check(LOOKUP_OPTIONS):
             return self._lookup_levels(
                 LOOKUP_OPTIONS,
-                levels,
+                provider.hierarchy,
+                provider.root,
+                "main",
+                invocation.scope,
                 invocation,
                 MergeStrategy.strategy("hash"),
                 module_name=mod,
@@ -908,19 +1008,19 @@ class Hiera:
     def _layer_lookup_options_default(self, provider, invocation):
         """:meth:`_layer_lookup_options`, over ``provider``'s
         ``default_hierarchy`` instead of its main ``hierarchy``."""
-        levels = self._levels_for(
-            provider.default_hierarchy, provider.root, invocation.scope, "default"
-        )
         with invocation.check(LOOKUP_OPTIONS):
             return self._lookup_levels(
                 LOOKUP_OPTIONS,
-                levels,
+                provider.default_hierarchy,
+                provider.root,
+                "default",
+                invocation.scope,
                 invocation,
                 MergeStrategy.strategy("hash"),
                 module_name=provider.module_name,
             )
 
-    def _lookup_default_in_module(self, key, root, module_name, invocation):
+    def _lookup_default_in_module(self, key, root, segments, module_name, invocation):
         """Puppet's ``lookup_default_in_module``
         (``module_data_provider.rb:26-40``, ``lookup_adapter.rb:180-217``):
         a module's own ``default_hierarchy``, consulted only after the main
@@ -945,12 +1045,17 @@ class Hiera:
         compiled = self._module_default_lookup_options(provider, invocation)
         entry = extract_lookup_options_for_key(root, compiled) or {}
         strategy = MergeStrategy.strategy(entry.get("merge"))
-        levels = self._levels_for(
-            provider.default_hierarchy, provider.root, invocation.scope, "default"
-        )
         with invocation.check(key):
             return self._lookup_levels(
-                root, levels, invocation, strategy, module_name=module_name
+                root,
+                provider.default_hierarchy,
+                provider.root,
+                "default",
+                invocation.scope,
+                invocation,
+                strategy,
+                segments,
+                module_name=module_name,
             )
 
     def lookup(
