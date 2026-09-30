@@ -244,6 +244,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Every public class, function and method has a docstring with `:param:`,
   `:returns:` and `:raises:` fields, shown by `help()` and the API
   reference.
+- The API reference shipped in the package (`hyera/AGENTS.md`) lists every
+  export with its exact signature, every registered backend name, the
+  environment variables read, and the differences from Puppet.
 
 ### Removed
 

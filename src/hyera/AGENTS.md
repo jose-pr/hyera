@@ -1,27 +1,27 @@
 # `hyera` — public API header
 
 Header-file-style reference for the `hyera` package: every `__all__` export
-with its signature, arguments, contract, and gotchas, so this module can be
-consumed without reading its source. Kept current with the public API. For
-the project overview, see the shipped `README.md`, or <https://github.com/jose-pr/hyera>.
+with its exact signature, arguments, contract, and gotchas, so this module
+can be consumed without reading its source. Kept current with the public
+API by tests. For the project overview, see the shipped `README.md`, or
+<https://github.com/jose-pr/hyera>.
 
-Install and import as `hyera` (`pip install hyera`, extras
-`[cli]`/`[hocon]`); the command is `hyera`. Import every public name from
+Install as `hyera` (`pip install hyera`); extras: `pip install 'hyera[cli]'`
+(the console script, `duho`), `pip install 'hyera[hocon]'` (`HOCONBackend`,
+`pyhocon`), `pip install 'hyera[eyaml]'` (`EyamlBackend`, `cryptography`).
+`hyera[dev]`/`hyera[docs]` are contributor-only tooling extras, not needed
+to use the library. Import as `import hyera`; import every public name from
 `hyera` itself, never from a submodule directly — `hyera._*` modules are
-private engine internals with no stability contract.
+private engine internals with no stability contract. The console script is
+`hyera` (`[project.scripts]`); `python -m hyera` runs the same entry point.
+`hyera.__version__` (a plain `__version__` string) is the package version. Fully typed (`py.typed`;
+`pyright --verifytypes hyera` scores 100%). Every lookup-shaped call
+(`lookup`/`__call__`/`__getitem__`/`dig`/`get`/`getvar`) returns `Any`,
+since Hiera data is dynamic.
 
-Fully typed (`py.typed`; `pyright --verifytypes hyera` scores 100%). Every
-lookup-shaped call (`lookup`/`__call__`/`__getitem__`/`dig`/`get`/`getvar`)
-returns `Any`, since Hiera data is dynamic. `hyera.MergeSpec` is the type
-of every `merge=` argument: a strategy name (`"first"`/`"unique"`/
-`"hash"`/`"deep"`/...), a `{"strategy": ..., ...}` mapping with Puppet's
-deep-merge options, or `None` for the level's own default.
+## Lookup
 
-## Engine
-
-- **`Hiera(base_config, backends=None, base_path=None, *, scope=None,
-  environmentpath=None, basemodulepath=(), modulepath=None,
-  cache_size=256, revalidate=True)`**
+- **`Hiera(base_config, backends=None, base_path=None, *, scope=None, environmentpath=None, basemodulepath=(), modulepath=None, cache_size=256, revalidate=True, codedir=None)`**
   — the main entry point. `base_config`: a file path, a file-like object, a
   pre-parsed `dict` (a Hiera 5 base config: `version`, `defaults`,
   `hierarchy`, `default_hierarchy`), or `None` for Puppet's built-in default
@@ -55,18 +55,24 @@ deep-merge options, or `None` for the level's own default.
   glob-matched directory is seen by the next lookup; `False` keeps every
   file and listing as first read until `clear_cache()`. Must be a `bool`,
   else `TypeError("revalidate must be a bool, not <type>")`. Every layer
-  built inside one `Hiera(...)` call shares it too.
+  built inside one `Hiera(...)` call shares it too. `codedir`: Puppet's
+  `$codedir`, consulted only by a version 3 hiera.yaml's default per-backend
+  datadir (`<codedir>/environments/%{::environment}/hieradata`); `None`
+  (the default) means Puppet's own AIO default for the platform
+  (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
+  elsewhere) — never the per-user `~/.puppetlabs/etc/code` default, and
+  never discovered from `puppet.conf`.
   `self.scope` is set before the config loads, so a hierarchy path template
   referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
   it from the first lookup onward. A missing or `null`/`false`
-  `defaults`/`hierarchy` is filled
-  with Puppet's own defaults (`{datadir: data, data_hash: yaml_data}` /
-  `[{name: Common, path: common.yaml}]`) rather than raising; a hierarchy
-  entry's own `datadir` wins, else `defaults.datadir`, else the literal
-  `data`, always resolved next to hiera.yaml (or under `base_path`) — never
-  the Hiera 3 absolute `/etc/puppetlabs/...` path. `default_hierarchy` is
-  accepted only in a *module*'s own hiera.yaml (see "Layers" below); the
-  same key in the global or an environment config raises `ConfigError`
+  `defaults`/`hierarchy` is filled with Puppet's own defaults
+  (`{datadir: data, data_hash: yaml_data}` / `[{name: Common, path:
+  common.yaml}]`) rather than raising; a hierarchy entry's own `datadir`
+  wins, else `defaults.datadir`, else the literal `data`, always resolved
+  next to hiera.yaml (or under `base_path`) — never the Hiera 3 absolute
+  `/etc/puppetlabs/...` path. `default_hierarchy` is accepted only in a
+  *module*'s own hiera.yaml (see "Layers" below); the same key in the
+  global or an environment config raises `ConfigError`
   ("'default_hierarchy' is only allowed in the module layer"), at
   validation time. Where it is accepted, its entries are schema-validated
   exactly like `hierarchy`'s. Each entry uses its own function
@@ -111,7 +117,7 @@ deep-merge options, or `None` for the level's own default.
     (`NAMES = {"v3": (...)}`, resolved only against `data_hash`), else
     `ConfigError` ("Hiera 3 backend '<name>' is not available") — Puppet,
     with real Hiera 3 installed, would instead skip that backend silently
-    (the `v3-ruby-backend-unavailable` conformance deviation). A relative
+    (the `v3-ruby-backend-unavailable` deviation, below). A relative
     per-backend `datadir` (default
     `<codedir>/environments/%{::environment}/hieradata`) resolves against
     the process's working directory *at construction*, not hiera.yaml's
@@ -165,7 +171,7 @@ deep-merge options, or `None` for the level's own default.
     environment directories at all — every environment name then resolves
     with no environment layer and no error, a deliberate difference from
     Puppet (which always has an `environmentpath`); see "Differences from
-    Puppet" in the README. `basemodulepath` defaults to `()`. `modulepath`,
+    Puppet" below. `basemodulepath` defaults to `()`. `modulepath`,
     when given, *replaces* the whole modulepath (the environment's own
     `modules` directory included) for every environment, exactly like
     Puppet's `--modulepath`; `None` (the default) means Puppet's own
@@ -219,65 +225,66 @@ deep-merge options, or `None` for the level's own default.
     To look up a single module's own data with no global or environment
     config at all: `Hiera({"version": 5, "hierarchy": []},
     modulepath=["/path/to/modules"])`.
-  - **`.lookup(name, value_type=None, merge=None, default_value=<unset>, *,
-    default_values_hash=None, override=None, block=None)`** — Puppet's
-    `lookup()`, against the instance's bound scope. Five equivalent call
-    forms: `lookup("k")`; `lookup("k", "Integer")`; `lookup("k", "Integer",
-    "first", 0)` (every positional argument); `lookup({"name": "k", "merge":
-    "first"})` (a single dict in place of everything else — `"name"` is
-    required, and every other positional argument/option keyword must be
-    omitted); `lookup("k", {"merge": "first"})` (name positional, every
-    other option in a dict passed as `value_type`). Every option name also
-    works as a keyword (`lookup("k", merge="first")`); combining an options
-    dict (either form) with another positional argument or an option
-    keyword raises `TypeError` — `block` is the one exception, accepted
-    alongside either dict form. `name`: a `str`, or a `list` of `str` tried
-    in order (a `tuple` raises `TypeError`: `h["a", "b"]` must mean `(name,
-    value_type)`, so a name list has to be a `list`). `value_type`: a Puppet
-    type expression string (`"Integer"`, `"Optional[String]"`); every
-    candidate value (an override, a found value, a default) is asserted
-    against it, raising `HieraLookupError` on a mismatch with Puppet's own
-    subject text ("Found value has wrong type, …", "Default value has wrong
-    type, …", "Value found for key '<k>' in override hash has wrong type,
-    …", "… in default values hash has wrong type, …", "Value returned from
-    default block has wrong type, …"). `merge`: as `lookup_options`'
-    `merge` (see below) — an explicit `merge=` overrides only the merge
-    `lookup_options` would have picked; an applicable `convert_to` still
-    runs. `default_value`: returned (after `value_type`) when nothing else
-    was found; **omitted entirely** means no default at all — passing
-    `None` explicitly is a real default that beats a miss (and a found
-    `None` beats even that). `default_values_hash`: a dict tried, per name,
-    only after the whole hierarchy missed every name. `override`: a dict
-    consulted, per name, *before* the hierarchy — a hit here returns
-    immediately, `convert_to` included, never touching the hierarchy at
-    all; both `override` and `default_values_hash` also feed `%{var}`
-    interpolation inside any value looked up during the same call (never a
-    hierarchy location, which interpolates against the scope alone).
-    `block`: called with `name` exactly as given (a list stays a list) when
-    nothing else was found, before `default_value`; its return value is
-    asserted against `value_type` too. Precedence, per name in order:
-    `override` → the hierarchy (`lookup_options`, `default_hierarchy`,
-    `convert_to` all apply) → (next name) → `default_values_hash` (every
-    name again) → `block` → `default_value` → `KeyNotFoundError` (also a
-    `KeyError`), naming every name that was tried ("… for the name 'x'" for
-    one, "… for any of the names [...]" otherwise, including an empty
-    list). A non-`str`/non-`list` `name`, a `tuple`, an unparsable
-    `value_type`'s call shape, an empty-string `merge`, a non-callable
-    `block`, or an unknown/malformed option raises `TypeError`. Also
-    reachable as `h(...)` (`__call__`, identical to `.lookup(...)`) and
-    `h[...]` (`__getitem__`: a `tuple` unpacks into `.lookup(*item)`,
-    anything else becomes the sole `name` argument — so `h["a", "b"]` is
-    `lookup("a", "b")`, not a two-name list). `name in h` (`__contains__`)
-    is `True` unless `.lookup(name)` raises `KeyNotFoundError` — any other
-    error (a malformed key, a type mismatch) propagates, same as
-    `.lookup()`. `iter(h)` raises `TypeError` (`__iter__ = None`): a `Hiera`
-    is not a sequence, even though it defines `__getitem__`.
-  - **`.dig(*keys, value_type=None, merge=None, default_values_hash=None,
-    override=None) -> Any`** — Puppet's `dig()`: looks up `keys[0]` via
-    `.lookup()` (`merge`/`default_values_hash`/`override` apply to that
-    root lookup, exactly as they would to `.lookup()` itself), then digs
-    the rest of `keys` out of it Ruby `Hash#dig`/`Array#dig`-style. A miss
-    on `keys[0]` gives `None` — unlike `.lookup()`, `.dig()` never raises
+  - **`.lookup(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None)`**
+    — Puppet's `lookup()`, against the instance's bound scope. Five
+    equivalent call forms: `lookup("k")`; `lookup("k", "Integer")`;
+    `lookup("k", "Integer", "first", 0)` (every positional argument);
+    `lookup({"name": "k", "merge": "first"})` (a single dict in place of
+    everything else — `"name"` is required, and every other positional
+    argument/option keyword must be omitted); `lookup("k", {"merge":
+    "first"})` (name positional, every other option in a dict passed as
+    `value_type`). Every option name also works as a keyword (`lookup("k",
+    merge="first")`); combining an options dict (either form) with another
+    positional argument or an option keyword raises `TypeError` — `block`
+    is the one exception, accepted alongside either dict form. `name`: a
+    `str`, or a `list` of `str` tried in order (a `tuple` raises
+    `TypeError`: `h["a", "b"]` must mean `(name, value_type)`, so a name
+    list has to be a `list`). `value_type`: a Puppet type expression string
+    (`"Integer"`, `"Optional[String]"`; see "Types" below); every candidate
+    value (an override, a found value, a default) is asserted against it,
+    raising `HieraLookupError` on a mismatch with Puppet's own subject text
+    ("Found value has wrong type, …", "Default value has wrong type, …",
+    "Value found for key '<k>' in override hash has wrong type, …", "… in
+    default values hash has wrong type, …", "Value returned from default
+    block has wrong type, …"). `merge`: a `hyera.MergeSpec` (see "Types"
+    below) — an explicit `merge=` overrides only the merge `lookup_options`
+    would have picked; an applicable `convert_to` still runs. `default_value`:
+    returned (after `value_type`) when nothing else was found; **omitted
+    entirely** means no default at all — passing `None` explicitly is a
+    real default that beats a miss (and a found `None` beats even that).
+    `default_values_hash`: a dict tried, per name, only after the whole
+    hierarchy missed every name. `override`: a dict consulted, per name,
+    *before* the hierarchy — a hit here returns immediately, `convert_to`
+    included, never touching the hierarchy at all; both `override` and
+    `default_values_hash` also feed `%{var}` interpolation inside any value
+    looked up during the same call (never a hierarchy location, which
+    interpolates against the scope alone). `block`: called with `name`
+    exactly as given (a list stays a list) when nothing else was found,
+    before `default_value`; its return value is asserted against
+    `value_type` too. Precedence, per name in order: `override` → the
+    hierarchy (`lookup_options`, `default_hierarchy`, `convert_to` all
+    apply) → (next name) → `default_values_hash` (every name again) →
+    `block` → `default_value` → `KeyNotFoundError` (also a `KeyError`),
+    naming every name that was tried ("… for the name 'x'" for one, "… for
+    any of the names [...]" otherwise, including an empty list). A
+    non-`str`/non-`list` `name`, a `tuple`, an unparsable `value_type`'s
+    call shape, an empty-string `merge`, a non-callable `block`, or an
+    unknown/malformed option raises `TypeError`.
+  - Also reachable as `h(...)` (`.__call__(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None)`,
+    identical to `.lookup(...)`) and `h[...]` (`.__getitem__(item)`: a
+    `tuple` unpacks into `.lookup(*item)`, anything else becomes the sole
+    `name` argument — so `h["a", "b"]` is `lookup("a", "b")`, not a
+    two-name list). `name in h` (`.__contains__(name)`) is `True` unless
+    `.lookup(name)` raises `KeyNotFoundError` — any other error (a
+    malformed key, a type mismatch) propagates, same as `.lookup()`.
+    `iter(h)` raises `TypeError`: a `Hiera` is not a sequence, even though
+    it defines `__getitem__`.
+  - **`.dig(*keys, value_type=None, merge=None, default_values_hash=None, override=None)`**
+    — Puppet's `dig()`: looks up `keys[0]` via `.lookup()`
+    (`merge`/`default_values_hash`/`override` apply to that root lookup,
+    exactly as they would to `.lookup()` itself), then digs the rest of
+    `keys` out of it Ruby `Hash#dig`/`Array#dig`-style. A miss on
+    `keys[0]` gives `None` — unlike `.lookup()`, `.dig()` never raises
     `KeyNotFoundError`. A later key that is not an `int` against a `list`,
     or any key against a value that is not a collection, raises
     `HieraLookupError` naming the path walked so far and the Puppet type
@@ -289,23 +296,21 @@ deep-merge options, or `None` for the level's own default.
     `1.0`). `value_type`, when given, asserts the final result with the
     subject "Found value". Needs at least one key, the first a `str`, else
     `TypeError`.
-  - **`.get(dotted, default_value=None, block=None, *, value_type=None,
-    merge=None, default_values_hash=None, override=None) -> Any`** —
-    Puppet's `get()`: `dotted` is a single dotted-navigation *string*
-    (`"a.b.0"`), **not** the removed old `.get(key, ...)`'s plain key. The
-    root segment resolves like `.lookup()` (an `int` root can never match a
-    hiera key, so it is treated as a miss without a lookup at all); a root
-    miss or a found `None`, or any navigation past it landing on `None`,
-    returns `default_value` — never raises for that reason. A walk error
-    (the same two `HieraLookupError`s `.dig()` raises) reaches `block(error)`
-    when a block is given, else raises. `dotted` must be a non-empty `str`
-    (there is no whole-data value to return), else
-    `HieraLookupError("Syntax error in dotted-navigation string")`, the
-    same error a malformed one raises; a non-`str` `dotted` raises
+  - **`.get(dotted, default_value=None, block=None, *, value_type=None, merge=None, default_values_hash=None, override=None)`**
+    — Puppet's `get()`: `dotted` is a single dotted-navigation *string*
+    (`"a.b.0"`). The root segment resolves like `.lookup()` (an `int` root
+    can never match a hiera key, so it is treated as a miss without a
+    lookup at all); a root miss or a found `None`, or any navigation past
+    it landing on `None`, returns `default_value` — never raises for that
+    reason. A walk error (the same two `HieraLookupError`s `.dig()` raises)
+    reaches `block(error)` when a block is given, else raises. `dotted`
+    must be a non-empty `str` (there is no whole-data value to return),
+    else `HieraLookupError("Syntax error in dotted-navigation string")`,
+    the same error a malformed one raises; a non-`str` `dotted` raises
     `TypeError` instead. `value_type` asserts the final result with the
     subject that says where it came from ("Found value", "Default value"
     or "Value returned from block").
-  - **`.getvar(dotted, default_value=None, block=None) -> Any`** — Puppet's
+  - **`.getvar(dotted, default_value=None, block=None)`** — Puppet's
     `getvar()`: `.get()`'s own navigation, over a scope variable's value
     instead of a looked-up one. `dotted` must start with a valid
     (optionally `::`-qualified) Puppet variable name immediately followed
@@ -313,25 +318,27 @@ deep-merge options, or `None` for the level's own default.
     string does not start with a valid variable name")`. An undefined
     variable returns `default_value` regardless of the bound scope's
     `strict` — never raises for that alone.
-  - **`.explain(name, value_type=None, merge=None, default_value=<unset>, *,
-    default_values_hash=None, override=None, block=None,
-    explain_options=False) -> ExplainResult`** — what `puppet lookup
-    --explain`/`--explain-options` shows: takes exactly `.lookup()`'s own
-    signature and dispatcher (the same five call forms, the same keyword
-    spellings). `explain_options=True` mirrors `--explain-options`: only
-    how `lookup_options` was assembled for `name` (and its own module, if
-    qualified) is reported; combined with an otherwise-normal call it is
-    Puppet's `--explain --explain-options`, byte-identical to
-    `explain_options=False`. Always returns an `ExplainResult`:
-    `.text()` is the indented report (every hierarchy entry and path
-    consulted, `Path not found`, `No such key`, `Found key`, merges and
-    their results, interpolations and sub-keys, the `lookup_options`
-    search, `default_hierarchy`); `.to_hash()` is the same tree, projected
-    with Puppet's own keys (`branches`, `type`, `key`, `value`, `event`,
-    `name`, `path`, `original_path`, ...) — a fresh `copy.deepcopy` on
-    every call, so mutating the result never reaches a later `.explain()`/
-    `.lookup()`. `.error` is the `HieraError` the lookup ended with, or
-    `None`. An error `puppet lookup --explain` prints as its own last line
+  - **`.explain(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, explain_options=False)`**
+    — what `puppet lookup --explain`/`--explain-options` shows: takes
+    exactly `.lookup()`'s own signature and dispatcher (the same five call
+    forms, the same keyword spellings). `explain_options=True` mirrors
+    `--explain-options`: only how `lookup_options` was assembled for `name`
+    (and its own module, if qualified) is reported; combined with an
+    otherwise-normal call it is Puppet's `--explain --explain-options`,
+    byte-identical to `explain_options=False`. Always returns an
+    `ExplainResult`:
+    - **`ExplainResult(explainer, error=None)`** — never constructed by a
+      caller (the engine builds one for every `.explain()` call).
+      `.text() -> str` is the indented report (every hierarchy entry and
+      path consulted, `Path not found`, `No such key`, `Found key`, merges
+      and their results, interpolations and sub-keys, the `lookup_options`
+      search, `default_hierarchy`; also `str(result)`); `.to_hash() ->
+      dict` is the same tree, projected with Puppet's own keys (`branches`,
+      `type`, `key`, `value`, `event`, `name`, `path`, `original_path`,
+      ...) — a fresh `copy.deepcopy` on every call, so mutating the result
+      never reaches a later `.explain()`/`.lookup()`. `.error ->
+      Optional[HieraError]` is the error the lookup ended with, or `None`.
+    An error `puppet lookup --explain` prints as its own last line
     is reported the same way here (`.error` set, `.text()` ends with its
     message) instead of raising: a miss (`KeyNotFoundError`), an invalid
     `lookup_options` value, a failed `convert_to`, an interpolation syntax
@@ -350,27 +357,30 @@ deep-merge options, or `None` for the level's own default.
     search always shows, even right after an ordinary `.lookup()` already
     cached everything; it never bypasses or corrupts any other cache, and
     changes nothing an ordinary `.lookup()`/`.sources()` afterwards sees.
-  - **`.scoped(*, variables=None, facts=None, trusted=None,
-    server_facts=None, environment=None, strict=None, node_name=None) ->
-    Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new
-    `Hiera` (via `object.__new__` plus a `__dict__` copy, not a proxy) that
-    shares this instance's config, backends and all three caches (`.cache`,
-    `._source_cache`, `._lookup_options_cache` — already keyed on the scope
-    value, so sharing them is safe) with the derived scope bound in place
-    of `self.scope`. Every method — `.lookup`/`()`/`[]`/`in`, `.sources()`,
+  - **`.scoped(*, variables=None, facts=None, trusted=None, server_facts=None, environment=None, strict=None, node_name=None)`**
+    — a *view*: builds a new `Hiera` (sharing this instance's config,
+    backends and caches — already keyed on the scope value, so sharing
+    them is safe) with `self.scope.derive(...)` bound in place of
+    `self.scope`. Every method — `.lookup`/`()`/`[]`/`in`, `.sources()`,
     `.format()` — then reads the view's own scope. `.scoped(...)` layers:
     calling it again on a view derives from *that* view's scope, not the
     original instance's, so nested calls compose. The original instance's
     own scope, and any other existing view, are never affected.
-  - **`.sources() -> list`** — resolve+load the ordered candidate source
-    paths for the bound scope (cached per scope value; a fresh `Hiera`
-    instance if the on-disk tree may have changed).
-  - **`.format(text) -> Any`** — interpolates `text` exactly as a data
+  - **`.sources()`** — resolve+load the ordered candidate source paths for
+    the bound scope (cached per scope value; construct a fresh `Hiera`
+    instance if the on-disk tree may have changed structurally).
+  - **`.format(text)`** — interpolates `text` exactly as a data
     value is interpolated (Puppet's `Context#interpolate`): all five
     methods, whitespace inside `%{ }` ignored, literal braces untouched,
     undefined variables per the scope's `strict`. Returns a `str`, except
     that a `text` that is exactly one `%{alias('k')}` returns `k`'s value.
     Raises `TypeError` for a non-`str` `text`.
+  - **`.clear_cache()`** — drops every cached location,
+    `lookup_options` mapping, glob listing and parsed data file; the next
+    lookup re-reads whatever it needs from disk. Safe to call while other
+    threads are looking things up on this instance or a `.scoped(...)` view
+    of it (they share every cache). There are no public cache attributes to
+    inspect or clear individually.
   - Coming from `hiera()`/`hiera_array()`/`hiera_hash()`/`hiera_include()`
     (Puppet's legacy functions always force a merge, ignoring
     `lookup_options`): `hiera(k[, d])` → `h.lookup(k, None, "first"[, d])`;
@@ -378,16 +388,10 @@ deep-merge options, or `None` for the level's own default.
     `h.lookup(k, None, "hash")`; `hiera_include(k)` has no equivalent (it
     applies classes to a catalog, which hyera has no notion of) — none of
     the four are implemented as methods; use `.lookup()` directly.
-  - **`.clear_cache() -> None`** — drops every cached location,
-    `lookup_options` mapping, glob listing and parsed data file; the next
-    lookup re-reads whatever it needs from disk. Safe to call while other
-    threads are looking things up on this instance or a `.scoped(...)` view
-    of it (they share every cache). There are no public cache attributes to
-    inspect or clear individually.
-  - Gotcha: parsed data files are cached per `(path, strict)` for the
-    instance's life — a YAML file's own non-hash validation is
+  - Gotcha: parsed data files are cached per `(path, backend.strict, options)`
+    for the instance's life — a YAML file's own non-hash validation is
     `strict`-sensitive, so the same file can be cached independently under
-    two different `strict` values — and unbounded, like Puppet's own
+    different `strict` values — and unbounded, like Puppet's own
     per-environment file cache: its size follows the data tree, not the
     number of scopes seen, and only `clear_cache()` empties it. Resolved
     hierarchy locations are cached per the values of the variables their
@@ -420,67 +424,59 @@ deep-merge options, or `None` for the level's own default.
     what it read at construction). `Hiera` (a `.scoped(...)` view included)
     survives `copy.deepcopy` and `pickle` (a spawn-start process pool can
     receive one; a relative config path stays relative to the receiving
-    process's working directory): the parsed-file cache, the location and
-    `lookup_options` caches (and the lock they share), and the glob-listing
-    cache do NOT survive a copy — each starts empty, so the next lookup
-    re-reads every data file (re-decrypting sops plaintext along with it)
-    and rebuilds whatever else it needs (`Scope`'s own warning-dedup state
-    is NOT carried over verbatim either — its internal lock cannot be
-    pickled, so a copy starts with the same dedup keys but a fresh,
-    unlocked mutex). The same is NOT true of an `eyaml_lookup_key`/other
-    `lookup_key`/`data_dig` hierarchy entry: its result (decrypted
-    plaintext included) lives in the view's own per-provider
-    `LookupContext` cache (see the Gotchas section below), which is a
-    plain instance attribute `copy.deepcopy`/`pickle` copies right along
+    process's working directory): every cache (location, `lookup_options`,
+    parsed-file, glob-listing) and the lock they share do NOT survive a
+    copy — each starts empty, so the next lookup re-reads every data file
+    (re-decrypting sops plaintext along with it) and rebuilds whatever else
+    it needs (`Scope`'s own warning-dedup state is NOT carried over
+    verbatim either — its internal lock cannot be pickled, so a copy starts
+    with the same dedup keys but a fresh, unlocked mutex). The same is NOT
+    true of an `eyaml_lookup_key`/other `lookup_key`/`data_dig` hierarchy
+    entry: its result (decrypted plaintext included) lives in the view's
+    own per-provider `LookupContext` cache (see "Backends" below), which is
+    a plain instance attribute `copy.deepcopy`/`pickle` copies right along
     with the rest of the instance, unlike the caches above.
     Concurrent `.lookup()` calls on one instance (or its views) from
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches under one lock per instance (untested on free-threaded
     builds).
 - **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
-  `location_key`, `locations`, `kind`, `options`) — one hierarchy entry,
-  stored exactly as written in hiera.yaml (`locations`/`options` are never
-  interpolated or normalized here). `.new(conf, backend, kind="data_hash")`
-  builds one from a hierarchy dict (`location_key` is the first of
-  `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
-  `None`; `locations` is that key's raw value(s) — one string for a
-  singular key, the declared tuple for a plural one, or `(collection_var,
-  item_var, template)` for `mapped_paths`; `kind` is the resolved function
-  kind, `"data_hash"`/`"lookup_key"`/`"data_dig"`; `options` is the entry's
-  own `options`, else `defaults`'s, uninterpolated).
-  `.paths(base_path, scope) -> list[Path]` resolves candidate source
-  *file* paths for a bound `Scope`, through the same `%{...}` engine as
-  data values (`allow_methods=False`): an undefined variable interpolates
-  as `''` plus the scope's `strict`-mode warning and the resulting path is
-  still probed, **never** a skipped level; `datadir` interpolates
-  separately, under the scope's `strict` (raises under `"error"`, unlike a
-  location itself, which is always lenient); method-call syntax
-  (`%{lookup(...)}` etc.) raises `ConfigError` in any of these positions.
-  A location-less entry, or one using `uri`/`uris`, contributes no paths
-  here (`[]`) -- a `uri` is never a filesystem path.
-  `hyera._location_resolver.resolve_locations(level, base_path, scope)`
-  (private; `.paths` is its body) returns `None` for a location-less entry
-  (distinct from a location key that itself expands to zero candidates,
-  `[]`) or a list of `ResolvedLocation(original, location, is_uri, exist)`.
-  A `uri`/`uris` location is validated against Ruby's `URI()` RFC 3986
-  grammar and normalized like `URI#to_s` (lowercase scheme; drop an empty
-  or default port for `http`/`ws` (80), `https`/`wss` (443), `ftp` (21) and
-  `ldap` (389); percent-encode a literal space in the query as `%20`) --
-  `ConfigError("bad URI (is not URI?): <Ruby-inspected text>")` on a
-  malformed one; `.exist` is always `True` for a `uri` (never fetched or
-  stat'ed), and `.location` is the normalized string, not a `Path`. A
-  `mapped_paths` collection is a
-  scope reference (dotted, `::`-qualified) — `None`/`""`/an empty
-  Array/Hash contributes no paths, a `String` becomes a one-element list, an
-  Array is used as-is, a Hash contributes its `[key, value]` pairs; a
-  Boolean/Integer/Float collection raises `ConfigError`. Each item binds as
-  one local-scope variable layer (`%{item}` reads it; `%{::item}` still
-  reaches a top-scope variable of the same name, bypassing the local
-  layer). A `path`/`paths`/mapped location that names a directory raises
-  `BackendError` ("Is a directory") when loaded, instead of reading its
-  files; a glob match that is a directory is dropped instead. A `glob`/
-  `globs` location matches through hyera's own Ruby `Dir.glob` port
-  (`_location_resolver.glob`), never `pathlib_next.Path.glob`: `{a,b}`
+  `location_key`, `locations`, `kind`, `options`, `extension`,
+  `datadir_base`, `datadir_literal`) — one hierarchy entry, stored exactly
+  as written in hiera.yaml (`locations`/`options` are never interpolated or
+  normalized here).
+  - **`.new(conf, backend, kind='data_hash', *, extension=None, datadir_base=None, datadir_literal=False)`**
+    builds one from a hierarchy dict (`location_key` is the first of
+    `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
+    `None`; `locations` is that key's raw value(s) — one string for a
+    singular key, the declared tuple for a plural one, or `(collection_var,
+    item_var, template)` for `mapped_paths`; `kind` is the resolved function
+    kind, `"data_hash"`/`"lookup_key"`/`"data_dig"`; `options` is the entry's
+    own `options`, else `defaults`'s, uninterpolated; `extension` is a
+    version-3-only appended suffix; `datadir_base`/`datadir_literal` are
+    version-specific `datadir`-resolution flags — see "Version 3"/"Version
+    4" above).
+  - **`.paths(base_path, scope)`** resolves candidate source
+    *file* paths for a bound `Scope`, through the same `%{...}` engine as
+    data values (`allow_methods=False`): an undefined variable interpolates
+    as `''` plus the scope's `strict`-mode warning and the resulting path is
+    still probed, **never** a skipped level; `datadir` interpolates
+    separately, under the scope's `strict` (raises under `"error"`, unlike a
+    location itself, which is always lenient); method-call syntax
+    (`%{lookup(...)}` etc.) raises `ConfigError` in any of these positions.
+    A location-less entry, or one using `uri`/`uris`, contributes no paths
+    here (`[]`) — a `uri` is never a filesystem path.
+  A `mapped_paths` collection is a scope reference (dotted, `::`-qualified)
+  — `None`/`""`/an empty Array/Hash contributes no paths, a `String`
+  becomes a one-element list, an Array is used as-is, a Hash contributes
+  its `[key, value]` pairs; a Boolean/Integer/Float collection raises
+  `ConfigError`. Each item binds as one local-scope variable layer
+  (`%{item}` reads it; `%{::item}` still reaches a top-scope variable of
+  the same name, bypassing the local layer). A `path`/`paths`/mapped
+  location that names a directory raises `BackendError` ("Is a directory")
+  when loaded, instead of reading its files; a glob match that is a
+  directory is dropped instead. A `glob`/`globs` location matches through
+  hyera's own Ruby `Dir.glob` port, never `pathlib_next.Path.glob`: `{a,b}`
   brace alternation (nested, in written order, duplicates kept); a
   dotfile matches only an explicit leading `.` in the pattern, never a
   bare `*`/`?`/`[...]`; `**/` never descends through a symlink or a
@@ -490,36 +486,23 @@ deep-merge options, or `None` for the level's own default.
   or unreadable directory contributes nothing; `datadir`'s own glob
   metacharacters are live for a glob level (a literal directory for a
   `path`/`paths`/mapped one).
-- **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
-  Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
-  `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`
-  returns the real value. Equality and hashing follow Puppet: two
-  `Sensitive` values are equal (and hash equal) exactly when their wrapped
-  values are Ruby-`eql?` — `1`, `1.0` and `True` are distinct wrapped
-  values, but a list or dict payload compares/hashes by content (in any key
-  order for a dict) despite being unhashable in plain Python.
-- **`ExplainResult`** — `Hiera.explain(...)`'s return value; see `.explain`
-  above for the full contract. `.to_hash() -> dict`, `.text() -> str`
-  (also `str(result)`), and the read-only property `.error ->
-  Optional[HieraError]`. Never constructed directly.
 
-## Scope (`_scope.py`)
+## Scope and facts
 
 Puppet's top scope, as one immutable, hashable value, bound to every
 `Hiera` instance, views included (`Hiera(..., scope=...)`, `.scope`,
 `.scoped(...)`). Logger `hyera._scope`.
 
-- **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None,
-  environment=None, strict="warning", node_name=None)`** — every argument
-  keyword-only. `variables`/`facts`/`server_facts`/`trusted` are each `None`
-  or a mapping with `str` keys; `variables`/`server_facts`/`trusted` values
-  must additionally be Puppet Data (`None`, `bool`, `int`, `float`, `str`,
-  a list/tuple — stored as a list — or a `str`-keyed dict of Data, recursively)
-  or construction raises `TypeError("Unsupported data type: '<type
-  name>'")`; every input is deep-copied. `strict` must be `"off"`,
-  `"warning"` or `"error"`, else `ValueError`. `environment` must be `None`
-  or a non-empty `str`; `node_name` must be `None` or a `str` — otherwise
-  `TypeError`/`ValueError`.
+- **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None, environment=None, strict='warning', node_name=None)`**
+  — every argument keyword-only. `variables`/`facts`/`server_facts`/`trusted`
+  are each `None` or a mapping with `str` keys; `variables`/`server_facts`/
+  `trusted` values must additionally be Puppet Data (`None`, `bool`, `int`,
+  `float`, `str`, a list/tuple — stored as a list — or a `str`-keyed dict of
+  Data, recursively) or construction raises `TypeError("Unsupported data
+  type: '<type name>'")`; every input is deep-copied. `strict` must be
+  `"off"`, `"warning"` or `"error"`, else `ValueError`. `environment` must
+  be `None` or a non-empty `str`; `node_name` must be `None` or a `str` —
+  otherwise `TypeError`/`ValueError`.
 
   Built in Puppet's own precedence order (`compiler.rb`'s
   `set_node_parameters`, `node.rb`, `trusted_information.rb`,
@@ -563,19 +546,20 @@ Puppet's top scope, as one immutable, hashable value, bound to every
      `ValueError("Cannot reassign variable '$<name>'")`.
   - **`.environment`/`.strict`/`.node_name`** — read-only properties for the
     resolved values above.
-  - **`.lookup(name) -> value | Scope.UNDEFINED`** — no strict side effects
-    (Puppet's `catch(:undefined_variable)` form). A leading `::` is
-    stripped; a remaining `::` marks the name qualified, but the local
-    layers and top table are still checked for a literal match either way
-    (there are no class scopes, so a qualified name is undefined unless a
-    variable is literally named that way). Only for an unqualified miss:
+  - **`.lookup(name)`** — no strict side effects (Puppet's
+    `catch(:undefined_variable)` form); returns the bound value (even
+    `None`), or `Scope.UNDEFINED`. A leading `::` is stripped; a remaining
+    `::` marks the name qualified, but the local layers and top table are
+    still checked for a literal match either way (there are no class
+    scopes, so a qualified name is undefined unless a variable is
+    literally named that way). Only for an unqualified miss:
     `"caller_module_name"` returns `None`, and a bare non-negative integer
     name (`^(?:0|[1-9][0-9]*)$`) returns `None`; anything else unmatched is
     `Scope.UNDEFINED`. A non-`str` `name` raises `TypeError`.
-  - **`.exist(name) -> bool`** — `True` iff bound in a local layer or the
+  - **`.exist(name)`** — `True` iff bound in a local layer or the
     top table, or `name == "caller_module_name"`; a still-qualified name
     (after stripping one leading `::`) or a numeric name is always `False`.
-  - **`.lookupvar(name, *, lenient=False) -> value`** — `.lookup(name)`,
+  - **`.lookupvar(name, *, lenient=False)`** — `.lookup(name)`,
     with `.strict` applied to `Scope.UNDEFINED`: `"off"` returns `None`
     silently; `"warning"` warns once per name ("Undefined variable
     '\<name>'", `"; class <X> could not be found"` appended for a
@@ -587,21 +571,20 @@ Puppet's top scope, as one immutable, hashable value, bound to every
     root `Scope` (shared by every scope `with_local_scope`/`derive`
     produces from it), up to 100 distinct names tracked, matching Puppet's
     own cap.
-  - **`.with_local_scope(variables) -> Scope`** — a child sharing this
+  - **`.with_local_scope(variables)`** — a child sharing this
     scope's table and warning state, adding one local variable layer
     (`variables`'s keys/values checked the same way as the constructor's
     `variables`). This scope is unchanged; layers are functional, not
     push/pop, since one `Hiera` can serve many concurrent lookups.
-  - **`.derive(*, variables=None, facts=None, trusted=None,
-    server_facts=None, environment=None, strict=None, node_name=None) ->
-    Scope`** — a new root scope, fully rebuilt from this scope's own
+  - **`.derive(*, variables=None, facts=None, trusted=None, server_facts=None, environment=None, strict=None, node_name=None)`**
+    — a new root scope, fully rebuilt from this scope's own
     constructor inputs: `variables`/`facts`/`server_facts` shallow-update
     the parent's (new values win, so an unrelated fact never goes stale);
     the rest replace the parent's when given (`environment`/`strict`
     default to *this scope's already-resolved* value, not to their own
     defaults). Local layers are not carried; the warning state is shared.
   - **`Scope.UNDEFINED`** — the lookup-miss sentinel (the same object as
-    `hyera._navigation._MISSING`).
+    the `<unset>` sentinel documented under "Types" below).
   - **Value semantics** — immutable and hashable; `==`/`hash` compare a
     type-tagged rendering of the top table, local layers, `strict` and
     `node_name` (so `True`, `1` and `1.0` are distinct, unlike plain Python
@@ -609,12 +592,10 @@ Puppet's top scope, as one immutable, hashable value, bound to every
     is this scope's own copy, shared by every caller. `repr()` shows
     `environment`, `strict` and variable/fact counts, never values.
 
-## Facts (`_facts.py`)
-
 Two sources for `Scope(facts=...)`: a Puppet-compatible `--facts` file, and
 bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
 
-- **`load_facts(path) -> dict`** — `path` is a `str` or `os.PathLike`; every
+- **`load_facts(path)`** — `path` is a `str` or `os.PathLike`; every
   message uses `str(path)` as given (`puppet lookup --facts` rules,
   `application/lookup.rb:349-371`). The parser is chosen by extension:
   `.json` → JSON; `.yml`/`.yaml` → YAML; anything else tries JSON, then
@@ -622,8 +603,8 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   error). For a `.json`/`.yml`/`.yaml` file specifically, a parse failure
   **does** raise. JSON is parsed with Ruby `json`-gem rules: UTF-8 only (a
   BOM fails), `NaN`/`Infinity`/`-Infinity` rejected. YAML goes through
-  `hyera._yaml_loader.safe_load` (decoded `utf-8-sig` first, so a BOM is
-  stripped, unlike a hiera.yaml/data file) — but
+  hyera's own Psych-compatible loader (decoded `utf-8-sig` first, so a BOM
+  is stripped, unlike a hiera.yaml/data file) — but
   `Puppet::Util::Yaml.safe_load` permits **no** classes at all, unlike the
   data-file loader, which permits `Symbol`: a `RubySymbol` anywhere in the
   parsed result (key or value, from an explicit `!ruby/sym` tag or a plain
@@ -638,7 +619,7 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   facts with `<path>` given via the --facts flag, they must all be
   overridden."). Every error is a `BackendError` with `.path` set, chained
   from its cause where there is one.
-- **`facts_from_facter(*, timeout: int = 30) -> dict`** — runs a bare
+- **`facts_from_facter(*, timeout=30)`** — runs a bare
   `facter -j` (no queries, no `--show-legacy`: a queried `facter -j a b`
   returns flat dotted keys `$facts` cannot navigate) and returns its JSON
   output as a `dict`. Does **not** add `clientcert`/`clientversion`/
@@ -651,7 +632,49 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   inside its `except` and raised after, so `__context__` never carries
   the (possibly partial) output, matching the sops runner's own hardening.
 
-## Backends (`backends.py`)
+## Types
+
+- **`MergeSpec`** — the type of every public `merge=` argument: a
+  strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`/`"default"`/
+  `"reverse_deep"`/`"unconstrained_deep"`), a `{"strategy": ..., ...}`
+  mapping with Puppet's deep-merge options (`knockout_prefix`,
+  `sort_merged_arrays`, `merge_hash_arrays`, and, for the two extra Hiera-3
+  deep variants, `keep_array_duplicates`, `overwrite_arrays`,
+  `unpack_arrays`, `extend_existing_arrays`, `merge_nil_values`,
+  `preserve_unmergeables`), or `None` for the level's own `lookup_options`
+  default (an unrecognized name/shape raises `hyera.MergeError`). See
+  "Merges" under Gotchas for the exact semantics of each strategy.
+- **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
+  Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
+  `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`
+  returns the real value. Equality and hashing follow Puppet: two
+  `Sensitive` values are equal (and hash equal) exactly when their wrapped
+  values are Ruby-`eql?` — `1`, `1.0` and `True` are distinct wrapped
+  values, but a list or dict payload compares/hashes by content (in any key
+  order for a dict) despite being unhashable in plain Python.
+- **`value_type`/`convert_to` type expressions** — a Puppet type
+  expression string (`"Integer"`, `"Array[String]"`,
+  `"Optional[Integer[0,10]]"`) parsed against a subset of Puppet's type
+  system: full semantics for `Any`/`Data`/`Undef`/`Boolean`/`Integer`/
+  `Float`/`Numeric`/`String`/`Enum`/`Pattern`/`Array`/`Hash`/`Tuple`/
+  `Struct`/`Optional`/`NotUndef`/`Variant`/`Scalar`/`Collection`; named-only
+  (accepted in a type expression, matched by class, but not a `convert_to`
+  target) for the rest of Puppet's built-ins. `convert_to` (Puppet's
+  `new()`) is implemented only for types whose values are plain data
+  (`Integer`/`Float`/`Numeric`/`String`/`Boolean`/`Array`/`Hash`/
+  `Sensitive`/`Tuple`/`Struct`/`Optional`/`NotUndef`); converting to
+  `SemVer`, `SemVerRange`, `Timespan`, `Timestamp`, `Regexp`, `Binary`,
+  `URI`, `Type` or `Object` always raises `HieraLookupError("hiera does not
+  support new() for the Puppet type '<T>'")` — the
+  `convert-to-unsupported-type` deviation, below. See "convert_to" under
+  Gotchas for the two message forms a failed conversion raises.
+- **The `<unset>` sentinel** — `Hiera.lookup`'s `default_value` (and
+  `.explain`'s) defaults to a private sentinel object that renders as
+  `<unset>` in `help()`/`inspect.signature()` output and keeps its identity
+  through `copy`/`pickle`; it is never itself returned from a lookup (it
+  only marks "no default was given"). The same object is `Scope.UNDEFINED`.
+
+## Backends
 
 A self-registering registry: every format or provider
 is a `Backend` subclass, found by name rather than passed around directly.
@@ -660,8 +683,16 @@ is a `Backend` subclass, found by name rather than passed around directly.
   separate name namespaces. `function` is the Hiera 5 `data_hash`/
   `lookup_key`/`data_dig` value in a hierarchy level (Puppet function
   names only); `v3` is empty for the built-ins (the v3/v4 config
-  reader maps its own names); `format` is a plain serialization name;
-  `render` is a CLI/MCP output-format name.
+  reader maps its own names; only a third-party Hiera-3 backend
+  registers here); `format` is a plain serialization name; `render` is a
+  CLI output-format name (see "CLI" below).
+  Registered names, by kind:
+  - `function`: `yaml_data`, `json_data`, `hocon_data`, `sops_data`,
+    `sops`, `eyaml_lookup_key`, `sops_<yaml|json|ini|dotenv>` (a
+    `NamePattern`, matching e.g. `sops_json`).
+  - `v3`: none built in.
+  - `format`: `yaml`, `json`, `hocon`, `dotenv`.
+  - `render`: `s`, `json`, `yaml`.
 - **`Backend.NAMES: dict`** — `{kind: (name | NamePattern, ...)}`, declared
   on the defining class only (never inherited/merged); read once at
   subclass-definition time. **`NamePattern(display, regex)`** registers by
@@ -676,18 +707,18 @@ is a `Backend` subclass, found by name rather than passed around directly.
   cached, since one backend instance is shared across scopes. `.name`
   defaults to the class's first registered name; `Backend.new` sets it to
   whatever name was actually asked for.
-- **Lookup** — `Backend.find(name, kind="function") -> type | None` (exact
-  names win, then patterns in registration order); `.get(name, kind) ->
-  type` (raises `BackendError` for an unknown name, and via
-  `.check_available()` for a registered-but-unusable one, e.g. missing
-  `pyhocon`); `.new(name, conf=None, *, kind="function", strict=None) ->
-  Backend` (instantiates, passing any `NamePattern` captures as keywords);
-  `.names(kind="function") -> list[str]` (exact names, then pattern
-  displays); `.for_path(path) -> type | None` (`format`-kind class with the
-  longest case-sensitive `EXTENSIONS` suffix match); `.implements(op) ->
-  bool` (derived from method overrides, never declared twice).
-- **Serialization (json-module shaped)** — `.loads(text)`/`.dumps(obj,
-  **kw)` (subclasses implement; base raises `NotImplementedError`);
+- **Lookup** — `.find(name, kind='function')` (exact
+  names win, then patterns in registration order; `None` if unregistered);
+  `.get(name, kind='function')` (raises `BackendError` for an unknown
+  name, and via `.check_available()` for a registered-but-unusable one,
+  e.g. missing `pyhocon`); `.new(name, conf=None, *, kind='function', strict=None)`
+  (instantiates, passing any `NamePattern` captures as keywords);
+  `.names(kind='function')` (exact names, then pattern displays, as a
+  `list[str]`); `.for_path(path)` (`format`-kind class with the
+  longest case-sensitive `EXTENSIONS` suffix match, or `None`);
+  `.implements(op)` (derived from method overrides, never declared twice).
+- **Serialization (json-module shaped)** — `.loads(text)`/`.dumps(obj, **kw)`
+  (subclasses implement; base raises `NotImplementedError`);
   `.load(source)` (path-like or a file object: reads the bytes, decodes
   strict UTF-8 — `context.rb:53` — then calls `.loads`; a decode error or a
   `.loads` `BackendError` becomes `BackendError("Unable to parse (<path>):
@@ -696,36 +727,33 @@ is a `Backend` subclass, found by name rather than passed around directly.
   writes `.dumps(...)`.
 - **Hiera 5 provider hooks** — `.data_hash(path, options)` (base:
   `._require_path_only(path, options)` then `._as_data_hash(self.load(path),
-  path)`); `._as_data_hash(parsed, path)` adapts a parsed document into
-  hiera data (base: identity; `YAMLBackend` overrides it for the non-Hash
-  rule). `._require_path_only(path, options)` — Puppet's
-  `Struct[{path=>String[1]}]` contract every built-in file function
-  (`yaml_data`/`json_data`/`hocon_data`/`sops_data`) follows: raises
-  `ConfigError("'<name>' one of 'path', 'paths' 'glob', 'globs' or
-  'mapped_paths' must be declared in hiera.yaml when using this data_hash
-  function")` when `path is None` or `options` carries anything besides the
-  `path` key `data_hash` itself received (a `uri` location, or any
-  user-declared hierarchy option) — before any file is read.
-  `.lookup_key(key, options, context)` / `.data_dig(key_segments, options,
-  context)` raise `NotImplementedError` in the base; a backend that
-  overrides either is called per key and per location with a
-  `hyera.LookupContext` as `context` (below). Neither hook's return value is
-  interpolated by the engine — call `context.interpolate(value)` yourself;
-  signal a miss with `context.not_found()`, never a sentinel return value.
-  `options` carries `path` (a `str`) or `uri` (interpolated and normalized
-  like Ruby's `URI#to_s`, never fetched) for a located entry, or neither
-  for a location-less one — the same mapping a `data_hash` hook receives.
-- **`LookupContext`** (in `hyera` and `hyera.backends`; Puppet's public
-  `Context`, `pops/lookup/context.rb:126-206`) — the `context` argument a
-  `lookup_key`/`data_dig` hook receives, one per hierarchy entry and
-  location, scoped to the `Hiera`/`h.scoped(...)` view the lookup runs
-  against (never shared with another view, same as the provider itself):
+  path)`, raising `ConfigError("'<name>' one of 'path', 'paths' 'glob',
+  'globs' or 'mapped_paths' must be declared in hiera.yaml when using this
+  data_hash function")` when `path is None` or `options` carries anything
+  besides `path`); `.lookup_key(key, options, context)` /
+  `.data_dig(key_segments, options, context)` raise `NotImplementedError`
+  in the base; a backend that overrides either is called per key and per
+  location with a `hyera.LookupContext` as `context` (below). Neither
+  hook's return value is interpolated by the engine — call
+  `context.interpolate(value)` yourself; signal a miss with
+  `context.not_found()`, never a sentinel return value. `options` carries
+  `path` (a `str`) or `uri` (interpolated and normalized like Ruby's
+  `URI#to_s`, never fetched) for a located entry, or neither for a
+  location-less one — the same mapping a `data_hash` hook receives.
+- **`LookupContext(function_context, invocation)`** (in `hyera` and
+  `hyera.backends`; Puppet's public `Context`,
+  `pops/lookup/context.rb:126-206`) — the `context` argument a
+  `lookup_key`/`data_dig` hook receives, built by the engine (never
+  constructed directly by a caller), one per hierarchy entry and
+  location, scoped to
+  the `Hiera`/`h.scoped(...)` view the lookup runs against (never shared
+  with another view, same as the provider itself):
   - `.interpolate(value)` — `%{...}` interpolation with method calls
     allowed, against the current lookup's scope.
   - `.not_found()` — raises internally (a `BaseException` subclass, so a
     backend's own `except Exception:` cannot swallow it); never returns.
-  - `.explain(producer)` — a no-op until an explain facility exists;
-    `producer` (a zero-argument callable) is never invoked.
+  - `.explain(producer)` — add `producer`'s text (a zero-argument
+    callable) to this lookup's `explain()` report.
   - `.cache(key, value)` / `.cache_all(mapping)` / `.cache_has_key(key)` /
     `.cached_value(key)` (`None` when absent) / `.cached_entries()` (an
     iterator of `(key, value)` pairs) — a per-location cache private to this
@@ -741,67 +769,50 @@ is a `Backend` subclass, found by name rather than passed around directly.
     call (not by content); shared by every hierarchy entry on the same
     `Hiera` instance (like the `data_hash` file cache), never per-location.
   - `.environment_name` (the scope's `environment`, `"production"` when
-    unset) / `.module_name` (always `None` here — a future layers plan
-    passes its module name through).
-- **`default_backends() -> list[type[Backend]]`** — the distinct classes
-  registered in the `function` namespace, in definition order:
-  `[YAMLBackend, JSONBackend, HOCONBackend, SopsBackend]`.
-  `Hiera(backends=...)` takes this same kind of list as an allow-list; a
-  `data_hash` name whose registered class is not in it is refused exactly
-  like an unknown name.
+    unset) / `.module_name` (always `None` today — no provider kind yet
+    fills it in).
+- **`default_backends()`** — the distinct classes registered in the
+  `function` namespace, in definition order: `[YAMLBackend, JSONBackend,
+  HOCONBackend, SopsBackend, EyamlBackend]`. `Hiera(backends=...)` takes
+  this same kind of list as an allow-list; a `data_hash`/`lookup_key` name
+  whose registered class is not in it is refused exactly like an unknown
+  name.
 - **`YAMLBackend`** — `NAMES = {"function": ("yaml_data",), "format":
   ("yaml",)}`, `EXTENSIONS = (".yaml", ".yml")`. (The `render`-kind `yaml`
-  name belongs to `hyera._render.YAMLRender`, a separate class -- see
-  "Rendering" below.)
-  `.loads` is `hyera._yaml_loader.safe_load` (Psych's parsing rules, not
-  PyYAML's own) into a plain `dict`/`list`, unadapted -- dotted-key access
-  is a function over that data, not a container method; raises
-  `BackendError` on a YAML error, one line, Psych's
-  shape (`<problem> <context> at line L column C`, 1-based; either part may
-  be absent) — never a source snippet or the underlying value, with no
-  exception chain. `._as_data_hash` ports `yaml_data.rb:27-35`: a `dict`
-  (with any `RubySymbol` key normalized to its plain-string name) passes
-  through; `None`/`False` always warn-and-empty (`{}`, even under
-  `strict="error"`); any other non-dict value raises `BackendError` under
-  `strict="error"`, else warns-and-empties. `.dumps` is
-  `yaml.safe_dump(sort_keys=False, allow_unicode=True,
-  default_flow_style=False)`.
-- **`hyera._yaml_loader`** (private) — ports Psych 5.3.1's `safe_load` +
-  `ScalarScanner#tokenize` on top of PyYAML (`CSafeLoader`/libyaml when
-  available, else the pure `SafeLoader`; both are wired identically, so
-  results only differ on one known gap — see the gotcha below).
-  `safe_load(text) -> object`: a leading BOM (U+FEFF) is replaced with a
-  single space (reproduces every probed Psych BOM outcome without scanner
-  changes — it does *not* strip the BOM, unlike some other Ruby file-read
-  paths; see the gotcha below); only the first YAML document is read; a
-  `None` result (empty/comment-only/`~` document) becomes `False`
-  (`util/yaml.rb:28-41`). Numbers, booleans, `null`, symbols and
-  sexagesimal values are resolved by `_tokenize`, a line-by-line port of
-  `scalar_scanner.rb`, not PyYAML's own (Python-flavored) implicit
-  resolvers — a custom `resolve()` override retags every implicit plain
-  scalar with a private tag before PyYAML's own bool/int/float/null
-  resolvers ever see it (the literal `<<` merge-key scalar is the one
-  exception, so `flatten_mapping` keeps recognizing it). A YAML
-  date/timestamp-shaped scalar raises `BackendError("Tried to load
-  unspecified class: Date"/"...: Time")` — like Puppet, there is no lenient
-  mode. `RubySymbol(name)` (re-exported from `hyera.backends`, `__slots__`,
-  not a `str` subclass) represents a Ruby `:symbol`; `symkeys_to_string(obj)`
-  recursively turns `RubySymbol` **keys** (not values) into their plain
-  string names — used for both data files and `hiera.yaml`. An unknown tag
-  is tokenized (scalar), listed (sequence) or dict-built (mapping) like an
-  untagged node of the same kind, matching `to_ruby.rb`'s default case — it
-  is *not* a parse error, unlike plain PyYAML. A `!ruby/object`/`!ruby/regexp`/
-  etc. (other than `!ruby/sym(bol)`/`!ruby/string`) raises the same
-  disallowed-class `BackendError`, naming the class from the tag text.
-  `!!set`/`!!omap` follow Psych (`!!set` is always disallowed —
-  `Psych::Set` is never a permitted class; `!!omap` builds a `dict` from
-  its pairs). A duplicate mapping key: the last one wins, matching
-  `construct_mapping`'s own behavior; an unhashable key (a list/dict from a
-  complex `? ... : ...` key) is frozen into a hashable tuple, recursively.
+  name belongs to a separate, private `_render.YAMLRender` class.)
+  `.loads(text)` parses via hyera's own Psych-compatible loader into a
+  plain `dict`/`list`, unadapted — dotted-key access is a function over
+  that data, not a container method; raises `BackendError` on a YAML
+  error, one line, Psych's shape (`<problem> <context> at line L column
+  C`, 1-based; either part may be absent) — never a source snippet or the
+  underlying value, with no exception chain. The non-Hash rule (ports
+  `yaml_data.rb:27-35`): a `dict` (with any Ruby-symbol key normalized to
+  its plain-string name) passes through; `None`/`False` always
+  warn-and-empty (`{}`, even under `strict="error"`); any other non-dict
+  value raises `BackendError` under `strict="error"`, else
+  warns-and-empties. `.dumps(obj, **kw)` is `yaml.safe_dump(sort_keys=False,
+  allow_unicode=True, default_flow_style=False)`.
+  Numbers, booleans, `null`, symbols and sexagesimal values resolve the
+  Ruby (Psych `ScalarScanner`) way, not PyYAML's own Python-flavored
+  implicit resolvers. A leading BOM (U+FEFF) becomes a single space, not a
+  strip (see the BOM gotcha, below). A YAML date/timestamp-shaped scalar
+  raises `BackendError("Tried to load unspecified class: Date"/"...:
+  Time")` — like Puppet, there is no lenient mode. A Ruby symbol
+  (`hyera.backends.RubySymbol(name)`, `__slots__`, not a `str` subclass)
+  represents a `:symbol`/`!ruby/sym(bol)` scalar; only its use as a **key**
+  is normalized to a plain string automatically (a symbol *value* survives
+  as `RubySymbol` and is not a valid Puppet lookup value — see the
+  RichData gotcha). An unknown tag is tokenized/listed/dict-built like an
+  untagged node of the same kind (not a parse error); `!ruby/object`/
+  `!ruby/regexp`/etc. (other than `!ruby/sym(bol)`/`!ruby/string`) raises
+  the same disallowed-class `BackendError`, naming the class from the tag
+  text. `!!set` is always disallowed; `!!omap` builds a `dict` from its
+  pairs. A duplicate mapping key: the last one wins; an unhashable key (a
+  list/dict from a complex `? ... : ...` key) is frozen into a hashable
+  tuple, recursively.
 - **`JSONBackend`** — `NAMES = {"function": ("json_data",), "format":
   ("json",)}`, `EXTENSIONS = (".json",)`. (The `render`-kind `json` name
-  belongs to `hyera._render.JSONRender`, a separate class -- see
-  "Rendering" below.) `.loads`
+  belongs to a separate, private `_render.JSONRender` class.) `.loads(text)`
   parses the way Ruby's `json` gem (MultiJson's `JsonGem` adapter, Puppet's
   own JSON parser) does, not plain `json.loads`: `/* ... */` and `// ...`
   comments outside string literals are accepted (stripped to spaces before
@@ -811,43 +822,37 @@ is a `Backend` subclass, found by name rather than passed around directly.
   rejected (`incomplete surrogate pair`) — Python's own decoder accepts
   both by default. Raises `BackendError` on any of these, one line: either
   `<msg> at line L column C` (`json.JSONDecodeError`'s own fields) or the
-  comment/NaN/surrogate message above, no exception chain. `.dumps` is
-  `json.dumps(ensure_ascii=False)`.
-- **`HOCONBackend`** — `NAMES = {"function": ("hocon_data",), "format":
-  ("hocon",)}`, `EXTENSIONS = (".conf",)`. Always registered: a missing/broken `pyhocon`
+  comment/NaN/surrogate message above, no exception chain. `.dumps(obj, **kw)`
+  is `json.dumps(ensure_ascii=False)`.
+- **`HOCONBackend(conf=None, *, strict=None, hocon_includes=None)`** —
+  `NAMES = {"function": ("hocon_data",), "format": ("hocon",)}`,
+  `EXTENSIONS = (".conf",)`. Always registered: a missing/broken `pyhocon`
   fails at `.check_available()` (backend/level construction, so a
   `hocon_data` hierarchy level fails to build) *and* in `.loads`, both
   naming the `hyera[hocon]` extra, rather than silently vanishing from
-  `default_backends()`. `has_hocon() -> bool` — `True` iff `pyhocon`
+  `default_backends()`. `has_hocon()` — `True` iff `pyhocon`
   imports without error; any import-time exception (not just
-  `ImportError`) is caught and logged at debug. `.loads` parses through a
-  *private copy* of the `pyhocon.config_parser` module (`_hocon_parser()`,
-  built once under a lock and cached; the copy's `get_period_expr` is
-  replaced with a grammar that never matches), so a duration (`10s`,
+  `ImportError`) is caught and logged at debug. `.loads(text)` parses through a
+  *private copy* of the `pyhocon.config_parser` module, so a duration (`10s`,
   `5 minutes`) or size string (`10MB`) stays literal text — matching real
   Ruby hocon, which has no duration/size type at all — instead of becoming
-  a `datetime.timedelta` (which used to crash `-o yaml`); the *shared*
-  `pyhocon` module (what a third party importing `pyhocon` directly sees)
-  is never touched, except for two deprecation shims scoped to the private
-  copy only: its `codecs`/`logger` names are replaced so pyhocon 0.3.63's
-  own `codecs.open()`/`Logger.warn()` calls (both deprecated on Python
-  3.14+) never raise under this project's `filterwarnings = ["error"]`
-  when a real `include file(...)` resolves. A root value that is not an
+  a `datetime.timedelta`; the *shared* `pyhocon` module (what a third party
+  importing `pyhocon` directly sees) is never touched, except for two
+  deprecation shims scoped to the private copy only (its `codecs`/`logger`
+  names, so pyhocon's own deprecated calls never raise under this
+  project's `filterwarnings = ["error"]`). A root value that is not an
   object (e.g. a top-level `[1, 2]`) raises `BackendError("... has type
   LIST rather than object at file root")`. `.loads` returns plain
-  `dict`/`list` (`ConfigTree`/`ConfigList` converted recursively). Invalid
-  UTF-8 (handled by the base `.load`), and any other pyhocon parse
-  failure, raise `BackendError` with a one-line message (`str(e)`,
-  whitespace-collapsed), no exception chain.
+  `dict`/`list`. Invalid UTF-8 (handled by the base `.load`), and any other
+  pyhocon parse failure, raise `BackendError` with a one-line message
+  (`str(e)`, whitespace-collapsed), no exception chain.
 
-  `__init__(conf=None, *, strict=None, hocon_includes=None)` —
   `hocon_includes` (hyera's own extension, not Puppet vocabulary):
-  `None` (the default) reads `conf.get("hocon_includes", True)`, so a
-  hierarchy entry/`defaults` key of the same name reaches it the same way
-  `datadir` already does; an explicit `True`/`False` overrides
-  `conf`. `self.hocon_includes` (bool) selects which of two scanners
-  `.loads` runs before pyhocon ever parses the text:
-
+  `None` (the constructor default) reads `conf.get("hocon_includes", True)`,
+  so a hierarchy entry/`defaults` key of the same name reaches it the same
+  way `datadir` already does; an explicit `True`/`False` overrides `conf`.
+  It selects which of two scanners `.loads` runs before pyhocon ever parses
+  the text:
   - **`True` (default, matches Puppet's own `hocon_data`):** a plain
     `include "..."` contributes nothing; `include file(...)` (relative or
     absolute, also inside a nested object or after another key) is left
@@ -860,92 +865,62 @@ is a `Backend` subclass, found by name rather than passed around directly.
     keeps; every other key-position form — `url(...)`, `classpath(...)`,
     `required(...)` (whether or not its target exists), `package(...)`,
     any other `name(...)`, a space before the paren, a case-mismatched
-    keyword (`INCLUDE ...`, a dotless-i look-alike), or a bare `include`
-    with nothing valid after it — raises `BackendError`, matching
-    Puppet's own parse/method errors (Ruby hocon implements none of
-    them). One accepted divergence: Puppet's `include file("*.conf")`
-    never globs (contributes nothing); pyhocon's own resolution does and
-    includes every match (`hocon-file-include-globs-where-puppet-does-not`).
-  - **`False` (opt-in restriction, the pre-fidelity behaviour):** every form
-    but a plain quoted include raises, `include file(...)` included.
+    keyword, or a bare `include` with nothing valid after it — raises
+    `BackendError`, matching Puppet's own parse/method errors (Ruby hocon
+    implements none of them). One accepted divergence: Puppet's `include
+    file("*.conf")` never globs (contributes nothing); pyhocon's own
+    resolution does and includes every match
+    (`hocon-file-include-globs-where-puppet-does-not`).
+  - **`False` (opt-in restriction, the pre-fidelity behaviour):** every
+    form but a plain quoted include raises, `include file(...)` included.
 
   `${VAR}` substitutions fall back to environment variables, as in
   Puppet, in either mode. As a fail-closed backstop, pyhocon's own
-  include-resolving methods (`parse_file`/`parse_URL`/
-  `resolve_package_path`) also raise for the duration of `.loads()`, for
+  include-resolving methods also raise for the duration of `.loads()`, for
   whichever forms the active mode does not intend to resolve for real
   (`url`/`package` always; `file` too when `hocon_includes` is `False`),
   so an undiscovered gap in the text scanner still cannot read a file or
-  reach the network; they behave normally for any other pyhocon use in
-  the same process, before or after. This backstop wraps **both** the
-  shared `pyhocon.config_parser` module and hyera's own private copy
-  (`_hocon_parser()`'s `mod` — a *different* `ConfigFactory`/
-  `ConfigParser` class from the shared module's own, since
-  `.loads` always parses through the private copy).
-- **`SopsBackend`** — `NAMES = {"function": ("sops_data", "sops",
-  NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`. Not a `YAMLBackend`
-  subclass; `__init__(conf=None, *, strict=None, format=None)` —
-  `format` is set by the `NamePattern` capture, else inferred.
-  `.data_hash` infers the format from the file's extension with **sops's
-  own rule**, case-sensitive (`cmd/sops/formats/formats.go`, verified
-  against the real v3.13.3 binary and source 2026-09-29): `.yaml`/`.yml`
-  → yaml, `.json` → json, `.env` → dotenv, `.ini` → ini, anything else →
-  `ConfigError` (sops would read it as binary, which is not a data hash)
-  — `_SOPS_SUFFIXES`, checked in that order via `str.endswith`. It shells
-  out to `sops -d` (hardened for unattended use: `SOPS_TIMEOUT`,
-  module-level, default `30` seconds, bounds the subprocess; a missing
-  `sops` binary or non-zero exit raises `BackendError` with captured
-  stderr rather than hanging or raising a raw `OSError`; invoked as
-  `[<abs sops path>, "--input-type=<fmt>", "--output-type=<out>", "-d",
-  "--", <abs data path>]` — the data path is always absolute and after a
-  literal `--`, so a path or scope value starting with `-` can never be
-  parsed as a `sops` option; a `sops.bat`/`sops.cmd` shim is refused,
-  `cmd.exe` re-parses a batch file's own argument line; a
-  `subprocess.TimeoutExpired` is recorded and its `BackendError` raised
-  only after the `except` block, so `__context__` never carries its
-  `.stdout` -- security review R4b, 2026-09-29), then parses the
+  reach the network; this backstop wraps both the shared `pyhocon.config_parser`
+  module and hyera's own private copy.
+- **`SopsBackend(conf=None, *, strict=None, format=None)`** — `NAMES = {"function": ("sops_data", "sops", NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`.
+  Not a `YAMLBackend` subclass; `format` is set by the `NamePattern`
+  capture, else inferred.
+  `.data_hash(path, options)` infers the format from the file's extension
+  with **sops's own rule**, case-sensitive (`cmd/sops/formats/formats.go`):
+  `.yaml`/`.yml` → yaml, `.json` → json, `.env` → dotenv, `.ini` → ini,
+  anything else → `ConfigError` (sops would read it as binary, which is
+  not a data hash). It shells out to `sops -d` (hardened for unattended
+  use: `SOPS_TIMEOUT`, module-level, default `30` seconds, bounds the
+  subprocess; a missing `sops` binary or non-zero exit raises
+  `BackendError` with captured stderr rather than hanging or raising a raw
+  `OSError`; a `sops.bat`/`sops.cmd` shim is refused), then parses the
   decrypted bytes with a `format`-namespace backend (`Backend.new(<out>,
   kind="format")`) — YAML keeps `yaml_data`'s non-Hash rule; JSON/dotenv
   get the engine's generic Hash check instead.
-  **`ini` is the one exception to "output type = input type" (security
-  review S5, 2026-09-29):** sops's own INI *writer* is ambiguous (a
-  decrypted value containing `"""` plus a newline can inject a key or
-  replace a whole other section, and no ini-text parser can tell those
-  bytes apart from a genuine file — reproduced against real sops 3.13.3),
-  so `ini` is always decrypted as `--output-type=json` and parsed with
-  `JSONBackend` instead; there is no `IniBackend`. sops's JSON view of an
-  ini-format file is exactly `{"DEFAULT": {...}, <section>: {...}, ...}`
-  (`DEFAULT` always present, even empty; a duplicate `[section]` "last
-  wins" the way a duplicate JSON object key does), confirmed against the
-  real binary. `data_hash: sops_ini` still forces sops's `--input-type`
-  to `ini` (reads the file as INI) but the output/parse side is always
-  `json`, the same as inferred-`ini`.
+  **`ini` is the one exception to "output type = input type":** sops's own
+  INI *writer* is ambiguous, so `ini` is always decrypted as
+  `--output-type=json` and parsed with `JSONBackend` instead; there is no
+  `IniBackend`. sops's JSON view of an ini-format file is exactly
+  `{"DEFAULT": {...}, <section>: {...}, ...}`. `data_hash: sops_ini` still
+  forces sops's `--input-type` to `ini` but the output/parse side is
+  always `json`, the same as inferred-`ini`.
   A decrypted file that fails to parse raises a one-line, chain-free
   `BackendError("Unable to parse (<path>): <problem>", path=...)` — never
   the decrypted plaintext; a `UnicodeDecodeError` is reported as `invalid
   UTF-8 at byte offset <n>` (never the stock codec message's offending
-  byte value); the `raw`/`text` locals are `del`eted before that raise.
-  **`_sops_redact_yaml_problem` (security review S7, 2026-09-29):** three
-  `_yaml_loader` messages quote the offending scalar or an attacker-
-  suppliable class name verbatim (`invalid value for Float()/Integer():
-  "<data>"`, `Tried to load unspecified class: <data>` for a `!ruby/...`
-  tag) — on the sops decrypt path only (plain `yaml_data` keeps Puppet's
-  full text), the quoted/named part is replaced with `<redacted>` unless
-  the class name is one of the fixed set `_yaml_loader` itself raises
-  unconditionally for a known YAML shape (`Time`, `Date`, `Object`,
-  `Psych::Set` — never text lifted from the document).
+  byte value). Three `_yaml_loader` error messages that would otherwise
+  quote the offending scalar or an attacker-suppliable class name verbatim
+  have that part replaced with `<redacted>` on the sops decrypt path only
+  (plain `yaml_data` keeps Puppet's full text).
   **Gotcha:** sops re-emits YAML through its own Go YAML writer, which
   changes shape on decrypt — a date-shaped scalar becomes a full ISO
-  timestamp (`2024-01-15` → `2024-01-15T00:00:00Z`, still disallowed by
-  `_yaml_loader`, just with a different message source); tags are
-  stripped (`!foo bar` → `bar`); `!!binary`/`!!null` round-trip to plain
-  text/`null`; octal ints are re-emitted as decimal (`0755` → `493`); a
-  `:symbol` scalar/key survives as plain `:name` text (still parses to a
-  `RubySymbol`/normalizes via `symkeys_to_string` on our side, same as
-  any other YAML source).
+  timestamp (still disallowed, just with a different message source);
+  tags are stripped; `!!binary`/`!!null` round-trip to plain text/`null`;
+  octal ints are re-emitted as decimal; a `:symbol` scalar/key survives as
+  plain `:name` text (still parses to a `RubySymbol`).
 - **`EyamlBackend`** — `NAMES = {"function": ("eyaml_lookup_key",)}`, a
   `lookup_key` provider, Puppet's own name for hiera-eyaml. Requires the
-  optional `hyera[eyaml]` extra (`cryptography`); `check_available()`
+  optional `hyera[eyaml]` extra (`cryptography`); `.check_available()`
   raises `BackendError` naming the extra when it is missing, at level
   build via `Backend.new`, the same shape as the `hocon_data`/missing-
   `pyhocon` message. **PKCS7 only** — the private key alone is needed (no
@@ -958,117 +933,94 @@ is a `Backend` subclass, found by name rather than passed around directly.
   logged warning if both are set), `pkcs7_b64_private_key_env_var` (wins
   over the plain path silently, base64-decoded with Ruby's lenient
   `Base64.decode64` rules); `pkcs7_public_key*` options are accepted
-  (Puppet's own schema has them) but never read. The raw `.eyaml` file's
-  own non-Hash rule matches `yaml_data`'s (reads `self.strict` fresh on
-  every read, never cached, so a later call under a different `strict`
-  sees its own rule — the same trap `Hiera._load_file`'s cache key
-  already guards against for `data_hash`). A decrypted value is
+  (Puppet's own schema has them) but never read. `.lookup_key(key, options, context)`:
+  the raw `.eyaml` file's own non-Hash rule matches `yaml_data`'s (reads
+  `self.strict` fresh on every read, never cached). A decrypted value is
   interpolated (methods allowed) exactly like a `data_hash` result — a
   Hash's **keys** are interpolated but never decrypted, only its values
   recurse; every other type (int/float/bool/None) passes through
   unchanged. Decrypt failures raise `BackendError("hiera-eyaml backend
   error decrypting <token> when looking up <key> in <path>. Error was
   <message>")`; a missing `path`/`uri` location raises `ConfigError` like
-  any other `lookup_key` function. `hyera._eyaml` (private) holds the
-  token grammar, key loading and a bounds-checked BER/DER reader that
-  decrypts PKCS7 `EnvelopedData` (RSA PKCS#1 v1.5 key transport,
-  AES-128/192/256-CBC content, definite or indefinite lengths, no
-  certificate parsing) — any wrong-key/garbled-ciphertext symptom (wrong
-  key, bad padding, implicit-rejection garbage) reports as `"bad
-  decrypt"`, OpenSSL's own text for exactly that case, never a
-  distinguishable error.
+  any other `lookup_key` function.
 - **`DotenvBackend`** — `format`-namespace only (`dotenv`; no Puppet
   `data_hash` equivalent, reachable only through `SopsBackend`). Parses
-  **exactly the shape sops's own writer emits** (`stores/dotenv/
-  store.go`), not a general dotenv dialect — sops's own `--output-type
-  json` view is the acceptance oracle it was verified against
-  (2026-09-29, real sops 3.13.3). `DotenvBackend.loads(text) -> dict`:
-  blank lines and `#`-prefixed lines are skipped; the first `=` splits
-  key/value; a literal two-character `\n` in the value becomes a real
-  newline; a line with no `=` raises `BackendError("invalid dotenv line
-  <n>")` — never the line's own text. There is no `IniBackend`: see
-  `SopsBackend` above (S5) for why `ini` is parsed as JSON instead.
+  **exactly the shape sops's own writer emits**, not a general dotenv
+  dialect. `.loads(text)`: blank lines and `#`-prefixed lines are skipped;
+  the first `=` splits key/value; a literal two-character `\n` in the
+  value becomes a real newline; a line with no `=` raises
+  `BackendError("invalid dotenv line <n>")` — never the line's own text.
+  There is no `IniBackend`: see `SopsBackend` above for why `ini` is
+  parsed as JSON instead.
+- **Rendering** — three `render`-kind-only, private `Backend` subclasses
+  (`hyera._render`), found the same way (`Backend.new(fmt, kind="render")`):
+  Puppet's `puppet lookup --render-as` output. Each implements only
+  `dumps(obj) -> str`; none of the Hiera 5 provider hooks or `loads`
+  apply. `s` renders Ruby `to_s` (Ruby 3.2 AIO hash form `{"k"=>v}`,
+  `Sensitive [value redacted]`) — the same renderer a bare `%{var}`/
+  function-call result uses. `json` renders compact, insertion-ordered
+  JSON (`ensure_ascii=False, allow_nan=False, separators=(",", ":")`); a
+  non-finite `float` raises `ValueError` with Puppet's own text (`NaN not
+  allowed in JSON`, etc.); anything else not representable as Puppet data
+  raises `TypeError("<type name> is not a Puppet data value")`. `yaml`
+  renders byte-compatible with Psych's `to_yaml` for every measured shape
+  (`explicit_start=True, default_flow_style=False, sort_keys=False,
+  allow_unicode=True`); every render ends with exactly one trailing `\n`.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
-  the sops timeout.
+  the sops timeout. See "Environment" below for the fixed-name variables.
 
-## Exceptions (`exceptions.py`)
+## Errors
 
 `HieraError(*args, path=None)` (base; `.path` names the file concerned, or
 `None`) →
 
-- **`ConfigError`** — anything about `hiera.yaml`: missing, unreadable,
-  unparsable, non-mapping, an unsupported `version`, or wrong shape. A
-  read/shape problem's message names the origin directly; an unparsable
-  file's is `(<path>): <problem> at line L column C` (Psych's shape, one
-  line). `.line` (in addition to the inherited `.path`) names the 1-based
-  line in `.path` a problem was found at, when known (`None` for a dict
-  config, or when no line applies); a message that includes a line also
-  ends with Puppet's own `(file: F, line: N)` suffix.
+- **`ConfigError(*args, path=None, line=None)`** — anything about
+  `hiera.yaml`: missing, unreadable, unparsable, non-mapping, an
+  unsupported `version`, or wrong shape. A read/shape problem's message
+  names the origin directly; an unparsable file's is `(<path>): <problem>
+  at line L column C` (Psych's shape, one line). `.line` (in addition to
+  the inherited `.path`) names the 1-based line in `.path` a problem was
+  found at, when known (`None` for a dict config, or when no line
+  applies); a message that includes a line also ends with Puppet's own
+  `(file: F, line: N)` suffix.
 - **`BackendError`** — a data file could not be read or parsed. `.path`
   names it; an unparsable file's message is `Unable to parse (<path>):
-  <problem> at line L column C`, one line. Can be raised from `Hiera(...)`
-  itself (context-free levels are loaded by the constructor) as well as
-  from a lookup.
+  <problem> at line L column C`, one line. Raised from the first lookup
+  whose scope reaches the bad file (never from `Hiera(...)` itself — see
+  "Lookup" above).
 - **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
   a key, including a `convert_to` whose type cannot be parsed or whose
-  conversion/result-type assertion fails (Puppet's `new()`; see `Sensitive`
-  and the `convert_to` Gotcha below for the two message forms). →
+  conversion/result-type assertion fails (see "Types" above and the
+  `convert_to` Gotcha below for the two message forms). →
   - **`InterpolationError`** — a `%{...}` interpolation or function call
     could not be resolved.
   - **`MergeError`** — an unknown or invalid merge strategy.
-  - **`KeyNotFoundError`** (also a `KeyError`) — `.lookup()`'s miss (no
+  - **`KeyNotFoundError(name)`** (also a `KeyError`) — `.lookup()`'s miss (no
     default given), with Puppet's message ("Function lookup() did not find
     a value for the name '<key>'", or the "any of the names [...]" plural
     form). `.name` holds the key(s) tried.
 
-Every class above is importable directly from `hyera` (e.g. `hyera.BackendError
-is hyera.backends.BackendError`, both paths work since `hyera.__init__`
-re-exports it too).
+Every class above is importable directly from `hyera` (e.g.
+`hyera.BackendError is hyera.backends.BackendError`, both paths work since
+`hyera.__init__` re-exports it too).
 
-## Rendering (`_render.py`)
+## CLI
 
-Three `render`-kind-only `Backend` subclasses -- Puppet's `puppet lookup
---render-as` output, found via `Backend.new(fmt, kind="render")`. Each
-implements only `dumps(obj) -> str`; none of the Hiera 5 provider hooks or
-`loads` apply. Imported once, for its side-effect registration, right
-after `backends` in `hyera/__init__.py`.
+`hyera.cli` exports `main` always; `Lookup` only when the `cli` extra
+(`duho`) is installed.
 
-- **`StringRender`** (`s`) — `hyera._interpolation._to_puppet_str`: Ruby
-  `to_s`, the same renderer a bare `%{var}`/function-call result uses
-  (Ruby 3.2 AIO hash form `{"k"=>v}`, `Sensitive [value redacted]`).
-- **`JSONRender`** (`json`) — `json.dumps(ensure_ascii=False,
-  allow_nan=False, separators=(",", ":"))` over a projected value: a
-  `Sensitive` becomes its redacted text, a `dict` keeps insertion order (a
-  non-`str` key renders through `_to_puppet_str`), a `list`/`tuple`
-  becomes a plain `list`. A non-finite `float` raises `ValueError` with
-  Puppet's own text (`NaN not allowed in JSON`, `Infinity not allowed in
-  JSON`, `-Infinity not allowed in JSON`); anything else not representable
-  as Puppet data raises `TypeError("<type name> is not a Puppet data
-  value")`.
-- **`YAMLRender`** (`yaml`) — a `yaml.SafeDumper` subclass
-  (`explicit_start=True, default_flow_style=False, sort_keys=False,
-  allow_unicode=True`), byte-compatible with Psych's `to_yaml` for every
-  measured shape: `None` renders as an empty plain scalar; a `str` uses
-  literal style (`|`) when it contains `\n`, double-quoted style for
-  exactly `y`/`Y`/`n`/`N` or text matching `^:.` (Psych quotes these,
-  PyYAML's own resolver does not), else PyYAML's own default quoting
-  rules; a `Sensitive` renders as its redacted text; a `tuple` renders as
-  a list. A trailing `...` document-end line, when PyYAML adds one, is
-  stripped. Every render ends with exactly one trailing `\n`.
-
-## CLI (`cli.py`)
-
-- **`main(argv=None) -> int`** — the `hyera` console-script entry point;
-  builds and dispatches the `Lookup` duho command (`duho.main`), which sets
+- **`main(argv=None)`** — the `hyera` console-script entry point;
+  builds and dispatches the `Lookup` duho command, which sets
   up `-v/-q/--loglevel` logging and returns the process exit code. When the
   `cli` extra (`duho`) is not installed, `main` always exists but prints
   `hyera: the command-line interface needs the cli extra: pip install
   "hyera[cli]"` to stderr and returns 2, instead of raising
   `ModuleNotFoundError`; `Lookup` itself is not defined in that case.
-- **`Lookup`** — the `duho.Cli` command class (only defined when `duho` is
-  installed), accepting `puppet lookup`'s own flag set. Fields, grouped:
+- **`Lookup`** — the `duho.Cli` command class, accepting `puppet lookup`'s
+  own flag set. `.__call__()` runs the parsed command and returns the exit
+  code. Fields, grouped:
   - *lookup*: `keys` (positional, zero or more — the first one found wins),
     `merge` (`--merge first|unique|hash|deep`; any other value exits 2 with
     Puppet's own text, validated by hand rather than via argparse choices),
@@ -1079,11 +1031,13 @@ after `backends` in `hyera/__init__.py`.
     parsed once, up front, so a syntax error exits 2 even when the key
     would otherwise just miss), `default` (`--default`), `explain`/
     `explain_options` (`--explain`/`--explain-options`).
-  - *facts and scope*: `facts` (`--facts FILE`, parsed by `load_facts`),
-    `node` (`--node NAME`, `Scope(node_name=...)` only — seeds no fact),
-    `scope` (`--scope`/`-s NAME=VALUE`, repeatable; VALUE is YAML, an empty
-    VALUE is `None`, a dotted NAME nests a nested hash, the CLI's one flag
-    with no `puppet lookup` counterpart).
+  - *facts and scope*: `facts` (`--facts FILE`, parsed by `load_facts`;
+    **mandatory** — an absent or empty `--facts` exits 2 with "No facts
+    available for target node: `<--node or the local fqdn>`"), `node`
+    (`--node NAME`, `Scope(node_name=...)` only — seeds no fact), `scope`
+    (`--scope`/`-s NAME=VALUE`, repeatable; VALUE is YAML, an empty VALUE
+    is `None`, a dotted NAME nests a nested hash, the CLI's one flag with
+    no `puppet lookup` counterpart).
   - *settings*: `hiera_config` (`--hiera_config PATH`; default `./hiera.yaml`
     if it exists, else `Hiera(None, base_path=os.getcwd())` — Puppet's
     built-in default configuration; a *named* missing file is still a
@@ -1096,19 +1050,18 @@ after `backends` in `hyera/__init__.py`.
   - *output*: `render_as` (`--render-as FORMAT`, default `None` meaning
     `"yaml"`, or `"s"` while explaining; case-insensitive; an unrecognized
     format exits 2 with `Unknown rendering format '<f>'` before any lookup
-    runs). Output goes through `hyera._render`'s `s`/`json`/`yaml` render
-    backends (`Backend.new(fmt, kind="render")`), the same shapes `puppet
-    lookup --render-as` prints (Ruby `to_s` for `s`, byte-compatible YAML
-    for `yaml`, compact insertion-ordered JSON for `json`); a `Sensitive`
+    runs). Output goes through the `s`/`json`/`yaml` render
+    backends ("Rendering" above), the same shapes `puppet
+    lookup --render-as` prints; a `Sensitive`
     value redacts in every format, including `yaml` (Puppet's own YAML
     leaks the plaintext). A non-finite float under `--render-as json` exits
-    2 with Puppet's own text (`NaN not allowed in JSON`, `Infinity not
-    allowed in JSON`, `-Infinity not allowed in JSON`). Output is written
-    as UTF-8 bytes with LF line endings via `_emit` (never `print`),
-    regardless of the console or locale encoding, with a trailing newline
+    2 with Puppet's own text. Output is written
+    as UTF-8 bytes with LF line endings, regardless of the console or
+    locale encoding, with a trailing newline
     added only if the rendered text lacks one (Ruby `puts` semantics); a
     reader that closes the pipe early raises `BrokenPipeError`, silenced
     and reported as exit 2 with nothing on stderr.
+  - `debug` (`--debug`/`-d`) — equivalent to `-vv`; see "Logging" below.
 
   Removed outright, no alias: `--config`/`-c` (use `--hiera_config`),
   `--deep` (use `--merge deep`), `--knockout-prefix` (use
@@ -1118,20 +1071,19 @@ after `backends` in `hyera/__init__.py`.
   **Argument order, matching `puppet lookup`'s own `main`:** the deep-only
   guard, then `--merge` validation, then the no-keys check (`--explain-options`
   alone with no key becomes the key `"__global__"`; otherwise "No keys were
-  given to lookup."), then the render format, then scope/facts (an empty or
-  absent `--facts` is "No facts available for target node: `<--node or the
-  local fqdn>`"), then `--hiera_config`/layers/`--type` and the lookup or
-  `--explain` itself. `main()` first runs every argv token through
+  given to lookup."), then the render format, then scope/facts, then
+  `--hiera_config`/layers/`--type` and the lookup or `--explain` itself.
+  `main()` first runs every argv token through
   `_puppet_argv`, which joins a long value option with its following token
   (`--opt value` -> `--opt=value`) so a value that itself looks like an
   option (`--knock-out-prefix --`, `--default -x`) reaches argparse the way
   Puppet's own parser would consume it; a value that is exactly `"--"` is
-  additionally routed through an internal placeholder and translated back
-  in `__call__` (`_unplaceholder`), working around a CPython `argparse`
-  bug (fixed in 3.13, present on this project's 3.9 floor) that empties a
-  single-value option's own value when it is literally `"--"`.
+  additionally routed through an internal placeholder, working around a
+  CPython `argparse` bug (fixed in 3.13, present on this project's 3.9
+  floor) that empties a single-value option's own value when it is
+  literally `"--"`.
   Tokens after a bare `--` (not itself following a value option) go to
-  duho's own `_passthrough_`, treated as more keys — Puppet's own
+  duho's own passthrough, treated as more keys — Puppet's own
   "everything after this is a key" convention — and never reach
   `--render-as`/any other flag.
 
@@ -1151,35 +1103,88 @@ after `backends` in `hyera/__init__.py`.
   key 'K': …` if printing the found/default/explained value itself fails.
   The traceback is omitted unless `-v`, `-d`/`--debug` or
   `DUHO_TRACEBACK=1` is set.
-  `$server_facts` carries `serverversion` (the constant `_PUPPET_VERSION`,
-  currently `"8.10.0"`, the `puppet lookup` release this CLI's flags
-  mirror) and `environment` only — no host-identity keys. Facts come only
-  from `--facts`; this CLI never runs facter or reads stored facts, so an
-  unattended lookup has no hidden subprocess and gives the same answer on
-  every host.
-- **Logging** (`_logger_name_ = "hyera"`, so `-v`/`-q`/`--loglevel` change
-  the `hyera` logger, not duho's own command-class logger):
-  `_verbose_loglevel_` follows Puppet's own scheme from a `WARNING` base —
+  `$server_facts` carries `serverversion` (the `puppet lookup` release
+  this CLI's flags mirror) and `environment` only — no host-identity keys.
+  Facts come only from `--facts`; this CLI never runs facter or reads
+  stored facts, so an unattended lookup has no hidden subprocess and gives
+  the same answer on every host.
+- **Logging** (`-v`/`-q`/`--loglevel` change the `hyera` logger):
+  the verbosity scheme follows Puppet's own from a `WARNING` base —
   no flag: warning; `-v`: info; `-vv` or `-d`/`--debug`: debug; `-vvv`:
   trace; `-q`: error; `-qq`: critical. A plain miss (no `--default`) logs
   at DEBUG (Puppet's own "did not find a value for the name…" text), so it
   is silent by default and under `-v`, matching Puppet exactly; only
-  `-vv`/`-d`/`--loglevel hyera:DEBUG` shows it. `debug` (`--debug`/`-d`) is
-  its own field, equivalent to `-vv`, and also makes `_fail` attach a
-  traceback the same way `-v` does.
-- Env: `HYERA_MCP=stdio` runs the command as an MCP server over
-  stdin/stdout (duho), exposing one tool, `hyera` (`Lookup`'s
-  `_parsername_`, not its class name), whose arguments are the CLI fields
-  (`keys`, `hiera_config`, `facts`, `scope`, ...); a `tools/call` returns
-  what the command would print, and `initialize`'s `serverInfo.name` is
-  `"hyera"` too. Any other `HYERA_MCP` value exits `2` with `unsupported
-  MCP transport`. The trigger variable name itself is always `HYERA_MCP`,
-  from that same `_parsername_`, regardless of `sys.argv[0]` (so `python -m
-  hyera.cli` or embedding `Lookup` in a differently-named script never
-  changes it). The trigger is read before the arguments, so an MCP session
-  never performs a command-line lookup. A truthy `AGENT_HELP` or
-  `AGENTS_HELP` makes `--help` print duho's JSON agent-help document
-  instead of usage text.
+  `-vv`/`-d`/`--loglevel hyera:DEBUG` shows it. `--help` is plain text.
+
+## Environment
+
+Every environment variable `hyera`'s own code, or a dependency it invokes
+in a way that changes visible behavior, reads by a fixed name:
+
+- **`ALLUSERSPROFILE`** — read only on the platform-default-`codedir`
+  fallback (no explicit `Hiera(codedir=...)`/`--codedir`), Windows only:
+  Puppet's AIO default `codedir` is `%ALLUSERSPROFILE%\PuppetLabs\code`,
+  falling back to the literal `C:\ProgramData` if unset.
+- **`HYERA_MCP`** — `HYERA_MCP=stdio` runs the `hyera` command as an MCP
+  server over stdin/stdout (via `duho`), exposing one tool, `hyera`
+  (`Lookup`'s program name, not its class name), whose arguments are the
+  CLI fields (`keys`, `hiera_config`, `facts`, `scope`, ...); a
+  `tools/call` returns what the command would print, and
+  `initialize`'s `serverInfo.name` is `"hyera"` too. Any other
+  `HYERA_MCP` value exits `2` with `unsupported MCP transport`. The
+  trigger variable name itself is always `HYERA_MCP`, regardless of
+  `sys.argv[0]` (so `python -m hyera.cli` or embedding `Lookup` in a
+  differently-named script never changes it). The trigger is read before
+  the arguments, so an MCP session never performs a command-line lookup.
+- **`AGENT_HELP`** / **`AGENTS_HELP`** — either truthy makes `--help` print
+  duho's JSON agent-help document instead of usage text.
+- **`DUHO_TRACEBACK`** — `DUHO_TRACEBACK=1` adds a traceback to a `2`-exit
+  CLI error (same effect as `-v`/`-d`).
+
+Not a fixed-name environment variable, but env-adjacent: `sops` (invoked
+by `SopsBackend`) runs with the process environment, so its own `SOPS_*`
+and any key-source variables it reads apply; `SOPS_TIMEOUT` is a
+`hyera.backends` module attribute, not an env var. `EyamlBackend`'s
+`pkcs7_private_key_env_var`/`pkcs7_b64_private_key_env_var` hiera.yaml
+options name an environment variable *dynamically* (the variable's own
+name is data, not a fixed hyera name) to read the eyaml private key from.
+
+## Differences from Puppet
+
+- **deviation** `sops-backend` — hyera keeps a `sops`/`sops_data`
+  `data_hash` backend that Puppet does not have.
+- **deviation** `convert-to-unsupported-type` — hiera implements Puppet's
+  `new()` only for types whose values are plain data; converting to
+  SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or
+  Object raises.
+- **deviation** `knockout-prefix-not-python-regex` — a `knockout_prefix`
+  that Python's `re` module cannot compile raises an error; Ruby accepts
+  it with a warning ("regular expression has redundant nested repeat
+  operator").
+- **deviation** `v3-ruby-backend-unavailable` — Ruby Hiera 3 backends
+  cannot run in Python, so an unregistered Hiera 3 backend name raises
+  `ConfigError` where Puppet with Hiera 3 installed skips it.
+
+Not supported:
+
+- The legacy Puppet functions `hiera()`/`hiera_array()`/`hiera_hash()`/
+  `hiera_include()` as Python methods — see "Coming from `hiera()`" under
+  Lookup for the equivalent `.lookup()` calls. The `%{hiera('x')}`
+  interpolation function stays supported.
+- Running Ruby Hiera 3 backends or `hiera3_backend` Ruby code: a
+  third-party Python `Backend` may register under the name; anything else
+  raises `ConfigError` (`v3-ruby-backend-unavailable`, above).
+- Catalog-compilation context: class-local variable scopes beyond an
+  explicit `variables=` layer, `calling_class`/`calling_module`, and
+  `--compile`.
+- `--render-as binary|msgpack`.
+- The GPG eyaml encryption scheme — detected and reported as an
+  unsupported plugin; only PKCS7 is implemented.
+- Type aliases (`Stdlib::*`, user-defined) and `Timespan`/`Timestamp`/
+  `SemVer` in `convert_to`/`value_type` — an explicit "unsupported type"
+  error (see "Types" above).
+- Discovering `environmentpath`/`modulepath`/`codedir` from `puppet.conf`:
+  they are explicit constructor and CLI arguments only.
 
 ## Gotchas
 
@@ -1197,10 +1202,9 @@ after `backends` in `hyera/__init__.py`.
   their `LookupContext` caches are per scope-binding object (`Hiera`/
   `h.scoped(...)` view), never shared with another view; `cached_file_data`
   is per `Hiera` instance, shared by every hierarchy entry. A backend's
-  `context.not_found()` raises a `BaseException` subclass
-  (`hyera._function_provider._NotFound`), not `Exception` — a backend
-  wrapping its own logic in `except Exception:` does not accidentally
-  swallow it.
+  `context.not_found()` raises a `BaseException` subclass, not `Exception`
+  — a backend wrapping its own logic in `except Exception:` does not
+  accidentally swallow it.
 - A self- or mutually-referencing interpolation (`%{lookup('a')}` inside
   `a`; a variable whose value refers to itself; a chain `a` -> `b` -> `a`)
   raises `InterpolationError` "Recursive lookup detected in [a, b]" (the
@@ -1318,7 +1322,7 @@ after `backends` in `hyera/__init__.py`.
   file.
 - A **dotted reference** (`%{trusted.certname}`, `%{facts.os.family}`) and a
   **dotted lookup key** (`h.lookup("a.b.0")`) both follow Puppet's own
-  `split_key`/`sub_lookup` sub-key grammar, in hierarchy paths, `datadir`,
+  sub-key grammar, in hierarchy paths, `datadir`,
   `mapped_paths` templates, values, `.format()`, `%{scope('a.b')}` and
   `.lookup()` alike: a segment may be single- or double-quoted (quotes keep any
   embedded `.` literal and are trimmed off; whitespace around an unquoted
@@ -1362,24 +1366,6 @@ after `backends` in `hyera/__init__.py`.
   string) — a *standalone* `%{scope(...)}`/`%{hiera(...)}`/`%{lookup(...)}`
   call still stringifies a scalar result the same way (only `%{alias(...)}`
   preserves a non-scalar result's native type when it is the entire value).
-- `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
-  by default (2026-09-29 — see the API section above): `include
-  file(...)` really reads the named file (cwd-relative or absolute), and
-  a directive in value position (`msg = please include "x"`) is kept as
-  literal text, both confirmed against the real oracle (Puppet 8.10.0 /
-  Ruby hocon 1.4.0, WSL). The stricter pre-fidelity behaviour (raise on both)
-  is kept as the `hocon_includes=False` opt-in. One measured, accepted
-  divergence: `include file("*.conf")` globs under pyhocon's own
-  resolution where Puppet's never does (see the API section).
-  `hocon_include_parity` closed the two findings this reversed
-  (`hocon-data-include-file-and-value-position-includes-raise-pu`,
-  `hocon-array-value-position-include-raises-vs-puppet-literal`) and
-  found, in the same pass, that the fail-closed pyhocon-include guard had
-  never actually wrapped the module `HOCONBackend.loads` parses through
-  (`_hocon_parser()`'s private copy has its own, distinct
-  `ConfigFactory`/`ConfigParser` classes — `is not` the shared module's) —
-  a gap dating to `json_hocon_loaders`'s private-copy fix for duration
-  parsing, now closed by installing the guard on that copy too.
 - **A BOM behaves differently in a data file than in `hiera.yaml` vs. how
   it might look at first** — actually the *same* either way, and that is
   itself the gotcha: `puppet lookup` reads hiera.yaml via `HieraConfig` ->
@@ -1396,7 +1382,7 @@ after `backends` in `hyera/__init__.py`.
   flow-style (`{...}`) or single-key mapping has no such problem.
 - **libyaml (the C loader) accepts a tab after `:` in a plain scalar
   (`plain:\tp`); the pure-Python loader does not** — the one behavioral gap
-  between `_C_LOADER` and `_PURE_LOADER`. Both venvs and every published
+  between the two loaders. Both venvs and every published
   wheel ship libyaml, so this is a real fallback path (a source build
   without it, or `PyYAML` built `--no-libyaml`), not a hidden dead branch;
   it is tested and documented, not worked around.
@@ -1408,8 +1394,7 @@ after `backends` in `hyera/__init__.py`.
   or shaped this way currently returns successfully instead of erroring
   like Puppet.
 - **`None`/`null`/`~` as an actual data value is indistinguishable from "key
-  not found"** in the engine's own navigation (`Hiera._get_key` treats
-  `cache is None` as "keep looking") — a known limitation, not yet
+  not found"** in the engine's own navigation — a known limitation, not yet
   fixed; a data file legally
   containing `key: ~` currently makes that key un-lookupable.
 - **`convert_to` is Puppet's `new()`.** A `str` first element of the
@@ -1420,8 +1405,12 @@ after `backends` in `hyera/__init__.py`.
   type whose conversion or result-type assertion fails raises
   `HieraLookupError("The convert_to lookup_option for key '<key>' raised
   error: <msg>")` instead — both with the underlying error chained as
-  `__cause__`. Converting to SemVer, SemVerRange, Timespan, Timestamp,
-  Regexp, Binary, URI, Type or Object always raises the second form with
-  "hiera does not support new() for the Puppet type '<T>'" — these are
-  types whose values are not plain data, so this subset never implements
-  `new()` for them (a deliberate deviation; Puppet itself supports several).
+  `__cause__`. See "Types" above for the types `new()` never supports.
+- `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
+  by default (see "Backends" above): `include file(...)` really reads the
+  named file (cwd-relative or absolute), and a directive in value position
+  (`msg = please include "x"`) is kept as literal text. The stricter
+  pre-fidelity behaviour (raise on both) is kept as the
+  `hocon_includes=False` opt-in. One measured, accepted divergence:
+  `include file("*.conf")` globs under pyhocon's own resolution where
+  Puppet's never does.

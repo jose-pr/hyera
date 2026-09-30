@@ -298,3 +298,185 @@ def test_docstring_fields_match_signatures():
                 )
 
     assert not offenders, "\n".join(offenders)
+
+
+def _header_text():
+    return Path(hyera.__file__).with_name("AGENTS.md").read_text(encoding="utf-8")
+
+
+def _render(obj, drop_first=False):
+    """``inspect.signature(obj)`` with every annotation (parameter and
+    return) dropped, and the bound first parameter removed when
+    ``drop_first``."""
+    sig = inspect.signature(obj)
+    params = list(sig.parameters.values())
+    if drop_first and params:
+        params = params[1:]
+    params = [p.replace(annotation=inspect.Parameter.empty) for p in params]
+    sig = sig.replace(parameters=params, return_annotation=inspect.Signature.empty)
+    return str(sig)
+
+
+def test_header_documents_every_export():
+    """The shipped header (``src/hyera/AGENTS.md``) documents every
+    exported name's exact signature (or, for a non-callable export, its
+    bare name), every exported class's own public members, and every
+    registered backend name -- so a consuming agent can skip the source."""
+    header = _header_text()
+    offenders = []
+
+    for module in _public_modules():
+        for name in module.__all__:
+            obj = getattr(module, name)
+            if inspect.isclass(obj):
+                if "__init__" in vars(obj):
+                    rendered = name + _render(obj)
+                    if rendered not in header:
+                        offenders.append(
+                            "class {}: missing {!r}".format(name, rendered)
+                        )
+                elif "`{}`".format(name) not in header:
+                    offenders.append("class {}: missing `{}`".format(name, name))
+            elif inspect.isfunction(obj):
+                rendered = name + _render(obj)
+                if rendered not in header:
+                    offenders.append("function {}: missing {!r}".format(name, rendered))
+            elif "`{}`".format(name) not in header:
+                offenders.append("{}: missing `{}`".format(name, name))
+
+            if not inspect.isclass(obj):
+                continue
+            for member_name, member in vars(obj).items():
+                if member_name == "__init__":
+                    include = True
+                elif member_name in ("__call__", "__getitem__", "__contains__"):
+                    include = True
+                elif not member_name.startswith("_"):
+                    include = True
+                else:
+                    include = False
+                if not include or member_name == "__init__":
+                    continue
+                if isinstance(member, property):
+                    needle = ".{}".format(member_name)
+                elif isinstance(member, (staticmethod, classmethod)):
+                    needle = ".{}{}".format(
+                        member_name, _render(getattr(obj, member_name))
+                    )
+                elif inspect.isfunction(member):
+                    needle = ".{}{}".format(
+                        member_name, _render(member, drop_first=True)
+                    )
+                else:
+                    continue
+                if needle not in header:
+                    offenders.append(
+                        "{}.{}: missing {!r}".format(name, member_name, needle)
+                    )
+
+    from hyera.backends import Backend
+
+    for kind in Backend.KINDS:
+        for backend_name in Backend.names(kind):
+            needle = "`{}`".format(backend_name)
+            if needle not in header:
+                offenders.append(
+                    "Backend.names({!r}): missing {!r}".format(kind, needle)
+                )
+
+    assert not offenders, "\n".join(offenders)
+
+
+def test_header_lists_every_marker():
+    """Every ``deviation``/``divergence`` id a conformance case carries has
+    its own line in the header's "Differences from Puppet" section -- a
+    later plan that adds or removes a marker must edit the header."""
+    import yaml
+
+    cases_dir = (
+        Path(hyera.__file__).resolve().parents[2] / "tests" / "conformance" / "cases"
+    )
+    deviation_ids = set()
+    gap_ids = set()
+
+    def _ids(value):
+        if isinstance(value, str):
+            return {value}
+        if isinstance(value, dict) and "id" in value:
+            return {value["id"]}
+        if isinstance(value, list):
+            out = set()
+            for item in value:
+                out |= _ids(item)
+            return out
+        return set()
+
+    for case_file in sorted(cases_dir.glob("*/case.yaml")):
+        data = yaml.safe_load(case_file.read_text(encoding="utf-8"))
+        if not data:
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                if "deviation" in node:
+                    deviation_ids |= _ids(node["deviation"])
+                if "divergence" in node:
+                    gap_ids |= _ids(node["divergence"])
+                stack.extend(node.values())
+            elif isinstance(node, list):
+                stack.extend(node)
+
+    header = _header_text()
+    header_deviations = set(
+        re.findall(r"^- \*\*deviation\*\* `([^`]+)`", header, re.MULTILINE)
+    )
+    header_gaps = set(re.findall(r"^- \*\*gap\*\* `([^`]+)`", header, re.MULTILINE))
+
+    assert header_deviations == deviation_ids
+    assert header_gaps == gap_ids
+
+
+def test_header_lists_env_vars():
+    """Every literal environment-variable name ``hyera``'s own source reads
+    (``os.environ``/``os.getenv``) appears in the header's "Environment"
+    section."""
+    pattern = re.compile(
+        r"""(?:environ(?:\.get)?\(|environ\[|getenv\()\s*["']([A-Z][A-Z0-9_]*)["']"""
+    )
+    package_dir = Path(hyera.__file__).parent
+    names = set()
+    for path in package_dir.glob("*.py"):
+        names |= set(pattern.findall(path.read_text(encoding="utf-8")))
+
+    header = _header_text()
+    env_start = header.index("## Environment")
+    env_end = header.index("## Differences from Puppet")
+    env_section = header[env_start:env_end]
+
+    missing = [n for n in names if n not in env_section]
+    assert not missing, missing
+
+
+def test_header_is_self_contained():
+    """The header ships inside the wheel, where an installed consumer has
+    no repo: no relative Markdown link, no private-working-tree path, no
+    bare decision id, no ``src/`` reference."""
+    header = _header_text()
+    offenders = []
+
+    for target in re.findall(r"\]\(([^)]+)\)", header):
+        if not target.startswith("http"):
+            offenders.append("relative link: {!r}".format(target))
+
+    agents_needle = "." + "agents"
+    if agents_needle in header:
+        offenders.append("contains a " + agents_needle + " path")
+
+    if re.search(r"\bD\d{2}\b", header):
+        offenders.append("contains a bare decision id")
+
+    if "src/" in header:
+        offenders.append("contains a src/ reference")
+
+    assert not offenders, offenders
