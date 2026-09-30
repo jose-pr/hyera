@@ -362,10 +362,6 @@ class _FunctionProvider:
         self._prune = prune
         self._contexts: dict = {}
 
-    @property
-    def full_name(self) -> str:
-        return "{} function '{}'".format(self.kind, self.backend.name)
-
     def options_for(self, location) -> dict:
         """Puppet's ``options.merge('path'/'uri' => ...)``
         (``function_provider.rb:62-72``)."""
