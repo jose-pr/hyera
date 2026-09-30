@@ -215,7 +215,8 @@ def normalize_paths(text: str, case_dir: Path, root: "str | None" = None) -> str
     lead-in, so this uses a charclass that stops at a quote/paren/space
     instead. Unlike :func:`normalize_message` this never strips an
     ``Error:``/``Warning:`` prefix and never applies :func:`aio_inspect` --
-    explain's own hash dump uses `` => `` verbatim (see D10.4 in the plan).
+    explain's own hash dump uses `` => `` verbatim, and normalizing that
+    away would corrupt the text Puppet actually printed.
     """
     text = re.sub(
         r'[^\s"\'(]*[\\/]cases[\\/]' + re.escape(case_dir.name), "<case>", text
