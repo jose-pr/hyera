@@ -17,11 +17,8 @@ queries:
 - key: unqualified_in_module
 - key: other::key
 - key: mymod::dflt
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::dflt_arr
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::dflt_opt
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::merged
   id: mymod_merged_deep
   merge: deep
@@ -34,4 +31,3 @@ queries:
 - key: mymod::dflt_arr
   id: mymod_dflt_arr_unique
   merge: unique
-  divergence: spec-layers-backends/default-hierarchy-semantics

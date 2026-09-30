@@ -42,8 +42,11 @@ private engine internals with no stability contract.
   entry's own `datadir` wins, else `defaults.datadir`, else the literal
   `data`, always resolved next to hiera.yaml (or under `base_path`) — never
   the Hiera 3 absolute `/etc/puppetlabs/...` path. `default_hierarchy` is
-  accepted in a single (non-layered) config, and its entries are schema-
-  validated exactly like `hierarchy`'s. Each entry uses its own function
+  accepted only in a *module*'s own hiera.yaml (see "Layers" below); the
+  same key in the global or an environment config raises `ConfigError`
+  ("'default_hierarchy' is only allowed in the module layer"), at
+  validation time. Where it is accepted, its entries are schema-validated
+  exactly like `hierarchy`'s. Each entry uses its own function
   key (`data_hash`/`lookup_key`/`data_dig`/`hiera3_backend`/
   `v4_data_hash`), falling back to `defaults` only when the entry names
   none (`defaults` is never merged into an entry wholesale); `lookup_key`
@@ -112,6 +115,15 @@ private engine internals with no stability contract.
     nothing. A version-4 config outside the global layer raises "not
     supported yet" for now. `sources()` still reports only the global
     layer's candidate paths — a per-layer view belongs to `explain()`.
+    A module's own hiera.yaml may declare `default_hierarchy`, consulted
+    only for that module's own `<module>::...` keys, and only after the
+    global, environment and module main hierarchies all miss (including a
+    hit whose dotted dig misses). The caller's `merge=` never applies
+    there — the merge comes only from the default hierarchy's own
+    `lookup_options`, never merged with the main hierarchy's — while the
+    main hierarchy's `convert_to` still applies to the result either way.
+    The same key in the global or an environment config raises
+    `ConfigError` at validation time, before any lookup runs.
     To look up a single module's own data with no global or environment
     config at all: `Hiera({"version": 5, "hierarchy": []},
     modulepath=["/path/to/modules"])`.

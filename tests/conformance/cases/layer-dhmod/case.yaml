@@ -9,8 +9,5 @@ puppet_args:
 queries:
 - key: mymod::both
 - key: mymod::onlydefault
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::dlo
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: mymod::explicit
-  divergence: spec-layers-backends/default-hierarchy-semantics

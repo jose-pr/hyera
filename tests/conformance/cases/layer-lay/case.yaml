@@ -12,9 +12,7 @@ queries:
   - key: mm::envmod
   - key: unq
   - key: mm::darr
-    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: mm::dopt
-    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: mm::h
   - id: mm::h-deep
     key: mm::h
@@ -23,4 +21,3 @@ queries:
   - id: mm::darr-unique
     key: mm::darr
     merge: unique
-    divergence: spec-layers-backends/default-hierarchy-semantics

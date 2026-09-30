@@ -48,6 +48,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `default_hierarchy` is accepted only in a module's hiera.yaml, as in
+  Puppet. A global or environment hiera.yaml containing it raises
+  `ConfigError` ("'default_hierarchy' is only allowed in the module
+  layer"). Move those entries into `hierarchy`, or into a module's
+  hiera.yaml.
+- A module's `default_hierarchy` is consulted only for that module's
+  keys, after the global, environment and module hierarchies all miss.
+  The `merge` passed to `lookup()` does not apply there — the merge comes
+  from the `lookup_options` in the default hierarchy's own data, while
+  `convert_to` from the main `lookup_options` still applies.
 - Interpolation in data values follows Puppet's rules: one left-to-right
   pass (`%{literal('%')}{x}` yields the literal `%{x}`, and a substituted
   value is never scanned again); whitespace inside `%{ }` is ignored; hash
@@ -128,8 +138,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An explicit `merge=` overrides only the merge from `lookup_options`;
   `convert_to` is always applied.
 - `%{lookup()}`, `%{hiera()}` and `%{alias()}` run full lookups, with the
-  target key's own `lookup_options` and the `default_hierarchy` fallback;
-  `%{alias()}` no longer merges with the caller's strategy.
+  target key's own `lookup_options` and (for a module key) its module's
+  `default_hierarchy` fallback; `%{alias()}` no longer merges with the
+  caller's strategy.
 - A found value that is not Puppet RichData (a hash key that is a boolean,
   a null or a collection; a Ruby symbol) raises `HieraLookupError` naming
   the key, the data_hash function and the file.

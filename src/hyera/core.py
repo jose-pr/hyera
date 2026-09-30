@@ -196,6 +196,11 @@ class Hiera:
         #: ``(environment, module_name, scope) -> the final compiled
         #: ``lookup_options`` mapping (:meth:`_retrieve_lookup_options`).
         self._lookup_options_cache: dict = {}
+        #: ``(environment, module_name, scope) -> a module's own
+        #: ``default_hierarchy``-only compiled ``lookup_options``
+        #: (:meth:`_module_default_lookup_options`) -- never merged with
+        #: ``_lookup_options_cache``'s own entries.
+        self._default_lo_cache: dict = {}
 
         self._load_config(
             default_backends() if backends is None else backends, base_path
@@ -306,8 +311,6 @@ class Hiera:
         strict_token = _STRICT.set(self.scope.strict)
         try:
             self._sources(self.scope)
-            if self.default_hierarchy:
-                self._default_levels(self.scope)
         except (HieraLookupError, InterpolationError) as e:
             _LOGGER.debug("Pre-warm skipped after a lookup-time error: %s", e)
         finally:
@@ -584,11 +587,14 @@ class Hiera:
         the key's environment, then -- for a qualified key -- its module) on
         the bare root key; a dotted key's segments are dug out of the merged
         root value exactly once (never per location, per level or per
-        layer). On a miss, and only when the global config has a
-        ``default_hierarchy``, the same walk (without the layer stack, same
-        strategy) runs over it. A final miss returns
+        layer). On a miss -- including a hit whose *dig* misses -- and only
+        for a qualified key whose own module has a ``default_hierarchy``,
+        :meth:`_lookup_default_in_module` is consulted the same way
+        (``lookup_adapter.rb:73-79``). A final miss returns
         :data:`~hyera._navigation._MISSING`; a found value has
-        ``convert_to`` applied, if the options set one.
+        ``convert_to`` applied, if the options set one -- from the main
+        hierarchy's ``lookup_options`` either way, even when the value came
+        from the default hierarchy fallback.
 
         ``parsed`` lets a caller that already split ``key`` into
         ``(root, segments)`` skip re-parsing it.
@@ -609,10 +615,8 @@ class Hiera:
         if value is not _MISSING and segments:
             value = sub_lookup(key, segments, value)
 
-        if value is _MISSING and self.default_hierarchy:
-            default_levels = self._default_levels(invocation.scope)
-            with invocation.check(key):
-                value = self._lookup_levels(root, default_levels, invocation, strategy)
+        if value is _MISSING:
+            value = self._lookup_default_in_module(key, root, module_name, invocation)
             if value is not _MISSING and segments:
                 value = sub_lookup(key, segments, value)
 
@@ -754,11 +758,6 @@ class Hiera:
             if path in self._loaded_paths
         ]
 
-    def _default_levels(self, scope):
-        return self._levels_for(
-            self.default_hierarchy, self.base_path, scope, "default"
-        )
-
     def _layer_lookup_options(self, provider, invocation):
         """The reserved ``lookup_options`` key's raw value across
         ``provider``'s own hierarchy only (a HASH-strategy gather over its
@@ -877,6 +876,82 @@ class Hiera:
             raise
         self._lookup_options_cache[cache_key] = compiled
         return compiled
+
+    def _module_default_lookup_options(self, provider, invocation):
+        """The compiled ``lookup_options`` mapping gathered from
+        ``provider``'s own ``default_hierarchy`` data only -- never merged
+        with the global/environment/module options
+        (:meth:`_retrieve_lookup_options`), as Puppet's
+        ``module_data_provider.rb:26-40``'s ``key_lookup_in_default``
+        never touches the main options. Cached per environment name,
+        module name and scope, like :meth:`_retrieve_lookup_options`.
+        """
+        scope = invocation.scope
+        state_name = self._environment(scope.environment).name
+        cache_key = (state_name, provider.module_name, scope)
+        if cache_key in self._default_lo_cache:
+            return self._default_lo_cache[cache_key]
+        self._default_lo_cache[cache_key] = None
+        try:
+            meta = Invocation(scope, self._sub_lookup)
+            raw = self._layer_lookup_options_default(provider, meta)
+            opts = validate_lookup_options(
+                None if raw is _MISSING else raw, provider.module_name
+            )
+            compiled = compile_patterns(opts)
+        except Exception:
+            del self._default_lo_cache[cache_key]
+            raise
+        self._default_lo_cache[cache_key] = compiled
+        return compiled
+
+    def _layer_lookup_options_default(self, provider, invocation):
+        """:meth:`_layer_lookup_options`, over ``provider``'s
+        ``default_hierarchy`` instead of its main ``hierarchy``."""
+        levels = self._levels_for(
+            provider.default_hierarchy, provider.root, invocation.scope, "default"
+        )
+        with invocation.check(LOOKUP_OPTIONS):
+            return self._lookup_levels(
+                LOOKUP_OPTIONS,
+                levels,
+                invocation,
+                MergeStrategy.strategy("hash"),
+                module_name=provider.module_name,
+            )
+
+    def _lookup_default_in_module(self, key, root, module_name, invocation):
+        """Puppet's ``lookup_default_in_module``
+        (``module_data_provider.rb:26-40``, ``lookup_adapter.rb:180-217``):
+        a module's own ``default_hierarchy``, consulted only after the main
+        stack (and its dig) misses.
+
+        :data:`~hyera._navigation._MISSING` when ``module_name`` is
+        ``None`` (an unqualified key never reaches a module's default
+        hierarchy either), the module has no usable provider, or its
+        ``default_hierarchy`` is empty. The merge strategy comes only from
+        the default hierarchy's own ``lookup_options``
+        (:meth:`_module_default_lookup_options`) -- never the caller's
+        ``merge=`` or the main hierarchy's options, which
+        :meth:`_search_and_merge` still applies its ``convert_to`` from,
+        regardless of which walk actually found the value.
+        """
+        if module_name is None:
+            return _MISSING
+        state = self._environment(invocation.scope.environment)
+        provider = self._usable(self._module_provider(state, module_name), invocation)
+        if provider is None or not provider.default_hierarchy:
+            return _MISSING
+        compiled = self._module_default_lookup_options(provider, invocation)
+        entry = extract_lookup_options_for_key(root, compiled) or {}
+        strategy = MergeStrategy.strategy(entry.get("merge"))
+        levels = self._levels_for(
+            provider.default_hierarchy, provider.root, invocation.scope, "default"
+        )
+        with invocation.check(key):
+            return self._lookup_levels(
+                root, levels, invocation, strategy, module_name=module_name
+            )
 
     def lookup(
         self,

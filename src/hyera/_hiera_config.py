@@ -556,10 +556,13 @@ def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") 
     the first mismatch; assumes :func:`_fill_v5_defaults`
     already ran, so ``defaults``/``hierarchy`` are present.
 
-    ``layer`` (``"global"``/``"environment"``/``"module"``) gates the one
-    rule that differs by layer here: ``hiera3_backend`` is global-only. The
-    matching ``default_hierarchy``-is-module-only rule is a later plan's
-    edit to this function.
+    ``layer`` (``"global"``/``"environment"``/``"module"``) gates two rules
+    that differ by layer here: ``hiera3_backend`` is global-only, and
+    ``default_hierarchy`` is module-only (``hiera_config.rb:754-757``) --
+    checked right after ``hierarchy``/``plan_hierarchy`` validate and
+    before ``default_hierarchy``'s own entries do, so a
+    non-module-owned ``default_hierarchy`` is rejected before its
+    (possibly also invalid) entries are ever inspected.
     """
     _check_top(data, source)
     defaults = data.get("defaults") or {}
@@ -574,6 +577,12 @@ def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") 
         source,
         layer=layer,
     )
+    if "default_hierarchy" in data and layer != "module":
+        raise _config_error(
+            source,
+            "'default_hierarchy' is only allowed in the module layer",
+            _config_line(source.text, ("default_hierarchy",), key=True),
+        )
     _validate_hierarchy_issues(
         data.get("default_hierarchy") or [],
         "default_hierarchy",

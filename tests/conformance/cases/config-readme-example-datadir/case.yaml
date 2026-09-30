@@ -3,4 +3,3 @@ description: >-
 origin: spec-config/cases/readme_example_datadir
 queries:
   - key: k
-    divergence: spec-layers-backends/default-hierarchy-semantics

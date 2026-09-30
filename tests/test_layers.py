@@ -381,3 +381,116 @@ def test_environment_lookup_options_apply_to_unqualified_keys(tmp_path, make_tre
 
     h = Hiera(str(base / "hiera.yaml"), environmentpath=[envs])
     assert h.lookup("k") == ["g", "e"]
+
+
+def test_default_hierarchy_rejected_outside_module_layer_dict():
+    with pytest.raises(ConfigError) as exc_info:
+        Hiera(
+            {
+                "version": 5,
+                "hierarchy": [{"name": "c", "path": "c.yaml"}],
+                "default_hierarchy": [{"name": "d", "path": "d.yaml"}],
+            }
+        )
+    assert (
+        str(exc_info.value) == "'default_hierarchy' is only allowed in the module layer"
+    )
+    assert exc_info.value.path is None
+    assert exc_info.value.line is None
+
+
+def test_default_hierarchy_rejected_outside_module_layer_file(make_tree):
+    base = make_tree(
+        {
+            "hierarchy": [{"name": "c", "path": "c.yaml"}],
+            "default_hierarchy": [{"name": "d", "path": "d.yaml"}],
+        }
+    )
+    text = (base / "hiera.yaml").read_text(encoding="utf-8")
+    expected_line = next(
+        i + 1
+        for i, line in enumerate(text.splitlines())
+        if line.startswith("default_hierarchy:")
+    )
+    with pytest.raises(
+        ConfigError, match="'default_hierarchy' is only allowed in the module layer"
+    ) as exc_info:
+        Hiera(str(base / "hiera.yaml"))
+    assert exc_info.value.line == expected_line
+
+
+def test_default_hierarchy_rejected_outside_module_layer_environment(
+    tmp_path, make_tree
+):
+    base = _global(make_tree)
+    _write(
+        tmp_path / "envs" / "e1" / "hiera.yaml",
+        "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
+        "default_hierarchy:\n  - {name: d, path: d.yaml}\n",
+    )
+    with pytest.raises(
+        ConfigError, match="'default_hierarchy' is only allowed in the module layer"
+    ) as exc_info:
+        Hiera(
+            str(base / "hiera.yaml"),
+            environmentpath=[tmp_path / "envs"],
+            scope=Scope(environment="e1"),
+        )
+    assert exc_info.value.line == 4
+
+
+def test_module_default_hierarchy_ignores_caller_merge(tmp_path, make_tree):
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(
+        modules / "m" / "hiera.yaml",
+        "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
+        "default_hierarchy:\n  - {name: d1, path: d1.yaml}\n  - {name: d2, path: d2.yaml}\n",
+    )
+    _write(modules / "m" / "data" / "c.yaml", "m::other: x\n")
+    _write(modules / "m" / "data" / "d1.yaml", "m::k: {a: 1}\n")
+    _write(modules / "m" / "data" / "d2.yaml", "m::k: {b: 2}\n")
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    # The caller's merge="deep" never reaches the default hierarchy walk;
+    # with no lookup_options of its own, it defaults to first-match, so
+    # only d1's (higher-priority) value is returned.
+    assert h.lookup("m::k", merge="deep") == {"a": 1}
+
+
+def test_default_hierarchy_lookup_options_must_be_qualified(tmp_path, make_tree):
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(
+        modules / "m" / "hiera.yaml",
+        "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
+        "default_hierarchy:\n  - {name: d, path: d.yaml}\n",
+    )
+    _write(modules / "m" / "data" / "c.yaml", "m::main: v\n")
+    _write(
+        modules / "m" / "data" / "d.yaml",
+        "lookup_options:\n  other::x: {merge: unique}\nm::only_default: v\n",
+    )
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    # A key found in the main hierarchy never reaches the default
+    # hierarchy's own (unqualified, invalid) lookup_options at all.
+    assert h.lookup("m::main") == "v"
+    with pytest.raises(HieraLookupError):
+        h.lookup("m::only_default")
+
+
+def test_default_hierarchy_only_for_qualified_keys(tmp_path, make_tree):
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(
+        modules / "m" / "hiera.yaml",
+        "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
+        "default_hierarchy:\n  - {name: d, path: d.yaml}\n",
+    )
+    _write(modules / "m" / "data" / "c.yaml", "m::k: v\n")
+    _write(modules / "m" / "data" / "d.yaml", "unq: only-in-default\n")
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("unq")

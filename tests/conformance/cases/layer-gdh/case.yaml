@@ -7,8 +7,6 @@ queries:
   - key: a
     error_match: "'default_hierarchy' is only allowed in the module layer"
     error_class: ConfigError
-    divergence: spec-layers-backends/default-hierarchy-semantics
   - key: b
     error_match: "'default_hierarchy' is only allowed in the module layer"
     error_class: ConfigError
-    divergence: spec-layers-backends/default-hierarchy-semantics

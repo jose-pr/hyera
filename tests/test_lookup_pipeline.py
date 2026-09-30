@@ -13,17 +13,13 @@ import pytest
 from hyera import Hiera, HieraLookupError, KeyNotFoundError, MergeError
 
 
-def _levels(make_tree, *level_data, default_hierarchy_data=None):
+def _levels(make_tree, *level_data):
     """A tree with one hierarchy level per positional YAML string, named
-    ``l1`` (highest priority) through ``lN`` (lowest); ``default_hierarchy_
-    data`` (if given) adds a one-level ``default_hierarchy``."""
+    ``l1`` (highest priority) through ``lN`` (lowest)."""
     names = ["l{}".format(i + 1) for i in range(len(level_data))]
     hierarchy = [{"name": n, "path": "{}.yaml".format(n)} for n in names]
     config = {"hierarchy": hierarchy}
     files = {"data/{}.yaml".format(n): data for n, data in zip(names, level_data)}
-    if default_hierarchy_data is not None:
-        config["default_hierarchy"] = [{"name": "d", "path": "defaults.yaml"}]
-        files["data/defaults.yaml"] = default_hierarchy_data
     return make_tree(config, files=files)
 
 
@@ -149,26 +145,6 @@ def test_sub_lookup_never_shares_merge(make_tree):
     # merge="deep", which would otherwise have picked up l2's "b" too.
     assert h.lookup("al_x", merge="deep") == '["a"]'
     assert h.lookup("al", merge="deep") == ["b", "a"]
-
-
-def test_sub_lookup_spans_default_hierarchy(make_tree):
-    root = _levels(
-        make_tree,
-        "mainval: dval\n",
-        default_hierarchy_data=(
-            "main_ref: \"%{lookup('mainval')}\"\n"
-            "dh_only: mval\n"
-            "dh_ref: \"%{lookup('dh_only')}\"\n"
-        ),
-    )
-    h = Hiera(str(root / "hiera.yaml"))
-    # default_hierarchy's own values are found only on a main-hierarchy
-    # miss; a sub-lookup from inside default_hierarchy reaches the full
-    # pipeline too -- both the main hierarchy (main_ref) and
-    # default_hierarchy itself (dh_ref) -- never only the level list
-    # that happened to be walked to reach it.
-    assert h.lookup("main_ref") == "dval"
-    assert h.lookup("dh_ref") == "mval"
 
 
 def test_rich_data_validated_per_value(make_tree):

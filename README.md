@@ -116,10 +116,6 @@ hierarchy:
       - "modules/*.yaml"
   - name: "Common"
     path: "common.yaml"
-
-default_hierarchy:            # consulted only when the hierarchy above misses
-  - name: "Module defaults"
-    path: "module_defaults.yaml"
 ```
 
 Backends (by `data_hash` name — Puppet function names only; see "Differences
@@ -193,6 +189,27 @@ version-3 (or missing-`version`) hiera.yaml at an environment or module root
 is silently ignored (with a warning); `puppet lookup`'s own `strict=error`
 raises instead. See `src/hyera/AGENTS.md`'s "Layers" entry for the full
 discovery and error rules.
+
+A module's own `hiera.yaml` may also declare a `default_hierarchy`
+(`default_hierarchy` is rejected everywhere else — global or environment —
+with `ConfigError`):
+
+```yaml
+# modules/mymod/hiera.yaml
+version: 5
+hierarchy:
+  - name: "Common"
+    path: "common.yaml"
+default_hierarchy:
+  - name: "Module defaults"
+    path: "module_defaults.yaml"
+```
+
+It is consulted only for that module's own `mymod::*` keys, and only after
+every layer (global, environment, the module's own main hierarchy) misses.
+The caller's `merge=` does not apply there — the merge comes from the
+default hierarchy's own `lookup_options` instead — while the main
+hierarchy's `convert_to` still applies to whatever value it returns.
 
 ### Merging and `lookup_options`
 
@@ -340,7 +357,7 @@ location matched through hyera's own Ruby `Dir.glob` port (brace
 alternation, Ruby's dotfile and `**` rules, no recursion through a symlink
 or junction) · `datadir` (default `data`,
 next to hiera.yaml) ·
-`default_hierarchy` · `data_hash` backends (yaml/json/hocon, plus the
+`default_hierarchy` (module layer only) · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with
 Puppet's parsing and rendering rules, hash-key interpolation, and recursion

@@ -3,6 +3,4 @@ description: default_hierarchy declared at the global layer, a second instance o
 origin: spec-merge/fx/dhglobal
 queries:
 - key: x
-  divergence: spec-layers-backends/default-hierarchy-semantics
 - key: y
-  divergence: spec-layers-backends/default-hierarchy-semantics

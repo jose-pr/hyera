@@ -5,8 +5,6 @@ description: >-
 origin: tests/G_defhier
 queries:
   - key: from_default
-    divergence: spec-layers-backends/default-hierarchy-semantics
     error_match: "only allowed in the module layer"
   - key: from_main
-    divergence: spec-layers-backends/default-hierarchy-semantics
     error_match: "only allowed in the module layer"
