@@ -145,6 +145,10 @@ and exit codes `0` (found), `1` (key missing) and `2` (any other error).
   the 3.9 floor).
 - Tests: `<py> -m pytest -q -rs` (pytest config in `pyproject.toml` puts
   `src/` on the path).
+- Coverage: `<py> -m coverage run --branch --source=src/hyera -m pytest -q
+  -rs`, then `<py> -m coverage report --show-missing`. CI reports branch
+  coverage on every run (the `coverage` job, Python 3.14 only) without
+  gating on it — a drift signal, not a check that can fail the run.
 - **Conformance goldens** (`tests/conformance/`): replay needs no Puppet,
   `<py> -m pytest -q -rs tests/conformance`. Recording needs Puppet 8.10's
   `puppet lookup`, local or in WSL: `<py> tests/conformance/record.py
@@ -188,14 +192,17 @@ is never the first time the test suite or the docs build is exercised, and
 the docs site can be redeployed without cutting a release.
 
 - **`test.yml`**: `workflow_dispatch` (with a `ref` input) or a throwaway
-  `ci-*` tag — nothing runs on an ordinary push. 18 jobs: `test` (a
+  `ci-*` tag — nothing runs on an ordinary push. 19 jobs: `test` (a
   10-leg OS/Python matrix: every supported Python on Ubuntu, the oldest and
   newest on Windows and macOS), `types` (`pyright --verifytypes`, Python
   3.9 and 3.14), `floors` (every declared dependency pinned to its
   `pyproject.toml` floor, on the oldest supported Python), `format`
-  (`black --check`), `docs` (the same strict `mkdocs build` the release
-  gates on), and `console-script` (build the wheel, install it into a
-  clean venv, run the installed script — Ubuntu, Windows and macOS). A
+  (`black --check`), `coverage` ("Coverage report (not a gate)", Python
+  3.14 only: branch coverage via `coverage run`/`report`, printed to the
+  job's own step summary — `continue-on-error: true`, so a coverage-tool
+  break never fails the run), `docs` (the same strict `mkdocs build` the
+  release gates on), and `console-script` (build the wheel, install it into
+  a clean venv, run the installed script — Ubuntu, Windows and macOS). A
   `ci-*` tag is throwaway: give it a unique name, push it, poll the run,
   then delete it locally and on the remote.
 - **`docs.yml`**: push to `main` touching `docs/`, `mkdocs.yml`, `src/` or
