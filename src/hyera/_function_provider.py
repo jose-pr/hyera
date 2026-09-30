@@ -2,7 +2,7 @@
 ``lookup_key`` or ``data_dig`` function per key and per location, with a
 :class:`LookupContext` for the ``lookup_key``/``data_dig`` cases.
 
-Original code (no phiera lineage); ports the *design* of Puppet's
+Original code; ports the *design* of Puppet's
 ``pops/lookup/function_provider.rb``, ``data_hash_function_provider.rb``,
 ``lookup_key_function_provider.rb``, ``data_dig_function_provider.rb`` and
 ``context.rb`` -- not translated line by line, so no "Ported from ..."

@@ -1,6 +1,6 @@
 """The per-lookup ``DEBUG`` trace (Puppet's ``DebugExplainer``) and the two
-logging leftovers this phase also fixes: the phiera-era dotted-only miss
-log (already gone by the time this landed) and ``cli.py``'s hard-coded
+logging leftovers this phase also fixes: an earlier dotted-only miss log
+(already gone by the time this landed) and ``cli.py``'s hard-coded
 package-name logger.
 """
 

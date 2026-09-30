@@ -1,23 +1,7 @@
 hyera
 Copyright (c) 2026 jose-pr
 
-This project is a derivative of phiera, a Python Hiera parser by Andrei
-Zbikowski and Rob King:
-
-    https://github.com/Nike-Inc/phiera
-    https://pypi.org/project/phiera/
-
-phiera is licensed under the Apache License, Version 2.0. A copy of that
-license is included at LICENSES/phiera-Apache-2.0.txt.
-
-The files derived from phiera are:
-
-    src/hyera/core.py                (from phiera/phiera.py)
-    src/hyera/_hiera_config.py       (from phiera/phiera.py)
-
-Each was modified by jose-pr and carries a notice saying so.
-
-This project also ports selected code from Puppet, by Puppet, Inc.:
+This project ports selected code from Puppet, by Puppet, Inc.:
 
     https://github.com/puppetlabs/puppet
 

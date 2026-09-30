@@ -3,8 +3,8 @@ already-resolved value (``dig``/``get``) or the bound ``Scope``
 (``getvar``): ``functions/dig.rb``, ``functions/get.rb``,
 ``functions/getvar.rb``.
 
-Original code; no phiera/Puppet-source header (see ``core.Hiera.dig``/
-``.get``/``.getvar``, the thin methods wrapping this module).
+Original code. (see ``core.Hiera.dig``/``.get``/``.getvar``, the thin
+methods wrapping this module).
 """
 
 import re

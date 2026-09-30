@@ -1,5 +1,3 @@
-# Derived from phiera/phiera.py (https://github.com/Nike-Inc/phiera),
-# Apache-2.0. Modified by jose-pr. See NOTICE.
 # Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb
 # (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
 # See NOTICE.

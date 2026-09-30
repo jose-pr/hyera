@@ -2,8 +2,8 @@
 (the five call forms) plus ``pops/lookup.rb``'s ``Lookup.lookup`` (name
 precedence, subjects, messages).
 
-Original code; no phiera/Puppet-source header (see ``core.Hiera.lookup``,
-which is the thin method wrapping this module).
+Original code. (see ``core.Hiera.lookup``, which is the thin method
+wrapping this module).
 """
 
 import typing as _ty

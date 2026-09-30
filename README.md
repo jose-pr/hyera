@@ -815,9 +815,7 @@ PyPI.
 
 ## License
 
-MIT, for this project's own code. It is derived from
-[phiera](https://github.com/Nike-Inc/phiera) (Apache-2.0); the files taken
-from it keep that license. Several modules also port code translated from
+MIT, for this project's own code. Several modules port code translated from
 [Puppet](https://github.com/puppetlabs/puppet) (Apache-2.0), the
 [deep_merge](https://github.com/danielsdeleo/deep_merge) gem (MIT),
 [Psych](https://github.com/ruby/psych) (MIT), Ruby's YAML library, and

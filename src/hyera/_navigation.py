@@ -6,7 +6,7 @@
 Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and
 ``lookup_key.rb`` (``parse_lookup_key``). ``join_key`` is original code
 (``split_key``'s display-only inverse, needed for a hyera-only tuple key
-path's message text): no phiera/Puppet-source header.
+path's message text).
 """
 
 import contextlib

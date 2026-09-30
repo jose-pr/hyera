@@ -4,10 +4,9 @@ lookup's own trace, exactly as ``puppet lookup --explain``/``--render-as
 s|json`` project it, plus the ``DebugExplainer`` a lookup wraps it in to
 also log the same report at ``DEBUG``.
 
-Original code; no phiera/Puppet-source header -- this is a from-scratch
-Python port of one Ruby file's class hierarchy (structurally close enough
-to cite line numbers against, in the module docstrings below, but never
-copied verbatim), not a translation carried over from phiera. Recording
+Original code -- this is a from-scratch Python port of one Ruby file's
+class hierarchy (structurally close enough to cite line numbers against,
+in the module docstrings below, but never copied verbatim). Recording
 hooks live on ``_invocation.Invocation``; this module only holds the tree
 itself (and the debug wrapper), so it has no engine imports at all beyond
 the one Ruby-rendering helper every value passes through.

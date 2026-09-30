@@ -1,7 +1,7 @@
 """``eyaml_lookup_key`` support: token scanning, PKCS7 key loading and a
 cert-free PKCS7 EnvelopedData decrypt over ``cryptography`` primitives.
 
-Original code (no phiera/Puppet header): the token grammar mirrors
+Original code: the token grammar mirrors
 hiera-eyaml's ``parser/encrypted_tokens.rb``/``parser/parser.rb`` and the
 PKCS7 handling mirrors ``encryptors/pkcs7.rb``, but neither is translated
 line by line -- both are re-implemented against Python's stdlib/`re`/

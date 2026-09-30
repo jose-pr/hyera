@@ -3,10 +3,10 @@ module data providers behind Puppet's lookup provider stack
 (``lookup_adapter.rb``'s ``PROVIDER_STACK``), built on the single-config
 engine ``_hiera_config.py`` already provides.
 
-Original code; no phiera/Puppet-source header -- this module implements the
-*rules* described in Puppet's ``lookup_adapter.rb``, ``data_provider.rb``,
-``module_data_provider.rb`` and ``environment_data_provider.rb``, not a
-line-by-line translation of any one of them.
+Original code -- this module implements the *rules* described in Puppet's
+``lookup_adapter.rb``, ``data_provider.rb``, ``module_data_provider.rb``
+and ``environment_data_provider.rb``, not a line-by-line translation of
+any one of them.
 """
 
 import logging

@@ -107,6 +107,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Attribution for an earlier derivative project this started from is
+  removed (headers, `NOTICE` entries, its license file): no code from it
+  remains in the tree.
 - With the `hyera` logger at `DEBUG`, each lookup logs one record: `Lookup
   of '<key>'` followed by the report `explain()` returns (every path
   consulted and whether the key was found there). The DEBUG message
