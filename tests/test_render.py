@@ -100,6 +100,13 @@ def test_render_yaml(key):
     assert _render("yaml", value) == yaml_text + "\n"
 
 
+def test_render_yaml_tuple_renders_as_a_sequence():
+    # A tuple never comes from real hiera data (parsed containers are
+    # always list/dict), but the YAML dumper still needs a representer for
+    # one -- registered and exercised directly.
+    assert _render("yaml", (1, 2, 3)) == "---\n- 1\n- 2\n- 3\n"
+
+
 @pytest.mark.parametrize("key", _KEYS)
 def test_render_json(key):
     value, _s_text, _yaml_text, json_text = _CASES[key]

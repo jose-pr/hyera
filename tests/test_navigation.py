@@ -14,6 +14,7 @@ from hyera import Hiera, Scope
 from hyera.exceptions import HieraLookupError
 from hyera._navigation import (
     _MISSING,
+    _ruby_class,
     join_key,
     parse_lookup_key,
     split_key,
@@ -70,7 +71,7 @@ def test_split_key(key, expect):
 
 @pytest.mark.parametrize(
     "key",
-    ["a..b", "a.", ".a", "a.'b", "'a", 'a.""'],
+    ["a..b", "a.", ".a", "a.'b", "'a", 'a.""', "."],
     ids=[
         "double-dot",
         "trailing-dot",
@@ -78,6 +79,7 @@ def test_split_key(key, expect):
         "unbalanced-single",
         "lone-single-quote",
         "empty-double-quoted",
+        "lone-dot",
     ],
 )
 def test_split_key_syntax_error(key):
@@ -244,3 +246,13 @@ def test_nested_null_is_not_found(make_tree):
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "n: ~\n"})
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("n.x", default_value="D") == "D"
+
+
+def test_ruby_class_hash_and_other_fallbacks_direct():
+    # _ruby_class's own Hash and plain-Python-type-name branches: its one
+    # real caller (sub_lookup's "Data Provider type mismatch" message)
+    # only ever reaches it for a *non*-dict value (a dict is the expected,
+    # passing case there), so neither is reachable through any real
+    # lookup -- exercised directly, same as this module's other helpers.
+    assert _ruby_class({"a": 1}) == "Hash"
+    assert _ruby_class(object()) == "object"
