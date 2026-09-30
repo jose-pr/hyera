@@ -376,6 +376,42 @@ def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
     assert rc == 2
 
 
+def test_broken_pipe_while_emitting_exits_2_and_silences_stdout(
+    monkeypatch, render_root
+):
+    # The in-process counterpart to test_closed_stdout_exits_2_quietly
+    # above: that test needs a real OS pipe closed from the reader side,
+    # so it runs as a subprocess whose own coverage this run never
+    # measures. Forcing the same BrokenPipeError through _emit exercises
+    # Lookup.__call__'s except BrokenPipeError: _silence_stdout(); return
+    # 2 in-process instead; _silence_stdout itself is mocked out rather
+    # than actually called, since its real dup2() would redirect this
+    # test process's own stdout to the null device for the rest of the
+    # pytest run.
+    import hyera.cli as cli
+
+    monkeypatch.setattr(
+        cli,
+        "_emit",
+        lambda text: (_ for _ in ()).throw(BrokenPipeError()),
+    )
+    silenced = []
+    monkeypatch.setattr(cli, "_silence_stdout", lambda: silenced.append(True))
+    rc = cli.main(
+        [
+            "--hiera_config",
+            str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
+            "--render-as",
+            "json",
+            "str",
+        ]
+    )
+    assert rc == 2
+    assert silenced == [True]
+
+
 @pytest.mark.parametrize("flag", ["-o", "--output"])
 def test_output_flag_removed(flag, hiera_root):
     with pytest.raises(SystemExit) as exc:
@@ -1323,9 +1359,10 @@ def test_emit_falls_back_to_plain_write_without_a_buffer_attr():
     # under contextlib.redirect_stdout, as the conformance harness uses,
     # or a genuine one here) -- real sys.stdout (even under pytest's
     # capsys) always has one, so no in-process CLI test exercises this any
-    # other way; the subprocess-based BrokenPipeError test below covers
-    # the real-console path but isn't measured (a child process's own
-    # coverage isn't traced by this run).
+    # other way; the subprocess-based BrokenPipeError test above covers
+    # the real-console path, and test_broken_pipe_while_emitting_exits_2_
+    # and_silences_stdout covers the same except-branch in-process (with
+    # _emit mocked) so it is actually measured.
     from hyera.cli import _emit, _silence_stdout
 
     buf = io.StringIO()
@@ -1350,6 +1387,73 @@ def test_main_without_duho_prints_hint_and_exits_2(monkeypatch, capsys):
     rc = cli.main(["k"])
     assert rc == 2
     assert 'pip install "hyera[cli]"' in capsys.readouterr().err
+
+
+def test_cli_module_reimported_without_duho_installed(monkeypatch, capsys):
+    # The module-level `import duho` / `except ModuleNotFoundError` (only
+    # this test forces a fresh import of hyera.cli itself) and the
+    # `if duho is not None:` guard around the whole `Lookup` class body:
+    # setting sys.modules["duho"] = None makes the next `import duho`
+    # raise ModuleNotFoundError(name="duho") exactly as a genuinely
+    # missing package would, and dropping hyera.cli from sys.modules
+    # forces cli.py's module body -- including that import and the class
+    # guard -- to run again. hyera.cli has no import-time side effect
+    # beyond defining names (backend/format registration lives in
+    # hyera.backends, untouched here), so reloading it is safe.
+    #
+    # monkeypatch.undo() runs explicitly (rather than waiting for the
+    # fixture's own automatic teardown) before the final restoring
+    # reimport below: sys.modules["duho"] must already be back to the
+    # real module at that point, or the restored hyera.cli would itself
+    # be reloaded with duho still faked absent.
+    import sys as _sys_mod
+
+    import hyera.cli
+
+    monkeypatch.setitem(_sys_mod.modules, "duho", None)
+    monkeypatch.delitem(_sys_mod.modules, "hyera.cli")
+    try:
+        reimported = __import__("hyera.cli", fromlist=["cli"])
+        assert reimported.duho is None
+        assert not hasattr(reimported, "Lookup")
+        assert "Lookup" not in reimported.__all__
+        rc = reimported.main(["k"])
+        assert rc == 2
+        assert 'pip install "hyera[cli]"' in capsys.readouterr().err
+    finally:
+        monkeypatch.undo()
+        _sys_mod.modules.pop("hyera.cli", None)
+        __import__("hyera.cli", fromlist=["cli"])
+
+
+def test_cli_reraises_a_duho_internal_import_error(monkeypatch):
+    # The `if _e.name != "duho": raise` half of the same except clause:
+    # a `duho` present but broken in some other way (here, missing its
+    # own `logging` submodule) must not be swallowed as "the cli extra
+    # isn't installed" -- only a ModuleNotFoundError naming "duho" itself
+    # means that. A bare ModuleType stub named "duho" with no `__path__`
+    # makes `import duho` succeed (it's already in sys.modules) but
+    # `import duho.logging` fail with ModuleNotFoundError(name=
+    # "duho.logging"), reproducing exactly that shape without needing a
+    # genuinely broken duho installation -- but only once the real
+    # `duho.logging`'s own already-cached sys.modules entry is also
+    # removed, or `import duho.logging` would just return that cached
+    # submodule without ever consulting the (now-stubbed) `duho` package.
+    import sys as _sys_mod
+    import types
+
+    import hyera.cli
+
+    monkeypatch.setitem(_sys_mod.modules, "duho", types.ModuleType("duho"))
+    monkeypatch.delitem(_sys_mod.modules, "duho.logging", raising=False)
+    monkeypatch.delitem(_sys_mod.modules, "hyera.cli")
+    try:
+        with pytest.raises(ModuleNotFoundError, match="duho.logging"):
+            __import__("hyera.cli", fromlist=["cli"])
+    finally:
+        monkeypatch.undo()
+        _sys_mod.modules.pop("hyera.cli", None)
+        __import__("hyera.cli", fromlist=["cli"])
 
 
 def test_parse_scope_empty_item_and_empty_value_direct():
