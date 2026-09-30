@@ -17,6 +17,7 @@ from hyera import HieraLookupError, Sensitive
 from hyera._lookup_adapter import convert_result
 from hyera._new_function import new_instance
 from hyera._string_converter import convert as _string_convert
+from hyera._string_converter import puppet_quote as _puppet_quote
 from hyera._type_mismatch import assert_instance_of
 from hyera._type_parser import parse_type
 from hyera._types import ALIASES, PTypeReferenceType, infer, infer_set
@@ -464,3 +465,39 @@ def test_ruby_format_table():
     assert _string_convert(1e20, "%p") == "1.0e+20"
     assert _string_convert(3.0, "%f") == "3.000000"
     assert _string_convert(2.5, "%s") == "2.5"
+    # "#" alternate-form prefix on hex/binary (octal's own "#" is covered
+    # above already).
+    assert _string_convert(255, "%#x") == "0xff"
+    assert _string_convert(5, "%#B") == "0B101"
+    # An integer value with a float-style directive redirects through the
+    # float body, not the integer one.
+    assert _string_convert(3, "%f") == "3.000000"
+    # Float body: uppercase exponent + width/precision, "+" on a
+    # non-negative value, left-justify, and the "a"/"A"-style else branch
+    # (unsupported by this subset, falls back to repr()).
+    assert _string_convert(3.14159, "%10.2E") == "  3.14E+00"
+    assert _string_convert(3.14159, "%+.2f") == "+3.14"
+    assert _string_convert(3.14159, "%-10.2f") + "|" == "3.14      |"
+    assert _string_convert(3.14159, "%A") == "3.14159"
+    # NaN/Infinity (Ruby Float#inspect, not Python's repr spelling).
+    assert _string_convert(float("nan"), "%p") == "NaN"
+    assert _string_convert(float("inf"), "%p") == "Infinity"
+    assert _string_convert(float("-inf"), "%p") == "-Infinity"
+    # A string_formats value that does not parse as a %-directive at all
+    # falls back to the plain %s rendering, matching Puppet.
+    assert _string_convert(5, "%") == "5"
+    assert _string_convert(5, "nope") == "5"
+    # Sensitive redacts through every directive, not just the default one.
+    assert _string_convert(Sensitive("secret"), "%p") == "Sensitive [value redacted]"
+
+
+def test_puppet_quote():
+    # A control character not in the named-escape table renders as a
+    # \u{XX} escape, and forces the double-quoted form.
+    assert _puppet_quote("a\x01b") == '"a\\u{1}b"'
+    assert _puppet_quote("x", enforce_double_quotes=True) == '"x"'
+    # Single-quoted form: an embedded "'" and a literal "\" both escape.
+    assert _puppet_quote("it's") == "'it\\'s'"
+    assert _puppet_quote("a\\b") == "'a\\b'"
+    # A trailing, unpaired backslash still closes the quote correctly.
+    assert _puppet_quote("trail\\") == "'trail\\'"
