@@ -1151,19 +1151,61 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 
 ## Differences from Puppet
 
+- **difference** `missing-config-raises` — A missing hiera.yaml raises
+  `ConfigError` from `Hiera(path)` or `--hiera_config`, instead of Puppet's
+  built-in-default fallback.
+- **difference** `config-dir-not-interpolated` — The directory holding
+  hiera.yaml is used literally, with no `%{...}` interpolation and no
+  glob-metacharacter escaping.
+- **difference** `config-not-revalidated` — A changed hiera.yaml is not
+  re-read by an existing `Hiera`; construct a new one to pick it up.
+- **difference** `environmentpath-none-means-no-layer` — With
+  `environmentpath=None` (the default), every environment name resolves
+  with no environment layer and no error, instead of Puppet's
+  always-configured `environmentpath` raising for an unknown one.
+- **deviation** `v3-ruby-backend-unavailable` — Ruby Hiera 3 backends
+  cannot run in Python, so an unregistered Hiera 3 backend name raises
+  `ConfigError` where Puppet with Hiera 3 installed skips it.
+- **difference** `codedir-aio-default` — `codedir` defaults to Puppet's
+  AIO system location for the platform, never the per-user default or a
+  value discovered from `puppet.conf`.
 - **deviation** `sops-backend` — hyera keeps a `sops`/`sops_data`
   `data_hash` backend that Puppet does not have.
-- **deviation** `convert-to-unsupported-type` — hiera implements Puppet's
-  `new()` only for types whose values are plain data; converting to
-  SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or
-  Object raises.
+- **difference** `hocon-include-glob` — `hocon_data`'s `include
+  file("*.conf")` globs and includes every match by default; Puppet's own
+  `hocon_data` never expands such a glob.
+- **difference** `eyaml-pkcs7-only` — `eyaml_lookup_key` supports only the
+  PKCS7 encryptor; other hiera-eyaml encryptors raise the same error
+  Puppet gives without their plugin.
 - **deviation** `knockout-prefix-not-python-regex` — a `knockout_prefix`
   that Python's `re` module cannot compile raises an error; Ruby accepts
   it with a warning ("regular expression has redundant nested repeat
   operator").
-- **deviation** `v3-ruby-backend-unavailable` — Ruby Hiera 3 backends
-  cannot run in Python, so an unregistered Hiera 3 backend name raises
-  `ConfigError` where Puppet with Hiera 3 installed skips it.
+- **deviation** `convert-to-unsupported-type` — hiera implements Puppet's
+  `new()` only for types whose values are plain data; converting to
+  SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or
+  Object raises.
+- **difference** `strict-default-warning` — Undefined variables default to
+  `strict="warning"`, not Puppet 8's `strict="error"`.
+- **difference** `glob-case-sensitive-byte-order` — Glob wildcards are
+  case-sensitive and results sort by byte order on every OS, unlike Ruby
+  on Windows.
+- **difference** `render-yaml-sensitive-redacted` — `--render-as yaml`
+  prints `Sensitive` values redacted, where Puppet prints the plaintext.
+- **difference** `aio-hash-rendering` — `--render-as s` prints hashes in
+  Ruby 3.2's AIO form (`{"a"=>1}`), as Puppet 8's own packages do.
+- **difference** `scope-flag-sets-node-parameters` — `--scope
+  NAME=VALUE` sets node parameters, which `puppet lookup` takes from the
+  node classifier instead.
+- **difference** `facts-from-file-only` — Facts come only from
+  `--facts`/`Scope(facts=...)`; `puppet lookup` also reads local facter or
+  PuppetDB-stored facts.
+- **difference** `server-facts-minimal` — `$server_facts` holds only
+  `serverversion` and `environment`, where a real Puppet server populates
+  more.
+- **difference** `environment-conf-compile-trusted-unsupported` —
+  `environment.conf` is not read; `--compile` and `--trusted` are not
+  supported.
 
 Not supported:
 

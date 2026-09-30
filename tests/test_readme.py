@@ -18,7 +18,73 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
+HEADER = ROOT / "src" / "hyera" / "AGENTS.md"
 FENCE = re.compile(r"^```(\w+)[^\n]*\n(.*?)^```$", re.M | re.S)
+
+#: Differences-from-Puppet slugs with no conformance golden behind them,
+#: mapped to one sentence saying why the harness cannot record one. Checked
+#: two ways by ``test_differences_match_deviations``: every golden
+#: ``deviation:`` id plus every key here must equal the README's tagged
+#: bullet set, and none of these slugs may collide with a golden id.
+DOC_ONLY = {
+    "missing-config-raises": (
+        "tests/conformance/_ours.py's run_api always passes an existing hiera.yaml"
+    ),
+    "config-dir-not-interpolated": (
+        "the harness always records cases from a fixed, non-interpolatable "
+        "hiera.yaml directory"
+    ),
+    "config-not-revalidated": (
+        "the harness never mutates a data file between two calls in the same case"
+    ),
+    "environmentpath-none-means-no-layer": (
+        "absent environmentpath is the harness's own default for every "
+        "non-layers case, so there is nothing Puppet-side to diverge from"
+    ),
+    "codedir-aio-default": (
+        "the harness never varies codedir, so no query exercises the default"
+    ),
+    "hocon-include-glob": (
+        "no case directory exercises a glob-shaped file(...) argument "
+        "against the real oracle yet"
+    ),
+    "eyaml-pkcs7-only": (
+        "the harness cannot exercise a GPG-encrypted eyaml value, since "
+        "recording one would need a GPG keypair and a real Puppet install "
+        "with the gpg plugin"
+    ),
+    "strict-default-warning": (
+        "the conformance recorder runs every case with --strict warning"
+    ),
+    "glob-case-sensitive-byte-order": (
+        "the recording host and CI both run case-sensitive filesystems, so "
+        "case-insensitivity has no recordable fixture"
+    ),
+    "render-yaml-sensitive-redacted": (
+        "the harness's oracle capture never records a raw Sensitive "
+        "plaintext, so there is nothing to compare a redaction against"
+    ),
+    "aio-hash-rendering": (
+        "the harness normalizes the oracle's Ruby 4 hash-inspect form into "
+        "the AIO form before comparing"
+    ),
+    "scope-flag-sets-node-parameters": (
+        "the harness always supplies --scope as node parameters uniformly, "
+        "so there is no node-classifier fixture to diverge from"
+    ),
+    "facts-from-file-only": (
+        "the harness always runs Puppet with --facts too, so no case "
+        "records Puppet falling back to local facter facts"
+    ),
+    "server-facts-minimal": (
+        "the harness's oracle runs one fixed Puppet server version, so no "
+        "query could show a richer $server_facts set as a mismatch"
+    ),
+    "environment-conf-compile-trusted-unsupported": (
+        "the harness never invokes puppet lookup --compile/--trusted, so "
+        "no case could record what hyera does not implement"
+    ),
+}
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by
 #: a double quote. A real install command must read ``pip install
@@ -137,3 +203,49 @@ def test_install_commands_quote_extras():
             assert hit is None, "unquoted extra in {}: {!r}".format(
                 path.relative_to(ROOT), scan_text[hit.start() : hit.start() + 40]
             )
+
+
+def _differences_section(text):
+    return text.split("## Differences from Puppet", 1)[1].split("\n## ", 1)[0]
+
+
+def test_differences_match_deviations():
+    """The README's tagged Differences list, and the shipped header's
+    matching section, together cover exactly the conformance goldens'
+    ``deviation:`` ids plus the doc-only slugs above -- no more, no less,
+    and in the same order in both files."""
+    golden = set()
+    for case_file in sorted(
+        (ROOT / "tests" / "conformance" / "cases").glob("*/case.yaml")
+    ):
+        data = yaml.safe_load(case_file.read_text(encoding="utf-8"))
+        if not data:
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                if "deviation" in node:
+                    value = node["deviation"]
+                    golden.add(value["id"] if isinstance(value, dict) else value)
+                stack.extend(node.values())
+            elif isinstance(node, list):
+                stack.extend(node)
+
+    assert not golden & set(DOC_ONLY), "a slug is both a golden id and doc-only"
+
+    readme_section = _differences_section(README.read_text(encoding="utf-8"))
+    readme_ids = re.findall(r"\(id: `([a-z0-9-]+)`\)", readme_section)
+    assert len(readme_ids) == len(set(readme_ids)), "duplicate id in README"
+    assert set(readme_ids) == golden | set(DOC_ONLY)
+
+    header_section = _differences_section(HEADER.read_text(encoding="utf-8"))
+    header_ids = re.findall(
+        r"^- \*\*(?:deviation|difference)\*\* `([a-z0-9-]+)`", header_section, re.M
+    )
+    header_deviation_ids = re.findall(
+        r"^- \*\*deviation\*\* `([a-z0-9-]+)`", header_section, re.M
+    )
+
+    assert header_ids == readme_ids
+    assert set(header_deviation_ids) == golden

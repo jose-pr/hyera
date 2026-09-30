@@ -625,8 +625,8 @@ locations and under globbed directories are seen by the next lookup.
 | `name` | Supported | required, non-empty, unique per hierarchy. |
 | `path` | Supported | |
 | `paths` | Supported | |
-| `glob` | Partial | matched through hyera's own Ruby `Dir.glob` port; case-sensitive and byte-sorted on every OS, unlike Ruby on Windows. |
-| `globs` | Partial | same as `glob`. |
+| `glob` | Partial | matched through hyera's own Ruby `Dir.glob` port; case-sensitive and byte-sorted on every OS, unlike Ruby on Windows. (id: `glob-case-sensitive-byte-order`) |
+| `globs` | Partial | same as `glob`. (id: `glob-case-sensitive-byte-order`) |
 | `mapped_paths` | Supported | a scope reference iterated as `[key, value]` pairs; each item is a local scope variable. |
 | `uri` | Supported | validated with Ruby's `URI()` grammar, passed to the entry's function, never fetched. |
 | `uris` | Supported | same as `uri`. |
@@ -635,7 +635,7 @@ locations and under globbed directories are seen by the next lookup.
 | `data_hash` | Supported | value must be a real Puppet function name (or the one non-Puppet `sops_data` name -- see Backends below). |
 | `lookup_key` | Supported | called per key and per location with a `hyera.LookupContext`. |
 | `data_dig` | Supported | same calling convention as `lookup_key`, plus the requested key segments. |
-| `hiera3_backend` | Partial | global layer only; an unregistered name raises `ConfigError` where Puppet, with real Hiera 3 installed, silently contributes nothing. |
+| `hiera3_backend` | Partial | global layer only; an unregistered name raises `ConfigError` where Puppet, with real Hiera 3 installed, silently contributes nothing. (id: `v3-ruby-backend-unavailable`) |
 | `default_hierarchy` | Supported | module layer only; consulted after every other layer misses. |
 | `plan_hierarchy` | Not supported | schema-validated but never consulted -- hyera does not run Puppet Bolt plans, the only context where Puppet applies it. |
 
@@ -648,23 +648,23 @@ locations and under globbed directories are seen by the next lookup.
 | Global/environment/module layers | Supported | `Hiera(..., environmentpath=, basemodulepath=, modulepath=)`. |
 | Interpolation variables (`%{x}`, `%{::x}`, `%{facts.x}`, `%{trusted.x}`) | Supported | |
 | Interpolation functions (`hiera`/`lookup`/`alias`/`scope`/`literal`) | Supported | |
-| Undefined variables (`strict`) | Partial | default is `"warning"` (interpolates as `""` and logs); Puppet 8 defaults to `"error"`. |
+| Undefined variables (`strict`) | Partial | default is `"warning"` (interpolates as `""` and logs); Puppet 8 defaults to `"error"`. (id: `strict-default-warning`) |
 | Merge strategies (`first`/`default`/`unique`/`hash`/`deep`) | Supported | |
-| Deep-merge options (`knockout_prefix`, `sort_merged_arrays`, `merge_hash_arrays`) | Partial | a `knockout_prefix` Python's `re` cannot compile raises, where Ruby accepts it with a warning. |
+| Deep-merge options (`knockout_prefix`, `sort_merged_arrays`, `merge_hash_arrays`) | Partial | a `knockout_prefix` Python's `re` cannot compile raises, where Ruby accepts it with a warning. (id: `knockout-prefix-not-python-regex`) |
 | `reverse_deep`/`unconstrained_deep` | Supported | Hiera-3-era deep-merge variants. |
 | `lookup_options` merge (exact and `^` keys) | Supported | |
-| `convert_to` | Partial | SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type and Object all raise. |
+| `convert_to` | Partial | SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type and Object all raise. (id: `convert-to-unsupported-type`) |
 | Lookup forms (name list, `value_type`, `default_value`, `default_values_hash`, `override`, `block`) | Supported | |
 | Dotted keys | Supported | |
 | `dig`/`get`/`getvar` | Supported | |
 | `explain`/`explain_options` | Supported | |
-| Type expressions | Partial | a type alias other than `Data`/`RichData` is unsupported. |
+| Type expressions | Partial | a type alias other than `Data`/`RichData` is unsupported. (id: `convert-to-unsupported-type`) |
 | `yaml_data` | Supported | |
 | `json_data` | Supported | |
-| `hocon_data` | Partial | `include file("*.conf")` globs by default, where Puppet's never does; see [Backends](#backends). |
-| `eyaml_lookup_key` | Partial | PKCS7 only; other hiera-eyaml encryptors are not supported. |
-| `sops_data` | Supported | the one backend with no Puppet equivalent. |
-| `puppet lookup` CLI flags | Partial | every flag except `--compile`/`--trusted` and the binary `--render-as` formats. |
+| `hocon_data` | Partial | `include file("*.conf")` globs by default, where Puppet's never does; see [Backends](#backends). (id: `hocon-include-glob`) |
+| `eyaml_lookup_key` | Partial | PKCS7 only; other hiera-eyaml encryptors are not supported. (id: `eyaml-pkcs7-only`) |
+| `sops_data` | Supported | the one backend with no Puppet equivalent. (id: `sops-backend`) |
+| `puppet lookup` CLI flags | Partial | every flag except `--compile`/`--trusted` and the binary `--render-as` formats. (id: `environment-conf-compile-trusted-unsupported`) |
 
 **Not supported**
 
@@ -684,19 +684,67 @@ locations and under globbed directories are seen by the next lookup.
 
 ## Differences from Puppet
 
-hyera aims to resolve exactly like `puppet lookup`. Every `data_hash`/
-`lookup_key`/`data_dig` name it accepts is a real Puppet function name --
-with one deliberate exception:
+hyera aims to resolve exactly like `puppet lookup`. Every deliberate
+difference is listed here, tagged with a slug; each is also either a
+recorded conformance-harness deviation (checked against the real Puppet
+oracle) or a documented-only difference the harness cannot record a golden
+for.
 
+- **A missing hiera.yaml raises `ConfigError`, not Puppet's built-in
+  fallback.** `Hiera(path)` raises when `path` does not exist, and the
+  CLI's `--hiera_config` behaves the same way for a named file that is
+  missing; Puppet then falls back to its built-in default configuration.
+  Ask for that explicitly with `Hiera(None, base_path=...)`, or omit
+  `--hiera_config` so `./hiera.yaml`-if-present is tried first. (id: `missing-config-raises`)
+- **The directory holding hiera.yaml is used literally.** hyera never
+  interpolates `%{...}` inside that absolute base directory, and for glob
+  levels treats any glob metacharacter in it as a literal pattern
+  character; Puppet interpolates `%{...}` there too. There is no opt-in,
+  since the directory is fixed at construction. (id: `config-dir-not-interpolated`)
+- **A changed hiera.yaml is not re-read by an existing `Hiera`.** Puppet
+  re-reads it between compilations; construct a new `Hiera` to pick up a
+  changed base config (data files and glob listings *are* re-checked by
+  default; see [Caching](#caching)). (id: `config-not-revalidated`)
+- **`environmentpath=None` (the default) means no environment directories
+  at all.** Every environment name then resolves with no environment layer
+  and no error; Puppet always has an `environmentpath`, so an environment
+  name it cannot find always raises. Pass a real `environmentpath` to get
+  Puppet's raising behaviour. (id: `environmentpath-none-means-no-layer`)
+- **An unregistered Hiera 3 backend name raises `ConfigError`.** Puppet,
+  with real Hiera 3 installed, silently contributes nothing for a
+  `backends:`/`hiera3_backend:` name it cannot run; hyera cannot run a
+  Ruby Hiera 3 backend at all, so register a third-party Python
+  `hyera.Backend` under that name instead, or drop it from `backends:`. (id: `v3-ruby-backend-unavailable`)
+- **`codedir` defaults to Puppet's AIO system location for the platform**
+  (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
+  elsewhere) -- never the per-user `~/.puppetlabs/etc/code` default or a
+  value discovered from `puppet.conf`. Pass `codedir=`/`--codedir`
+  explicitly to match a differently-configured Puppet install. (id: `codedir-aio-default`)
 - **`sops_data`** (also `sops`, and `sops_yaml`/`sops_json`/`sops_ini`/
   `sops_dotenv` to force the format) -- a `data_hash` backend with no
   Puppet equivalent, for decrypting a
   [sops](https://github.com/getsops/sops)-encrypted data file on the fly.
-  A hierarchy that uses it does not load under real Puppet.
+  A hierarchy that uses it does not load under real Puppet, and there is
+  no Puppet equivalent to fall back to. (id: `sops-backend`)
+- **`hocon_data`'s `include file("*.conf")` globs.** hyera lets pyhocon's
+  own resolution run for real, which expands a glob in a `file(...)`
+  argument and includes every match; Puppet's own `hocon_data` never
+  expands such a glob (it contributes nothing). There is no opt-in that
+  reproduces Puppet's non-globbing `file(...)` exactly, though
+  `hocon_includes=False` (or `hocon_includes: false` on the entry/
+  `defaults`) is available as a stricter, non-resolving alternative for
+  every include form. Every other `include` form matches Puppet exactly
+  (see [Backends](#backends)). (id: `hocon-include-glob`)
 - **`eyaml_lookup_key` supports only the PKCS7 encryptor.** hiera-eyaml's
   other encryptors (GPG, and any third-party plugin) raise the same
   "cannot load such file" error real Puppet gives without that plugin's
-  gem installed -- this project never adds one.
+  gem installed -- this project never adds one, so there is no way to opt
+  into GPG support here. (id: `eyaml-pkcs7-only`)
+- **A deep-merge `knockout_prefix` that Python's `re` module cannot compile
+  raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
+  about a redundant nested repeat operator) and uses it as a regex; choose
+  a `knockout_prefix` that is valid in both regex dialects to avoid the
+  difference. (id: `knockout-prefix-not-python-regex`)
 - **`convert_to` (Puppet's `new()`) does not support every type Puppet
   does.** SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI,
   Type and Object all raise `hyera.HieraLookupError` ("hiera does not
@@ -704,64 +752,39 @@ with one deliberate exception:
   are types whose values are not plain data. A type alias other than
   `Data`/`RichData` is also unsupported (`parse_type` resolves only the
   five Puppet static-loader aliases; any other capitalized name becomes an
-  unresolved type reference).
-- **`hocon_data`'s `include file("*.conf")` globs.** Puppet's own
-  `hocon_data` never expands a glob in a `file(...)` argument (it
-  contributes nothing); hyera's default lets pyhocon's own resolution run
-  for real, which does glob and includes every match. Every other
-  `include` form matches Puppet exactly (see [Backends](#backends) above).
-- **`Hiera(path)` raises `ConfigError` when the file does not exist.**
-  Puppet then falls back to its built-in default configuration; ask for
-  that explicitly with `Hiera(None, base_path=...)` here.
-- **A deep-merge `knockout_prefix` that Python's `re` module cannot compile
-  raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
-  about a redundant nested repeat operator) and uses it as a regex; Python
-  refuses to compile it at all.
+  unresolved type reference). There is no opt-in. (id: `convert-to-unsupported-type`)
 - **Undefined variables default to `strict="warning"`** (an undefined
   `%{var}`/`%{scope('var')}` interpolates as `""` and logs a warning);
-  Puppet 8 defaults to `strict="error"`. Pass `Scope(strict="error")` (or
-  `.scoped(strict="error")`) to match Puppet's own default.
-- **The directory holding hiera.yaml is used literally.** Puppet
-  interpolates `%{...}` inside that absolute path too; hyera does not --
-  and, for glob levels, treats glob metacharacters in it as a pattern.
+  Puppet 8 defaults to `strict="error"`, which fails the lookup. Pass
+  `Scope(strict="error")` (or `.scoped(strict="error")`) to match Puppet's
+  own default. Hierarchy locations are lenient in every mode, as in
+  Puppet. (id: `strict-default-warning`)
 - **Glob wildcards are case-sensitive and results sort by byte order on
-  every OS, as on Puppet's Linux servers; Ruby on Windows matches glob
-  wildcards case-insensitively.**
-- **`environmentpath=None` (the default) means no environment directories
-  at all.** Puppet always has an `environmentpath`, so an environment name
-  it cannot find always raises; here, with no `environmentpath` configured,
-  every environment name resolves with no environment layer and no error --
-  a library with no layers configured keeps working exactly as before this
-  feature existed.
-- **A changed `hiera.yaml` is not re-read by an existing `Hiera`.** Puppet
-  re-reads it between compilations; construct a new `Hiera` to pick up a
-  changed base config. Data files and glob listings *are* re-checked, by
-  default -- see [Caching](#caching) above.
-- **An unregistered Hiera 3 backend name raises `ConfigError`.** Puppet,
-  with real Hiera 3 installed, silently contributes nothing for a
-  `backends:`/`hiera3_backend:` name it cannot run; hyera cannot run a
-  Ruby Hiera 3 backend at all, so this is a deliberate, documented
-  deviation rather than a silent miss.
-- **`codedir` defaults to Puppet's AIO system location for the platform**
-  (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
-  elsewhere), never the per-user `~/.puppetlabs/etc/code` default or a
-  value discovered from `puppet.conf`.
+  every OS**, as on Puppet's Linux servers; Ruby on Windows matches glob
+  wildcards case-insensitively instead, so a hierarchy authored against a
+  Windows Puppet server may need adjusting. (id: `glob-case-sensitive-byte-order`)
 - **`--render-as yaml` prints `Sensitive` values redacted**, as the other
-  formats do; Puppet prints the plaintext.
-- **`--render-as s` prints hashes in Ruby 3.2's form** (`{"a"=>1}`), as
-  Puppet 8's packages do.
+  formats do; Puppet prints the plaintext. There is no opt-in to print the
+  plaintext here. (id: `render-yaml-sensitive-redacted`)
+- **`--render-as s` prints hashes in Ruby 3.2's AIO form** (`{"a"=>1}`), as
+  Puppet 8's own packages do; Puppet on Ruby 3.4 or later renders
+  `{"a" => 1}` (with spaces around `=>`) instead. There is no opt-in, since
+  hyera targets the AIO packages' own Ruby version. (id: `aio-hash-rendering`)
 - **`--scope NAME=VALUE` sets node parameters**, which `puppet lookup`
-  takes from the node classifier instead.
-- **Facts come only from `--facts`**; `puppet lookup` also reads the local
-  node's facter facts or stored facts. A `--facts` file with no facts is
-  rejected, as in Puppet.
-- **Without `--hiera_config`, `./hiera.yaml` is used when present,
-  otherwise Puppet's built-in default configuration; a named file that
-  does not exist is an error.**
-- **`$server_facts` holds `serverversion` (`8.10.0`) and `environment`
-  only.**
+  takes from the node classifier instead; use `--scope` for every value a
+  real Puppet run would source from the classifier. (id: `scope-flag-sets-node-parameters`)
+- **Facts come only from `--facts`/`Scope(facts=...)`.** `puppet lookup`
+  also reads the local node's facter facts or PuppetDB-stored facts when
+  `--facts` is omitted; hyera always requires an explicit facts source (a
+  `--facts` file with no facts is rejected, as in Puppet). (id: `facts-from-file-only`)
+- **`$server_facts` holds only `serverversion` (`8.10.0`) and
+  `environment`.** A real Puppet server populates several more; pass the
+  missing ones through `Scope(server_facts=...)` directly if a hierarchy
+  needs them. (id: `server-facts-minimal`)
 - **`environment.conf` is not read; `--compile` and `--trusted` are not
-  supported.**
+  supported.** Configure `environmentpath`/`modulepath`/`basemodulepath`
+  explicitly instead of relying on `environment.conf` discovery, and there
+  is no catalog-compilation mode to fall back to. (id: `environment-conf-compile-trusted-unsupported`)
 
 ## Development
 
