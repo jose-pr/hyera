@@ -277,6 +277,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `-v`, `-q` and `--loglevel` now change what the CLI logs; they used to
   have no effect on it. `--help` is plain text and describes `--merge`
   correctly: omitting it lets `lookup_options` decide.
+- The CLI no longer performs a reverse-DNS lookup (`socket.getfqdn()`) on
+  every run without `--node`; it now runs only when actually needed to
+  name the node in the "No facts available" message. The lookup can be
+  slow on some hosts (measured: 60+ seconds on a CI runner), which made
+  an ordinary, successful lookup with no facts-related error hang for no
+  visible reason.
 
 ### Security
 

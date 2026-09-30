@@ -414,8 +414,12 @@ if duho is not None:
             try:
                 variables = _parse_scope(self.scope)
                 facts = load_facts(facts_path) if facts_path is not None else {}
-                node_name = node or _socket.getfqdn().lower()
                 if not facts:
+                    # socket.getfqdn() is a live reverse-DNS lookup and can
+                    # be slow (measured: 60s+ hangs on macOS CI runners) --
+                    # compute it only for this message, never on the
+                    # (overwhelmingly common) path where facts are present.
+                    node_name = node or _socket.getfqdn().lower()
                     raise _UsageError(
                         "No facts available for target node: {}".format(node_name)
                     )
