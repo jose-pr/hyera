@@ -262,6 +262,21 @@ def test_malformed_config_raises_config_error(cfg, expected):
     assert expected in str(exc.value)
 
 
+def test_unexpected_exception_during_build_wrapped_as_config_error(monkeypatch):
+    # A defensive catch-all: any exception _build_hierarchies raises other
+    # than a HieraError (which keeps its own class/text) is wrapped into a
+    # ConfigError naming the real exception's class and message, rather
+    # than escaping raw.
+    import hyera.core as core
+
+    def boom(*a, **k):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(core, "_build_hierarchies", boom)
+    with pytest.raises(ConfigError, match="is invalid: ValueError: boom"):
+        Hiera(_BASE_V5)
+
+
 def test_config_error_names_file_and_line(tmp_path):
     config = tmp_path / "hiera.yaml"
     config.write_bytes(

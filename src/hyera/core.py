@@ -1288,8 +1288,9 @@ class Hiera:
                     return _MISSING
                 provider = self._usable(raw, invocation)
                 inv = invocation
-            else:
-                return _MISSING
+            # `layer` is always one of `_LAYERS` (the only caller,
+            # `strategy.lookup(_LAYERS, at_layer, invocation)` below, never
+            # passes anything else), so every name is handled above.
             if provider is None:
                 return _MISSING
             mod = provider.module_name if provider.place == "Module" else None

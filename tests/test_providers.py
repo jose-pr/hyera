@@ -686,6 +686,21 @@ def test_data_hash_non_dict_return_is_backend_error(make_tree, backends, script)
         h.lookup("k")
 
 
+def test_data_hash_path_based_type_label_fallback(make_tree, backends, script):
+    # core.py's own _puppet_type_label (distinct from
+    # _function_provider.py's copy, used for the location-less/uri case)
+    # falls back to the plain Python type name for a value that is not any
+    # of Puppet's own JSON-ish shapes.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash", "path": "a.yaml"}]},
+        files={"data/a.yaml": "x"},
+    )
+    script["data_hash"] = lambda path, options: object()
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="got object$"):
+        h.lookup("k")
+
+
 def test_data_hash_no_location_non_dict_return_is_backend_error(
     make_tree, backends, calls, script
 ):

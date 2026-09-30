@@ -146,6 +146,22 @@ def test_module_directory_name_matched_exactly(tmp_path, make_tree):
         h.lookup("mymod::k")
 
 
+def test_known_module_with_no_data_provider(tmp_path, make_tree):
+    # A module directory that exists (known to modulepath) but has no
+    # hiera.yaml of its own and no default data file: a known module with
+    # no usable provider at all -- report_module_provider_not_found fires
+    # (both for the lookup_options gather and the real key), never a
+    # crash.
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    (modules / "m").mkdir(parents=True)
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("m::k")
+    assert 'Module data provider for module "m" not found' in h.explain("m::k").text()
+
+
 def test_unqualified_module_keys_dropped_with_one_warning(tmp_path, make_tree, caplog):
     base = _global(make_tree)
     modules = tmp_path / "modules"
