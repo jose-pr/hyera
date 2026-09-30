@@ -132,7 +132,7 @@ def test_float_specials(loader):
 
 
 @pytest.mark.parametrize("loader", _LOADERS)
-@pytest.mark.parametrize("text", ["1e3", "1.0e3", "685.230_15e+03"])
+@pytest.mark.parametrize("text", ["1e3", "1.0e3", "685.230_15e+03", ".", "+.", "-."])
 def test_float_lookalikes_stay_strings(loader, text):
     assert _load_with(loader, "k: {}\n".format(text))["k"] == text
 
@@ -196,6 +196,14 @@ def test_symbol_scalars(loader):
     assert _load_with(loader, "k: :'q'\n")["k"] == RubySymbol("q")
     assert _load_with(loader, "k: !ruby/symbol foo\n")["k"] == RubySymbol("foo")
     assert _load_with(loader, "k: !ruby/sym foo\n")["k"] == RubySymbol("foo")
+    # A double-colon prefix (Ruby's own "::Foo"-shaped symbol) strips both.
+    assert _load_with(loader, "k: ::foo\n")["k"] == RubySymbol("foo")
+
+
+def test_ruby_symbol_ne_and_repr():
+    assert RubySymbol("a") != RubySymbol("b")
+    assert not (RubySymbol("a") != RubySymbol("a"))
+    assert repr(RubySymbol("a")) == ":a"
 
 
 @pytest.mark.parametrize("loader", _LOADERS)
@@ -250,12 +258,28 @@ def test_core_tags(loader):
     assert _load_with(loader, "k: !!value x\n")["k"] == "x"
     assert _load_with(loader, "k: !!merge x\n")["k"] == "x"
     assert _load_with(loader, "k: !ruby/string foo\n")["k"] == "foo"
+    # A "str"-family tag on a non-scalar node (an obscure Ruby
+    # ivars-on-a-String encoding with no fixture to model exactly) falls
+    # back to ordinary construction by node kind instead of crashing.
+    assert _load_with(loader, "k: !str\n  a: 1\n")["k"] == {"a": 1}
+    assert _load_with(loader, "k: !ruby/string [1, 2]\n")["k"] == [1, 2]
 
 
 @pytest.mark.parametrize("loader", _LOADERS)
 def test_float_tag_invalid_value_raises(loader):
     with pytest.raises(BackendError, match=r'invalid value for Float\(\): "abc"'):
         _load_with(loader, "k: !!float abc\n")
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_implicit_float_lookalike_invalid_value_raises(loader):
+    # Distinct from the explicit !!float case above: a bare scalar that
+    # the FLOAT_RE regex accepts (a sign plus a bare "." plus an exponent,
+    # no digits at all) but Python's own float() still rejects after
+    # cleaning -- the auto-detection path through _tokenize, not
+    # _construct_float's tagged one.
+    with pytest.raises(BackendError, match=r'invalid value for Float\(\): "-\.e\+1"'):
+        _load_with(loader, "k: -.e+1\n")
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +313,12 @@ def test_set_is_disallowed(loader):
 def test_ruby_object_is_disallowed(loader):
     with pytest.raises(BackendError, match="unspecified class: Object"):
         _load_with(loader, "k: !ruby/object:Object\n  b: 1\n")
+    # The bare "!ruby/object" tag (no ":Class" suffix at all) and any
+    # other bare "!ruby/<kind>" tag both name themselves.
+    with pytest.raises(BackendError, match="unspecified class: Object"):
+        _load_with(loader, "k: !ruby/object\n  b: 1\n")
+    with pytest.raises(BackendError, match="unspecified class: Regexp"):
+        _load_with(loader, "k: !ruby/regexp foo\n")
 
 
 @pytest.mark.parametrize("loader", _LOADERS)
@@ -318,6 +348,11 @@ def test_binary(loader):
     assert _load_with(loader, "k: !!binary aGVsbG8=\n")["k"] == "hello"
     assert _load_with(loader, "k: !!binary /w==\n")["k"] == "\udcff"
     assert _load_with(loader, "k: !!binary '%%%'\n")["k"] == ""
+    # "%%%" above is silently stripped down to nothing by b64decode's own
+    # lenient (validate=False) mode -- never raises. A single valid-
+    # alphabet character with impossible padding does raise, exercising
+    # the except-and-treat-as-empty fallback for real.
+    assert _load_with(loader, "k: !!binary a\n")["k"] == ""
 
 
 # ---------------------------------------------------------------------------

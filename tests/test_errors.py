@@ -266,6 +266,25 @@ def test_json_parse_error_names_file(make_tree):
     )
 
 
+def test_yaml_control_character_names_position_not_line_column(make_tree):
+    # A raw control character is a yaml.reader.ReaderError, not a
+    # yaml.MarkedYAMLError -- _yaml_problem's own "at position N" shape,
+    # distinct from every other yaml parse error in this file (all "at
+    # line L column C").
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "c.yaml"}]},
+        files={"data/c.yaml": b"k: \x01value\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError) as excinfo:
+        h.lookup("k")
+    assert re.search(
+        r"^Unable to parse \(.*c\.yaml\): unacceptable character #x0001: "
+        r"control characters are not allowed at position 3$",
+        str(excinfo.value),
+    )
+
+
 def test_backend_exception_wrapped_with_path(make_tree, monkeypatch):
     monkeypatch.setattr(Backend, "_REGISTRY", copy.deepcopy(Backend._REGISTRY))
 
