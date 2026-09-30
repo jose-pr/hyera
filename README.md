@@ -421,8 +421,9 @@ raising under `strict="error"`) ·
 `explain()`, reporting a lookup the way `puppet lookup
 --explain`/`--explain-options` does.
 
-Not implemented: hiera.yaml version 3/4 (a file without `version` is version
-3) · `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond
+Not implemented: lookups through hiera.yaml version 3/4 (schema validation is
+done; a file without `version` is version 3) · `hiera3_backend` legacy shim ·
+encrypted-value `convert_to` beyond
 `Sensitive` · hiera-eyaml encryptors other than PKCS7 (GPG and third-party
 plugins) · reading `environment.conf`'s `modulepath`/`environment_data_provider`,
 or metadata.json's deprecated `data_provider`, both superseded here by the

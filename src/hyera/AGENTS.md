@@ -72,20 +72,39 @@ private engine internals with no stability contract.
   Puppet's own arity/parameter-type text ("Unable to find" for an
   unregistered name). A hierarchy entry with no location key at all calls
   its function once, with no location, instead of contributing nothing.
-  Raises `ConfigError` for anything
-  about `hiera.yaml` — missing, unreadable, a directory, unparsable,
-  non-mapping (naming the Hiera 3 fallback this runtime does not support
-  yet), an unsupported `version` (only a literal Integer `5` is accepted; a
-  missing `version` or an explicit `3` reads as "hiera.yaml version 3 is
-  not supported yet"; `4` reads as "cannot be used in the global layer";
-  anything else as "This runtime does not support hiera.yaml version N"),
-  or any violation of Puppet's hiera.yaml version 5 schema (an unrecognized
-  key anywhere, a missing/duplicate/non-string `name`, more than one
-  function or location key, a malformed `options` entry, and the like) —
-  with Puppet's own message and, where known, `.path` and `.line` — and
-  `BackendError` (`.path` names it) for a data file that cannot be read or
-  parsed. Context-free hierarchy levels are loaded by the constructor, so a
-  `BackendError` can come from `Hiera(...)` itself, not only from a lookup.
+  Raises `ConfigError` for anything about `hiera.yaml` — missing,
+  unreadable, a directory, unparsable, an unsupported `version` (an
+  explicit `1`, `2`, `6` or other non-3/4/5 value as "This runtime does not
+  support hiera.yaml version N"; `4` at the global layer as "cannot be used
+  in the global layer"), or any violation of Puppet's schema for the
+  resolved version — with Puppet's own message and, where known, `.path`
+  and `.line` — and `BackendError` (`.path` names it) for a data file that
+  cannot be read or parsed. Context-free hierarchy levels are loaded by the
+  constructor, so a `BackendError` can come from `Hiera(...)` itself, not
+  only from a lookup.
+  - **Version 3** (Hiera 1, 2 and 3: a file without `version`, and an
+    explicit `version: 3`, are the same dialect to Puppet) is read and
+    validated against Puppet's own v3 schema (`backends`, `logger`,
+    `merge_behavior`, `deep_merge_options`, `hierarchy`, plus one config
+    key per listed backend), reporting **every** mismatch — not just the
+    first, unlike the version 5 schema below — each as its own "The Lookup
+    Configuration ... has wrong type, ..." line, newline-joined into one
+    `ConfigError`. A hiera.yaml that exists but does not parse to a YAML
+    hash at all (empty, a list, ...) logs Puppet's own warning and falls
+    back to Puppet's Hiera 3 default configuration
+    (`backends: [yaml]`, `hierarchy: ['nodes/%{::trusted.certname}',
+    'common']`, `merge_behavior: native`), then reads *that* as version 3.
+    A valid version 3 config still raises `ConfigError` ("hiera.yaml
+    version 3 hierarchies are not supported yet") after validation — the
+    provider build (one data source per backend, Puppet's backend-major
+    order) is not implemented yet. Every version 3 read (valid or not)
+    logs Puppet's deprecation warning ("Use of 'hiera.yaml' version 3 is
+    deprecated. It should be converted to version 5") unless
+    `scope.strict == "off"`.
+  - **Version 5** is the schema described above: an unrecognized key
+    anywhere, a missing/duplicate/non-string `name`, more than one function
+    or location key, a malformed `options` entry, and the like — reporting
+    only the first mismatch.
   - **Layers.** `hiera.yaml` (`base_config`) is the *global* layer. Two more,
     optional, keyword-only layers sit alongside it, exactly as `puppet
     lookup` reads them: an *environment* layer, `<environmentpath>/
