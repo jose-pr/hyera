@@ -5,9 +5,9 @@ Original code (no phiera/Puppet header): the token grammar mirrors
 hiera-eyaml's ``parser/encrypted_tokens.rb``/``parser/parser.rb`` and the
 PKCS7 handling mirrors ``encryptors/pkcs7.rb``, but neither is translated
 line by line -- both are re-implemented against Python's stdlib/`re`/
-`cryptography` idioms, so this file carries no "Ported from ..." header
-(see ``.agents/AGENTS.md`` D02 for the distinction this project draws
-between "matches behaviour" and "ported/translated").
+`cryptography` idioms, so this file matches the upstream *behaviour*
+without being a structural port of it, and carries no "Ported from ..."
+header.
 """
 
 import base64
