@@ -265,17 +265,6 @@ class Invocation:
         finally:
             self.explainer.pop()
 
-    @contextlib.contextmanager
-    def without_explain(self):
-        """Suspend explaining for the guarded block (``invocation.rb:151-
-        163``): locations interpolate through this, so resolving a hierarchy
-        path itself is never itself recorded (``hiera_config.rb:257``)."""
-        saved, self.explainer = self.explainer, None
-        try:
-            yield
-        finally:
-            self.explainer = saved
-
     @property
     def only_explain_options(self) -> bool:
         return self.explainer is not None and self.explainer.only_explain_options

@@ -153,6 +153,30 @@ def test_hiera_level_paths_resolves_a_glob(tmp_path):
     ]
 
 
+def test_hiera_level_paths_resolves_mapped_paths_uncached(tmp_path):
+    # .paths() gives every mapped_paths level's own Invocation no
+    # scope_interpolations list (it has no cache to key, unlike the main
+    # lookup pipeline's hierarchy-build path) -- with_local_memory_eluding's
+    # own no-op branch, exercised here directly rather than through a
+    # cached Hiera.lookup() call.
+    from hyera import HieraLevel
+    from hyera.backends import YAMLBackend
+
+    (tmp_path / "data" / "roles").mkdir(parents=True)
+    (tmp_path / "data" / "roles" / "web.yaml").write_bytes(b"k: v\n")
+
+    level = HieraLevel.new(
+        {
+            "name": "lvl",
+            "datadir": "data",
+            "mapped_paths": ["roles", "role", "roles/%{role}.yaml"],
+        },
+        YAMLBackend(),
+    )
+    paths = level.paths(tmp_path, Scope(facts={"roles": ["web"]}))
+    assert [str(p) for p in paths] == [str(tmp_path / "data" / "roles" / "web.yaml")]
+
+
 # --- path/paths extension (used for Hiera 3 configs) ---------------------
 
 
@@ -346,11 +370,10 @@ def test_mapped_paths_collection_array(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web", "db"]}))
     assert h.lookup("k") == "web"
-    # A plain (non-hierarchy-rebuild) lookup's own Invocation has no
-    # scope_interpolations list to track -- with_local_memory_eluding's
-    # own no-op path, distinct from a hierarchy build's refs-tracking one.
-    # explain() resolves the same mapped_paths locations through
-    # without_explain() (locations are never themselves recorded).
+    # explain() resolves the same mapped_paths locations without ever
+    # recording them: location_resolver never touches the invocation's
+    # explainer at all, so resolving a path is structurally invisible to
+    # explain() regardless of whether explaining is active.
     assert "roles/web.yaml" in h.explain("k").text()
 
 
