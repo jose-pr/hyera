@@ -341,15 +341,21 @@ def test_malformed_unknown_content_algorithm(public_key):
 
 
 def test_malformed_never_raises_index_or_recursion_error(public_key):
-    """R4-style fuzzing (mutation, not property-based): every one of 5,000
-    random byte flips/truncations of a real envelope must surface only as
-    ``BackendError`` (or decrypt cleanly, if the mutation happened to land
-    somewhere inert) -- never ``IndexError``/``RecursionError``/a hang."""
+    """Mutation fuzzing (not property-based): every seeded random byte
+    flip/truncation of a real envelope must surface only as ``BackendError``
+    (or decrypt cleanly, if the mutation happened to land somewhere inert) --
+    never ``IndexError``/``RecursionError``/a hang.
+
+    Each iteration is a real RSA decryption, so the default run is short;
+    set ``HYERA_FUZZ_ITERATIONS`` (e.g. 5000) for a long run after changing
+    the PKCS7 decoder. The seed is fixed, so a longer run extends the same
+    sequence."""
     der = _envelope(b"bounds-probe", public_key)
+    import os
     import random
 
     rng = random.Random(1234)
-    for _ in range(5000):
+    for _ in range(int(os.environ.get("HYERA_FUZZ_ITERATIONS", "300"))):
         mutated = bytearray(der)
         kind = rng.random()
         if kind < 0.5:
