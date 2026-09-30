@@ -646,8 +646,36 @@ def test_no_secrets_reachable_via_context_after_wrong_key(public_key, tmp_path):
 
 
 def test_no_secrets_reachable_via_context_after_bad_padding(public_key):
-    der = bytearray(_envelope(b"x" * 64, public_key))
-    der[-1] ^= 1  # corrupt the last ciphertext byte -> padding failure
+    base_der = bytearray(_envelope(b"x" * 64, public_key))
+    with open(PRIVATE_KEY_PATH, "rb") as fh:
+        key_pem = fh.read()
+    # A single-bit flip in the last ciphertext byte scrambles the whole
+    # final AES block once it goes through CBC decryption (ordinary block
+    # cipher diffusion), which almost always leaves invalid PKCS7 padding
+    # behind -- but `_envelope` picks a fresh random AES key and IV on
+    # every call, so which flip value actually does that is not fixed:
+    # about 1 in 256 draws the garbled block coincidentally still looks
+    # like a valid one-byte pad, `_pkcs7_decrypt` returns garbage instead
+    # of raising, and the failure only then surfaces higher up as a UTF-8
+    # decode error -- which this test does not expect, so it flakes.
+    # Search deterministically for a flip that reproduces the padding
+    # failure against *this* run's random key/IV, instead of trusting a
+    # single fixed guess (`^= 1`) to land on one.
+    for flip in range(1, 256):
+        der = bytearray(base_der)
+        der[-1] ^= flip
+        try:
+            _pkcs7_decrypt(bytes(der), key_pem)
+        except BackendError as e:
+            if "bad decrypt" in str(e):
+                break
+    else:
+        pytest.fail("no single-byte corruption reproduced a padding failure")
+    # Scrub this frame's own PEM copy before the assertion under test: once
+    # `_decrypt` raises, `_walk_for_secrets` inspects every frame on the
+    # exception's traceback, including this one, and `key_pem` would
+    # otherwise still be a live local holding "...PRIVATE KEY...".
+    key_pem = b""
     with pytest.raises(BackendError, match="bad decrypt") as exc:
         _decrypt(_token(bytes(der)))
     hits = _walk_for_secrets(exc.value, (b"PRIVATE KEY",))
