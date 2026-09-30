@@ -291,3 +291,8 @@ def test_scope_value_semantics():
 
     with pytest.raises(ValueError):
         Scope(strict="bogus")
+
+
+def test_node_name_property():
+    assert Scope().node_name is None
+    assert Scope(node_name="web01.example.com").node_name == "web01.example.com"

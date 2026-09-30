@@ -11,7 +11,14 @@ lookup sees.
 
 import hyera
 import hyera._explain
-from hyera import BackendError, Hiera, HieraLookupError, KeyNotFoundError, Scope
+from hyera import (
+    BackendError,
+    ExplainResult,
+    Hiera,
+    HieraLookupError,
+    KeyNotFoundError,
+    Scope,
+)
 
 
 def test_explain_call_forms_agree(make_tree):
@@ -246,3 +253,15 @@ def test_environment_layer_errors_are_reported(tmp_path, make_tree):
     except HieraLookupError as e:
         raised = e
     assert raised is not None
+
+
+def test_explain_returns_explain_result(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "c.yaml"}]},
+        files={"data/c.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    result = h.explain("k")
+    assert isinstance(result, ExplainResult)
+    assert result.error is None
+    assert str(result) == result.text()

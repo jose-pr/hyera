@@ -18,8 +18,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from hyera import BackendError
+from hyera import BackendError, EyamlBackend
 from hyera._eyaml import _decode64, _has_encrypted_token, _pkcs7_decrypt, decrypt_string
+from hyera.backends import Backend
 
 FIXTURE = (
     Path(__file__).resolve().parent / "conformance" / "cases" / "backend-eyaml-pkcs7"
@@ -646,3 +647,11 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key):
         _decrypt(_token(bytes(der)))
     hits = _walk_for_secrets(exc.value, (b"PRIVATE KEY",))
     assert hits == []
+
+
+def test_eyaml_backend_registered_under_eyaml_lookup_key():
+    # EyamlBackend is a public class (in hyera.__all__) even though nothing
+    # constructs it directly -- the engine only ever reaches it through the
+    # registry, by the function name a hiera.yaml entry declares.
+    assert EyamlBackend.NAMES["function"] == ("eyaml_lookup_key",)
+    assert Backend.find("eyaml_lookup_key") is EyamlBackend

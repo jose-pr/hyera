@@ -93,6 +93,21 @@ def test_hiera_level_new_no_location():
     assert lvl.locations == ()
 
 
+def test_hiera_level_paths_resolves_locations(tmp_path):
+    # Through the public seam (hyera.HieraLevel, hyera.backends.YAMLBackend),
+    # not the private _hiera_config/_StubBackend helper above: .paths()
+    # interpolates the location template and joins it onto base_path/datadir.
+    from hyera import HieraLevel
+    from hyera.backends import YAMLBackend
+
+    level = HieraLevel.new(
+        {"name": "lvl", "datadir": "data", "path": "%{environment}.yaml"},
+        YAMLBackend(),
+    )
+    paths = level.paths(tmp_path, Scope(environment="production"))
+    assert [str(p) for p in paths] == [str(tmp_path / "data" / "production.yaml")]
+
+
 # --- path/paths extension (used for Hiera 3 configs) ---------------------
 
 
