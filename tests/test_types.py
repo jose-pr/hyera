@@ -1073,6 +1073,59 @@ def test_new_unrecorded():
     ) or "unrecognized key 'a'" in str(exc_info.value)
 
 
+def test_new_dispatch_optional_notundef_bare_and_literal_contained():
+    # _dispatch directly: new_instance()'s own fast path ("not args and
+    # type_.instance(value): return value") would otherwise skip _dispatch
+    # entirely here, since any non-None value trivially satisfies a bare
+    # Optional/NotUndef's own instance() check.
+    from hyera._new_function import _dispatch
+
+    # A bare Optional/NotUndef (no contained type argument at all) is not
+    # actually new()-able on its own -- Puppet has no meaningful
+    # "construct an Optional" operation without a contained type.
+    with pytest.raises(HieraLookupError, match="is not supported"):
+        _dispatch(parse_type("Optional"), "x", ())
+    with pytest.raises(HieraLookupError, match="is not supported"):
+        _dispatch(parse_type("NotUndef"), "x", ())
+    # A bareword literal contained type (Optional[integer]): dispatches
+    # through a plain String new(), since the literal is kept as a raw str
+    # rather than a real type.
+    assert _dispatch(parse_type("Optional[integer]"), "integer", ()) == "integer"
+
+
+def test_new_integer_binary_literal():
+    from hyera._new_function import new_instance
+
+    assert new_instance(parse_type("Integer"), "0b101") == 5
+
+
+def test_new_dispatch_integer_int_passthrough_and_empty_dict():
+    # _dispatch directly (same fast-path reason as the Optional/NotUndef
+    # case above -- an int already satisfies Integer's own instance()).
+    from hyera._new_function import _dispatch
+
+    assert _dispatch(parse_type("Integer"), 5, ()) == 5
+    # An empty dict: the named-args loop runs zero times (every non-empty
+    # dict's first key already raises "unrecognized key"), falling through
+    # to the generic "cannot be converted" error.
+    with pytest.raises(HieraLookupError, match="cannot be converted to Integer"):
+        _dispatch(parse_type("Integer"), {}, ())
+
+
+def test_new_dispatch_float_and_numeric_from_int_and_unsupported_type():
+    # _dispatch directly, for the same reason as above: an int already
+    # satisfies Numeric's own instance() check (unlike Float's, so that
+    # one call goes through new_instance() normally).
+    from hyera._new_function import _dispatch, new_instance
+
+    assert new_instance(parse_type("Float"), 5) == 5.0
+    assert _dispatch(parse_type("Numeric"), 5, ()) == 5
+    with pytest.raises(HieraLookupError, match="cannot be converted to Float"):
+        _dispatch(parse_type("Float"), [1, 2], ())
+    with pytest.raises(HieraLookupError, match="cannot be converted to Numeric"):
+        _dispatch(parse_type("Numeric"), [1, 2], ())
+
+
 # ------------------------------------------------------ convert_result
 
 
