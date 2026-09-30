@@ -1,6 +1,7 @@
 """Backend behavior, including the hardened sops backend and error paths."""
 
 import copy
+import io
 import json
 import subprocess
 import sys
@@ -438,3 +439,21 @@ def test_dotenv_registered_only_in_format_namespace():
     assert Backend.find("dotenv", kind="function") is None
     assert Backend.find("dotenv", kind="format") is DotenvBackend
     assert Backend.find("ini", kind="format") is None
+
+
+def test_format_backend_dumps_and_dump():
+    # The "format" namespace's own dumps()/dump() (distinct from
+    # _render.py's "render" namespace, which the CLI's --render-as uses):
+    # a general-purpose Backend serialization API, not yet called from
+    # anywhere else in this codebase.
+    yaml_backend = Backend.new("yaml", kind="format")
+    assert yaml_backend.dumps({"b": 1, "a": 2}) == "b: 1\na: 2\n"
+    buf = io.StringIO()
+    yaml_backend.dump({"a": 1}, buf)
+    assert buf.getvalue() == "a: 1\n"
+
+    json_backend = Backend.new("json", kind="format")
+    assert json_backend.dumps({"a": "café"}) == '{"a": "café"}'
+    buf2 = io.StringIO()
+    json_backend.dump({"a": 1}, buf2)
+    assert buf2.getvalue() == '{"a": 1}'

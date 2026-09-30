@@ -98,6 +98,25 @@ def test_name_pattern_captures_reach_init_and_exact_beats_pattern():
     assert "probe_<x|y>" in Backend.names("function")
 
 
+def test_default_name_skips_a_leading_pattern():
+    # Every built-in backend lists an exact name before any pattern, so
+    # _default_name's own "skip a pattern, keep looking" loop step is only
+    # exercised by a class (a third-party backend is free to order its own
+    # NAMES either way) that puts the pattern first.
+    class PatternFirst(Backend):
+        NAMES = {
+            "function": (
+                NamePattern("pf_<x|y>", re.compile(r"pf_(?P<letter>x|y)")),
+                "pf_exact",
+            )
+        }
+
+        def loads(self, text):
+            return {}
+
+    assert PatternFirst().name == "pf_exact"
+
+
 def test_names_lists_exact_then_pattern_display():
     class A(Backend):
         NAMES = {"function": ("a_data",)}
@@ -191,6 +210,39 @@ def test_strict_property_falls_back_to_call_time_default():
 def test_get_raises_for_unknown_name_listing_known():
     with pytest.raises(Exception, match="yaml_data"):
         Backend.get("nonexistent_data")
+
+
+def test_get_returns_the_available_class():
+    # get()'s own success path (check_available() then return), distinct
+    # from the unknown-name failure case above -- not called from anywhere
+    # else in this codebase, but part of the registry's own public API.
+    from hyera.backends import YAMLBackend
+
+    assert Backend.get("yaml_data") is YAMLBackend
+
+
+def test_new_raises_for_unknown_name_listing_known():
+    # new()'s own "unknown name" raise, a separate code path from get()'s.
+    with pytest.raises(Exception, match="yaml_data"):
+        Backend.new("nonexistent_data")
+
+
+def test_duplicate_pattern_raises():
+    class First(Backend):
+        NAMES = {"function": (NamePattern("dup_<n>", re.compile(r"dup_(?P<n>\d+)")),)}
+
+        def loads(self, text):
+            return {}
+
+    with pytest.raises(ValueError, match="dup_<n>"):
+
+        class Second(Backend):
+            NAMES = {
+                "function": (NamePattern("dup_<n>", re.compile(r"dup_(?P<n>\d+)")),)
+            }
+
+            def loads(self, text):
+                return {}
 
 
 def test_hocon_check_available_names_extra(monkeypatch):
