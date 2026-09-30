@@ -140,6 +140,30 @@ jobs:
       - name: Run tests
         run: python -m pytest -q -rs
 
+  # Branch coverage, reported for reading -- not a gate (PYTHON.md does not
+  # ask for one by default; the mutation run is this project's acceptance
+  # evidence instead). continue-on-error so a coverage-tool break never
+  # blocks the rest of the run.
+  coverage:
+    name: Coverage report (not a gate)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install package with all extras
+        run: python -m pip install -e ".[dev,cli,hocon,eyaml]"
+      - name: Run tests under coverage
+        run: python -m coverage run --branch --source=src/hyera -m pytest -q -rs
+      - name: Show missing lines/branches
+        run: python -m coverage report --show-missing
+      - name: Write the summary table
+        run: python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
   format:
     name: Format (black)
     runs-on: ubuntu-latest
