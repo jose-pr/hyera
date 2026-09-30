@@ -19,7 +19,7 @@ from hyera._new_function import new_instance
 from hyera._string_converter import convert as _string_convert
 from hyera._string_converter import puppet_quote as _puppet_quote
 from hyera._type_mismatch import assert_instance_of
-from hyera._type_parser import parse_type
+from hyera._type_parser import _Parser, parse_type
 from hyera._types import (
     ALIASES,
     PAnyType,
@@ -134,6 +134,207 @@ def test_render_table():
     assert str(infer_set(11)) == "Integer[11, 11]"
     assert str(infer([1]).generalize()) == "Array[Integer]"
     assert str(infer([True]).generalize()) == "Array[Boolean]"
+
+
+# --------------------------------------------------- parser grammar/errors
+#
+# The golden-driven `test_parse_matches_golden` above only exercises specs
+# Puppet itself was asked to parse; these cover the parser's own remaining
+# grammar shapes and error branches directly (array/hash literals, quoted
+# string escapes, unary minus, `default` size bounds, and every builder's
+# own argument-count/shape error).
+
+
+def test_parser_syntax_errors():
+    error_cases = [
+        ("@bad", "Syntax error at '@' (line: 1, column: 1)"),
+        ("Array[", "Syntax error at end of input"),
+        ("Hash[]", "Syntax error at ']' (line: 1, column: 6)"),
+        ("Collection[", "Syntax error at end of input"),
+        ("Tuple[]", "Syntax error at ']' (line: 1, column: 7)"),
+        ("Variant[]", "Syntax error at ']' (line: 1, column: 9)"),
+        ("Enum[]", "Syntax error at ']' (line: 1, column: 6)"),
+        ("Pattern[]", "Syntax error at ']' (line: 1, column: 9)"),
+        ("Optional[]", "Syntax error at ']' (line: 1, column: 10)"),
+        ("NotUndef[]", "Syntax error at ']' (line: 1, column: 10)"),
+        ("Float[]", "Syntax error at ']' (line: 1, column: 7)"),
+        ("String[]", "Syntax error at ']' (line: 1, column: 8)"),
+        ("Boolean[]", "Syntax error at ']' (line: 1, column: 9)"),
+        ("Sensitive[]", "Syntax error at ']' (line: 1, column: 11)"),
+        ("-x", "Syntax error at 'x' (line: 1, column: 2)"),
+        ("Integer,", "Syntax error at end of input"),
+        ("Integer]", "Syntax error at ']' (line: 1, column: 8)"),
+        ("Pattern['^a'b']", "Syntax error at ''' (line: 1, column: 14)"),
+    ]
+    for spec, message in error_cases:
+        with pytest.raises(HieraLookupError) as exc_info:
+            parse_type(spec)
+        assert str(exc_info.value) == message, spec
+
+
+def test_parser_not_a_type_spec_errors():
+    for spec in (
+        "-5",
+        "Integer [1]",
+        "Struct[String]",
+        "Enum[1]",
+        "Enum[[1,2]]",
+        "Pattern[1]",
+        "Regexp[1,2]",
+        "Regexp[1]",
+        "Collection[1,2,3]",
+        "Tuple[String,default,3]",
+        "Tuple[String,1,default]",
+        # Every element is a size bound (popped off), leaving no element
+        # types to build a Tuple from.
+        "Tuple[1,2]",
+        # "undef" is a valid primary expression (a literal value), just
+        # never a valid *type* expression.
+        "Optional[undef]",
+        # An empty (`[]`) and a trailing-comma array literal, both as an
+        # access argument -- neither is a valid Enum value.
+        "Enum[[]]",
+        "Enum[[1,2,]]",
+        # Array's own three-size-argument form (no element type given at
+        # all, just size args directly) is still capped at two.
+        "Array[1,2,3]",
+        # A Struct key that is neither a bareword/quoted string nor
+        # `Optional[<string>]`.
+        "Struct[{5=>String}]",
+        # An "access" key whose base name IS "optional" but whose own
+        # argument isn't a bareword/quoted string.
+        "Struct[{Optional[Integer]=>String}]",
+    ):
+        with pytest.raises(HieraLookupError) as exc_info:
+            parse_type(spec)
+        assert str(exc_info.value) == (
+            "The expression <{}> is not a valid type specification.".format(spec)
+        )
+
+
+def test_parser_builder_arg_count_errors():
+    cases = [
+        (
+            "Array[Integer,1,2,3]",
+            "Invalid number of type parameters specified: Array requires 0 to 3, 4 provided",
+        ),
+        (
+            "Hash[String=>Integer]",
+            "Invalid number of type parameters specified: Hash requires 2 to 4, 1 provided",
+        ),
+        (
+            "Sensitive[Integer,String]",
+            "Invalid number of type parameters specified: Sensitive requires 0 to 1, 2 provided",
+        ),
+        (
+            "Optional[Integer,String]",
+            "Invalid number of type parameters specified: Optional requires 1, 2 provided",
+        ),
+        ("Boolean[true,false]", "'new_boolean' expects 1 argument, got 2"),
+        (
+            "Float[1,2,3]",
+            "Invalid number of type parameters specified: Float requires 1 or 2, 3 provided",
+        ),
+        (
+            "String[1,2,3]",
+            "Invalid number of type parameters specified: String requires 1 to 2, 3 provided",
+        ),
+        (
+            "NotUndef[Integer,String]",
+            "Invalid number of type parameters specified: NotUndef requires 0 to 1, 2 provided",
+        ),
+    ]
+    for spec, message in cases:
+        with pytest.raises(HieraLookupError) as exc_info:
+            parse_type(spec)
+        assert str(exc_info.value) == message, spec
+
+    # `_fmt_num`'s float-with-an-integer-value branch: Float bounds stay
+    # floats (unlike Integer's, which are always plain ints), so the
+    # "from > to" range-check message needs its own formatting to print
+    # "5"/"1" rather than "5.0"/"1.0".
+    with pytest.raises(HieraLookupError) as exc_info:
+        parse_type("Float[5.0,1.0]")
+    assert str(exc_info.value) == "'from' must be less or equal to 'to'. Got (5, 1"
+
+
+def test_parser_never_parameterized_and_unsupported_with_args():
+    with pytest.raises(HieraLookupError) as exc_info:
+        parse_type("Data[Integer]")
+    assert str(exc_info.value) == "Not a parameterized type <Data>"
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        parse_type("Any[Integer]")
+    assert str(exc_info.value) == "Not a parameterized type <Any>"
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        parse_type("Iterable[Integer]")
+    assert (
+        str(exc_info.value)
+        == "hiera does not support the Puppet type 'Iterable[Integer]'"
+    )
+
+    with pytest.raises(HieraLookupError) as exc_info:
+        parse_type("SemVer[1,2]")
+    assert str(exc_info.value) == "hiera does not support the Puppet type 'SemVer[1,2]'"
+
+    ref = parse_type("Stdlib::Port[80]")
+    assert isinstance(ref, PTypeReferenceType)
+    assert str(ref) == "TypeReference['Stdlib::Port[80]']"
+
+
+def test_parser_literals_and_collections():
+    # Array/hash literal argument shapes: empty, one element, a trailing
+    # comma, and a bare "k => v" collapsed into one pair-argument.
+    assert str(parse_type("Array[Integer]")) == "Array[Integer]"
+    assert str(parse_type("Array[String,]")) == "Array[String]"
+    assert str(parse_type("Hash[String,Integer,]")) == "Hash[String, Integer]"
+    assert str(parse_type("Struct[{}]")) == "Struct[{}]"
+    assert str(parse_type("Struct[{Optional[c] => String, d => Integer}]")) == (
+        "Struct[{Optional['c'] => String, 'd' => Integer}]"
+    )
+    # A trailing comma in a hash literal's own body (distinct from the
+    # access-argument-list trailing comma covered above).
+    assert str(parse_type("Struct[{a=>String,}]")) == "Struct[{'a' => String}]"
+
+    # `default` as an explicit size bound (distinct from omitting the
+    # argument entirely).
+    assert str(parse_type("Array[Integer,default,3]")) == "Array[Integer, default, 3]"
+    assert str(parse_type("Hash[String,Integer,default,3]")) == (
+        "Hash[String, Integer, default, 3]"
+    )
+    assert str(parse_type("Collection[default,3]")) == "Collection[default, 3]"
+    assert str(parse_type("Collection[1,default]")) == "Collection[1]"
+
+    # Unary minus.
+    assert parse_type("Integer[-5,5]").instance(-5) is True
+
+    # Quoted-string escapes (double- and single-quoted), inside an Enum
+    # argument list.
+    enum_t = parse_type('Enum["a\\nb\\t\\r\\"\\\\c"]')
+    assert enum_t.values == ['a\nb\t\r"\\c']
+    assert parse_type("Pattern['^a\\'b']").instance("a'bx") is True
+
+    # Collection's single-bound form (a lower bound only, no upper).
+    assert str(parse_type("Collection[5]")) == "Collection[5]"
+
+
+def test_parser_advance_past_eof_is_a_no_op():
+    # Every call site in this module only ever advances past a token whose
+    # kind it just confirmed is not "eof" -- so calling `advance()` a
+    # second time once the parser is already sitting on the eof token (a
+    # defensive backstop against an out-of-range `self.pos`) never happens
+    # through `parse_type()` itself. Exercised directly on the class.
+    p = _Parser("x")
+    first = p.advance()
+    assert first.kind == "name"
+    pos_at_eof = p.pos
+    eof1 = p.advance()
+    assert eof1.kind == "eof"
+    assert p.pos == pos_at_eof  # unchanged: the "if tok.kind != eof" guard
+    eof2 = p.advance()
+    assert eof2 is eof1
+    assert p.pos == pos_at_eof  # still unchanged on a second call
 
 
 # --------------------------------------------------------- aliases/refs
