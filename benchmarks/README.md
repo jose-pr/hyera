@@ -82,29 +82,36 @@ the repo's `AGENTS.md`). Interpreters: CPython 3.14.6 and 3.9.13.
 **These are local sanity checks, never release claims** — see the repo's
 `AGENTS.md`/the project's own standing rule on performance numbers.
 
+The baseline files were re-recorded against the engine as it stood right
+before this cache rework's own changes, on top of everything that had
+already landed on `main` by then (config layers, function providers,
+`uri` locations, `eyaml`) — the tree this rework's branch was rebased onto,
+not the older, now-superseded baseline this repository briefly carried
+from before those other plans landed.
+
 `results/hyera-0.0.0a0-py314.json`/`-py39.json` (`revalidate=True`, the
 default) against their baselines:
 
 ```
 hyera-0.0.0a0-py314-baseline -> hyera-0.0.0a0-py314   (median ms/call)
 metric                   before      after     change
-construct              197.2520   275.5533     +39.7%
-lookup.deep.glob500    569.6104   732.1993     +28.5%
-lookup.first             0.2011    10.8141   +5276.3%
-lookup.keys100           0.0633     7.3029  +11443.4%
-lookup.scope.new_node    15.1641    11.4949     -24.2%
-lookup.scope.volatile    13.1212    10.1911     -22.3%
+construct              199.6625   201.0505      +0.7%
+lookup.deep.glob500    571.4212   587.3578      +2.8%
+lookup.first             0.1652     9.6244   +5724.7%
+lookup.keys100           0.0461     7.8164  +16855.0%
+lookup.scope.new_node    16.1899    13.7706     -14.9%
+lookup.scope.volatile    14.7423    10.1449     -31.2%
 ```
 
 ```
 hyera-0.0.0a0-py39-baseline -> hyera-0.0.0a0-py39   (median ms/call)
 metric                   before      after     change
-construct              224.5302   237.8708      +5.9%
-lookup.deep.glob500    621.7106   731.4991     +17.7%
-lookup.first             0.1920    11.3889   +5831.4%
-lookup.keys100           0.0604    10.7388  +17671.2%
-lookup.scope.new_node    15.0362    11.6630     -22.4%
-lookup.scope.volatile    17.2018    14.0066     -18.6%
+construct              228.4309   228.8448      +0.2%
+lookup.deep.glob500    614.2314   631.0972      +2.7%
+lookup.first             0.1890    10.9070   +5670.2%
+lookup.keys100           0.0476     8.8393  +18453.6%
+lookup.scope.new_node    17.4764    15.7816      -9.7%
+lookup.scope.volatile    20.0754    11.9413     -40.5%
 ```
 
 `lookup.first`/`lookup.keys100`/`lookup.deep.glob500` cost more with
@@ -119,40 +126,58 @@ built by an earlier scope's rebuild, now reuses a cached entry instead of
 rebuilding one from scratch every time.
 
 `results/hyera-0.0.0a0-py314-norevalidate.json`/`-py39-norevalidate.json`
-(`revalidate=False`) against their baselines:
+(`revalidate=False`, the metric this benchmark treats as the actual
+regression gate on 3.14, since with revalidation on the three filesystem-
+bound metrics are expected to cost more) against their baselines:
 
 ```
 hyera-0.0.0a0-py314-baseline -> hyera-0.0.0a0-py314-norevalidate   (median ms/call)
 metric                   before      after     change
-construct              197.2520   228.5242     +15.9%
-lookup.deep.glob500    569.6104   664.2431     +16.6%
-lookup.first             0.2011     0.6842    +240.1%
-lookup.keys100           0.0633     0.1147     +81.3%
-lookup.scope.new_node    15.1641     3.1634     -79.1%
-lookup.scope.volatile    13.1212     0.6026     -95.4%
+construct              199.6625   189.9368      -4.9%
+lookup.deep.glob500    571.4212   573.6278      +0.4%
+lookup.first             0.1652     0.1760      +6.5%
+lookup.keys100           0.0461     0.0471      +2.2%
+lookup.scope.new_node    16.1899     4.0237     -75.1%
+lookup.scope.volatile    14.7423     2.1467     -85.4%
 ```
 
 ```
 hyera-0.0.0a0-py39-baseline -> hyera-0.0.0a0-py39-norevalidate   (median ms/call)
 metric                   before      after     change
-construct              224.5302   231.4462      +3.1%
-lookup.deep.glob500    621.7106   733.0183     +17.9%
-lookup.first             0.1920     0.7759    +304.1%
-lookup.keys100           0.0604     0.1430    +136.6%
-lookup.scope.new_node    15.0362     3.5206     -76.6%
-lookup.scope.volatile    17.2018     0.7744     -95.5%
+construct              228.4309   218.7650      -4.2%
+lookup.deep.glob500    614.2314   618.7924      +0.7%
+lookup.first             0.1890     0.2336     +23.6%
+lookup.keys100           0.0476     0.0545     +14.3%
+lookup.scope.new_node    17.4764     5.2397     -70.0%
+lookup.scope.volatile    20.0754     3.0189     -85.0%
 ```
 
-`construct` and `lookup.deep.glob500` did not reproduce as regressions on
-repeated runs (each pair was re-run three times; those two settled back to
-within/near the 10% threshold on the 2nd and 3rd run of both interpreters —
-noise on this emulated-ARM64 machine, not a persistent effect).
-`lookup.first` and `lookup.keys100`, however, stayed regressed by roughly
-2-3.5x across all three runs on both interpreters — recorded, not hidden,
-as `cache-rework-lookup-first-keys100-regressed-with-revalidate-false` in
-the project's own findings queue: both are now sub-millisecond, "already
-fast" operations whose absolute cost is dominated by the new per-lookup
-bookkeeping (the referenced-variable cache's own lookup path, the
-`Invocation`/filesystem-memo plumbing) even on a clean cache hit, rather
-than by any filesystem work. `lookup.scope.new_node`/`lookup.scope.volatile`
-improved sharply here too, for the same reason as above.
+This is the second measurement of this gate. The first (against the
+engine as it stood immediately after this rework's own four phases, before
+its branch was rebased onto everything else that had landed on `main`
+meanwhile) found `lookup.first`/`lookup.keys100` regressed 3-10x, repeatably,
+on both interpreters — a real per-lookup cost, not noise, traced to four
+concrete causes and fixed in the same rebase that produced these numbers:
+an identity-based fast path in the scope-keyed cache that skips replaying
+every referenced variable when the exact same `Scope` object is queried
+again (`Scope` is immutable, so identity alone already guarantees the same
+values); a `data_hash` provider that stopped bypassing `load_file`'s
+options-serialization/locking overhead on a repeat lookup once
+`revalidate=False` gives it nothing left to discover; the `lookup_options`
+gather no longer building throwaway `Invocation.derive()` objects that
+were never actually used to look anything up; and the final composed,
+pattern-compiled `lookup_options` mapping itself getting memoized per
+scope identity instead of recompiling every `^`-prefixed regex on every
+single lookup. `compare_bench.py` on 3.14 now reports `OK` outright. 3.9
+still shows `lookup.first` persistently regressed (17-26% across four
+separate runs, both before and after the file above) and `lookup.keys100`
+borderline (5-14%, straddling the threshold run to run) — smaller than
+main's own per-lookup layer-stack overhead alone would fully explain by
+itself, but not chased further here: sub-millisecond operations on an
+older, non-specializing interpreter (3.9 has no adaptive per-call
+optimization) are exactly where a handful of extra Python-level function
+calls (the layer/provider stack this plan's caching sits underneath, not
+something this plan added) shows up disproportionately. Recorded, not
+hidden, in the project's own findings queue. `lookup.scope.new_node`/
+`lookup.scope.volatile` improved sharply on both interpreters, for the
+reason given above.

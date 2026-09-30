@@ -12,34 +12,34 @@
   },
   "metrics": {
     "construct": {
-      "max_ms": 324.323067,
-      "median_ms": 275.5533,
-      "min_ms": 244.7356
+      "max_ms": 209.101033,
+      "median_ms": 201.0505,
+      "min_ms": 198.545333
     },
     "lookup.deep.glob500": {
-      "max_ms": 887.33513,
-      "median_ms": 732.1993,
-      "min_ms": 695.02487
+      "max_ms": 589.22627,
+      "median_ms": 587.35775,
+      "min_ms": 584.13072
     },
     "lookup.first": {
-      "max_ms": 12.834691,
-      "median_ms": 10.814089,
-      "min_ms": 9.100733
+      "max_ms": 9.738658,
+      "median_ms": 9.624397,
+      "min_ms": 9.594009
     },
     "lookup.keys100": {
-      "max_ms": 10.349961,
-      "median_ms": 7.302912,
-      "min_ms": 7.274056
+      "max_ms": 7.891952,
+      "median_ms": 7.816437,
+      "min_ms": 7.740752
     },
     "lookup.scope.new_node": {
-      "max_ms": 12.080745,
-      "median_ms": 11.49487,
-      "min_ms": 10.602655
+      "max_ms": 16.227225,
+      "median_ms": 13.770605,
+      "min_ms": 13.741515
     },
     "lookup.scope.volatile": {
-      "max_ms": 15.008604,
-      "median_ms": 10.191136,
-      "min_ms": 8.586526
+      "max_ms": 10.602698,
+      "median_ms": 10.144902,
+      "min_ms": 9.74443
     }
   },
   "name": "hyera-0.0.0a0-py314",
@@ -47,7 +47,7 @@
   "processor": "ARMv8 (64-bit) Family 8 Model 2 Revision 201, Qualcomm Technologies Inc",
   "python": "3.14.6",
   "revalidate": true,
-  "timestamp": "2026-09-30T01:58:35+00:00",
+  "timestamp": "2026-09-30T04:59:44+00:00",
   "tree": {
     "files": 771,
     "reachable": 523

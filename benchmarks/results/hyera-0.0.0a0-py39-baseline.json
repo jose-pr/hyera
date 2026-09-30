@@ -12,41 +12,41 @@
   },
   "metrics": {
     "construct": {
-      "max_ms": 227.162433,
-      "median_ms": 224.530233,
-      "min_ms": 219.835767
+      "max_ms": 233.229467,
+      "median_ms": 228.430867,
+      "min_ms": 221.4368
     },
     "lookup.deep.glob500": {
-      "max_ms": 647.57308,
-      "median_ms": 621.71065,
-      "min_ms": 594.83116
+      "max_ms": 617.0037,
+      "median_ms": 614.23144,
+      "min_ms": 611.03994
     },
     "lookup.first": {
-      "max_ms": 0.220282,
-      "median_ms": 0.192011,
-      "min_ms": 0.190849
+      "max_ms": 0.203081,
+      "median_ms": 0.189023,
+      "min_ms": 0.183851
     },
     "lookup.keys100": {
-      "max_ms": 0.067454,
-      "median_ms": 0.060428,
-      "min_ms": 0.060132
+      "max_ms": 0.065922,
+      "median_ms": 0.047642,
+      "min_ms": 0.046901
     },
     "lookup.scope.new_node": {
-      "max_ms": 29.38757,
-      "median_ms": 15.03616,
-      "min_ms": 14.82979
+      "max_ms": 36.96556,
+      "median_ms": 17.476385,
+      "min_ms": 16.74288
     },
     "lookup.scope.volatile": {
-      "max_ms": 20.111598,
-      "median_ms": 17.201756,
-      "min_ms": 15.020698
+      "max_ms": 22.139934,
+      "median_ms": 20.075354,
+      "min_ms": 17.009022
     }
   },
-  "name": "hyera-0.0.0a0-py39-baseline",
+  "name": "hyera-0.0.0a0-py39",
   "platform": "Windows-10-10.0.28000-SP0",
   "processor": "ARMv8 (64-bit) Family 8 Model 2 Revision 201, Qualcomm Technologies Inc",
   "python": "3.9.13",
-  "timestamp": "2026-09-29T23:59:00+00:00",
+  "timestamp": "2026-09-30T04:58:24+00:00",
   "tree": {
     "files": 771,
     "reachable": 523
