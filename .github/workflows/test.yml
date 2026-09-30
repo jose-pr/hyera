@@ -126,7 +126,7 @@ jobs:
       - name: Install black
         run: python -m pip install black
       - name: Check formatting
-        run: python -m black --check src/ tests/
+        run: python -m black --check src/ tests/ benchmarks/
 
   # The same strict build the release gates on (release.yml's docs-gate), run
   # on every ci-* tag so a docstring or docs change that breaks the site

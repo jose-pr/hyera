@@ -109,6 +109,7 @@ encryptors other than PKCS7 (GPG and third-party plugins).
   on the path).
 - Editable install: `<py> -m pip install -e ".[dev]"`. `dev` pulls in the
   `cli` and `hocon` extras, so nothing else needs adding by hand.
+- Benchmarks: `<py> benchmarks/run.py [--save]` (see `benchmarks/README.md`).
 - Package: built with `hatchling`. The PyPI distribution, the import
   package and the console script are all `hyera`. `hyera[cli]` pulls in
   `duho` for the console script, `hyera[hocon]` pulls in `pyhocon` for
