@@ -1,0 +1,15 @@
+description: >-
+  An undefined variable in a hierarchy entry's `options` is lenient like
+  any other location interpolation (warn and resolve to ''), which then
+  still leaves an extra `options` key a data_hash file function rejects;
+  under `--strict error` the undefined variable itself is the error.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' one of 'path'"
+  - id: k-strict-error
+    key: k
+    puppet_args: ["--strict", "error"]
+    note: Puppet 8.10 probe
+    error_match: "Undefined variable 'nosuch'"

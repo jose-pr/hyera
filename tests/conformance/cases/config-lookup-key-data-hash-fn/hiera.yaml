@@ -1,0 +1,4 @@
+version: 5
+defaults: {datadir: data}
+hierarchy:
+  - {name: common, lookup_key: yaml_data, path: common.yaml}

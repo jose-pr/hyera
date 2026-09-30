@@ -1,0 +1,9 @@
+description: >-
+  `options` declared in `defaults` (inherited by an entry with no options
+  of its own) is rejected by a data_hash file function exactly like an
+  option declared directly on the entry.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' one of 'path'"

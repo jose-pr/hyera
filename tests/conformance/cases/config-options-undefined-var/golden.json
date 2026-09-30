@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "306dd53981fe114f2a440a2bfa33ecded195595125d1e22154252938ad292672",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "Undefined variable 'nosuch';"
+      ],
+      "status": "error",
+      "message": "'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"
+    },
+    "k-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "k"
+      ],
+      "status": "error",
+      "message": "Undefined variable 'nosuch' (file: <case>/hiera.yaml, line: 4)"
+    }
+  }
+}

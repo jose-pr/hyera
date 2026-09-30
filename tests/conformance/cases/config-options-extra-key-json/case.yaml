@@ -1,0 +1,8 @@
+description: >-
+  The same options-on-a-file-function rejection as config-options-extra-key,
+  for json_data.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'json_data' one of 'path'"

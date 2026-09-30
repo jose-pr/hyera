@@ -1,0 +1,6 @@
+description: >-
+  An empty `options: {}` on a data_hash file function is not an extra key
+  and does not error.
+queries:
+  - key: k
+    note: Puppet 8.10 probe

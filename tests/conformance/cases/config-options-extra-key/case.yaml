@@ -1,0 +1,9 @@
+description: >-
+  A hierarchy entry declaring `options` on a data_hash file function (only
+  `path`/`paths`/`glob`/`globs`/`mapped_paths` may be set) is a Puppet
+  config error, not a silently-ignored option.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared"

@@ -1,0 +1,8 @@
+description: >-
+  Method-call syntax (`%{lookup(...)}`) is rejected in a hierarchy entry's
+  `options`, the same restriction Puppet applies to every other location
+  key.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_match: "Interpolation using method syntax is not allowed in this context"

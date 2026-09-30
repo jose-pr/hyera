@@ -1,0 +1,8 @@
+description: >-
+  Naming a data_hash-only function (`yaml_data`) as a `data_dig` entry is
+  a Puppet config error at level build, reporting the function's real arity.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "'yaml_data' expects 2 arguments, got 3"
