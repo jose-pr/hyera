@@ -3,203 +3,232 @@
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
 lookup — a `src/hyera` packaged library plus an optional `hyera` CLI, built on
-the `duho`/`pathlib_next` stack.
+the `duho`/`pathlib_next` stack. The distribution, the import package and the
+console script are all `hyera` (`pip install hyera`, `import hyera`, `hyera`
+or `python -m hyera`).
 
-It reads a Hiera 5 base config, walks a hierarchy of data sources for a given
-context, and fully resolves a key's value — including `%{...}` interpolation
-and the `hiera`/`lookup`/`scope`/`literal`/`alias` functions — with optional
-array, hash, and deep-hash merging.
+The goal is to resolve Hiera data exactly the way Puppet 8's own `lookup`
+does. Every deliberate difference is listed in
+[`README.md#differences-from-puppet`](README.md#differences-from-puppet); the
+per-feature fidelity table is
+[`README.md#hiera-coverage`](README.md#hiera-coverage).
 
-## Code layout
+## Layout
 
 ```
 src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
-├── core.py                 # Hiera: entry point and engine (data_hash_function_provider.rb, data_provider.rb)
-├── _hiera_config.py        # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
-├── _data_provider.py       # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
-├── _location_resolver.py   # hierarchy level path resolution: Puppet interpolation rules, mapped_paths scope semantics (location_resolver.rb, hiera_config.rb)
-├── _function_provider.py   # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
-├── _eyaml.py                # eyaml_lookup_key: token scanning, PKCS7 key loading, a bounds-checked BER/DER PKCS7 decrypt over cryptography primitives
-├── _interpolation.py       # the %{...} engine: resolving functions and variable references (interpolation.rb)
-├── _invocation.py          # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
-├── _merge_strategy.py      # MergeStrategy: merge strategies (merge_strategy.rb, deep_merge gem's core.rb)
-├── _navigation.py          # sentinel + dotted context lookup (sub_lookup.rb)
-├── _scope.py                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
-├── _facts.py                # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
-├── _lookup_adapter.py      # lookup_options matching + convert_result (lookup_adapter.rb)
-├── _lookup_function.py     # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
-├── _data_functions.py      # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
-├── _types.py               # type model, Sensitive (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
-├── _type_parser.py         # parse_type: Puppet type-expression parser (type_parser.rb)
-├── _type_mismatch.py       # describe_mismatch, assert_instance_of (type_mismatch_describer.rb, type_asserter.rb)
-├── _string_converter.py    # convert, puppet_quote: value-to-string formatting (string_converter.rb)
-├── _new_function.py        # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
-├── backends.py             # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend
-├── _render.py              # s/json/yaml render backends: puppet lookup --render-as output
-├── _yaml_loader.py         # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
-├── exceptions.py           # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
-└── cli.py                  # duho-based `hyera` console script (Lookup command, main())
+├── __main__.py             # python -m hyera: the same entry point as the console script
+├── py.typed                 # PEP 561 marker: the package ships inline types
+├── AGENTS.md                 # the shipped API header -- every export, signature and gotcha
+├── core.py                    # Hiera: entry point and lookup engine (data_hash_function_provider.rb, data_provider.rb)
+├── _hiera_config.py            # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
+├── _data_provider.py            # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
+├── _location_resolver.py         # hierarchy level path resolution: interpolation rules, mapped_paths, glob (location_resolver.rb, hiera_config.rb)
+├── _function_provider.py          # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
+├── _cache.py                       # scope-keyed caching: Puppet's scope-interpolation stability check
+├── _navigation.py                   # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
+├── _interpolation.py                 # the %{...} engine: resolving functions and variable references (interpolation.rb)
+├── _invocation.py                     # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
+├── _merge_strategy.py                  # merge strategies for accumulating values across the hierarchy (merge_strategy.rb, deep_merge gem's core.rb)
+├── _lookup_adapter.py                   # lookup_options matching + convert_result (lookup_adapter.rb)
+├── _lookup_function.py                   # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
+├── _data_functions.py                     # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
+├── _explain.py                             # explain()'s tree and text rendering (pops/lookup/explainer.rb)
+├── _scope.py                                # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
+├── _facts.py                                 # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
+├── _types.py                                  # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+├── _type_parser.py                             # parse_type: Puppet type-expression parser (type_parser.rb)
+├── _type_mismatch.py                            # type mismatch messages and instance assertion (type_mismatch_describer.rb, type_asserter.rb)
+├── _string_converter.py                          # value-to-string conversion: String.new()'s engine (string_converter.rb)
+├── _new_function.py                               # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
+├── backends.py                                     # self-registering Backend registry, Puppet-only names + YAMLBackend/JSONBackend/HOCONBackend/SopsBackend (functions/yaml_data.rb)
+├── _eyaml.py                                        # eyaml_lookup_key: token scanning, PKCS7 key loading, a bounds-checked PKCS7 decrypt
+├── _render.py                                        # s/json/yaml CLI render backends: puppet lookup --render-as output
+├── _yaml_loader.py                                    # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
+├── exceptions.py                                       # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
+└── cli.py                                                # duho-based hyera console script (Lookup command, main())
+
+tests/
+├── conftest.py              # make_tree: a valid Hiera 5 tree on disk, LF/UTF-8, per test
+├── test_*.py                 # unit tests, one module per engine area (backends, config, merge, interpolation, CLI, ...)
+└── conformance/
+    ├── _golden.py             # golden schema/digest/lint (no hyera import)
+    ├── _ours.py                 # the only module that calls into hyera's API/CLI
+    ├── record.py                 # recorder (dev-only, needs real Puppet)
+    ├── test_conformance.py        # replay: the API/library channel
+    ├── test_conformance_cli.py     # replay: the CLI channel
+    └── cases/<area>-<topic>/        # a hand-written case.yaml + a generated golden.json per case
+
+benchmarks/
+├── README.md            # schema + reproduce command
+├── run.py                 # the benchmark runner (--save writes benchmarks/results/)
+└── results/                 # tracked, committed JSON results (one per version/interpreter/config)
+
+examples/
+├── README.md         # how to run the example, and its expected output
+├── hiera.yaml          # a runnable Hiera 5 hierarchy (nodes/os/role/common)
+├── facts.yaml            # a puppet lookup --facts-shaped fact file
+├── lookup.py                # loads the facts, builds a Hiera, prints five values
+└── data/                       # the data tree the hierarchy reads
+
+docs/
+├── index.md            # the hand-written landing page (its examples are tested, see Develop)
+├── changelog.md          # snippet-embeds CHANGELOG.md
+└── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.backends, hyera.cli)
+
+.github/workflows/
+├── test.yml            # on-demand test matrix, types, floors, format, docs, console-script
+├── release.yml           # v* tag: test -> build -> docs-gate -> github-release -> publish-pypi / docs-deploy
+└── docs.yml                 # every GitHub Pages deploy
+
+mkdocs.yml                   # docs site config (MkDocs + Material + mkdocstrings)
+pyproject.toml                 # hatchling build, extras, pytest/black config
+CHANGELOG.md                     # Keep a Changelog; [Unreleased] is the only section this repo edits
+README.md                          # the PyPI long description and the user guide
+LICENSE, NOTICE, LICENSES/            # MIT for original code; NOTICE credits every upstream this project ports or derives from (see License below)
+.gitattributes                          # * text=auto eol=lf
 ```
 
 `hyera._*` modules are private engine internals mirroring Puppet's own file
-split; import public names from `hyera` itself.
+split; import public names from `hyera` itself, never from a submodule
+directly. `src/hyera/AGENTS.md` is the shipped API header (see
+[Packaging](#packaging) below) — every export with its exact signature,
+arguments and gotchas, so a consuming agent skips the source.
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
-levels use hyera's own `Dir.glob` port in `_location_resolver.py`, never
+levels use hyera's own Ruby `Dir.glob` port in `_location_resolver.py`, never
 `Path.glob`.
 
 ## How it fits together
 
 `Hiera(base_config, ...)` loads a Hiera 5 base config (path, file-like, or
-dict), builds a `HieraLevel` per hierarchy entry (each pairing a `Backend`
-with its source path template(s)), and pre-warms the context-free cache.
-`Hiera.lookup(name, ...)` (Puppet's own `lookup()`, also reachable as
-`h(...)`/`h[...]`/`name in h`) resolves each candidate name's *root* key
-against the hierarchy nested the way Puppet's provider stack does —
-locations within a level, levels within the hierarchy, then the
-global/environment/module layer stack (`_data_provider.py`) — reducing at
-each layer with a `MergeStrategy` (first-match by default), fully resolving
-interpolation and hiera function calls in the found root value before it is
-merged, then digging any dotted sub-key out of the merged result exactly
-once.
+dict) and builds a `HieraLevel` per hierarchy entry (each pairing a `Backend`
+with its source path template(s)); reading only happens then — no data file
+is read until the first lookup that needs it. `Hiera.lookup(name, ...)`
+(Puppet's own `lookup()`, also reachable as `h(...)`/`h[...]`/`name in h`)
+resolves each candidate name's *root* key against the hierarchy, nested the
+way Puppet's provider stack does: locations within a level, levels within
+the hierarchy, then the global/environment/module layer stack
+(`_data_provider.py`) — reducing at each layer with a `MergeStrategy`
+(first-match by default), fully resolving interpolation and hiera function
+calls in the found root value *before* it is merged (`core.py` resolves each
+level in turn, then merges — it never accumulates raw values across levels
+and resolves them afterward), then digging any dotted sub-key out of the
+merged result exactly once.
 
-Backends register under one or more Hiera `data_hash` names (see
-`src/hyera/AGENTS.md` for the table) and only need to implement
-`read_file`/`load`; every backend parses into plain `dict`/`list`, and
+Backends register under one or more Hiera `data_hash`/`lookup_key`/
+`data_dig` names (see the "Backends" table in
+[`README.md`](README.md#backends)) and only need to implement
+`read_file`/`load` (or, for a provider backend, a function hook taking a
+`hyera.LookupContext`); every backend parses into plain `dict`/`list`, and
 `_navigation.py` (`split_key`/`sub_lookup`, ported from Puppet's own
-`sub_lookup.rb`) is what makes an `"a.b.0.c"`-style dotted key or
-`%{...}` reference navigate that data uniformly, rather than a container
-method.
+`sub_lookup.rb`) is what makes an `"a.b.0.c"`-style dotted key or `%{...}`
+reference navigate that data uniformly, rather than a container method.
 
 The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
-`Hiera.lookup`, designed for unattended use: no interactive prompts,
-deterministic output, and exit codes `0` (found) / `1` (key missing) / `2`
-(usage or config error).
-
-See **`src/hyera/AGENTS.md`** for the header-file-style public API — every
-export with its signature, arguments, and gotchas.
-
-## Hiera 5 spec coverage
-
-Supported: `version: 5` validation, `defaults`, `hierarchy`,
-`default_hierarchy` (module layer only),
-`name`, `path`/`paths`/`glob`/`globs`/`mapped_paths`, `datadir`,
-`data_hash` backends (yaml/json/hocon/sops), `lookup_key`/`data_dig`
-provider backends (called per key and per location with a
-`hyera.LookupContext`), hierarchy `options` (interpolated, passed to the
-backend with `path`/`uri`), a location-less hierarchy entry (calls its
-function once, with no location), `uri`/`uris` locations (validated with
-Ruby's `URI()` grammar, normalized like `URI#to_s`, never fetched), all five
-interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with
-dotted subkeys, merges `first`/`default`/`unique`/`hash`/`deep` (with
-`knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`), `lookup_options`
-(per-key/regex merge strategy + `convert_to`), the global/environment/
-module layer stack (`Hiera(..., environmentpath=, basemodulepath=,
-modulepath=)`), and `eyaml_lookup_key` (PKCS7
-only, behind the `eyaml` extra). A versionless or `version: 3`
-hiera.yaml (Hiera 1, 2 and 3's own dialect) is read and validated against
-Puppet's v3 schema and resolved through the real backend-major provider
-build (`yaml`/`json`/`hocon`/`eyaml`, or a third-party backend registered
-under that name); `hiera3_backend` (global layer only) runs the same way.
-`version: 4` (`backend:` instead of `data_hash:`, one provider per entry)
-is read the same way in the environment/module layers, rejected (after its
-own schema validates) at the global layer; a `%{lookup()}`/`%{hiera()}`/
-`%{alias()}` inside a version 3 global layer's own data stays confined to
-the global layer unless the current environment has a real version 5
-hiera.yaml.
-
-Not implemented: running a Ruby Hiera 3 backend
-(a v3/`hiera3_backend` name must be a Puppet-mapped one or a registered
-Python backend), and hiera-eyaml encryptors other than PKCS7 (GPG and
-third-party plugins).
+`Hiera.lookup`, mirroring `puppet lookup`'s own flags (see
+[`README.md`](README.md#command-line)), designed for unattended use: no
+interactive prompts, deterministic output through the `_render.py` registry,
+and exit codes `0` (found), `1` (key missing) and `2` (any other error).
+`HYERA_MCP=stdio hyera` serves the same command as an MCP tool over stdio.
 
 ## Develop
 
-- venvs: `.venv/3.14-nt-amd64` and `.venv/3.9-nt-amd64` (both interpreter
-  bounds are supported and kept green).
-- Tests: `<py> -m pytest -q` (pytest config in `pyproject.toml` puts `src/`
-  on the path).
-- Editable install: `<py> -m pip install -e ".[dev]"`. `dev` pulls in the
-  `cli` and `hocon` extras, so nothing else needs adding by hand.
-- Benchmarks: `<py> benchmarks/run.py [--save]` (see `benchmarks/README.md`).
-- Format: `<py> -m black --check src/ tests/ benchmarks/ examples/`.
-- Types: `<py> -m pyright --verifytypes hyera --ignoreexternal` must report
-  100% and no symbol without a docstring (CI job `types`, Python 3.9 and
-  3.14).
-- Package: built with `hatchling`. The PyPI distribution, the import
-  package and the console script are all `hyera`. The `cli` extra pulls in
-  `duho` for the console script, the `hocon` extra pulls in `pyhocon` for
-  `HOCONBackend`.
-- **Version**: lives in exactly one place, `src/hyera/__init__.py`
-  (`__version__`); `[tool.hatch.version]` reads it to build the package.
-  Bump it in the same commit as the CHANGELOG entry for that release.
-- **CI**: `test.yml` runs the full OS/Python matrix, a `black --check`, a
-  `types` job (`pyright --verifytypes`, Python 3.9 and 3.14) gating the
-  100%-typed/fully-docstringed claim, and a `floors` job that installs
-  every declared dependency at its floor
-  (`pyproject.toml`'s `>=` bound) on the oldest supported Python, so a floor
-  that stops working is caught before a release does.
-- **Releases**: tags are SemVer (`v1.0.0`, `v1.0.0-rc.1`); the PEP 440 form
-  of the tag (`v1.0.0-rc.1` -> `1.0.0rc1`) must equal the built version, or
-  `release.yml` stops before publishing anything. Pre-release tags create a
-  GitHub pre-release and are never uploaded to PyPI; a hyphenless tag such
-  as `v1.0.0rc1` counts as final.
-- **Docs**: `<py> -m pip install -e ".[dev,docs]"` on the 3.14 venv (the docs
-  tools need Python 3.10+), then `<py> -m mkdocs build --strict` from the
-  repo root. `docs/index.md` is hand-written; its runnable examples and its
-  extras table are checked by `tests/test_docs_examples.py`, so an API or
-  extras change that breaks the page fails the suite instead of going
-  unnoticed. `docs/api/` holds exactly one `:::` page per public module
-  (`hyera`, `hyera.backends`, `hyera.cli`) — renaming or removing one updates
-  both its page and `mkdocs.yml`'s nav. `docs/changelog.md` snippet-embeds
-  `CHANGELOG.md`.
-- **CI (docs)**: `test.yml`'s `docs` job builds the docs strictly on every
-  run (the same build the release gates on, exercised before a release
-  rather than by one); `docs.yml` deploys to GitHub Pages on a push to
-  `main` touching `docs/`, `mkdocs.yml`, `src/` or `CHANGELOG.md`, and on
-  `workflow_dispatch`; `release.yml` gates the GitHub release on a strict
-  docs build (`docs-gate`, no deploy) and, for a final tag only, dispatches
-  `docs.yml` to redeploy the docs for that release (`docs-deploy`) — kept
-  off the publish chain so a docs problem never blocks a package that
-  already passed its tests.
+- venvs: `.venv/3.14-nt-amd64` and `.venv/3.9-nt-amd64`, named
+  `<version>-<os>-<arch>` (both interpreter bounds are supported and kept
+  green).
+- Editable install: `<py> -m pip install -e ".[dev,docs]"`. `dev` composes
+  every extra that has tests depending on it (`cli`, `hocon`, `eyaml`) plus
+  `black`/`build`/`pytest`/`twine`/`pyright[nodejs]`; `docs` adds the
+  MkDocs toolchain (Python 3.10+ only — install it on the 3.14 venv, not
+  the 3.9 floor).
+- Tests: `<py> -m pytest -q -rs` (pytest config in `pyproject.toml` puts
+  `src/` on the path).
+- **Conformance goldens** (`tests/conformance/`): replay needs no Puppet,
+  `<py> -m pytest -q -rs tests/conformance`. Recording needs Puppet 8.10's
+  `puppet lookup`, local or in WSL: `<py> tests/conformance/record.py
+  --runner {local|wsl} [--jobs N] [CASE ...]`; add `--check` to re-record in
+  memory and diff against the committed goldens, or `--list-markers` to list
+  every marker without needing Puppet at all. A case/query's `divergence:`
+  marker is a strict `xfail` against a real bug still to fix — turning it
+  green (`XPASS(strict)`) means the fix landed and the marker must come out;
+  a `deviation:` marker is a permanent, asserted-as-passing documented
+  difference, tested against `README.md`'s "Differences from Puppet" list
+  by `tests/test_readme.py::test_differences_match_deviations`.
+- Format: the exact command CI runs —
+  `<py> -m black --check src/ tests/ benchmarks/ examples/`.
+- Type gate: the exact command CI runs —
+  `<py> -m pyright --pythonpath "$(which python)" --verifytypes hyera --ignoreexternal`
+  (must report 100% and no public symbol without a docstring; CI runs it on
+  Python 3.9 and 3.14).
+- Docs: `<py> -m mkdocs build --strict` (3.14 venv). `docs/index.md` is
+  hand-written; its runnable examples and extras table are checked by
+  `tests/test_docs_examples.py`. `docs/api/` holds exactly one `:::` page
+  per public module — renaming or removing one updates both its page and
+  `mkdocs.yml`'s nav. `docs/changelog.md` snippet-embeds `CHANGELOG.md`.
+- Benchmarks: `<py> benchmarks/run.py [--save]` (see `benchmarks/README.md`
+  for the JSON schema). Compare only same-machine results; a local number
+  never backs a release claim on its own.
 
-### Conformance goldens
+## Packaging
 
-`tests/conformance/` replays real Puppet's `puppet lookup` output against
-this implementation, so a fidelity fix has an oracle-backed acceptance
-test instead of a hand-written expectation.
+Built with `hatchling`. `src/hyera/AGENTS.md` (the shipped API header) and
+`README.md` both ship in the sdist and the wheel; the root `AGENTS.md` you
+are reading does not — it is a development-only, repo-root file. The
+version lives in exactly one place, `src/hyera/__init__.py`'s
+`__version__`; `[tool.hatch.version]` reads it directly (no import, no
+installed-metadata lookup) to build the package. Bump it in the same commit
+as the matching `## [x.y.z]` `CHANGELOG.md` heading.
 
-- Layout: `_golden.py` (schema/digest/lint, no `hyera` import), `_ours.py`
-  (the only module that calls into `hyera`'s API/CLI), `record.py`
-  (recorder, dev-only), `test_conformance.py` / `test_conformance_cli.py`
-  (replay). Cases live under `cases/<area>-<topic>/` with a hand-written
-  `case.yaml` and a generated `golden.json`.
-- Replay needs no Puppet: `<py> -m pytest -q -rs tests/conformance`.
-- Recording needs Puppet 8.10's `puppet lookup` on `PATH` (`--runner
-  local`) or reachable inside a WSL distribution (`--runner wsl` or
-  `--runner wsl:<distro>`): `<py> tests/conformance/record.py --runner
-  local|wsl [--jobs N] [CASE ...]`. Add `--check` to re-record in memory
-  and diff against the committed goldens (exit 1 on drift, writes
-  nothing), or `--list-markers` to list every divergence id and deviation
-  without needing Puppet at all. CI only replays; it never records.
-- A query marked `divergence: <finding-id>` in `case.yaml` is a strict
-  `xfail` against Puppet's recorded result — fixing the underlying
-  behavior turns the run red (`XPASS(strict)`) until the marker is
-  removed. A `deviation:` is a different, permanent, asserted-as-passing
-  outcome (never a strict xfail).
-- **Never hand-edit `golden.json`.** It is only ever written by
-  `record.py`, keyed by query id, and lint-checked (`test_case_is_current`)
-  against a digest of everything that was asked of Puppet.
-- A query's `explain: data|options` (`--explain`/`--explain-options`)
-  records two Puppet runs (`--render-as json` and `--render-as s`) into one
-  `explained` result holding both `tree` and `text`, replayed against
-  `Hiera.explain(...)`/the CLI with the tree compared canonically and the
-  text line for line.
+## CI and release
+
+Three workflow files, one per concern — test, release, docs — so a release
+is never the first time the test suite or the docs build is exercised, and
+the docs site can be redeployed without cutting a release.
+
+- **`test.yml`**: `workflow_dispatch` (with a `ref` input) or a throwaway
+  `ci-*` tag — nothing runs on an ordinary push. 18 jobs: `test` (a
+  10-leg OS/Python matrix: every supported Python on Ubuntu, the oldest and
+  newest on Windows and macOS), `types` (`pyright --verifytypes`, Python
+  3.9 and 3.14), `floors` (every declared dependency pinned to its
+  `pyproject.toml` floor, on the oldest supported Python), `format`
+  (`black --check`), `docs` (the same strict `mkdocs build` the release
+  gates on), and `console-script` (build the wheel, install it into a
+  clean venv, run the installed script — Ubuntu, Windows and macOS). A
+  `ci-*` tag is throwaway: give it a unique name, push it, poll the run,
+  then delete it locally and on the remote.
+- **`docs.yml`**: push to `main` touching `docs/`, `mkdocs.yml`, `src/` or
+  `CHANGELOG.md`, and `workflow_dispatch` (a manual redeploy of any ref,
+  and the one a release dispatches at its own tag). It owns every Pages
+  deploy — `release.yml` never deploys docs itself, only gates on a strict
+  build.
+- **`release.yml`** (`v*` tag): `test` (a 6-leg matrix: Ubuntu/Windows/
+  macOS × the oldest and newest supported Python) → `build` (checks the
+  tag names the version actually built) → `docs-gate` (strict docs build,
+  no deploy) → `github-release` (flagged pre-release when the tag's PEP 440
+  form says so) → `publish-pypi` (final tags only, PyPI Trusted Publishing,
+  no stored token) and `docs-deploy` (final tags only, dispatches
+  `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`) stops after
+  `github-release`: no PyPI upload, no docs redeploy.
+- **Owner-only prerequisites** (no claim is made here about their current
+  state — check before assuming a release or a docs deploy will work):
+  PyPI Trusted Publishing registered for the `hyera` project, this
+  repository and `release.yml`, environment `pypi`; GitHub Pages set to
+  build from GitHub Actions; the repository's default workflow permissions
+  set to read and write; a tag deployment-branch policy (`v*`) on the
+  `github-pages` environment.
+- **Tagging discipline**: a `v*` tag is pushed only with the owner's
+  explicit consent for that release and that version — publish is
+  irreversible. A `ci-*` tag needs no such consent.
 
 ## License
 
 MIT, for this project's own code. It is derived from
 [phiera](https://github.com/Nike-Inc/phiera), which is Apache-2.0; the files
-taken from it keep that license. See `NOTICE` and
-`LICENSES/phiera-Apache-2.0.txt`.
+taken from it keep that license. Several modules also port code translated
+from [Puppet](https://github.com/puppetlabs/puppet) (Apache-2.0), the
+[deep_merge](https://github.com/danielsdeleo/deep_merge) gem (MIT), from
+[Psych](https://github.com/ruby/psych) (MIT), Ruby's YAML library, and from
+Ruby's [uri](https://github.com/ruby/uri) library (2-clause BSDL); those
+files carry their own notice. See `NOTICE` and `LICENSES/`.
