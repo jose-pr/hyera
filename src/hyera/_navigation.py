@@ -4,7 +4,9 @@
 """Navigation: dotted-key sub-navigation.
 
 Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and
-``lookup_key.rb`` (``parse_lookup_key``).
+``lookup_key.rb`` (``parse_lookup_key``). ``join_key`` is original code
+(``split_key``'s display-only inverse, needed for a hyera-only tuple key
+path's message text): no phiera/Puppet-source header.
 """
 
 import contextlib
@@ -197,6 +199,43 @@ def sub_lookup(
                 if invocation is not None:
                     invocation.report_found(segment, value)
         return value
+
+
+def join_key(segments: "Sequence[Union[str, int]]") -> str:
+    """Render ``[root, *segments]`` as Puppet's own dotted key text --
+    the display-only inverse of :func:`split_key`, used wherever a name
+    (including a ``hyera``-only tuple key path, which has no natural
+    string spelling of its own) needs to appear in a message.
+
+    An ``int`` segment is bare. A ``str`` segment is bare only if it would
+    round-trip back through :func:`split_key` unchanged: quoted whenever
+    it holds a ``.`` or a quote character (either would otherwise be
+    misread as syntax), and additionally quoted whenever there is more
+    than one segment and it looks like an integer (a bare digit-only
+    segment there would parse back as an ``int``, not this ``str`` --
+    Puppet's own quoted ``'0'`` segment rule). A quoted segment uses
+    double quotes, unless it holds a ``"`` and no ``'``, in which case it
+    uses single quotes; a segment holding both is still double-quoted,
+    as-is (no escaping -- this exact text may not itself round-trip, but
+    nothing in Puppet's own dotted-key grammar can spell it either).
+    """
+    multi = len(segments) > 1
+    parts = []
+    for segment in segments:
+        if isinstance(segment, int) and not isinstance(segment, bool):
+            parts.append(str(segment))
+            continue
+        needs_quote = bool(_SPECIAL_RE.search(segment)) or (
+            multi and bool(_INT_SEGMENT_RE.search(segment))
+        )
+        if not needs_quote:
+            parts.append(segment)
+            continue
+        has_dq = '"' in segment
+        has_sq = "'" in segment
+        quote = "'" if (has_dq and not has_sq) else '"'
+        parts.append(quote + segment + quote)
+    return ".".join(parts)
 
 
 def key_to_a(root, segments) -> "Tuple[Union[str, int], ...]":

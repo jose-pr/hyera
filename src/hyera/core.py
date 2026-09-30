@@ -55,7 +55,7 @@ from ._lookup_adapter import (
 )
 from ._lookup_function import lookup as _lookup_call, nested_lookup, parse_call
 from ._merge_strategy import MergeStrategy
-from ._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
+from ._navigation import _MISSING, join_key, parse_lookup_key, split_key, sub_lookup
 from ._scope import Scope
 from ._type_mismatch import assert_instance_of
 from ._type_parser import parse_type
@@ -1401,12 +1401,33 @@ class Hiera:
 
         ``parsed`` lets a caller that already split ``key`` into
         ``(root, segments)`` skip re-parsing it.
+
+        ``key`` is a tuple key path equally: element 0 is the root,
+        taken verbatim (never dot-split), the rest are dig segments taken
+        verbatim too -- ``parse_lookup_key``/``split_key`` never run for
+        one. Every place ``key`` reaches text below (explain/debug
+        output, a sub-lookup type-mismatch message, a ``convert_to``
+        error) uses ``text_key``, :func:`~hyera._navigation.join_key`'s
+        rendering for a tuple -- the same text the equivalent quoted
+        dotted string would produce -- so a tuple path and that string
+        report byte-identical messages (``key`` itself unchanged, for the
+        ``str`` case that already *is* the message text).
         """
-        if key == LOOKUP_OPTIONS or key.startswith(LOOKUP_OPTIONS + "."):
-            with invocation.recording("invalid_key", LOOKUP_OPTIONS):
-                pass
-            return _MISSING
-        root, segments = parsed if parsed is not None else parse_lookup_key(key)
+        if isinstance(key, tuple):
+            root = key[0]
+            if root == LOOKUP_OPTIONS:
+                with invocation.recording("invalid_key", LOOKUP_OPTIONS):
+                    pass
+                return _MISSING
+            segments = tuple(key[1:])
+            text_key = join_key(key)
+        else:
+            if key == LOOKUP_OPTIONS or key.startswith(LOOKUP_OPTIONS + "."):
+                with invocation.recording("invalid_key", LOOKUP_OPTIONS):
+                    pass
+                return _MISSING
+            root, segments = parsed if parsed is not None else parse_lookup_key(key)
+            text_key = key
         module_name = module_name_of(root)
 
         def gather_main():
@@ -1426,28 +1447,28 @@ class Hiera:
             merge if explicit_merge else options.get("merge")
         )
 
-        with invocation.recording("data", key):
-            with invocation.check(key):
+        with invocation.recording("data", text_key):
+            with invocation.check(text_key):
                 value = self._lookup_layers(
                     root, module_name, invocation, strategy, segments
                 )
             if value is not _MISSING and segments:
-                value = sub_lookup(key, segments, value, invocation)
+                value = sub_lookup(text_key, segments, value, invocation)
 
             if value is _MISSING and not invocation.global_only:
                 # A global_only lookup never reaches a module's own
                 # default_hierarchy (`lookup_adapter.rb:76`).
                 value = self._lookup_default_in_module(
-                    key, root, segments, module_name, invocation
+                    text_key, root, segments, module_name, invocation
                 )
                 if value is not _MISSING and segments:
-                    value = sub_lookup(key, segments, value, invocation)
+                    value = sub_lookup(text_key, segments, value, invocation)
 
         if value is _MISSING:
             return _MISSING
         convert_to = options.get("convert_to")
         if convert_to is not None:
-            value = convert_result(key, convert_to, value, invocation)
+            value = convert_result(text_key, convert_to, value, invocation)
         return value
 
     def _sub_lookup(self, key, invocation):
@@ -1914,7 +1935,7 @@ class Hiera:
 
     def lookup(
         self,
-        name: "_ty.Union[str, _ty.Sequence[str], _ty.Mapping[str, _ty.Any]]",
+        name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
         value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
         merge: MergeSpec = None,
         default_value: _ty.Any = _MISSING,
@@ -1945,9 +1966,21 @@ class Hiera:
         keyword is a ``TypeError`` -- except ``block``, which forms 4 and 5
         both still accept as its own argument.
 
-        :param name: the key, or a list of keys tried in order (the first
-            one that is found, anywhere in the precedence order below,
-            wins).
+        A hyera-only extension beyond this vocabulary (not Puppet's own):
+        ``name`` -- or any entry of a name ``list`` -- may be a non-empty
+        ``tuple`` instead of a ``str``, treated as an exact key path:
+        element 0 is the root key, every later element a dig segment
+        (``str`` a hash key, ``int`` an array index, never ``bool``), each
+        taken verbatim -- no dot splitting, no quote syntax, no whitespace
+        stripping. ``h.lookup(("a.b", "c", 0))`` resolves exactly as
+        ``h.lookup('"a.b".c.0')`` does, including paths a quoted string
+        cannot spell (a segment holding both quote kinds). ``h[...]`` is
+        unchanged: a tuple subscript still unpacks into ``lookup(*item)``,
+        so a path there is ``h[("a.b", "c"),]``.
+
+        :param name: the key, a tuple key path, or a list of keys/paths
+            tried in order (the first one that is found, anywhere in the
+            precedence order below, wins).
         :param value_type: a Puppet type expression (``"Integer"``,
             ``"Optional[String]"``); every candidate value (override, found,
             a default) is asserted against it, raising ``HieraLookupError``
@@ -2003,7 +2036,9 @@ class Hiera:
     def __getitem__(self, item: _ty.Any) -> _ty.Any:
         """``h[key]``/``h[key, *args]``/``h[key, {options}]``: the same
         five call forms as :meth:`lookup`, unpacking a tuple subscript into
-        positional arguments.
+        positional arguments -- unchanged by :meth:`lookup`'s own tuple key
+        path extension, so a path here is written ``h[("a.b", "c"),]``
+        (one positional argument, itself a tuple).
 
         :param item: a single argument (the ``name``), or a tuple of the
             positional/dict arguments :meth:`lookup` accepts.
@@ -2210,7 +2245,7 @@ class Hiera:
 
     def explain(
         self,
-        name: "_ty.Union[str, _ty.Sequence[str], _ty.Mapping[str, _ty.Any]]",
+        name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
         value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
         merge: MergeSpec = None,
         default_value: _ty.Any = _MISSING,
@@ -2288,7 +2323,11 @@ class Hiera:
                 # ordinary key would use (never `_retrieve_lookup_options`'s
                 # own hand-composed combining, which never builds a `merge`
                 # explain node) -- swallow whatever it finds or misses.
-                module_name = module_name_of(call.names[0]) if call.names else None
+                first_name = call.names[0] if call.names else None
+                first_root = (
+                    first_name[0] if isinstance(first_name, tuple) else first_name
+                )
+                module_name = module_name_of(first_root) if first_root else None
                 self._lookup_layers(
                     LOOKUP_OPTIONS,
                     module_name,

@@ -31,11 +31,12 @@ class LookupCall(_ty.NamedTuple):
     """One parsed ``lookup()`` call, every form normalized to the same
     shape (``functions/lookup.rb:151-223``)."""
 
-    #: The name argument exactly as given (a ``str``, or the possibly-empty
-    #: ``list`` a form-4 hash's own ``"name"`` unpacks to) -- what a
-    #: default ``block`` is called with.
-    name: "_ty.Union[str, list]"
-    #: ``name`` as a tuple, always -- a single-element tuple for a ``str``.
+    #: The name argument exactly as given (a ``str``, a tuple key path, or
+    #: the possibly-empty ``list`` a form-4 hash's own ``"name"`` unpacks
+    #: to) -- what a default ``block`` is called with.
+    name: "_ty.Union[str, tuple, list]"
+    #: ``name`` as a tuple, always -- a single-element tuple for a ``str``
+    #: or a tuple path.
     names: tuple
     #: A parsed type instance, or ``None``.
     value_type: object
@@ -82,15 +83,51 @@ def _validate_dict_keys(d, allowed, what):
         raise TypeError("lookup(): unknown option(s) {}".format(unknown))
 
 
+def _validate_tuple_path(path: tuple) -> None:
+    """A tuple *path* name: an exact key path, taken verbatim -- no
+    dot splitting, no quote syntax, no whitespace stripping. Element 0 is
+    the root key and must be a ``str``; every later element is a dig
+    segment and must be a ``str`` (a hash key) or ``int`` (an array
+    index, never ``bool``). Anything else raises ``TypeError`` naming the
+    offending element.
+    """
+    if len(path) == 0:
+        raise TypeError("lookup(): a tuple key path must not be empty")
+    for i, element in enumerate(path):
+        if i == 0:
+            if not isinstance(element, str):
+                raise TypeError(
+                    "lookup(): a tuple key path's root (element 0) must "
+                    "be a str, not {}".format(type(element).__name__)
+                )
+        elif isinstance(element, bool) or not isinstance(element, (str, int)):
+            raise TypeError(
+                "lookup(): a tuple key path's element {} must be a str "
+                "or int, not {}".format(i, type(element).__name__)
+            )
+
+
 def _validate_name(name) -> None:
     if isinstance(name, str):
         return
-    if isinstance(name, list) and all(isinstance(n, str) for n in name):
+    if isinstance(name, tuple):
+        _validate_tuple_path(name)
+        return
+    if isinstance(name, list):
+        for n in name:
+            if isinstance(n, str):
+                continue
+            if isinstance(n, tuple):
+                _validate_tuple_path(n)
+                continue
+            raise TypeError(
+                "lookup(): each name in a list must be a str or a tuple "
+                "key path, not {}".format(type(n).__name__)
+            )
         return
     raise TypeError(
-        "lookup(): name must be a str or a list of str, not {}".format(
-            type(name).__name__
-        )
+        "lookup(): name must be a str, a tuple key path, or a list of "
+        "str/tuple, not {}".format(type(name).__name__)
     )
 
 

@@ -63,7 +63,9 @@ def test_bad_call_shapes_raise_type_error(fn):
     with pytest.raises(TypeError):
         h.lookup({"merge": "first"})  # form 4 without "name"
     with pytest.raises(TypeError):
-        h.lookup(("a", "b"))  # a tuple is not a str or a list
+        h.lookup(())  # an empty tuple path has no root
+    with pytest.raises(TypeError):
+        h.lookup((1, "b"))  # a tuple path's root (element 0) must be a str
     with pytest.raises(TypeError):
         h.lookup("k", merge="")
     with pytest.raises(TypeError):

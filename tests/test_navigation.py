@@ -12,7 +12,13 @@ import pytest
 
 from hyera import Hiera, Scope
 from hyera.exceptions import HieraLookupError
-from hyera._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
+from hyera._navigation import (
+    _MISSING,
+    join_key,
+    parse_lookup_key,
+    split_key,
+    sub_lookup,
+)
 
 
 def _make_error(problem):
@@ -157,6 +163,43 @@ def test_parse_lookup_key_syntax_error(key):
     expect = "Syntax error in key: '{}'".format(key)
     with pytest.raises(HieraLookupError, match=re.escape(expect)):
         parse_lookup_key(key)
+
+
+# --- join_key: split_key's display-only inverse (tuple key paths) ------
+
+
+@pytest.mark.parametrize(
+    "segments,expect",
+    [
+        (["a"], "a"),
+        ([0], "0"),
+        (["0"], "0"),
+        (["a", "0"], 'a."0"'),
+        (["a.b", "c", 0], '"a.b".c.0'),
+    ],
+    ids=[
+        "bare-root",
+        "bare-int",
+        "bare-digit-string-sole-segment",
+        "quoted-digit-string-in-multi-segment",
+        "dot-and-int-mix",
+    ],
+)
+def test_join_key(segments, expect):
+    assert join_key(segments) == expect
+
+
+def test_join_key_quotes_single_quote_content_with_double_quotes():
+    assert join_key(["a", "b'c"]) == 'a."b\'c"'
+
+
+def test_join_key_quotes_double_quote_content_with_single_quotes():
+    assert join_key(["a", 'b"c']) == "a.'b\"c'"
+
+
+def test_join_key_both_quote_kinds_uses_double_quotes_as_is():
+    segment = "b'\"c"
+    assert join_key(["a", segment]) == 'a."' + segment + '"'
 
 
 # --- Wiring: dotted lookup keys and %{...} references go through the port ---

@@ -99,22 +99,37 @@ class KeyNotFoundError(HieraLookupError, KeyError):
 
     Also a :class:`KeyError`, so an existing ``except KeyError`` keeps
     working. ``name`` is the key string, or list of key strings, that was
-    tried; a list of one uses the singular message form.
+    tried; a list of one uses the singular message form. A name may also
+    be a tuple key path: ``.name`` keeps it exactly as given, but
+    the message text renders it as :func:`~hyera._navigation.join_key`'s
+    dotted form, same as the equivalent quoted string would read.
+
+    A bare tuple *path* is never passed here directly -- it would be
+    misread as "several names" instead of one path with several segments.
+    Every caller wraps it in a ``list`` first (even a list of one), the
+    same way a single ``str`` name already is.
 
     :param name: the key(s) that were tried.
     """
 
     def __init__(self, name: _ty.Union[str, _ty.Sequence[str]]) -> None:
+        # Deferred to avoid a module-load cycle (`_navigation` imports
+        # `HieraLookupError` from this module).
+        from ._navigation import join_key
+
+        def _text(n):
+            return join_key(n) if isinstance(n, tuple) else n
+
         if isinstance(name, (list, tuple)) and len(name) != 1:
             message = (
                 "Function lookup() did not find a value for any of the "
-                "names {!r}".format(list(name))
+                "names {!r}".format([_text(n) for n in name])
             )
         else:
             single = name[0] if isinstance(name, (list, tuple)) else name
             message = (
                 "Function lookup() did not find a value for the name "
-                "{!r}".format(single)
+                "{!r}".format(_text(single))
             )
         super().__init__(message)
         self.name: _ty.Union[str, _ty.Sequence[str]] = name

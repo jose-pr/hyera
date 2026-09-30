@@ -18,6 +18,7 @@ import logging
 import typing as _ty
 
 from ._interpolation import _ruby_inspect, _to_puppet_str
+from ._navigation import join_key
 from .exceptions import HieraError
 
 __all__ = ["ExplainResult"]  # everything else here is private.
@@ -755,5 +756,9 @@ class _DebugExplainer(Explainer):
 
 def _debug_preamble(names) -> str:
     """Puppet's ``debug_preamble`` (``pops/lookup.rb:71-78``): ``Lookup of
-    'a'`` for one name, ``Lookup of 'a', 'b'`` for several."""
-    return "Lookup of " + ", ".join("'{}'".format(n) for n in names)
+    'a'`` for one name, ``Lookup of 'a', 'b'`` for several. A tuple key
+    path renders as :func:`~hyera._navigation.join_key`'s dotted
+    text, same as everywhere else a name reaches text."""
+    return "Lookup of " + ", ".join(
+        "'{}'".format(join_key(n) if isinstance(n, tuple) else n) for n in names
+    )
