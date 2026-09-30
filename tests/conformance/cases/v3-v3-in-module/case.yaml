@@ -1,0 +1,5 @@
+description: >-
+  A version 3 (symbol-keyed) module-layer hiera.yaml: ignored with a
+  warning by default, so the module's own key is not found.
+queries:
+  - key: mymod::k

@@ -1,0 +1,7 @@
+description: >-
+  A version: 4 hierarchy entry missing the required name key, and
+  using a key (glob) v4 does not have.
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: "entry 'hierarchy' index 0 expects a value for key 'name'"

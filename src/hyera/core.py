@@ -37,6 +37,7 @@ from ._hiera_config import (
     _fill_v5_defaults,
     _read_base_config,
     _read_v3,
+    _read_v4,
     _validate_v5,
 )
 from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
@@ -562,6 +563,17 @@ class Hiera:
             self.hierarchy, self.default_hierarchy = _read_v3(
                 self.base, source, self.scope, self.backends, self.codedir, cwd
             )
+        elif version == 4:
+            # Puppet validates a version 4 config's own schema (building
+            # its provider list) before ever checking whether version 4 is
+            # allowed in this layer -- probed: a schema-invalid version 4
+            # file at the global layer raises its schema error, never this
+            # one. Only a config that validates reaches the layer check.
+            _read_v4(self.base, source, self.scope, self.backends)
+            raise ConfigError(
+                "hiera.yaml version 4 cannot be used in the global layer",
+                path=source.path,
+            )
         else:
             _fill_v5_defaults(self.base)
             _validate_v5(self.base, source)
@@ -789,7 +801,7 @@ class Hiera:
                 )
 
         provider = (
-            load_layer_provider("Environment", root, self.backends)
+            load_layer_provider("Environment", root, self.backends, self.scope)
             if root is not None
             else None
         )
@@ -815,7 +827,7 @@ class Hiera:
         module_dir = state.modules().get(module_name)
         if module_dir is not None:
             result = load_layer_provider(
-                "Module", module_dir, self.backends, module_name=module_name
+                "Module", module_dir, self.backends, self.scope, module_name=module_name
             )
         cache[module_name] = result
         return result
@@ -1236,15 +1248,35 @@ class Hiera:
         A layer with no usable provider contributes
         :data:`~hyera._navigation._MISSING`, so every layer is always tried
         in order, as Puppet's own multi-variant reduce does.
+
+        ``invocation.global_only`` (already set, inherited from an outer
+        nested lookup reached while interpolating a version 3 global
+        value) skips the environment and module layers outright for this
+        walk too (``lookup_adapter.rb:332-339``) -- a global_only lookup
+        never leaves the global layer. Otherwise, when the global layer
+        itself is version 3 and no version 5 environment provider exists
+        for this scope, the global layer's own walk uses a *derived*
+        invocation with ``global_only=True`` (``global_data_provider.
+        rb:21-24``), so any ``%{lookup()}``/``%{hiera()}``/``%{alias()}``
+        reached while interpolating a value it finds inherits the same
+        confinement -- the environment/module walk for *this* key is
+        unaffected, since that derived invocation is used only inside the
+        global layer's own :meth:`_lookup_levels` call.
         """
         scope = invocation.scope
 
         def at_layer(layer):
             if layer == "global":
                 provider = self._global
+                inv = invocation
+                if not invocation.global_only and self._global_only_for(scope):
+                    inv = invocation.derive(invocation._lookup, global_only=True)
+            elif invocation.global_only:
+                return _MISSING
             elif layer == "environment":
                 state = self._environment(scope.environment)
                 provider = self._usable(state.provider, invocation)
+                inv = invocation
             elif layer == "module":
                 if module_name is None:
                     return _MISSING
@@ -1257,6 +1289,7 @@ class Hiera:
                         invocation.report_module_not_found(module_name)
                     return _MISSING
                 provider = self._usable(raw, invocation)
+                inv = invocation
             else:
                 return _MISSING
             if provider is None:
@@ -1274,7 +1307,7 @@ class Hiera:
                         provider.root,
                         "main",
                         scope,
-                        invocation,
+                        inv,
                         strategy,
                         segments,
                         module_name=mod,
@@ -1329,6 +1362,19 @@ class Hiera:
         result = gather()
         memo.compiled[key] = result
         return result
+
+    def _global_only_for(self, scope) -> bool:
+        """Whether a lookup into the global layer's own data must stay
+        confined to it (``lookup_adapter.rb:266-269``): the global layer is
+        version 3, and there is no *version 5* environment provider for
+        ``scope.environment`` -- an absent environment, an ignored version
+        3 one, and a version 4 one all count as none (only a real
+        :class:`~hyera._data_provider._Provider` with ``version == 5``
+        disqualifies global-only)."""
+        if self._global.version != 3:
+            return False
+        provider = self._environment(scope.environment).provider
+        return not (isinstance(provider, _Provider) and provider.version == 5)
 
     def _search_and_merge(self, key, invocation, merge, parsed=None):
         """Resolve ``key`` in full: the port of ``LookupAdapter#lookup``
@@ -1390,7 +1436,9 @@ class Hiera:
             if value is not _MISSING and segments:
                 value = sub_lookup(key, segments, value, invocation)
 
-            if value is _MISSING:
+            if value is _MISSING and not invocation.global_only:
+                # A global_only lookup never reaches a module's own
+                # default_hierarchy (`lookup_adapter.rb:76`).
                 value = self._lookup_default_in_module(
                     key, root, segments, module_name, invocation
                 )

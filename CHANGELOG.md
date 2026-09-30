@@ -493,8 +493,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   way); an unregistered name -- including `sops`, which has no v3 name --
   raises `ConfigError` (Puppet, with real Hiera 3 installed, silently
   contributes nothing for a backend it cannot run).
-- `version: 4` raises "hiera.yaml version 4 cannot be used in the global
-  layer" instead of being read as version 5.
+- `version: 4` at the global layer is validated in full first (its own
+  provider list is built, same as Puppet does), then raises "hiera.yaml
+  version 4 cannot be used in the global layer" -- a schema-invalid
+  version 4 file at the global layer raises its schema error instead,
+  never the layer one -- rather than being read as version 5.
+- hiera.yaml version 4 (`backend: yaml|json|hocon` instead of `data_hash:`,
+  `path`/`paths` defaulting to the entry's own `name`, one provider per
+  entry) is read in the environment and module layers, where Puppet
+  accepts it: `backend` names only `yaml`/`json`/`hocon` (no third-party
+  fallback, unlike v3); a relative `datadir` (config- or entry-level)
+  joins onto the layer's own root literally, with no interpolation at all,
+  unlike every other version.
+- A version 3 (or missing-`version`) hiera.yaml at an environment or
+  module root is still fully schema-validated even though it is only ever
+  ignored (or raised about) afterward -- a schema-invalid one raises
+  regardless of layer, exactly as the global layer already did.
+- A `%{lookup()}`/`%{hiera()}`/`%{alias()}` reached while interpolating a
+  version 3 *global* layer's own data stays confined to the global layer
+  -- it never reaches an environment or module, even for an
+  otherwise-qualified key, and never a module's `default_hierarchy` --
+  unless the current environment has a real version 5 hiera.yaml (an
+  absent, ignored-version-3, or version 4 environment all count as none).
 - Any other unsupported version raises "This runtime does not support
   hiera.yaml version N".
 - A `version` that is not an Integer (`"5"`, `5.0`) raises, instead of

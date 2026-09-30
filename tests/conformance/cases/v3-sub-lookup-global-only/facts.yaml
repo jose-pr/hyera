@@ -1,0 +1,4 @@
+---
+os: {family: RedHat}
+osfamily: RedHat
+role: web

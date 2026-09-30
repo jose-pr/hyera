@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "307bad0fdd7ffe2521722735a488ebdc7b84f5b423527f6473f9939c0e4af59d",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/environments/production/hiera.yaml: Use of 'hiera.yaml' version 4 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "The Lookup Configuration at <case>/environments/production/hiera.yaml' has wrong type, entry 'hierarchy' index 0 expects a value for key 'name'"
+    }
+  }
+}

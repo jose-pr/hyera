@@ -1,0 +1,6 @@
+---
+version: 5
+hierarchy:
+  - name: x
+    hiera3_backend: foo
+    path: common

@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6db4a40ba37e9f95c15ebeb74e3f588019bf9577d83c2f7cd1d467fcd80fc96b",
+  "results": {
+    "x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "x"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "z": {
+      "argv": [
+        "--strict",
+        "warning",
+        "z"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "gg": {
+      "argv": [
+        "--strict",
+        "warning",
+        "gg"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "agvalb"
+    },
+    "mymod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "modval"
+    }
+  }
+}

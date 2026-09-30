@@ -1,0 +1,7 @@
+description: >-
+  A version: 4 hierarchy entry naming a backend v4 has no provider
+  for at all (not yaml/json/hocon).
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: "No data provider is registered for backend 'sops'"

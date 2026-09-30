@@ -7,6 +7,4 @@ puppet_args:
 - production
 queries:
 - key: k
-  divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported
 - key: c
-  divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported

@@ -1,0 +1,9 @@
+description: >-
+  A version 3 global config with no environment hiera.yaml: a
+  %{lookup()}/%{hiera()} inside its own data stays confined to the
+  global layer and never reaches a module, even for a qualified key.
+queries:
+  - key: x
+  - key: z
+  - key: gg
+  - key: mymod::k

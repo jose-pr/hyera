@@ -122,20 +122,26 @@ def _ruby_type_name(value) -> str:
 _VERSION_LEADING_INT = re.compile(r"\s*[+-]?\d+")
 
 
-def _config_version(
-    data: dict, source: "_ConfigSource", *, layer: str = "global"
-) -> int:
+def _config_version(data: dict, source: "_ConfigSource") -> int:
     """Puppet's version dispatch (``hiera_config.rb:153-167``), returning the
-    resolved version: ``3``, ``4`` or ``5``.
+    resolved version: ``3``, ``4`` or ``5`` -- the same for every layer.
+    A missing ``version`` is Hiera 3's own signal and resolves to ``3``
+    (``hiera_config.rb:130``: ``version = data['version'] || 3``). Any
+    other version (``1``, ``2``, ``6``, ...) raises.
 
-    A missing ``version`` is Hiera 3's own signal and resolves to ``3`` at
-    every layer (``hiera_config.rb:130``: ``version = data['version'] ||
-    3``) -- the caller reads it with :func:`_read_v3`. An explicit ``4`` at
-    the global layer (``layer="global"``) raises :class:`ConfigError`
-    immediately (Puppet accepts version 4 only in the environment/module
-    layers); outside the global layer it currently raises "not supported
-    yet" (a later phase reads it with a v4 reader instead). Any other
-    version (``1``, ``2``, ``6``, ...) raises the same way at every layer.
+    This function only identifies *which* reader applies
+    (:func:`_read_v3`/:func:`_read_v4`/the v5 path); it does not decide
+    whether that version is allowed in the layer being read. Puppet
+    validates a version 3 or 4 config's own schema before ever checking
+    that (``HieraConfigV3``/``V4#initialize`` build the provider list as
+    part of construction; ``assert_config_version`` runs strictly after,
+    per-layer, at each use for 3, and once at global-layer load for 4 --
+    probed: a schema-invalid ``version: 4`` file at the global layer
+    raises its schema error, never "cannot be used in the global layer").
+    The layer rule itself lives in the caller: :meth:`~hyera.core.
+    Hiera._load_config` raises the version 4 in the global layer error
+    right after :func:`_read_v4` succeeds; :meth:`~hyera.core.Hiera._usable`
+    applies the version 3 outside the global layer rule at each use.
     """
     v = data.get("version")
     if v is None:
@@ -166,11 +172,7 @@ def _config_version(
     if n == 3:
         return 3
     if n == 4:
-        if layer == "global":
-            raise _config_error(
-                source, "hiera.yaml version 4 cannot be used in the global layer"
-            )
-        raise _config_error(source, "hiera.yaml version 4 is not supported yet")
+        return 4
     raise _config_error(
         source, "This runtime does not support hiera.yaml version {}".format(n)
     )
@@ -646,6 +648,208 @@ def _read_v3(
     return _v3_levels(data, source, backends, scope, codedir, cwd), []
 
 
+#: ``HieraConfigV4``'s own struct keys (``hiera_config.rb:489-507``), in
+#: schema-declaration order.
+_V4_TOP_KEYS = ("version", "datadir", "hierarchy")
+#: A v4 hierarchy entry's struct keys, in schema-declaration order.
+_V4_ENTRY_KEYS = ("backend", "name", "datadir", "path", "paths")
+_V4_ENTRY_REQUIRED = ("backend", "name")
+
+
+def _fill_v4_defaults(data: dict) -> None:
+    """Puppet's v4 ``||=`` fill (``HieraConfigV4#validate_config``,
+    ``hiera_config.rb:558-559``)."""
+    if data.get("datadir") is None or data.get("datadir") is False:
+        data["datadir"] = "data"
+    if data.get("hierarchy") is None or data.get("hierarchy") is False:
+        data["hierarchy"] = [{"name": "common", "backend": "yaml"}]
+
+
+def _validate_v4(data: dict, source: "_ConfigSource") -> None:
+    """Every Puppet v4 schema mismatch, in struct-declaration order
+    (``HieraConfigV4::CONFIG_TYPE``, ``hiera_config.rb:489-507``) -- like
+    :func:`_validate_v3`, every mismatch is reported, not just the first
+    (a nested per-entry mismatch line always precedes a top-level
+    "unrecognized key" line, since entries are walked before the top-level
+    key scan below). Assumes :func:`_fill_v4_defaults` already ran.
+    """
+    details: "list" = []
+
+    v = data.get("version")
+    if isinstance(v, bool) or not isinstance(v, int):
+        details.append(
+            _msg(
+                ("version",),
+                "expects an Integer value, got {}".format(_ruby_type_name(v)),
+            )
+        )
+
+    detail = _v3_string_detail(data.get("datadir"))
+    if detail:
+        details.append(_msg(("datadir",), detail))
+
+    hierarchy = data.get("hierarchy")
+    if not isinstance(hierarchy, list):
+        details.append(
+            _msg(
+                ("hierarchy",),
+                "expects an Array value, got {}".format(_ruby_type_name(hierarchy)),
+            )
+        )
+    else:
+        for i, entry in enumerate(hierarchy):
+            if not isinstance(entry, dict):
+                details.append(
+                    _msg(
+                        ("hierarchy", i),
+                        "expects a Struct value, got {}".format(_ruby_type_name(entry)),
+                    )
+                )
+                continue
+            for key in _V4_ENTRY_REQUIRED:
+                if key not in entry:
+                    details.append(
+                        _msg(
+                            ("hierarchy", i),
+                            "expects a value for key '{}'".format(key),
+                        )
+                    )
+            for key in ("backend", "name", "datadir", "path"):
+                if key not in entry:
+                    continue
+                detail = _v3_string_detail(entry[key])
+                if detail:
+                    details.append(_msg(("hierarchy", i, key), detail))
+            if "paths" in entry:
+                pv = entry["paths"]
+                if not isinstance(pv, list):
+                    details.append(
+                        _msg(
+                            ("hierarchy", i, "paths"),
+                            "expects an Array value, got {}".format(
+                                _ruby_type_name(pv)
+                            ),
+                        )
+                    )
+                else:
+                    for j, item in enumerate(pv):
+                        detail = _v3_string_detail(item)
+                        if detail:
+                            details.append(_msg(("hierarchy", i, "paths", j), detail))
+            for key in entry:
+                if key not in _V4_ENTRY_KEYS:
+                    details.append(
+                        _msg(("hierarchy", i), "unrecognized key '{}'".format(key))
+                    )
+
+    for k in data:
+        if k not in _V4_TOP_KEYS:
+            details.append(_msg((), "unrecognized key '{}'".format(k)))
+
+    if not details:
+        return
+    label = source.label if source else "<dict>"
+    message = "The Lookup Configuration at '{}' has wrong type, {}".format(
+        label, "\n".join(details)
+    )
+    raise ConfigError(message, path=source.path if source else None)
+
+
+_V4_NAME_RE_TEMPLATE = r"\s+name:\s+['\"]?{}(?:[^\w]|$)"
+
+
+def _v4_levels(data: dict, source: "_ConfigSource", backends, scope) -> "list":
+    """One :class:`HieraLevel` per v4 hierarchy entry (``HieraConfigV4#
+    create_configured_data_providers``, ``hiera_config.rb:509-551``):
+    unlike v3, one provider *per entry*, the v5 shape. Assumes
+    :func:`_fill_v4_defaults`/:func:`_validate_v4` already ran.
+    """
+    text = source.text
+    config_datadir = data["datadir"]
+    levels = []
+    seen_at: "dict" = {}
+    for i, entry in enumerate(data["hierarchy"]):
+        name = entry["name"]
+        name_re = _V4_NAME_RE_TEMPLATE.format(re.escape(name))
+        if name in seen_at:
+            first = seen_at[name]
+            second = (
+                _find_line_matching(text, name_re, start_line=first + 1)
+                if first
+                else None
+            )
+            message = "Hierarchy name '{}' defined more than once.".format(name)
+            if second:
+                raise _config_error(
+                    source,
+                    message + " First defined at (line: {})".format(first),
+                    line=second,
+                )
+            raise _config_error(source, message, line=first)
+        line = _find_line_matching(text, name_re)
+        seen_at[name] = line
+
+        backend = entry["backend"]
+        if backend in ("yaml", "json"):
+            kind, function, extension = (
+                "data_hash",
+                "{}_data".format(backend),
+                ("." + backend),
+            )
+        elif backend == "hocon":
+            kind, function, extension = "data_hash", "hocon_data", ".conf"
+        else:
+            backend_re = _V3_NAME_RE_TEMPLATE.format(re.escape(backend))
+            raise _config_error(
+                source,
+                "No data provider is registered for backend '{}'".format(backend),
+                line=_find_line_matching(text, backend_re, start_line=line or 1),
+            )
+
+        if "paths" in entry:
+            locations = list(entry["paths"])
+        else:
+            locations = [entry.get("path") or name]
+        # v4's datadir is joined onto the config root literally, never
+        # interpolated (`hiera_config.rb:525`, unlike v5's `:664-665`) --
+        # HieraLevel.datadir_literal tells the location resolver to skip
+        # interpolating it at all, so a literal '%' survives unchanged
+        # (interpolating it with `allow_methods=False`, as every other
+        # level's datadir is, rules out escaping it with
+        # `%{literal('%')}`: that is itself a disallowed method call).
+        datadir = entry.get("datadir", config_datadir)
+
+        conf = {"name": name, "paths": locations, "datadir": datadir}
+        levels.append(
+            _build_level(
+                conf,
+                kind,
+                function,
+                backends,
+                source,
+                scope,
+                extension=extension,
+                datadir_base=None,
+                datadir_literal=True,
+            )
+        )
+    return levels
+
+
+def _read_v4(
+    data: dict, source: "_ConfigSource", scope, backends
+) -> "_ty.Tuple[list, list]":
+    """Read a Hiera version 4 base config (``HieraConfigV4``,
+    ``hiera_config.rb:488-566``): the deprecation warning, the ``||=``
+    fill, full schema validation, then the per-entry provider build.
+    Version 4 has no ``default_hierarchy`` concept either.
+    """
+    _warn_deprecated(source, 4, scope)
+    _fill_v4_defaults(data)
+    _validate_v4(data, source)
+    return _v4_levels(data, source, backends, scope), []
+
+
 #: ``hiera_config.rb:71-73``.
 _FUNCTION_KEYS = ("data_hash", "lookup_key", "data_dig", "hiera3_backend")
 _ALL_FUNCTION_KEYS = _FUNCTION_KEYS + ("v4_data_hash",)
@@ -1095,6 +1299,14 @@ class HieraLevel(_ty.NamedTuple):
     #: directory. ``None`` for a v4/v5 level, which uses the caller's own
     #: ``base_path``.
     datadir_base: "_ty.Optional[Path]" = None
+    #: ``True`` for a version 4 level only: ``datadir`` is joined onto the
+    #: config root literally, with no interpolation at all
+    #: (``hiera_config.rb:525``, unlike v5's ``:664-665``) -- not even the
+    #: strict, method-free substitution every other level's ``datadir``
+    #: gets, since that would still trip over a literal ``%`` the way a
+    #: plain string substitution attempt (``allow_methods=False`` rules out
+    #: escaping it with ``%{literal('%')}``) cannot avoid.
+    datadir_literal: bool = False
 
     @classmethod
     def new(
@@ -1105,6 +1317,7 @@ class HieraLevel(_ty.NamedTuple):
         *,
         extension=None,
         datadir_base=None,
+        datadir_literal=False,
     ) -> "HieraLevel":
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
         if location_key is None:
@@ -1123,6 +1336,7 @@ class HieraLevel(_ty.NamedTuple):
             options=conf.get("options"),
             extension=extension,
             datadir_base=datadir_base,
+            datadir_literal=datadir_literal,
         )
 
     def paths(self, base_path: Path, scope) -> "list":
@@ -1330,6 +1544,7 @@ def _build_level(
     index: int = 0,
     extension=None,
     datadir_base=None,
+    datadir_literal=False,
     backend_cls=None,
 ) -> HieraLevel:
     """Resolve one hierarchy entry's backend and build its
@@ -1386,7 +1601,12 @@ def _build_level(
             source, "Hierarchy level {!r} is missing a function key".format(name)
         )
     return HieraLevel.new(
-        conf, backend, kind, extension=extension, datadir_base=datadir_base
+        conf,
+        backend,
+        kind,
+        extension=extension,
+        datadir_base=datadir_base,
+        datadir_literal=datadir_literal,
     )
 
 

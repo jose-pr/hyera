@@ -1,0 +1,11 @@
+description: >-
+  A version 3 (symbol-keyed) environment-layer hiera.yaml: ignored with
+  a warning by default (the global layer's own data wins); an error
+  under --strict error.
+queries:
+  - key: k
+  - id: k-strict-error
+    key: k
+    puppet_args: ["--strict", "error"]
+    error_class: ConfigError
+    error_match: 'cannot be used in an environment'

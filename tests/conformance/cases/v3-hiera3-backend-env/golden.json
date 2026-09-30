@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "eaee117512a82e781e084c0f579e7bdd52e332ffed0f9be146e84cf5e550bc47",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "'hiera3_backend' is only allowed in the global layer (file: <case>/environments/production/hiera.yaml, line: 5)"
+    }
+  }
+}

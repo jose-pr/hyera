@@ -1,0 +1,8 @@
+description: >-
+  A version 4 environment does not count as a version 5 environment
+  for global-only confinement: a %{lookup()} inside the global v3
+  data still cannot reach it, even though the top-level key itself
+  can.
+queries:
+  - key: y
+  - key: ek

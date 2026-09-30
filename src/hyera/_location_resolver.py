@@ -854,7 +854,16 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
 
     root = base_path if level.datadir_base is None else level.datadir_base
     config_root = Path(root).as_posix()
-    datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)
+    if level.datadir_literal:
+        # A version 4 datadir is joined onto the config root as written,
+        # with no interpolation at all (`hiera_config.rb:525`) -- unlike
+        # every other level, which interpolates it strictly (methods
+        # disallowed) just below.
+        datadir = _win_slash(level.datadir)
+    else:
+        datadir = interpolate(
+            _win_slash(level.datadir), strict_inv, allow_methods=False
+        )
     base = _pathname_plus(config_root, datadir)
 
     key = level.location_key

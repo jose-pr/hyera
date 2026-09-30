@@ -1,0 +1,10 @@
+description: >-
+  A version: 4 environment-layer hiera.yaml with json (paths, a
+  per-entry datadir) and hocon backends.
+requires: [pyhocon]
+queries:
+  - key: k
+  - key: h
+  - id: u-unique
+    key: u
+    merge: unique

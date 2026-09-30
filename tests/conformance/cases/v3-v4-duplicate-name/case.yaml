@@ -1,0 +1,6 @@
+description: >-
+  A version: 4 hierarchy with the same entry name declared twice.
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: 'Hierarchy name ''same'' defined more than once\.'

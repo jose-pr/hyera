@@ -1,0 +1,10 @@
+---
+version: 4
+hierarchy:
+  - name: j
+    backend: json
+    paths: [a, b.json]
+    datadir: jdata
+  - name: h
+    backend: hocon
+    path: common

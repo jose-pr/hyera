@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6232c390b95519555aa90e35384c1fe9b93e2643e2baa52e6701a1319c337ee1",
+  "results": {
+    "mymod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "mymod::k"
+      ],
+      "warnings": [
+        "<case>/modules/mymod/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
+        "hiera.yaml version 3 found at module root was ignored"
+      ],
+      "status": "not_found"
+    }
+  }
+}

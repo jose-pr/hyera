@@ -1,0 +1,4 @@
+description: >-
+  A version: 4 module-layer hiera.yaml.
+queries:
+  - key: mymod::k

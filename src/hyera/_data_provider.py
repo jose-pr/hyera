@@ -18,10 +18,14 @@ from pathlib_next import Path
 
 from ._hiera_config import (
     _build_hierarchies,
+    _config_version,
+    _fill_v3_defaults,
     _fill_v5_defaults,
     _read_base_config,
-    _config_version,
+    _read_v4,
+    _validate_v3,
     _validate_v5,
+    _warn_deprecated,
 )
 from ._lookup_adapter import LOOKUP_OPTIONS
 
@@ -144,17 +148,22 @@ def module_name_of(root: str) -> "_ty.Optional[str]":
     return root[:i]
 
 
-def load_layer_provider(place, root, backends, *, module_name=None):
+def load_layer_provider(place, root, backends, scope=None, *, module_name=None):
     """Load ``root / "hiera.yaml"`` as an environment or module layer.
 
     ``None`` when there is no ``hiera.yaml`` there at all. A version-3 (or
-    missing-version) config becomes an :class:`_IgnoredConfig`, left for
+    missing-version) config is still read in full against Puppet's own v3
+    schema -- a schema error surfaces here regardless of layer, exactly as
+    Puppet's own ``HieraConfigV3#validate_config`` always runs before any
+    layer-appropriateness check does -- then becomes an
+    :class:`_IgnoredConfig` once it validates, left for
     :meth:`~hyera.core.Hiera._usable` to warn or raise about, with the
-    invocation's own ``strict``. A version-4 config raises immediately
-    (version 4 is not supported yet). A version-5 config is validated
-    and built exactly like the global config, with ``layer=place.lower()``
-    threaded through so a per-layer rule (``hiera3_backend`` global-only,
-    ``default_hierarchy`` module-only) applies.
+    invocation's own ``strict``. A version-4 config is read in full
+    (Puppet accepts it only in the environment/module layers). A version-5
+    config is validated and built exactly like the global config, with
+    ``layer=place.lower()`` threaded through so a per-layer rule
+    (``hiera3_backend`` global-only, ``default_hierarchy`` module-only)
+    applies.
     """
     hiera_yaml = root / "hiera.yaml"
     try:
@@ -165,12 +174,22 @@ def load_layer_provider(place, root, backends, *, module_name=None):
         return None
     layer = place.lower()
     source, data = _read_base_config(hiera_yaml, None)
-    version = _config_version(data, source, layer=layer)
+    version = _config_version(data, source)
     if version == 3:
+        _warn_deprecated(source, 3, scope)
+        _fill_v3_defaults(data)
+        _validate_v3(data, source)
         return _IgnoredConfig(place, source)
+    if version == 4:
+        hierarchy, default_hierarchy = _read_v4(data, source, scope, backends)
+        return _Provider(
+            place, module_name, root, source, hierarchy, default_hierarchy, 4
+        )
     _fill_v5_defaults(data)
     _validate_v5(data, source, layer=layer)
-    hierarchy, default_hierarchy = _build_hierarchies(data, backends, source)
+    hierarchy, default_hierarchy = _build_hierarchies(
+        data, backends, source, scope=scope
+    )
     return _Provider(
         place, module_name, root, source, hierarchy, default_hierarchy, version
     )

@@ -58,6 +58,7 @@ class Invocation:
         _name_stack=None,
         _fs_memo=None,
         _lo_cache=None,
+        global_only=False,
     ):
         self.scope = scope
         self._lookup = lookup
@@ -81,6 +82,15 @@ class Invocation:
         #: cache would -- discarded once the call returns, never reaching
         #: the instance's own cache.
         self._lo_cache = _lo_cache
+        #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only on
+        #: the invocation used to resolve a version 3 global layer's own
+        #: data (``core.Hiera._lookup_layers``), when no environment
+        #: provider of version 5 exists for the current scope. A nested
+        #: ``%{lookup()}``/``%{hiera()}``/``%{alias()}`` reached while
+        #: interpolating that data inherits it via :meth:`derive`, which is
+        #: what confines it to the global layer and skips a module's
+        #: ``default_hierarchy`` (``lookup_adapter.rb:76,266-269,332-339``).
+        self.global_only = global_only
         #: Recursion-detection stack, shared with every ``Invocation``
         #: :meth:`derive`d from this one (``invocation.rb:47-52``): the same
         #: list object, never copied, so a name pushed by one still guards a
@@ -126,15 +136,23 @@ class Invocation:
         return self._lookup(key, self)
 
     def derive(
-        self, lookup, *, override_values=_UNSET, default_values=_UNSET
+        self,
+        lookup,
+        *,
+        override_values=_UNSET,
+        default_values=_UNSET,
+        global_only=_UNSET,
     ) -> "Invocation":
         """A new :class:`Invocation` sharing this one's scope, ``lenient``
         and recursion stack, with a different sub-lookup callable.
 
-        ``override_values``/``default_values`` default to this one's own
-        (omit either to inherit it); pass an explicit value (``{}`` to gather
-        with none at all, as Puppet's own ``lookup_options`` gather does with
-        a bare ``Invocation.new(scope)``) to replace it instead.
+        ``override_values``/``default_values``/``global_only`` default to
+        this one's own (omit any to inherit it, which is how
+        ``global_only`` propagates to a nested lookup -- ``invocation.
+        rb:57``); pass an explicit value (``{}`` for
+        ``override_values``/``default_values``, to gather with none at all,
+        as Puppet's own ``lookup_options`` gather does with a bare
+        ``Invocation.new(scope)``) to replace it instead.
         """
         return Invocation(
             self.scope,
@@ -151,6 +169,7 @@ class Invocation:
             _name_stack=self._name_stack,
             _fs_memo=self._fs_memo,
             _lo_cache=self._lo_cache,
+            global_only=(self.global_only if global_only is _UNSET else global_only),
         )
 
     def remember_scope_lookup(self, key, root_key, segments, value, *, undefined):

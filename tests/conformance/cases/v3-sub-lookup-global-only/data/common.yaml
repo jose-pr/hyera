@@ -1,0 +1,4 @@
+x: "a%{lookup('mymod::k')}b"
+z: "a%{hiera('mymod::k')}b"
+g: gval
+gg: "a%{lookup('g')}b"

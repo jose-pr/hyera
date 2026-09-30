@@ -1,31 +1,39 @@
-"""``hiera.yaml`` version 3 (and Hiera 1/2, which are unversioned v3):
-version dispatch, Puppet's v3 schema validation, the non-mapping-file
-fallback, the deprecation warning, and the backend-major provider build
+"""``hiera.yaml`` version 3 and 4 (Hiera 1/2 are unversioned v3): version
+dispatch, Puppet's v3/v4 schema validation, the non-mapping-file fallback,
+the deprecation warning, the backend-major (v3) and per-entry (v4) provider
+builds, per-layer version rules, and version 3 global-only sub-lookups
 (``_hiera_config.py``'s ``_config_version``/``_fill_v3_defaults``/
 ``_validate_v3``/``_read_v3``/``_v3_level_specs``/``_v3_backend_class``/
-``_find_line_matching``/``_default_codedir``).
+``_find_line_matching``/``_default_codedir``/``_fill_v4_defaults``/
+``_validate_v4``/``_read_v4``; ``core.py``'s ``_usable``/``_global_only_for``;
+``_invocation.Invocation.global_only``).
 
-Ports ``HieraConfig.create``'s dispatch, ``HieraConfigV3#validate_config``
-and ``#create_configured_data_providers``, and ``resolve_paths``' extension
-rule, plus Puppet's mismatch-describer order (``pops/types/
-type_mismatch_describer.rb``).
+Ports ``HieraConfig.create``'s dispatch, ``HieraConfigV3``/``HieraConfigV4``'s
+``validate_config``/``create_configured_data_providers``, and
+``resolve_paths``' extension rule, plus Puppet's mismatch-describer order
+(``pops/types/type_mismatch_describer.rb``) and ``invocation.rb``'s
+``global_only`` flag.
 """
 
 import copy
 import logging
+import re
 
 import pytest
 from pathlib_next import Path
 
-from hyera import Backend, ConfigError, Hiera, Scope
+from hyera import Backend, ConfigError, Hiera, KeyNotFoundError, Scope
 from hyera._hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
     _ConfigSource,
     _default_codedir,
     _fill_v3_defaults,
+    _fill_v4_defaults,
     _find_line_matching,
     _v3_level_specs,
+    _validate_v4,
 )
+from hyera._invocation import Invocation
 from hyera._yaml_loader import RubySymbol
 
 
@@ -446,3 +454,308 @@ def test_find_line_matching():
     assert _find_line_matching(text, r"^first$") == 1
     assert _find_line_matching(text, r"^first$", start_line=2) is None
     assert _find_line_matching(text, r"^last$", start_line=3) == 4
+
+
+# --- version 4 ---------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "data, expected_lines",
+    [
+        (
+            {
+                "version": 4,
+                "datadir": "data",
+                "hierarchy": [{"backend": "yaml", "glob": "*.yaml"}],
+            },
+            ["expects a value for key 'name'", "unrecognized key 'glob'"],
+        ),
+        (
+            {"version": 4, "datadir": "data", "hierarchy": {"a": "b"}},
+            ["expects an Array value, got Struct"],
+        ),
+        (
+            {
+                "version": "4",
+                "datadir": "data",
+                "hierarchy": [{"name": "c", "backend": "yaml"}],
+            },
+            ["expects an Integer value, got String"],
+        ),
+        (
+            {
+                "version": 4,
+                "datadir": "data",
+                "hierarchy": [
+                    {"name": "c", "backend": "yaml", "data_hash": "yaml_data"}
+                ],
+                "defaults": {},
+            },
+            ["unrecognized key 'data_hash'", "unrecognized key 'defaults'"],
+        ),
+        (
+            {"version": 4, "datadir": "data", "hierarchy": ["oops"]},
+            ["index 0 expects a Struct value, got String"],
+        ),
+    ],
+    ids=[
+        "missing-name-and-extra-key",
+        "hierarchy-hash",
+        "version-string",
+        "nested-before-top-level",
+        "entry-is-a-string",
+    ],
+)
+def test_v4_schema_errors(data, expected_lines):
+    with pytest.raises(ConfigError) as excinfo:
+        _validate_v4(data, _ConfigSource("<test>", None, None, Path(".")))
+    text = str(excinfo.value)
+    for line in expected_lines:
+        assert line in text
+    if len(expected_lines) > 1:
+        # A nested (per-entry) mismatch always precedes a top-level one.
+        assert text.index(expected_lines[0]) < text.index(expected_lines[-1])
+
+
+def test_v4_defaults_filled(make_tree):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": "version: 4\n",
+            "modules/mymod/data/common.yaml": "mymod::k: v\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    assert h.lookup("mymod::k") == "v"
+
+
+def test_v4_paths_and_extension(make_tree):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": (
+                "version: 4\n"
+                "hierarchy:\n"
+                "  - name: byname\n"
+                "    backend: yaml\n"
+                "  - name: pathswins\n"
+                "    backend: json\n"
+                "    path: unused\n"
+                "    paths: [a, b.json]\n"
+                "  - name: owndir\n"
+                "    backend: yaml\n"
+                "    datadir: other\n"
+                "    path: c\n"
+            ),
+            "modules/mymod/data/byname.yaml": "mymod::k1: from_name\n",
+            "modules/mymod/data/a.json": '{"mymod::k2": "from_a"}\n',
+            "modules/mymod/data/b.json": '{"mymod::k2x": "from_b"}\n',
+            "modules/mymod/other/c.yaml": "mymod::k3: from_owndir\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    # path defaults to name.
+    assert h.lookup("mymod::k1") == "from_name"
+    # paths wins over path (unused.json is never read); b.json's own
+    # extension is not doubled.
+    assert h.lookup("mymod::k2") == "from_a"
+    # an entry's own datadir overrides the config's.
+    assert h.lookup("mymod::k3") == "from_owndir"
+
+
+def test_v4_datadir_is_literal(make_tree):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": (
+                "version: 4\n"
+                'datadir: "d%{x}"\n'
+                "hierarchy:\n  - name: common\n    backend: yaml\n"
+            ),
+            "modules/mymod/d%{x}/common.yaml": "mymod::k: literal\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    assert h.lookup("mymod::k") == "literal"
+
+
+@pytest.mark.parametrize("backend", ["sops", "eyaml"])
+def test_v4_unknown_backend(make_tree, backend):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": (
+                "version: 4\nhierarchy:\n  - name: s\n    backend: {}\n".format(backend)
+            ),
+        },
+    )
+    # A module-layer provider is loaded lazily, on first use of a
+    # qualified key -- not at construction.
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    with pytest.raises(
+        ConfigError,
+        match="No data provider is registered for backend '{}'".format(backend),
+    ) as excinfo:
+        h.lookup("mymod::s")
+    assert excinfo.value.line == 4
+
+
+def test_v4_duplicate_name_reports_lines(make_tree):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": (
+                "version: 4\n"
+                "hierarchy:\n"
+                "  - name: same\n"
+                "    backend: yaml\n"
+                "  - name: same\n"
+                "    backend: json\n"
+            ),
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    with pytest.raises(ConfigError) as excinfo:
+        h.lookup("mymod::same")
+    assert "First defined at (line: 3)" in str(excinfo.value)
+    assert excinfo.value.line == 5
+
+
+def test_v4_in_global_layer_valid_file_gives_layer_error(make_tree, caplog):
+    root = make_tree(
+        "version: 4\ndatadir: data\nhierarchy:\n  - name: common\n    backend: yaml\n",
+        raw=True,
+    )
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(
+            ConfigError, match="hiera.yaml version 4 cannot be used in the global layer"
+        ):
+            Hiera(str(root / "hiera.yaml"))
+    # The deprecation warning is logged before the layer error is raised.
+    assert len(caplog.records) == 1
+    assert "is deprecated" in caplog.records[0].message
+
+
+def test_v4_in_global_layer_invalid_file_gives_schema_error(make_tree):
+    root = make_tree('version: 4\nhierarchy: ["oops"]\n', raw=True)
+    with pytest.raises(
+        ConfigError, match="entry 'hierarchy' index 0 expects a Struct value"
+    ):
+        Hiera(str(root / "hiera.yaml"))
+
+
+# --- per-layer version rules and global-only sub-lookups ---------------
+
+
+@pytest.mark.parametrize(
+    "place, version, strict, expect",
+    [
+        ("environments", 3, "warning", "ignored"),
+        (
+            "environments",
+            3,
+            "error",
+            "hiera.yaml version 3 cannot be used in an environment",
+        ),
+        ("modules", 3, "warning", "ignored"),
+        ("modules", 3, "error", "hiera.yaml version 3 cannot be used in a module"),
+        ("environments", 4, "warning", "used"),
+        ("modules", 4, "warning", "used"),
+    ],
+    ids=[
+        "environment-v3-warning",
+        "environment-v3-error",
+        "module-v3-warning",
+        "module-v3-error",
+        "environment-v4-used",
+        "module-v4-used",
+    ],
+)
+def test_layer_version_rules(make_tree, caplog, place, version, strict, expect):
+    is_env = place == "environments"
+    name_component = "production" if is_env else "mymod"
+    key = "k" if is_env else "mymod::k"
+    if version == 3:
+        layer_text = (
+            ":backends: [yaml]\n:yaml:\n  :datadir: data\n:hierarchy: [common]\n"
+        )
+        data_content = "k: v\n" if is_env else "mymod::k: v\n"
+    else:
+        layer_text = "version: 4\ndatadir: data\nhierarchy:\n  - name: common\n    backend: yaml\n"
+        data_content = "k: v\n" if is_env else "mymod::k: v\n"
+    root = make_tree(
+        {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
+        files={
+            "data/g.yaml": "g: 1\n",
+            "{}/{}/hiera.yaml".format(place, name_component): layer_text,
+            "{}/{}/data/common.yaml".format(place, name_component): data_content,
+        },
+    )
+    kwargs = (
+        {"environmentpath": [root / "environments"]}
+        if is_env
+        else {"modulepath": [root / "modules"]}
+    )
+    scope = Scope(strict=strict) if strict != "warning" else None
+    h = Hiera(str(root / "hiera.yaml"), scope=scope, **kwargs)
+    with caplog.at_level(logging.WARNING):
+        if expect.startswith("hiera.yaml"):
+            with pytest.raises(ConfigError, match=re.escape(expect)):
+                h.lookup(key)
+        elif expect == "ignored":
+            with pytest.raises(KeyNotFoundError):
+                h.lookup(key)
+            assert any("was ignored" in r.message for r in caplog.records)
+        else:
+            assert h.lookup(key) == "v"
+
+
+def test_hiera3_backend_only_in_global_layer(make_tree):
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "environments/production/hiera.yaml": (
+                "version: 5\nhierarchy:\n  - name: x\n"
+                "    hiera3_backend: foo\n    path: common\n"
+            ),
+        },
+    )
+    with pytest.raises(
+        ConfigError, match="'hiera3_backend' is only allowed in the global layer"
+    ) as excinfo:
+        Hiera(str(root / "hiera.yaml"), environmentpath=[root / "environments"])
+    assert excinfo.value.line == 4
+
+
+def test_invocation_global_only_is_inherited():
+    scope = Scope()
+    inv = Invocation(scope, lambda k, i: None, global_only=True)
+    derived = inv.derive(lambda k, i: None)
+    assert derived.global_only is True
+
+
+def test_v3_global_sub_lookups_stay_global(make_tree, monkeypatch):
+    root = make_tree(
+        ":backends: [yaml]\n:yaml:\n  :datadir: data\n:hierarchy: [common]\n",
+        files={
+            "data/common.yaml": (
+                "x: \"a%{lookup('mymod::k')}b\"\n"
+                "g: gval\n"
+                "gg: \"a%{lookup('g')}b\"\n"
+            ),
+            "modules/mymod/hiera.yaml": (
+                "version: 5\ndefaults: {datadir: data, data_hash: yaml_data}\n"
+                "hierarchy:\n  - name: common\n    path: common.yaml\n"
+            ),
+            "modules/mymod/data/common.yaml": "mymod::k: modval\n",
+        },
+        raw=True,
+    )
+    monkeypatch.chdir(root)
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    # No environment hiera.yaml at all: the global layer's own data stays
+    # confined to the global layer, so the qualified sub-lookup misses even
+    # though the module itself resolves the key directly.
+    assert h.lookup("x") == "ab"
+    assert h.lookup("gg") == "agvalb"
+    assert h.lookup("mymod::k") == "modval"

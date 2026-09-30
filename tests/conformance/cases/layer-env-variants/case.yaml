@@ -46,8 +46,6 @@ queries:
     key: g_only
     puppet_args: ["--environment", "v5nover"]
     error_class: ConfigError
-    divergence: spec-config/hiera-v3-config-unsupported
   - id: v4env-env_only
     key: env_only
     puppet_args: ["--environment", "v4env"]
-    divergence: critic-puppet-coverage/config-v4-and-symbol-keys-unsupported

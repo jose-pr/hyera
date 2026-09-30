@@ -78,7 +78,7 @@ def test_missing_config_file_raises(tmp_path):
     [
         (None, "entry 'hierarchy' variant 0 expects a String value, got Tuple"),
         (3, "entry 'hierarchy' variant 0 expects a String value, got Tuple"),
-        (4, "cannot be used in the global layer"),
+        (4, "entry 'hierarchy' index 0 expects a value for key 'backend'"),
         (6, "does not support hiera.yaml version 6"),
         ("abc", "does not support hiera.yaml version 0"),
         (True, "got Boolean"),

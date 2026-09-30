@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "e51aca3ad348ea39f5a64093c5ef0e820406cf5d114398165b63382e26bbc49b",
+  "results": {
+    "y": {
+      "argv": [
+        "--strict",
+        "warning",
+        "y"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "ab"
+    },
+    "ek": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ek"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "found",
+      "value": "envval4"
+    }
+  }
+}

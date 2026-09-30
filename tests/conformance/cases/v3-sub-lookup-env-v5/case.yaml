@@ -1,0 +1,9 @@
+description: >-
+  As v3-sub-lookup-global-only, but with a real version 5
+  environment-layer hiera.yaml: a %{lookup()}/%{hiera()} inside the
+  global data is no longer confined to the global layer, since a
+  version 5 environment now exists.
+queries:
+  - key: x
+  - key: y
+  - key: z

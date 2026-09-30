@@ -1,0 +1,6 @@
+description: >-
+  A version: 4 environment-layer hiera.yaml with nothing else -- every
+  v4 default applies (datadir: data, hierarchy: [{name: common, backend:
+  yaml}]).
+queries:
+  - key: k

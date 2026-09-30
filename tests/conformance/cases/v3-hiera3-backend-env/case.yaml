@@ -1,0 +1,7 @@
+description: >-
+  A v5 environment-layer hierarchy entry using hiera3_backend, which is
+  only allowed in the global layer.
+queries:
+  - key: k
+    error_class: ConfigError
+    error_match: "'hiera3_backend' is only allowed in the global layer"

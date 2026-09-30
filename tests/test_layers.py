@@ -255,18 +255,19 @@ def test_hiera3_backend_only_in_global_layer(tmp_path, make_tree, place):
     assert exc_info.value.line == 3
 
 
-def test_version_4_layer_config_not_supported_yet(tmp_path, make_tree):
+def test_version_4_environment_layer_resolves(tmp_path, make_tree):
     base = _global(make_tree)
     _write(
         tmp_path / "envs" / "v4" / "hiera.yaml",
         "version: 4\ndatadir: data\nhierarchy:\n  - name: common\n    backend: yaml\n",
     )
-    with pytest.raises(ConfigError, match="not supported yet"):
-        Hiera(
-            str(base / "hiera.yaml"),
-            environmentpath=[tmp_path / "envs"],
-            scope=Scope(environment="v4"),
-        )
+    _write(tmp_path / "envs" / "v4" / "data" / "common.yaml", "envkey: fromv4\n")
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[tmp_path / "envs"],
+        scope=Scope(environment="v4"),
+    )
+    assert h.lookup("envkey") == "fromv4"
 
 
 def test_modulepath_replaces_default_modulepath(tmp_path, make_tree):
