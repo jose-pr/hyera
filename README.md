@@ -356,6 +356,9 @@ is the same tree, keyed the way `--render-as json --explain` renders it.
 
 ## Command line
 
+Install the `cli` extra to get the command: `pip install "hyera[cli]"`
+(without it, `hyera`/`python -m hyera` print that hint and exit 2).
+
 `hyera` accepts `puppet lookup`'s own flags:
 
 ```sh
@@ -384,20 +387,22 @@ Options, grouped:
   paths separated by the OS path separator); `--codedir`; `--strict
   off|warning|error` (default `warning`).
 - **output**: `--render-as s|json|yaml` (default `yaml`, or `s` while
-  explaining), plus duho's `-v/-q/--loglevel`.
+  explaining).
+- **logging**: `-v`/`--verbose` (repeatable; adds info, then debug),
+  `-d`/`--debug` (debug, same as `-vv`), `-q`/`--quiet` (repeatable; drops
+  to error, then critical), `--loglevel [NAME:]LEVEL`.
 
 Without `--merge`, the data's `lookup_options` decides; an explicit
 `--merge`, `first` included, overrides it. Exit codes: `0` found (or
-`--default`/`--explain` printed), `1` the key was not found, `2` any other
-error — a usage problem, a bad config or data file, an unrenderable value,
-or a reader that closes the output early — reported as one stderr line
-(`-v` or `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup` exits `1`
-for both a miss and an error, printing nothing for the error case; hyera's
-CLI tells the two apart. See "Differences from Puppet" below for what this
-CLI does not (yet) support.
-
-The CLI needs the `cli` extra (`pip install "hyera[cli]"`); without it the
-command prints that hint and exits 2.
+`--default`/`--explain` printed), `1` the key was not found — nothing is
+printed, matching `puppet lookup`'s own silent miss — `2` any other
+error: a usage problem, a bad config or data file, an unrenderable value,
+or a reader that closes the output early (also silent: nothing on stderr).
+A `2` is reported as one stderr line (`-v`, `-d` or `DUHO_TRACEBACK=1`
+adds the traceback). `puppet lookup` exits `1` for both a miss and an
+error, printing nothing for the error case; hyera's CLI tells the two
+apart. See "Differences from Puppet" below for what this CLI does not
+(yet) support.
 
 `HYERA_MCP=stdio hyera` runs the same command as an MCP server over
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,

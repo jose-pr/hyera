@@ -1129,9 +1129,11 @@ after `backends` in `hyera/__init__.py`.
   `--render-as`/any other flag.
 
   Exit codes: `0` found (or `--default`/`--explain` printed), `1` the key
-  was not found (a `KeyNotFoundError` and nothing else), `2` every other
+  was not found (a `KeyNotFoundError` and nothing else — nothing is
+  printed, matching Puppet's own silent miss), `2` every other
   error — a usage problem, an unknown render format, a `ConfigError`/
-  `BackendError`, an unrenderable value, or a closed output pipe.
+  `BackendError`, an unrenderable value, or a closed output pipe (also
+  silent: nothing on stderr).
   `--explain`/`--explain-options` exit 0 even on a miss or most lookup
   failures (Puppet's own explain report documents the failure as its own
   last line instead); only a configuration/data problem building the
@@ -1140,13 +1142,24 @@ after `backends` in `hyera/__init__.py`.
   `Lookup of key 'K' failed: …` for a lookup failure (construction
   included, comma-joining every key tried), `Cannot render the value of
   key 'K': …` if printing the found/default/explained value itself fails.
-  The traceback is omitted unless `-v` or `DUHO_TRACEBACK=1` is set.
+  The traceback is omitted unless `-v`, `-d`/`--debug` or
+  `DUHO_TRACEBACK=1` is set.
   `$server_facts` carries `serverversion` (the constant `_PUPPET_VERSION`,
   currently `"8.10.0"`, the `puppet lookup` release this CLI's flags
   mirror) and `environment` only — no host-identity keys. Facts come only
   from `--facts`; this CLI never runs facter or reads stored facts, so an
   unattended lookup has no hidden subprocess and gives the same answer on
   every host.
+- **Logging** (`_logger_name_ = "hyera"`, so `-v`/`-q`/`--loglevel` change
+  the `hyera` logger, not duho's own command-class logger):
+  `_verbose_loglevel_` follows Puppet's own scheme from a `WARNING` base —
+  no flag: warning; `-v`: info; `-vv` or `-d`/`--debug`: debug; `-vvv`:
+  trace; `-q`: error; `-qq`: critical. A plain miss (no `--default`) logs
+  at DEBUG (Puppet's own "did not find a value for the name…" text), so it
+  is silent by default and under `-v`, matching Puppet exactly; only
+  `-vv`/`-d`/`--loglevel hyera:DEBUG` shows it. `debug` (`--debug`/`-d`) is
+  its own field, equivalent to `-vv`, and also makes `_fail` attach a
+  traceback the same way `-v` does.
 - Env: `HYERA_MCP=stdio` runs the command as an MCP server over
   stdin/stdout (duho), exposing one tool, `hyera` (`Lookup`'s
   `_parsername_`, not its class name), whose arguments are the CLI fields
