@@ -332,11 +332,14 @@ def test_sops_parse_error_plaintext_absent_from_cli(
             "hierarchy": [{"name": "secret", "path": "secret.yaml"}],
         },
         files={"data/secret.yaml": b""},
+        facts={"role": "web"},
     )
     config = root / "hiera.yaml"
 
     with caplog.at_level(logging.DEBUG):
-        rc = main(["k", "-c", str(config)])
+        rc = main(
+            ["k", "--hiera_config", str(config), "--facts", str(root / "facts.yaml")]
+        )
 
     assert rc == 2
     captured = capsys.readouterr()

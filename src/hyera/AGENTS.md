@@ -1061,51 +1061,105 @@ after `backends` in `hyera/__init__.py`.
   "hyera[cli]"` to stderr and returns 2, instead of raising
   `ModuleNotFoundError`; `Lookup` itself is not defined in that case.
 - **`Lookup`** — the `duho.Cli` command class (only defined when `duho` is
-  installed). Fields: `key` (positional),
-  `config` (`--config/-c`, default `"hiera.yaml"`), `scope` (`--scope/-s`,
-  repeatable `key=value`), `merge` (`--merge`, choice of
-  `first|unique|hash|deep|array|set`, default `None`; `array`/`set` are
-  legacy aliases for `unique`), `deep` (`--deep`, promotes `merge=hash` to
-  `deep`), `knockout_prefix` (`--knockout-prefix`), `render_as`
-  (`--render-as FORMAT`, default `None` meaning `"yaml"`; case-insensitive;
-  an unrecognized format exits 2 with `Unknown rendering format '<f>'`
-  before any lookup runs), `default` (`--default`). Output goes through
-  `hyera._render`'s `s`/`json`/`yaml` render backends (`Backend.new(fmt,
-  kind="render")`), the same shapes `puppet lookup --render-as` prints
-  (Ruby `to_s` for `s`, byte-compatible YAML for `yaml`, compact
-  insertion-ordered JSON for `json`); a `Sensitive` value redacts in every
-  format, including `yaml` (Puppet's own YAML leaks the plaintext). A
-  non-finite float under `--render-as json` exits 2 with Puppet's own text
-  (`NaN not allowed in JSON`, `Infinity not allowed in JSON`, `-Infinity
-  not allowed in JSON`). Output is written as UTF-8 bytes with LF line
-  endings via `_emit` (never `print`), regardless of the console or locale
-  encoding, with a trailing newline added only if the rendered text lacks
-  one (Ruby `puts` semantics); a reader that closes the pipe early raises
-  `BrokenPipeError`, silenced and reported as exit 2 with nothing on
-  stderr. Omitting `--merge` lets the data's
-  `lookup_options` decide (else first-match-wins); an explicit `--merge`,
-  `first` included, always overrides `lookup_options`. Exit codes: `0`
-  found (or `--default` printed), `1` the key was not found (a
-  `KeyNotFoundError` and nothing else), `2` any other error, an unknown
-  render format, an unrenderable value or a closed output pipe. A `2` from
-  a lookup or render failure logs exactly one `hyera`-logger ERROR line:
+  installed), accepting `puppet lookup`'s own flag set. Fields, grouped:
+  - *lookup*: `keys` (positional, zero or more — the first one found wins),
+    `merge` (`--merge first|unique|hash|deep`; any other value exits 2 with
+    Puppet's own text, validated by hand rather than via argparse choices),
+    `knock_out_prefix`/`sort_merged_arrays`/`merge_hash_arrays`
+    (`--knock-out-prefix`/`--sort-merged-arrays`/`--merge-hash-arrays`,
+    only meaningful with `--merge deep`; any of the three without it exits
+    2 with Puppet's text), `value_type` (`--type`, a Puppet type string;
+    parsed once, up front, so a syntax error exits 2 even when the key
+    would otherwise just miss), `default` (`--default`), `explain`/
+    `explain_options` (`--explain`/`--explain-options`).
+  - *facts and scope*: `facts` (`--facts FILE`, parsed by `load_facts`),
+    `node` (`--node NAME`, `Scope(node_name=...)` only — seeds no fact),
+    `scope` (`--scope`/`-s NAME=VALUE`, repeatable; VALUE is YAML, an empty
+    VALUE is `None`, a dotted NAME nests a nested hash, the CLI's one flag
+    with no `puppet lookup` counterpart).
+  - *settings*: `hiera_config` (`--hiera_config PATH`; default `./hiera.yaml`
+    if it exists, else `Hiera(None, base_path=os.getcwd())` — Puppet's
+    built-in default configuration; a *named* missing file is still a
+    `ConfigError`), `environment`, `environmentpath`, `modulepath`,
+    `basemodulepath` (each split on `os.pathsep` and absolutized by the
+    CLI, then passed straight through to `Hiera(...)`'s own keywords — the
+    library owns discovery and the missing-environment error, so CLI and
+    API can never disagree), `codedir`, `strict` (`--strict off|warning|
+    error`, default `None` meaning `"warning"`).
+  - *output*: `render_as` (`--render-as FORMAT`, default `None` meaning
+    `"yaml"`, or `"s"` while explaining; case-insensitive; an unrecognized
+    format exits 2 with `Unknown rendering format '<f>'` before any lookup
+    runs). Output goes through `hyera._render`'s `s`/`json`/`yaml` render
+    backends (`Backend.new(fmt, kind="render")`), the same shapes `puppet
+    lookup --render-as` prints (Ruby `to_s` for `s`, byte-compatible YAML
+    for `yaml`, compact insertion-ordered JSON for `json`); a `Sensitive`
+    value redacts in every format, including `yaml` (Puppet's own YAML
+    leaks the plaintext). A non-finite float under `--render-as json` exits
+    2 with Puppet's own text (`NaN not allowed in JSON`, `Infinity not
+    allowed in JSON`, `-Infinity not allowed in JSON`). Output is written
+    as UTF-8 bytes with LF line endings via `_emit` (never `print`),
+    regardless of the console or locale encoding, with a trailing newline
+    added only if the rendered text lacks one (Ruby `puts` semantics); a
+    reader that closes the pipe early raises `BrokenPipeError`, silenced
+    and reported as exit 2 with nothing on stderr.
+
+  Removed outright, no alias: `--config`/`-c` (use `--hiera_config`),
+  `--deep` (use `--merge deep`), `--knockout-prefix` (use
+  `--knock-out-prefix`), `--compile`/`-c`, `--trusted` (Puppet's own is a
+  no-op in 8.10 anyway), and the `array`/`set` `--merge` aliases.
+
+  **Argument order, matching `puppet lookup`'s own `main`:** the deep-only
+  guard, then `--merge` validation, then the no-keys check (`--explain-options`
+  alone with no key becomes the key `"__global__"`; otherwise "No keys were
+  given to lookup."), then the render format, then scope/facts (an empty or
+  absent `--facts` is "No facts available for target node: `<--node or the
+  local fqdn>`"), then `--hiera_config`/layers/`--type` and the lookup or
+  `--explain` itself. `main()` first runs every argv token through
+  `_puppet_argv`, which joins a long value option with its following token
+  (`--opt value` -> `--opt=value`) so a value that itself looks like an
+  option (`--knock-out-prefix --`, `--default -x`) reaches argparse the way
+  Puppet's own parser would consume it; a value that is exactly `"--"` is
+  additionally routed through an internal placeholder and translated back
+  in `__call__` (`_unplaceholder`), working around a CPython `argparse`
+  bug (fixed in 3.13, present on this project's 3.9 floor) that empties a
+  single-value option's own value when it is literally `"--"`.
+  Tokens after a bare `--` (not itself following a value option) go to
+  duho's own `_passthrough_`, treated as more keys — Puppet's own
+  "everything after this is a key" convention — and never reach
+  `--render-as`/any other flag.
+
+  Exit codes: `0` found (or `--default`/`--explain` printed), `1` the key
+  was not found (a `KeyNotFoundError` and nothing else), `2` every other
+  error — a usage problem, an unknown render format, a `ConfigError`/
+  `BackendError`, an unrenderable value, or a closed output pipe.
+  `--explain`/`--explain-options` exit 0 even on a miss or most lookup
+  failures (Puppet's own explain report documents the failure as its own
+  last line instead); only a configuration/data problem building the
+  `Hiera` instance itself exits 2 under `--explain` too. A `2` from a
+  lookup or render failure logs exactly one `hyera`-logger ERROR line:
   `Lookup of key 'K' failed: …` for a lookup failure (construction
-  included), `Cannot render the value of key 'K': …` if printing the
-  found/default value itself fails. The traceback is omitted unless `-v`
-  or `DUHO_TRACEBACK=1` is set.
+  included, comma-joining every key tried), `Cannot render the value of
+  key 'K': …` if printing the found/default/explained value itself fails.
+  The traceback is omitted unless `-v` or `DUHO_TRACEBACK=1` is set.
+  `$server_facts` carries `serverversion` (the constant `_PUPPET_VERSION`,
+  currently `"8.10.0"`, the `puppet lookup` release this CLI's flags
+  mirror) and `environment` only — no host-identity keys. Facts come only
+  from `--facts`; this CLI never runs facter or reads stored facts, so an
+  unattended lookup has no hidden subprocess and gives the same answer on
+  every host.
 - Env: `HYERA_MCP=stdio` runs the command as an MCP server over
   stdin/stdout (duho), exposing one tool, `hyera` (`Lookup`'s
   `_parsername_`, not its class name), whose arguments are the CLI fields
-  (`key`, `config`, `scope`, ...); a `tools/call` returns what the command
-  would print, and `initialize`'s `serverInfo.name` is `"hyera"` too. Any
-  other `HYERA_MCP` value exits `2` with `unsupported MCP transport`. The
-  trigger variable name itself is always `HYERA_MCP`, from that same
-  `_parsername_`, regardless of `sys.argv[0]` (so `python -m hyera.cli` or
-  embedding `Lookup` in a differently-named script never changes it). The
-  trigger is read before the arguments, so an MCP session never performs a
-  command-line lookup. A
-  truthy `AGENT_HELP` or `AGENTS_HELP` makes
-  `--help` print duho's JSON agent-help document instead of usage text.
+  (`keys`, `hiera_config`, `facts`, `scope`, ...); a `tools/call` returns
+  what the command would print, and `initialize`'s `serverInfo.name` is
+  `"hyera"` too. Any other `HYERA_MCP` value exits `2` with `unsupported
+  MCP transport`. The trigger variable name itself is always `HYERA_MCP`,
+  from that same `_parsername_`, regardless of `sys.argv[0]` (so `python -m
+  hyera.cli` or embedding `Lookup` in a differently-named script never
+  changes it). The trigger is read before the arguments, so an MCP session
+  never performs a command-line lookup. A truthy `AGENT_HELP` or
+  `AGENTS_HELP` makes `--help` print duho's JSON agent-help document
+  instead of usage text.
 
 ## Gotchas
 

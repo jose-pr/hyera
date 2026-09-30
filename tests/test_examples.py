@@ -32,12 +32,10 @@ def test_lookup_script_output(tmp_path, monkeypatch, capsys):
 def test_cli_invocation(capsys):
     pytest.importorskip("duho")
     argv = [
-        "-c",
+        "--hiera_config",
         str(_EXAMPLES_DIR / "hiera.yaml"),
-        "--scope",
-        "role=web",
-        "--scope",
-        "clientcert=web01.example.com",
+        "--facts",
+        str(_EXAMPLES_DIR / "facts.yaml"),
         "--render-as",
         "json",
         "ntp::servers",

@@ -29,7 +29,8 @@ def _read_bytes(path) -> bytes:
     reader = getattr(path, "read_bytes", None)
     if reader is not None:
         return reader()
-    return open(os.fspath(path), "rb").read()
+    with open(os.fspath(path), "rb") as fh:
+        return fh.read()
 
 
 def _reject_symbols(value, label) -> None:

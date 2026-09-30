@@ -25,6 +25,62 @@ def _error_records(caplog):
 
 
 @pytest.fixture
+def hiera_root(make_tree):
+    """``conftest.hiera_root``, plus a ``facts.yaml`` -- the CLI now
+    requires ``--facts`` for every lookup (an empty facts mapping is
+    Puppet's own "No facts available" error), so every CLI test needs a
+    real facts file even when the data itself never reads a fact.
+    Overrides (shadows) the shared ``conftest.py`` fixture of the same
+    name for this module only; other test files keep the plain one.
+    """
+    return make_tree(
+        {
+            "version": 5,
+            "defaults": {"data_hash": "yaml_data", "datadir": "data"},
+            "hierarchy": [
+                {"name": "Per-environment", "path": "environments/%{environment}.yaml"},
+                {"name": "Modules", "globs": ["modules/*.yaml"]},
+                {"name": "Common", "path": "common.yaml"},
+            ],
+        },
+        files={
+            "data/common.yaml": """\
+                ---
+                app::name: myapp
+                greeting: "hello %{environment}"
+                ntp::servers:
+                  - a.pool.ntp.org
+                classes:
+                  - base
+                db:
+                  host: localhost
+                  port: 5432
+                alias_target: "%{alias('app::name')}"
+                alias_list: "%{alias('ntp::servers')}"
+                literal_pct: "100%{literal('%')} done"
+                port_msg: "listening on %{hiera('db.port')}"
+                """,
+            "data/environments/production.yaml": """\
+                ---
+                ntp::servers:
+                  - prod.pool.ntp.org
+                classes:
+                  - prod
+                db:
+                  host: db.prod.internal
+                lookup_greeting: "%{hiera('app::name')} in prod"
+                """,
+            "data/modules/web.yaml": """\
+                ---
+                classes:
+                  - web
+                """,
+        },
+        facts={"role": "web"},
+    )
+
+
+@pytest.fixture
 def values_root(make_tree):
     """A tree exercising every CLI output type, including ``Sensitive``."""
     return make_tree(
@@ -53,6 +109,7 @@ def values_root(make_tree):
                   secret: { convert_to: Sensitive }
                   secret_hash: { convert_to: Sensitive }
                 """},
+        facts={"role": "web"},
     )
 
 
@@ -85,6 +142,7 @@ def mergefirst_root(make_tree):
                   - redhat
                 """,
         },
+        facts={"role": "web"},
     )
 
 
@@ -114,6 +172,7 @@ def render_root(make_tree):
     return make_tree(
         {"hierarchy": [{"name": "common", "path": "common.yaml"}]},
         files={"data/common.yaml": common_yaml},
+        facts={"role": "web"},
     )
 
 
@@ -137,7 +196,17 @@ _RENDER_AS_EXPECTED = {
 @pytest.mark.parametrize("key", list(_RENDER_AS_EXPECTED))
 @pytest.mark.parametrize("fmt,idx", [("s", 0), ("yaml", 1), ("json", 2)])
 def test_render_as(fmt, idx, key, render_root, capsys):
-    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", fmt, key])
+    rc = main(
+        [
+            "--hiera_config",
+            str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
+            "--render-as",
+            fmt,
+            key,
+        ]
+    )
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
@@ -145,27 +214,65 @@ def test_render_as(fmt, idx, key, render_root, capsys):
 
 
 def test_default_render_is_yaml(render_root, capsys):
-    rc = main(["-c", str(render_root / "hiera.yaml"), "str"])
+    rc = main(
+        [
+            "--hiera_config",
+            str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
+            "str",
+        ]
+    )
     assert rc == 0
     assert capsys.readouterr().out == "--- one\n"
 
 
 def test_render_as_is_case_insensitive(render_root, capsys):
-    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "JSON", "str"])
+    rc = main(
+        [
+            "--hiera_config",
+            str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
+            "--render-as",
+            "JSON",
+            "str",
+        ]
+    )
     assert rc == 0
     assert capsys.readouterr().out == '"one"\n'
 
 
 def test_unknown_render_format_exit_2(render_root, caplog):
     with caplog.at_level(logging.ERROR):
-        rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "foo", "str"])
+        rc = main(
+            [
+                "--hiera_config",
+                str(render_root / "hiera.yaml"),
+                "--facts",
+                str(render_root / "facts.yaml"),
+                "--render-as",
+                "foo",
+                "str",
+            ]
+        )
     assert rc == 2
     assert _error_records(caplog)[-1].getMessage() == "Unknown rendering format 'foo'"
 
 
 def test_json_nonfinite_exit_2(render_root, caplog):
     with caplog.at_level(logging.ERROR):
-        rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "json", "nan"])
+        rc = main(
+            [
+                "--hiera_config",
+                str(render_root / "hiera.yaml"),
+                "--facts",
+                str(render_root / "facts.yaml"),
+                "--render-as",
+                "json",
+                "nan",
+            ]
+        )
     assert rc == 2
     assert "NaN not allowed in JSON" in _error_records(caplog)[-1].getMessage()
 
@@ -178,8 +285,10 @@ def test_default_in_each_format(fmt, expected, render_root, capsys):
     rc = main(
         [
             "nope::key",
-            "-c",
+            "--hiera_config",
             str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
             "--default",
             "fallback",
             "--render-as",
@@ -196,7 +305,17 @@ def test_utf8_on_cp1252_stdout(render_root, monkeypatch):
     buf = io.BytesIO()
     wrapper = io.TextIOWrapper(buf, encoding="cp1252")
     monkeypatch.setattr(sys, "stdout", wrapper)
-    rc = main(["-c", str(render_root / "hiera.yaml"), "--render-as", "s", "unicode"])
+    rc = main(
+        [
+            "--hiera_config",
+            str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
+            "--render-as",
+            "s",
+            "unicode",
+        ]
+    )
     wrapper.flush()
     assert rc == 0
     assert buf.getvalue() == "café ☃\n".encode("utf-8")
@@ -209,8 +328,10 @@ def test_utf8_on_cp1252_pipe(render_root):
             sys.executable,
             "-m",
             "hyera",
-            "-c",
+            "--hiera_config",
             str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
             "--render-as",
             "s",
             "unicode",
@@ -230,8 +351,10 @@ def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
             sys.executable,
             "-m",
             "hyera",
-            "-c",
+            "--hiera_config",
             str(render_root / "hiera.yaml"),
+            "--facts",
+            str(render_root / "facts.yaml"),
             "--render-as",
             "json",
             "big",
@@ -254,7 +377,17 @@ def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
 @pytest.mark.parametrize("flag", ["-o", "--output"])
 def test_output_flag_removed(flag, hiera_root):
     with pytest.raises(SystemExit) as exc:
-        main(["app::name", "-c", str(hiera_root / "hiera.yaml"), flag, "json"])
+        main(
+            [
+                "app::name",
+                "--hiera_config",
+                str(hiera_root / "hiera.yaml"),
+                "--facts",
+                str(hiera_root / "facts.yaml"),
+                flag,
+                "json",
+            ]
+        )
     assert exc.value.code == 2
 
 
@@ -263,13 +396,33 @@ def test_sensitive_redacted_in_output(values_root, capsys):
     including the CLI's default (``s``-like) output, and never the wrapped
     secret.
     """
-    rc = main(["-c", str(values_root / "hiera.yaml"), "--render-as", "s", "secret"])
+    rc = main(
+        [
+            "--hiera_config",
+            str(values_root / "hiera.yaml"),
+            "--facts",
+            str(values_root / "facts.yaml"),
+            "--render-as",
+            "s",
+            "secret",
+        ]
+    )
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
     assert out.strip() == "Sensitive [value redacted]"
 
-    rc = main(["-c", str(values_root / "hiera.yaml"), "--render-as", "json", "secret"])
+    rc = main(
+        [
+            "--hiera_config",
+            str(values_root / "hiera.yaml"),
+            "--facts",
+            str(values_root / "facts.yaml"),
+            "--render-as",
+            "json",
+            "secret",
+        ]
+    )
     assert rc == 0
     out = capsys.readouterr().out
     assert "hunter2" not in out
@@ -279,8 +432,10 @@ def test_sensitive_redacted_in_output(values_root, capsys):
 def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
     base_args = [
         "classes",
-        "-c",
+        "--hiera_config",
         str(mergefirst_root / "hiera.yaml"),
+        "--facts",
+        str(mergefirst_root / "facts.yaml"),
         "-s",
         "os_family=RedHat",
         "--render-as",
@@ -321,8 +476,9 @@ def test_mcp_stdio_serves_lookup(hiera_root):
             "params": {
                 "name": "hyera",
                 "arguments": {
-                    "key": "app::name",
-                    "config": str(hiera_root / "hiera.yaml"),
+                    "keys": ["app::name"],
+                    "hiera_config": str(hiera_root / "hiera.yaml"),
+                    "facts": str(hiera_root / "facts.yaml"),
                     "scope": ["environment=production"],
                     "render_as": "s",
                 },
@@ -354,7 +510,7 @@ def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, ca
     monkeypatch.setattr(sys, "argv", ["/x/cli.py"])
     monkeypatch.setenv("HYERA_MCP", "bogus")
 
-    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
+    rc = main(["app::name", "--hiera_config", str(hiera_root / "hiera.yaml")])
 
     assert rc == 2
     assert "unsupported MCP transport" in capsys.readouterr().err
@@ -364,7 +520,7 @@ def test_mcp_unknown_transport_exits_2(hiera_root, monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["hyera"])
     monkeypatch.setenv("HYERA_MCP", "bogus")
 
-    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml")])
+    rc = main(["app::name", "--hiera_config", str(hiera_root / "hiera.yaml")])
 
     assert rc == 2
     assert "unsupported MCP transport" in capsys.readouterr().err
@@ -374,8 +530,10 @@ def test_lookup_found(hiera_root, capsys):
     rc = main(
         [
             "app::name",
-            "-c",
+            "--hiera_config",
             str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
             "-s",
             "environment=production",
             "--render-as",
@@ -387,7 +545,15 @@ def test_lookup_found(hiera_root, capsys):
 
 
 def test_lookup_missing_exit_1(hiera_root):
-    rc = main(["nope::key", "-c", str(hiera_root / "hiera.yaml")])
+    rc = main(
+        [
+            "nope::key",
+            "--hiera_config",
+            str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
+        ]
+    )
     assert rc == 1
 
 
@@ -395,8 +561,10 @@ def test_lookup_missing_with_default_exit_0(hiera_root, capsys):
     rc = main(
         [
             "nope::key",
-            "-c",
+            "--hiera_config",
             str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
             "--default",
             "fallback",
             "--render-as",
@@ -408,12 +576,25 @@ def test_lookup_missing_with_default_exit_0(hiera_root, capsys):
 
 
 def test_bad_config_exit_2(tmp_path):
-    rc = main(["k", "-c", str(tmp_path / "does-not-exist.yaml")])
+    (tmp_path / "facts.yaml").write_text("role: web\n", encoding="utf-8")
+    rc = main(
+        [
+            "k",
+            "--hiera_config",
+            str(tmp_path / "does-not-exist.yaml"),
+            "--facts",
+            str(tmp_path / "facts.yaml"),
+        ]
+    )
     assert rc == 2
 
 
 def test_codedir_flag(make_tree, capsys):
-    root = make_tree(":backends: [yaml]\n:hierarchy: [common]\n", raw=True)
+    root = make_tree(
+        ":backends: [yaml]\n:hierarchy: [common]\n",
+        raw=True,
+        facts={"role": "web"},
+    )
     codedir = root / "code"
     hieradata = codedir / "environments" / "production" / "hieradata"
     hieradata.mkdir(parents=True)
@@ -421,8 +602,10 @@ def test_codedir_flag(make_tree, capsys):
     rc = main(
         [
             "k",
-            "-c",
+            "--hiera_config",
             str(root / "hiera.yaml"),
+            "--facts",
+            str(root / "facts.yaml"),
             "--codedir",
             str(codedir),
             "--render-as",
@@ -441,38 +624,29 @@ def test_bad_lookup_options_merge_exits_2(make_tree, caplog):
         files={
             "data/common.yaml": "k: v\nlookup_options: {k: {merge: {merge: unique}}}\n"
         },
+        facts={"role": "web"},
     )
-    rc = main(["k", "-c", str(root / "hiera.yaml")])
-    assert rc == 2
-    assert "strategy" in _error_records(caplog)[-1].getMessage()
-
-
-def test_merge_array_alias_extension(hiera_root, capsys):
-    # Non-Puppet extension; this test goes with the feature: `--merge array`
-    # is our own legacy alias for `unique`.
     rc = main(
         [
-            "classes",
-            "-c",
-            str(hiera_root / "hiera.yaml"),
-            "-s",
-            "environment=production",
-            "--merge",
-            "array",
-            "--render-as",
-            "json",
+            "k",
+            "--hiera_config",
+            str(root / "hiera.yaml"),
+            "--facts",
+            str(root / "facts.yaml"),
         ]
     )
-    assert rc == 0
-    assert json.loads(capsys.readouterr().out) == ["prod", "web", "base"]
+    assert rc == 2
+    assert "strategy" in _error_records(caplog)[-1].getMessage()
 
 
 def test_unique_merge_json_output(hiera_root, capsys):
     rc = main(
         [
             "classes",
-            "-c",
+            "--hiera_config",
             str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
             "-s",
             "environment=production",
             "--merge",
@@ -486,16 +660,16 @@ def test_unique_merge_json_output(hiera_root, capsys):
 
 
 def test_invalid_scope_exit_2(hiera_root):
-    rc = main(["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "noequals"])
-    assert rc == 2
-
-
-def test_dotted_scope_name_exit_2(hiera_root):
-    # A Puppet variable name cannot contain '.', so a dotted --scope name is
-    # rejected outright rather than stored as a flat key nothing can read
-    # (there is no flat-dotted-context-key fallback to store it under).
     rc = main(
-        ["app::name", "-c", str(hiera_root / "hiera.yaml"), "-s", "trusted.certname=x"]
+        [
+            "app::name",
+            "--hiera_config",
+            str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
+            "-s",
+            "noequals",
+        ]
     )
     assert rc == 2
 
@@ -516,10 +690,19 @@ def test_config_error_exit_2_one_line(make_tree, monkeypatch, caplog):
         "hierarchy:\n"
         "  - {name: c, path: common.yaml}\n",
         raw=True,
+        facts={"role": "web"},
     )
 
     with caplog.at_level(logging.ERROR):
-        rc = main(["k", "-c", str(root / "hiera.yaml")])
+        rc = main(
+            [
+                "k",
+                "--hiera_config",
+                str(root / "hiera.yaml"),
+                "--facts",
+                str(root / "facts.yaml"),
+            ]
+        )
 
     assert rc == 2
     records = _error_records(caplog)
@@ -544,10 +727,19 @@ def test_data_parse_error_exit_2_names_key_and_file(make_tree, monkeypatch, capl
             "data/common.yaml": "good: yes\n",
             "data/other.yaml": "k: [unclosed\nz: 2\n",
         },
+        facts={"role": "web"},
     )
 
     with caplog.at_level(logging.ERROR):
-        rc = main(["good", "-c", str(root / "hiera.yaml")])
+        rc = main(
+            [
+                "good",
+                "--hiera_config",
+                str(root / "hiera.yaml"),
+                "--facts",
+                str(root / "facts.yaml"),
+            ]
+        )
 
     assert rc == 2
     message = _error_records(caplog)[-1].getMessage()
@@ -560,10 +752,19 @@ def test_directory_config_exit_2(make_tree, monkeypatch, caplog):
     root = make_tree(
         {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
         files={"data/one.yaml": "k: v\n"},
+        facts={"role": "web"},
     )
 
     with caplog.at_level(logging.ERROR):
-        rc = main(["k", "-c", str(root / "data")])
+        rc = main(
+            [
+                "k",
+                "--hiera_config",
+                str(root / "data"),
+                "--facts",
+                str(root / "facts.yaml"),
+            ]
+        )
 
     assert rc == 2
     assert "Is a directory" in _error_records(caplog)[-1].getMessage()
@@ -581,7 +782,15 @@ def test_unexpected_exception_exit_2(hiera_root, monkeypatch, caplog, exc_type):
     monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
     with caplog.at_level(logging.ERROR):
-        rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
+        rc = main(
+            [
+                "k",
+                "--hiera_config",
+                str(hiera_root / "hiera.yaml"),
+                "--facts",
+                str(hiera_root / "facts.yaml"),
+            ]
+        )
 
     assert rc == 2
     records = _error_records(caplog)
@@ -601,7 +810,16 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
     monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
     with caplog.at_level(logging.ERROR):
-        rc = main(["k", "-c", str(hiera_root / "hiera.yaml"), "-v"])
+        rc = main(
+            [
+                "k",
+                "--hiera_config",
+                str(hiera_root / "hiera.yaml"),
+                "--facts",
+                str(hiera_root / "facts.yaml"),
+                "-v",
+            ]
+        )
 
     assert rc == 2
     assert _error_records(caplog)[-1].exc_info is not None
@@ -619,8 +837,10 @@ def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
         rc = main(
             [
                 "app::name",
-                "-c",
+                "--hiera_config",
                 str(hiera_root / "hiera.yaml"),
+                "--facts",
+                str(hiera_root / "facts.yaml"),
                 "-s",
                 "environment=production",
                 "--render-as",
@@ -638,7 +858,15 @@ def test_plain_keyerror_is_not_a_miss(hiera_root, monkeypatch):
 
     monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
 
-    rc = main(["k", "-c", str(hiera_root / "hiera.yaml")])
+    rc = main(
+        [
+            "k",
+            "--hiera_config",
+            str(hiera_root / "hiera.yaml"),
+            "--facts",
+            str(hiera_root / "facts.yaml"),
+        ]
+    )
 
     assert rc == 2
 
@@ -647,10 +875,20 @@ def test_recursive_data_exits_2_without_traceback(make_tree):
     root = make_tree(
         {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
         files={"data/one.yaml": "a: \"%{hiera('b')}\"\nb: \"%{hiera('a')}\"\n"},
+        facts={"role": "web"},
     )
 
     proc = subprocess.run(
-        [sys.executable, "-m", "hyera", "a", "-c", str(root / "hiera.yaml")],
+        [
+            sys.executable,
+            "-m",
+            "hyera",
+            "a",
+            "--hiera_config",
+            str(root / "hiera.yaml"),
+            "--facts",
+            str(root / "facts.yaml"),
+        ],
         capture_output=True,
         text=True,
         timeout=120,
@@ -669,8 +907,539 @@ def test_hocon_duration_survives_yaml_output(make_tree, capsys):
             "hierarchy": [{"name": "c", "path": "common.conf"}],
         },
         files={"data/common.conf": "dur = 10s\n"},
+        facts={"role": "web"},
     )
-    rc = main(["dur", "-c", str(root / "hiera.yaml"), "--render-as", "yaml"])
+    rc = main(
+        [
+            "dur",
+            "--hiera_config",
+            str(root / "hiera.yaml"),
+            "--facts",
+            str(root / "facts.yaml"),
+            "--render-as",
+            "yaml",
+        ]
+    )
     assert rc == 0
     out = capsys.readouterr().out
     assert out.splitlines()[0] == "--- 10s"
+
+
+# ---------------------------------------------------------------------------
+# puppet lookup's flag set: merge validation and deep-merge options, --type,
+# scope/facts/node, layers (--environment*/--modulepath*), --strict,
+# --explain/--explain-options, and the flags this CLI removed outright.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def flags_root(make_tree):
+    """A two-level hierarchy (``high`` over ``low``) plus a staging
+    environment, a ``mymod`` module reachable from two different module
+    roots, and three alternate facts files -- everything the flag tests
+    below need from one tree."""
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "high", "path": "high.yaml"},
+                {"name": "low", "path": "low.yaml"},
+            ]
+        },
+        files={
+            "data/high.yaml": """\
+                h:
+                  items: [d, "--b"]
+                  rows:
+                    - x: 1
+                v: "%{role}-%{facts.os.family}|%{environment}|%{server_facts.environment}|[%{trusted.certname}]|%{server_facts.serverversion}"
+                u: "[%{nosuch}]"
+                str: one
+                int0: 0
+                sv: "%{n}|%{b}|%{o.x}|%{l}"
+                """,
+            "data/low.yaml": """\
+                h:
+                  items: [b, a, c]
+                  rows:
+                    - y: 2
+                """,
+            "empty_facts.yaml": "{}\n",
+            "partial_facts.yaml": "fqdn: a.example.com\n",
+            "environments/staging/hiera.yaml": """\
+                version: 5
+                defaults: {datadir: data, data_hash: yaml_data}
+                hierarchy: [{name: e, path: env.yaml}]
+                """,
+            "environments/staging/data/env.yaml": "envkey: fromstaging\n",
+            "modules/mymod/hiera.yaml": """\
+                version: 5
+                defaults: {datadir: data, data_hash: yaml_data}
+                hierarchy: [{name: m, path: common.yaml}]
+                """,
+            "modules/mymod/data/common.yaml": "mymod::k: frommodule\n",
+            "othermods/mymod/hiera.yaml": """\
+                version: 5
+                defaults: {datadir: data, data_hash: yaml_data}
+                hierarchy: [{name: m, path: common.yaml}]
+                """,
+            "othermods/mymod/data/common.yaml": "mymod::k: fromother\n",
+        },
+        facts={"role": "web", "os": {"family": "RedHat"}},
+    )
+    (root / "empty_environments").mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _flags_argv(flags_root, *extra):
+    return [
+        "--hiera_config",
+        str(flags_root / "hiera.yaml"),
+        "--facts",
+        str(flags_root / "facts.yaml"),
+        "--node",
+        "web01.example.com",
+    ] + list(extra)
+
+
+_DEEP_ONLY_TEXT = (
+    "The options --knock-out-prefix, --sort-merged-arrays, and "
+    "--merge-hash-arrays are only available with '--merge deep'"
+)
+_MERGE_UNKNOWN_TEXT = (
+    "The --merge option only accepts 'first', 'hash', 'unique', or 'deep'"
+)
+
+
+@pytest.mark.parametrize(
+    "flag", ["--knock-out-prefix=--", "--sort-merged-arrays", "--merge-hash-arrays"]
+)
+def test_deep_only_options_need_merge_deep(flag, flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "--merge", "hash", flag, "h"))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == _DEEP_ONLY_TEXT
+
+
+def test_deep_only_option_without_merge(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "--knock-out-prefix", "x", "h"))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == _DEEP_ONLY_TEXT
+
+
+@pytest.mark.parametrize(
+    "value", ["bogus", "reverse_deep", "unconstrained_deep", "array", "set"]
+)
+def test_merge_rejects_unknown(value, flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "--merge", value, "h"))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == _MERGE_UNKNOWN_TEXT
+
+
+@pytest.mark.parametrize(
+    "case,flags,expected",
+    [
+        ("plain", [], '{"items":["b","a","c","d","--b"],"rows":[{"y":2},{"x":1}]}'),
+        (
+            "knockout",
+            ["--knock-out-prefix", "--"],
+            '{"items":["a","c","d"],"rows":[{"y":2},{"x":1}]}',
+        ),
+        (
+            "hash_arrays",
+            ["--merge-hash-arrays"],
+            '{"items":["b","a","c","d","--b"],"rows":[{"y":2,"x":1}]}',
+        ),
+        (
+            "all_three",
+            ["--knock-out-prefix", "--", "--merge-hash-arrays"],
+            '{"items":["a","c","d"],"rows":[{"y":2,"x":1}]}',
+        ),
+    ],
+)
+def test_deep_merge_flags(case, flags, expected, flags_root, capsys):
+    rc = main(
+        _flags_argv(flags_root, "--merge", "deep", *flags, "--render-as", "json", "h")
+    )
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == expected
+
+
+def test_first_found_of_several_keys(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "nope", "str", "int0", "--render-as", "s"))
+    assert rc == 0
+    assert capsys.readouterr().out == "one\n"
+
+
+def test_default_with_several_keys(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "nope", "nope2", "--default", "x"))
+    assert rc == 0
+    assert capsys.readouterr().out == "--- x\n"
+
+
+def test_default_with_unique_merge(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "--merge", "unique", "--default", "x", "nope"))
+    assert rc == 0
+    assert capsys.readouterr().out == "--- x\n"
+
+
+def test_type_asserts_found_value(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "str", "--type", "Integer"))
+    assert rc == 2
+    assert (
+        "Found value has wrong type, expects an Integer value, got String"
+        in _error_records(caplog)[-1].getMessage()
+    )
+
+
+def test_type_asserts_default(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            _flags_argv(flags_root, "nope", "--type", "Integer", "--default", "3")
+        )
+    assert rc == 2
+    assert (
+        "Default value has wrong type, expects an Integer value, got String"
+        in _error_records(caplog)[-1].getMessage()
+    )
+
+
+def test_type_syntax_error_before_lookup(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "nope", "--type", "Integer["))
+    assert rc == 2  # not 1: a syntax error is never a plain miss
+    assert "Syntax error at end of input" in _error_records(caplog)[-1].getMessage()
+
+
+def test_no_keys(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == "No keys were given to lookup."
+
+
+def test_scope_variables(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "v", "--render-as", "s"))
+    assert rc == 0
+    assert capsys.readouterr().out == "web-RedHat|production|production|[]|8.10.0\n"
+
+
+def test_environment_flag_sets_scope(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--environment",
+            "staging",
+            "--environmentpath",
+            str(flags_root / "environments"),
+            "v",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "web-RedHat|staging|staging|[]|8.10.0\n"
+
+
+def test_environment_layer(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--environment",
+            "staging",
+            "--environmentpath",
+            str(flags_root / "environments"),
+            "envkey",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "fromstaging\n"
+
+
+def test_missing_environment_exit_2(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            _flags_argv(
+                flags_root,
+                "--environment",
+                "nosuch",
+                "--environmentpath",
+                str(flags_root / "environments"),
+                "str",
+            )
+        )
+    assert rc == 2
+    message = _error_records(caplog)[-1].getMessage()
+    assert "Could not find a directory environment named 'nosuch'" in message
+    assert "Does the directory exist?" in message
+
+
+def test_missing_production_environment_is_skipped(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--environmentpath",
+            str(flags_root / "empty_environments"),
+            "str",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "one\n"
+
+
+def test_module_layer_from_basemodulepath(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--basemodulepath",
+            str(flags_root / "modules"),
+            "mymod::k",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "frommodule\n"
+
+
+def test_modulepath_overrides_basemodulepath(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--basemodulepath",
+            str(flags_root / "modules"),
+            "--modulepath",
+            str(flags_root / "othermods"),
+            "mymod::k",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "fromother\n"
+
+
+def _warning_records(caplog):
+    return [
+        r
+        for r in caplog.records
+        if r.name == "hyera._scope" and r.levelno == logging.WARNING
+    ]
+
+
+def test_strict_modes_off(flags_root, capsys, caplog):
+    with caplog.at_level(logging.WARNING):
+        rc = main(_flags_argv(flags_root, "--strict", "off", "u", "--render-as", "s"))
+    assert rc == 0
+    assert capsys.readouterr().out == "[]\n"
+    assert not _warning_records(caplog)
+
+
+def test_strict_modes_warning(flags_root, capsys, caplog):
+    with caplog.at_level(logging.WARNING):
+        rc = main(
+            _flags_argv(flags_root, "--strict", "warning", "u", "--render-as", "s")
+        )
+    assert rc == 0
+    assert capsys.readouterr().out == "[]\n"
+    assert any(
+        "Undefined variable 'nosuch'" in r.getMessage()
+        for r in _warning_records(caplog)
+    )
+
+
+def test_strict_modes_error(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "--strict", "error", "u", "--render-as", "s"))
+    assert rc == 2
+    assert "Undefined variable 'nosuch'" in _error_records(caplog)[-1].getMessage()
+
+
+def test_scope_flag_values_are_yaml(flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root,
+            "--scope",
+            "n=0",
+            "--scope",
+            "b=false",
+            "--scope",
+            "o.x=1",
+            "--scope",
+            "l=[a,b]",
+            "sv",
+            "--render-as",
+            "s",
+        )
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == '0|false|1|["a", "b"]\n'
+
+
+@pytest.mark.parametrize(
+    "case,scope_arg",
+    [("noequals", "noequals"), ("eqx", "=x"), ("nested-under-scalar", None)],
+)
+def test_scope_flag_errors(case, scope_arg, flags_root, caplog):
+    if case == "nested-under-scalar":
+        args = _flags_argv(flags_root, "--scope", "n=1", "--scope", "n.x=2", "str")
+    else:
+        args = _flags_argv(flags_root, "--scope", scope_arg, "str")
+    with caplog.at_level(logging.ERROR):
+        rc = main(args)
+    assert rc == 2
+
+
+def test_empty_facts_file_exit_2(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            [
+                "--hiera_config",
+                str(flags_root / "hiera.yaml"),
+                "--facts",
+                str(flags_root / "empty_facts.yaml"),
+                "--node",
+                "web01.example.com",
+                "str",
+            ]
+        )
+    assert rc == 2
+    assert (
+        _error_records(caplog)[-1].getMessage()
+        == "No facts available for target node: web01.example.com"
+    )
+
+
+def test_facts_file_error_exit_2(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            [
+                "--hiera_config",
+                str(flags_root / "hiera.yaml"),
+                "--facts",
+                str(flags_root / "partial_facts.yaml"),
+                "--node",
+                "web01.example.com",
+                "str",
+            ]
+        )
+    assert rc == 2
+    assert "they must all be overridden" in _error_records(caplog)[-1].getMessage()
+
+
+def test_hiera_config_defaults_to_cwd_file(flags_root, monkeypatch, capsys):
+    monkeypatch.chdir(flags_root)
+    rc = main(
+        [
+            "--facts",
+            str(flags_root / "facts.yaml"),
+            "--node",
+            "n",
+            "str",
+            "--render-as",
+            "s",
+        ]
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == "one\n"
+
+
+def test_hiera_config_default_falls_back_to_puppet_default(
+    make_tree, monkeypatch, capsys
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "common", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+        facts={"role": "web"},
+    )
+    monkeypatch.chdir(root)
+    rc = main(["--facts", "facts.yaml", "--node", "n", "k", "--render-as", "s"])
+    assert rc == 0
+    assert capsys.readouterr().out == "v\n"
+
+
+@pytest.mark.parametrize(
+    "flag",
+    ["-c", "--config", "--deep", "--knockout-prefix", "--compile", "--trusted"],
+)
+def test_removed_flags_rejected(flag, flags_root):
+    with pytest.raises(SystemExit) as exc:
+        main(_flags_argv(flags_root, flag, "x", "str"))
+    assert exc.value.code == 2
+
+
+def test_keys_after_double_dash(flags_root, capsys):
+    # Everything after a bare "--" is treated as keys (Puppet's own
+    # convention), so "--render-as s" here never reaches the option parser
+    # and the default (yaml) format applies.
+    rc = main(_flags_argv(flags_root, "--", "str"))
+    assert rc == 0
+    assert capsys.readouterr().out == "--- one\n"
+
+
+# -- --explain / --explain-options ------------------------------------------
+
+
+def _hiera_for(flags_root):
+    return hyera.Hiera(
+        str(flags_root / "hiera.yaml"),
+        scope=hyera.Scope(
+            facts={"role": "web", "os": {"family": "RedHat"}},
+            server_facts={"serverversion": "8.10.0"},
+            node_name="web01.example.com",
+        ),
+    )
+
+
+def test_explain_text(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "--explain", "str"))
+    assert rc == 0
+    expected = _hiera_for(flags_root).explain("str").text()
+    if not expected.endswith("\n"):
+        expected += "\n"
+    assert capsys.readouterr().out == expected
+
+
+def test_explain_miss_exits_0(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "--explain", "nope"))
+    assert rc == 0
+
+
+def test_explain_json(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "--explain", "--render-as", "json", "nope"))
+    assert rc == 0
+    out = capsys.readouterr().out
+    expected = json.loads(json.dumps(_hiera_for(flags_root).explain("nope").to_hash()))
+    assert json.loads(out) == expected
+
+
+def test_explain_options_without_key(flags_root, capsys):
+    rc = main(_flags_argv(flags_root, "--explain-options"))
+    assert rc == 0
+    expected = _hiera_for(flags_root).explain("__global__", explain_options=True).text()
+    if not expected.endswith("\n"):
+        expected += "\n"
+    assert capsys.readouterr().out == expected
+
+
+def test_explain_config_error_exit_2(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            [
+                "--hiera_config",
+                str(flags_root / "nosuch.yaml"),
+                "--facts",
+                str(flags_root / "facts.yaml"),
+                "--node",
+                "web01.example.com",
+                "--explain",
+                "str",
+            ]
+        )
+    assert rc == 2

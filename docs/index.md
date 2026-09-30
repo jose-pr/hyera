@@ -58,6 +58,11 @@ classes:
   - monitoring
 ```
 
+```yaml
+# facts.yaml
+role: web
+```
+
 ```pycon
 >>> from hyera import Hiera, Scope
 >>> h = Hiera("hiera.yaml", scope=Scope(environment="production"))
@@ -68,7 +73,7 @@ classes:
 ```
 
 ```console
-$ python -m hyera classes --config hiera.yaml --scope environment=production --merge unique --render-as json
+$ python -m hyera classes --hiera_config hiera.yaml --facts facts.yaml --environment production --merge unique --render-as json
 ["monitoring","base"]
 ```
 

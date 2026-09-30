@@ -176,8 +176,17 @@ def test_cli_recursion_exits_2(make_tree, caplog):
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
         files={"data/common.yaml": "rec: \"%{lookup('rec')}\"\n"},
+        facts={"role": "web"},
     )
-    rc = _cli_main(["rec", "-c", str(root / "hiera.yaml")])
+    rc = _cli_main(
+        [
+            "rec",
+            "--hiera_config",
+            str(root / "hiera.yaml"),
+            "--facts",
+            str(root / "facts.yaml"),
+        ]
+    )
     assert rc == 2
     assert (
         "Recursive lookup detected in [rec]" in _error_records(caplog)[-1].getMessage()

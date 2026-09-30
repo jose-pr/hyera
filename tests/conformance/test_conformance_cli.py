@@ -1,9 +1,8 @@
 """Replay the recorded Puppet goldens against hyera's CLI, in-process.
 
-``hyera.cli.main`` does not accept ``puppet lookup``'s own flags today, so
-every query here is a strict xfail under `_ours.CLI_CHANNEL_DIVERGENCE`
-until the CLI learns them (the change that does sets the constant to
-``None`` in the same commit it removes this file's blanket marker).
+``hyera.cli.main`` accepts ``puppet lookup``'s own flags, so every CLI
+query replays the same golden argv the API channel does. A per-query
+divergence marker still applies to both channels equally.
 """
 
 import difflib
@@ -12,8 +11,15 @@ import pytest
 
 pytest.importorskip("duho")
 
+import _golden
 from _golden import case_dirs, load_case, query_id, read_golden
 from _ours import CLI_CHANNEL_DIVERGENCE, canonical, expected, run_cli, run_cli_explain
+
+
+def test_cli_server_version_matches_oracle():
+    import hyera.cli
+
+    assert hyera.cli._PUPPET_VERSION == _golden.ORACLE["puppet"]
 
 
 def _cli_params():

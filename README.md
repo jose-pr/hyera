@@ -356,35 +356,54 @@ is the same tree, keyed the way `--render-as json --explain` renders it.
 
 ## Command line
 
-```sh
-hyera KEY [options]
+`hyera` accepts `puppet lookup`'s own flags:
 
-hyera ntp::servers --config hiera.yaml --scope environment=production
-hyera classes --merge unique --render-as json
-hyera missing::key --default '(none)'
+```sh
+hyera [options] KEY [KEY ...]
+
+hyera --hiera_config hiera.yaml --facts facts.yaml --node web01.example.com ntp::servers
+hyera --merge deep --knock-out-prefix=-- --render-as json profile::settings
+hyera --explain ntp::servers
+python -m hyera --hiera_config hiera.yaml --facts facts.yaml ntp::servers
 ```
 
-Options: `--config/-c`, `--scope key=value` (repeatable), `--merge
-first|unique|hash|deep` (`array`/`set` alias `unique`), `--deep`,
-`--knockout-prefix`, `--render-as s|json|yaml` (default `yaml`), `--default`,
-plus duho's `-v/-q/--loglevel`. Without `--merge`, the data's
-`lookup_options` decides; an explicit `--merge`, `first` included,
-overrides it.
+Options, grouped:
+
+- **lookup**: one or more `KEY`s (the first one found wins); `--merge
+  first|unique|hash|deep`; `--knock-out-prefix`, `--sort-merged-arrays` and
+  `--merge-hash-arrays` (only with `--merge deep`); `--type` (asserts the
+  found value and `--default` against a Puppet type expression); `--default`;
+  `--explain`/`--explain-options`.
+- **facts and scope**: `--facts FILE` (`.json`/`.yaml`/`.yml`, or any other
+  name tried as JSON then YAML); `--node NAME` (used in messages only, sets
+  no fact); `--scope NAME=VALUE`/`-s` (repeatable; VALUE is YAML, a dotted
+  NAME builds a hash — hyera's one flag with no `puppet lookup` counterpart).
+- **settings**: `--hiera_config PATH` (default `./hiera.yaml` if present,
+  else Puppet's built-in default configuration); `--environment NAME`;
+  `--environmentpath`/`--modulepath`/`--basemodulepath` (each a list of
+  paths separated by the OS path separator); `--codedir`; `--strict
+  off|warning|error` (default `warning`).
+- **output**: `--render-as s|json|yaml` (default `yaml`, or `s` while
+  explaining), plus duho's `-v/-q/--loglevel`.
+
+Without `--merge`, the data's `lookup_options` decides; an explicit
+`--merge`, `first` included, overrides it. Exit codes: `0` found (or
+`--default`/`--explain` printed), `1` the key was not found, `2` any other
+error — a usage problem, a bad config or data file, an unrenderable value,
+or a reader that closes the output early — reported as one stderr line
+(`-v` or `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup` exits `1`
+for both a miss and an error, printing nothing for the error case; hyera's
+CLI tells the two apart. See "Differences from Puppet" below for what this
+CLI does not (yet) support.
 
 The CLI needs the `cli` extra (`pip install "hyera[cli]"`); without it the
 command prints that hint and exits 2.
 
-The CLI is built for unattended use: no interactive prompts, deterministic
-output, and meaningful exit codes: `0` found (or `--default` printed), `1`
-key not found, `2` any other error — reported as one stderr line (`-v` or
-`DUHO_TRACEBACK=1` adds the traceback). `puppet lookup` exits `1` for both a
-miss and an error, printing nothing for the error case; hyera's CLI tells
-the two apart.
-
 `HYERA_MCP=stdio hyera` runs the same command as an MCP server over
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
-`hyera`, whose arguments are the command-line fields (`key`, `config`,
-`scope`, `merge`, ...) and whose result is what the command would print.
+`hyera`, whose arguments are the command-line fields (`keys`, `hiera_config`,
+`facts`, `scope`, `merge`, ...) and whose result is what the command would
+print.
 
 ## sops and unattended runs
 
@@ -559,6 +578,18 @@ with one deliberate exception:
   formats do; Puppet prints the plaintext.
 - **`--render-as s` prints hashes in Ruby 3.2's form** (`{"a"=>1}`), as
   Puppet 8's packages do.
+- **`--scope NAME=VALUE` sets node parameters**, which `puppet lookup`
+  takes from the node classifier instead.
+- **Facts come only from `--facts`**; `puppet lookup` also reads the local
+  node's facter facts or stored facts. A `--facts` file with no facts is
+  rejected, as in Puppet.
+- **Without `--hiera_config`, `./hiera.yaml` is used when present,
+  otherwise Puppet's built-in default configuration; a named file that
+  does not exist is an error.**
+- **`$server_facts` holds `serverversion` (`8.10.0`) and `environment`
+  only.**
+- **`environment.conf` is not read; `--compile` and `--trusted` are not
+  supported.**
 
 ## Notes
 

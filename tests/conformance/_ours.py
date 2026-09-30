@@ -17,10 +17,9 @@ from hyera.cli import main as _cli_main
 import _golden
 from _golden import SENSITIVE_JSON
 
-#: Strict xfail reason for every CLI-channel query until hyera's CLI
-#: accepts puppet lookup's own flags. Set to None in the same commit that
-#: teaches the CLI those flags and removes this marker.
-CLI_CHANNEL_DIVERGENCE = "spec-layers-backends/cli-flag-parity"
+#: None: the CLI accepts puppet lookup's flags; per-query markers apply to
+#: both channels.
+CLI_CHANNEL_DIVERGENCE = None
 
 #: puppet_args flags this adapter understands well enough to translate.
 _KNOWN_PUPPET_FLAGS = ("--strict", "--environment", "--modulepath")
@@ -252,11 +251,7 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one query through ``hyera.cli.main``, invoked in-process.
 
     Passes the golden's own recorded ``puppet lookup`` argv straight to our
-    CLI. Today that argv (``--hiera_config``/``--facts``/``--node``/
-    ``--render-as``) is refused by argparse before ``Lookup.__call__`` runs,
-    so this always ends in the ``usage`` branch -- which is why every
-    CLI-channel query carries `CLI_CHANNEL_DIVERGENCE` until a later plan
-    teaches the CLI Puppet's own flags.
+    CLI.
     """
     result = golden["results"][_golden.query_id(query)]
     argv = [
@@ -285,6 +280,15 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
     if rc == 0:
         return {"status": "found", "value": json.loads(text) if text.strip() else None}
     if rc == 1:
+        # Mirrors run_api's own name-list special case: record.py's
+        # "not_found" heuristic matches only Puppet's *singular* miss
+        # message ("the name"), so a multi-name miss ("any of the names
+        # [...]") was recorded as a generic "error" with the --explain
+        # message instead, even though both channels agree the lookup
+        # simply misses every name (rc 1 here, LookupError there).
+        key = query.get("key")
+        if isinstance(key, (list, tuple)) and len(key) != 1:
+            return {"status": "error"}
         return {"status": "not_found"}
     if rc == 2:
         return {"status": "error"}
@@ -295,10 +299,6 @@ def run_cli_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one ``explain:`` query through ``hyera.cli.main``, in-process,
     twice: once for the tree (``--render-as json``) and once for the text
     (``--render-as s``), the same way ``record.py`` calls real Puppet twice.
-
-    Pre-wired under `CLI_CHANNEL_DIVERGENCE` like every other CLI-channel
-    query -- teaching the CLI these flags only needs to add them and flip
-    the constant, not touch this function.
     """
     result = golden["results"][_golden.query_id(query)]
     base_argv = [

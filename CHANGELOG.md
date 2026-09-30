@@ -92,6 +92,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.error`; any other error (a `--type` mismatch, an unreadable/unparsable
   data file, or a lookup error left unhandled by the *global* layer's own
   data) raises instead, exactly as `lookup()` does.
+- CLI flags from `puppet lookup`: several keys (the first one found wins);
+  `--type` (asserts the found value and `--default`); `--knock-out-prefix`,
+  `--sort-merged-arrays` and `--merge-hash-arrays` (only with `--merge
+  deep`); `--facts FILE`; `--node`; `--environment`, `--environmentpath`,
+  `--modulepath` and `--basemodulepath` (global, environment and module
+  layers); `--strict off|warning|error` (default `warning`); `--explain`
+  and `--explain-options`.
 
 ### Changed
 
@@ -214,6 +221,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   collections (`{"a"=>1, "b"=>[nil]}`). `Sensitive` values print as
   `Sensitive [value redacted]` in every format. Output is UTF-8 with LF
   line ends whatever the console or locale encoding.
+- `--config`/`-c` is now `--hiera_config`. Without it, `./hiera.yaml` is
+  used when it exists, otherwise Puppet's built-in default configuration
+  (`data/common.yaml`). `--scope NAME=VALUE` values are YAML (`n=0` is an
+  Integer, `l=[a,b]` an Array) and a dotted NAME builds a hash
+  (`os.family=RedHat`). `--merge` accepts only `first`, `unique`, `hash`
+  and `deep`; anything else exits 2 with Puppet's message.
 
 ### Removed
 
@@ -233,6 +246,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Hiera.cache`: call `clear_cache()` to drop cached data.
 - The CLI's `--output`/`-o` and the `raw` format: use `--render-as` (`raw`
   is `s`).
+- The CLI's `--deep` (use `--merge deep`), `--merge array`/`set` (use
+  `unique`) and `--knockout-prefix` (use `--knock-out-prefix`).
 
 ### Fixed
 
