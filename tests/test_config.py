@@ -7,6 +7,7 @@ kind selection is a later addition here, once that phase lands.
 """
 
 import copy
+import io
 from pathlib import Path
 
 import pytest
@@ -242,6 +243,26 @@ def test_dict_config_error_has_no_line():
     assert exc.value.path is None
     assert exc.value.line is None
     assert "<dict>" in str(exc.value)
+
+
+def test_file_like_config_error_has_line_but_no_path():
+    # A file-like source (unlike a real path) has readable text -- so a
+    # line number is still found -- but no filesystem path of its own;
+    # _config_error's "line but no path" suffix is distinct from either of
+    # the two cases above.
+    stream = io.StringIO(
+        "version: 5\n"
+        "defaults: {datadir: data, data_hash: yaml_data}\n"
+        "hierarchy:\n"
+        "  - {name: common, pathz: common.yaml}\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(stream)
+
+    assert exc.value.path is None
+    assert exc.value.line == 4
+    assert str(exc.value).endswith("(line: 4)")
 
 
 def test_default_hierarchy_entries_are_validated():

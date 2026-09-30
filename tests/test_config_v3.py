@@ -16,6 +16,7 @@ Ports ``HieraConfig.create``'s dispatch, ``HieraConfigV3``/``HieraConfigV4``'s
 """
 
 import copy
+import io
 import logging
 import re
 
@@ -104,6 +105,56 @@ from hyera._yaml_loader import RubySymbol
             {"backends": ["yaml"], "hierarchy": ["common"], "logger": ""},
             r"entry 'logger' expects a String\[1\] value, got String",
         ),
+        (
+            {"backends": ["yaml"], "hierarchy": ["common"], "logger": 5},
+            r"entry 'logger' expects a String value, got Integer",
+        ),
+        (
+            {"backends": ["yaml"], "hierarchy": ["", "common"]},
+            r"entry 'hierarchy' variant 1 index 0 expects a String\[1\] value, got String",
+        ),
+        (
+            {
+                "backends": ["yaml"],
+                "hierarchy": ["common"],
+                "deep_merge_options": "nope",
+            },
+            r"entry 'deep_merge_options' expects a Hash value, got String",
+        ),
+        (
+            {
+                "backends": ["yaml"],
+                "hierarchy": ["common"],
+                "deep_merge_options": {5: True},
+            },
+            r"entry 'deep_merge_options' key of entry '5' expects a String\[1\] "
+            r"value, got Integer",
+        ),
+        (
+            {
+                "backends": ["yaml"],
+                "hierarchy": ["common"],
+                "deep_merge_options": {"": True},
+            },
+            r"entry 'deep_merge_options' key of entry '' expects a String\[1\] "
+            r"value, got String",
+        ),
+        (
+            {"backends": ["yaml"], "yaml": {"datadir": 5}, "hierarchy": ["common"]},
+            r"entry 'yaml' entry 'datadir' expects a String value, got Integer",
+        ),
+        (
+            {"backends": ["yaml"], "yaml": {5: "x"}, "hierarchy": ["common"]},
+            r"entry 'yaml' key of entry '5' expects a String\[1\] value, got Integer",
+        ),
+        (
+            {"backends": ["yaml"], "hierarchy": ["common"], "logger": None},
+            r"entry 'logger' expects a String value, got Undef",
+        ),
+        (
+            {"backends": ["yaml"], "hierarchy": {}},
+            r"entry 'hierarchy' expects a value of type String or Array, got Hash",
+        ),
     ],
     ids=[
         "unknown-top-key",
@@ -118,11 +169,28 @@ from hyera._yaml_loader import RubySymbol
         "deep-merge-options-type",
         "backends-integer",
         "logger-empty",
+        "logger-integer",
+        "hierarchy-empty-item",
+        "deep-merge-options-not-a-hash",
+        "deep-merge-options-integer-key",
+        "deep-merge-options-empty-key",
+        "backend-conf-datadir-integer",
+        "backend-conf-integer-key",
+        "logger-undef",
+        "hierarchy-empty-hash",
     ],
 )
 def test_v3_config_schema_errors(config, match):
     with pytest.raises(ConfigError, match=match):
         Hiera(config)
+
+
+def test_v3_bare_string_backends_and_hierarchy_are_valid():
+    # `backends`/`hierarchy` as a bare (non-empty) string, not a list, is
+    # Puppet's own Variant[String[1], Array[String[1]]] shorthand -- no
+    # mismatch at all, and `_v3_backend_names` treats it as one name.
+    with pytest.raises(KeyNotFoundError):
+        Hiera({"backends": "yaml", "hierarchy": "common"}).lookup("k")
 
 
 def test_v3_mismatches_in_puppet_order():
@@ -353,6 +421,19 @@ def test_v3_unknown_backend_raises(make_tree, name):
         ConfigError, match="Hiera 3 backend '{}' is not available".format(name)
     ):
         Hiera(str(root / "hiera.yaml"))
+
+
+def test_v3_unknown_backend_via_file_like_source_has_line_but_no_path():
+    # _config_error's own "line but no path" branch (distinct from
+    # _type_error's, which v5 validation uses instead): a file-like source
+    # has readable text (so a line is still found via _find_line_matching)
+    # but no filesystem path of its own.
+    stream = io.StringIO("backends: unknown_v3_backend\nhierarchy:\n  - common\n")
+    with pytest.raises(ConfigError) as exc:
+        Hiera(stream)
+    assert exc.value.path is None
+    assert exc.value.line == 1
+    assert str(exc.value).endswith("(line: 1)")
 
 
 def test_v3_registered_python_backend(make_tree, monkeypatch):
