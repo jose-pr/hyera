@@ -237,9 +237,19 @@ since Hiera data is dynamic.
     merge="first")`); combining an options dict (either form) with another
     positional argument or an option keyword raises `TypeError` — `block`
     is the one exception, accepted alongside either dict form. `name`: a
-    `str`, or a `list` of `str` tried in order (a `tuple` raises
-    `TypeError`: `h["a", "b"]` must mean `(name, value_type)`, so a name
-    list has to be a `list`). `value_type`: a Puppet type expression string
+    `str`, or a `list` of `str`/tuple-path (below) tried in order. A
+    non-empty `tuple` is an exact key path, not parsed at all: element 0
+    is the root key, every later element a dig segment (`str` a hash key,
+    `int` an array index, never `bool`), each taken verbatim — no dot
+    splitting, no quote syntax, no whitespace stripping.
+    `h.lookup(("a.b", "c", 0))` resolves exactly as `h.lookup('"a.b".c.0')`
+    does — same root key, same `lookup_options`, same merge, same
+    sub-lookup errors — including a path a quoted string cannot spell (a
+    segment holding both quote kinds); its `KeyNotFoundError`/explain/debug
+    text renders the same dotted form. `h["a", "b"]` still means
+    `(name, value_type)`, unaffected: a tuple *subscript* keeps unpacking
+    into positional arguments (below), so a path there is
+    `h[("a.b", "c"),]`. `value_type`: a Puppet type expression string
     (`"Integer"`, `"Optional[String]"`; see "Types" below); every candidate
     value (an override, a found value, a default) is asserted against it,
     raising `HieraLookupError` on a mismatch with Puppet's own subject text
@@ -267,9 +277,11 @@ since Hiera data is dynamic.
     `block` → `default_value` → `KeyNotFoundError` (also a `KeyError`),
     naming every name that was tried ("… for the name 'x'" for one, "… for
     any of the names [...]" otherwise, including an empty list). A
-    non-`str`/non-`list` `name`, a `tuple`, an unparsable `value_type`'s
-    call shape, an empty-string `merge`, a non-callable `block`, or an
-    unknown/malformed option raises `TypeError`.
+    non-`str`/non-`list`/non-`tuple` `name`, a malformed tuple path (empty,
+    a non-`str` root, or a `bool`/other element past the root), an
+    unparsable `value_type`'s call shape, an empty-string `merge`, a
+    non-callable `block`, or an unknown/malformed option raises
+    `TypeError`.
   - Also reachable as `h(...)` (`.__call__(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None)`,
     identical to `.lookup(...)`) and `h[...]` (`.__getitem__(item)`: a
     `tuple` unpacks into `.lookup(*item)`, anything else becomes the sole

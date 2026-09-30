@@ -38,7 +38,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   five `lookup()` call forms; option names also work as keywords. A
   `Hiera` is callable as `lookup`, `h[...]` takes the same arguments, and
   `name in h` tests for a value. `value_type` takes a Puppet type string;
-  a list of names returns the first one found.
+  a list of names returns the first one found. `name` (or a name-list
+  entry) may also be a non-empty tuple: an exact key path taken verbatim
+  (no dot splitting, no quote syntax), resolving exactly as the matching
+  quoted dotted string would -- `h.lookup(("a.b", "c", 0))` is
+  `h.lookup('"a.b".c.0')`.
 - `Hiera.dig(*keys, ...)`, Puppet's `dig()` over a looked-up value.
 - `Hiera.get(dotted, default_value=None, block=None, ...)`, Puppet's
   `get()` with a dotted navigation string; it returns `default_value`
