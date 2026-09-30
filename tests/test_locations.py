@@ -346,6 +346,12 @@ def test_mapped_paths_collection_array(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web", "db"]}))
     assert h.lookup("k") == "web"
+    # A plain (non-hierarchy-rebuild) lookup's own Invocation has no
+    # scope_interpolations list to track -- with_local_memory_eluding's
+    # own no-op path, distinct from a hierarchy build's refs-tracking one.
+    # explain() resolves the same mapped_paths locations through
+    # without_explain() (locations are never themselves recorded).
+    assert "roles/web.yaml" in h.explain("k").text()
 
 
 def test_mapped_paths_collection_colon_prefix(make_tree):
