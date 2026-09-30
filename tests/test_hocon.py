@@ -32,11 +32,13 @@ import http.server
 import io
 import sys
 import threading
+import types
 
 import pytest
 
 from hyera import BackendError, Hiera, default_backends
 from hyera.backends import HOCONBackend, has_hocon
+from hyera.backends import _hocon as hocon_mod
 from hyera.backends._hocon import _hocon_parser
 
 
@@ -634,3 +636,217 @@ def test_adversarial_escaped_substitution_form_still_errors_by_default(
     monkeypatch.chdir(tmp_path)
     with pytest.raises(BackendError):
         HOCONBackend().loads(content)
+
+
+# -- scanner edge cases: unterminated tokens, substitutions, brackets ------
+#
+# These do not exercise the include rules themselves (covered above); they
+# exercise the scanner's own bookkeeping -- finding the end of a string,
+# skipping a `${...}` substitution, and tracking `{`/`[` nesting -- in
+# situations an include-focused test never reaches (either because the
+# scanner would already have raised before getting there, or because
+# nothing include-shaped needs to be present at all).
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_unterminated_triple_quoted_string_reaches_end_of_text(hocon_includes):
+    # No closing `"""` anywhere in the text -- `_find_hocon_string_end`
+    # must stop at end-of-text rather than scanning past it looking for a
+    # terminator that will never appear. Invalid HOCON either way; this
+    # only proves the scanner itself terminates cleanly and the eventual
+    # pyhocon parse failure surfaces as a BackendError, not some scanner-
+    # internal error.
+    with pytest.raises(BackendError):
+        HOCONBackend(hocon_includes=hocon_includes).loads('a = """abc\n')
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_uppercase_include_without_directive_argument_is_ordinary_key(
+    hocon_includes, pyhocon_tripwire
+):
+    # `INCLUDE` case-matches the keyword caselessly, but nothing
+    # directive-shaped follows it (`= 1`, not a quoted string or a
+    # `name(...)` call) -- `_hocon_directive_follows` correctly says no,
+    # and both scanners fall through to treating this as an entirely
+    # ordinary key, in either mode. Puppet's own case-sensitive match would
+    # do the same (`INCLUDE` is simply not its `include` keyword either).
+    result = HOCONBackend(hocon_includes=hocon_includes).loads(
+        "INCLUDE = 1\nplain = p\n"
+    )
+    assert result == {"INCLUDE": 1, "plain": "p"}
+    assert pyhocon_tripwire == []
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_substitution_reference_before_an_include_is_skipped(
+    hocon_includes, pyhocon_tripwire
+):
+    # A `${...}` substitution reference is skipped wholesale (up to its
+    # closing `}`) rather than scanned character by character -- this
+    # proves that skip runs at all, and that scanning is still correctly
+    # positioned to find a *real* include right after it.
+    result = HOCONBackend(hocon_includes=hocon_includes).loads(
+        'foo = 1\nx = ${foo}\ninclude "inc.conf"\nplain = p\n'
+    )
+    assert result == {"foo": 1, "x": 1, "plain": "p"}
+    assert pyhocon_tripwire == []
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_unclosed_substitution_reference_reaches_end_of_text(hocon_includes):
+    # No closing `}` anywhere in the text -- the substitution skip must
+    # stop at end-of-text rather than scanning past it. Invalid HOCON
+    # either way; this only proves the scanner itself terminates cleanly.
+    with pytest.raises(BackendError):
+        HOCONBackend(hocon_includes=hocon_includes).loads("x = ${foo\n")
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_multiline_triple_quoted_plain_include_preserves_newlines(
+    hocon_includes, pyhocon_tripwire
+):
+    # A plain quoted include's target can itself be a triple-quoted string
+    # spanning multiple lines. Blanking it out (it "contributes nothing"
+    # in either mode) must skip over the embedded newlines instead of
+    # overwriting them with spaces, so line numbers after it still line up
+    # with the original text for any later pyhocon parse error.
+    result = HOCONBackend(hocon_includes=hocon_includes).loads(
+        'include """a\nb"""\nplain = p\n'
+    )
+    assert result == {"plain": "p"}
+    assert pyhocon_tripwire == []
+
+
+def test_bare_value_position_include_without_argument_stays_literal():
+    # In value position, `include` with nothing directive-shaped after it
+    # (just end-of-line) is not defanged at all -- pyhocon's own unquoted-
+    # value grammar already treats it as an ordinary bareword, so there is
+    # nothing here that needs quoting to keep pyhocon's tokenizer from
+    # seeing a keyword.
+    result = HOCONBackend().loads("msg = foo include\n")
+    assert result == {"msg": "foo include"}
+
+
+def test_object_with_plain_include_scans_matching_close_brace(pyhocon_tripwire):
+    # The bracket-stack bookkeeping (`{`/`[` pushed, `}`/`]` popped) has to
+    # actually run and find a match on its stack -- a plain include that
+    # raises before ever reaching a closing bracket (as with the
+    # case-mismatched/space-before-paren forms above) never exercises this.
+    result = HOCONBackend(hocon_includes=False).loads(
+        'o {\n include "inc.conf"\n}\nplain = p\n'
+    )
+    assert result == {"o": {}, "plain": "p"}
+    assert pyhocon_tripwire == []
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_unbalanced_closing_brace_does_not_crash_the_scanner(hocon_includes):
+    # A stray `}` with nothing open on the bracket stack -- the scanner
+    # must not pop from an empty stack; it just leaves the stack alone and
+    # keeps going. The text is not valid HOCON either way, so this only
+    # proves the scanner survives it and the malformed input still reaches
+    # pyhocon and comes back as an ordinary BackendError.
+    with pytest.raises(BackendError):
+        HOCONBackend(hocon_includes=hocon_includes).loads("}\n")
+
+
+# -- direct unit coverage: the include-resolution backstop and the
+# private-parser-copy machinery -- paths that are either a deliberate
+# defense-in-depth backstop (never meant to fire through any text the
+# scanner above would produce) or process-global caching/build machinery,
+# neither reachable by feeding HOCON text through the public API.
+
+
+def test_guarded_hocon_classmethod_raises_when_guard_is_set():
+    calls = []
+
+    def original(cls, *args, **kwargs):
+        calls.append((args, kwargs))
+        return "ran for real"
+
+    guarded = hocon_mod._guarded_hocon_classmethod(original, "file include")
+    token = hocon_mod._HOCON_INCLUDE_GUARD.set(frozenset({"file include"}))
+    try:
+        with pytest.raises(BackendError, match="file include"):
+            guarded.__func__(object())
+    finally:
+        hocon_mod._HOCON_INCLUDE_GUARD.reset(token)
+    assert calls == []
+
+
+def test_install_hocon_include_guard_is_idempotent_for_an_explicit_module():
+    class _FakeConfigFactory:
+        parse_file = classmethod(lambda cls, *a, **kw: None)
+        parse_URL = classmethod(lambda cls, *a, **kw: None)
+
+    class _FakeConfigParser:
+        resolve_package_path = classmethod(lambda cls, *a, **kw: None)
+
+    class _FakeModule:
+        ConfigFactory = _FakeConfigFactory
+        ConfigParser = _FakeConfigParser
+
+    mod = _FakeModule()
+    hocon_mod._install_hocon_include_guard(mod)
+    assert mod._hocon_include_guard_installed is True
+    installed = _FakeConfigFactory.__dict__["parse_file"]
+
+    hocon_mod._install_hocon_include_guard(mod)  # second call must be a no-op
+
+    assert _FakeConfigFactory.__dict__["parse_file"] is installed
+
+
+def test_hocon_parser_returns_module_built_while_waiting_for_the_lock(monkeypatch):
+    # Simulates the double-checked-locking race the outer/inner
+    # `_HOCON_PARSER_MODULE is None` checks guard against: another thread
+    # finished building the module while this caller was waiting to
+    # acquire the lock, so the inner check must see it and return early
+    # instead of building a second copy.
+    sentinel = object()
+
+    class _FakeLock:
+        def __enter__(self):
+            hocon_mod._HOCON_PARSER_MODULE = sentinel
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+    monkeypatch.setattr(hocon_mod, "_HOCON_PARSER_MODULE", None)
+    monkeypatch.setattr(hocon_mod, "_HOCON_PARSER_LOCK", _FakeLock())
+
+    assert hocon_mod._hocon_parser() is sentinel
+
+
+def test_hocon_parser_requires_get_period_expr(monkeypatch):
+    pytest.importorskip("pyhocon")
+
+    class _FakeSpec:
+        loader = None
+
+    class _FakeLoader:
+        def exec_module(self, module):
+            pass  # a pyhocon old enough to lack `get_period_expr` entirely
+
+    fake_spec = _FakeSpec()
+    fake_spec.loader = _FakeLoader()
+    fake_module = types.ModuleType("pyhocon.config_parser")
+
+    monkeypatch.setattr(hocon_mod, "_HOCON_PARSER_MODULE", None)
+    monkeypatch.setattr(hocon_mod.importlib.util, "find_spec", lambda name: fake_spec)
+    monkeypatch.setattr(
+        hocon_mod.importlib.util, "module_from_spec", lambda spec: fake_module
+    )
+
+    with pytest.raises(BackendError, match="pyhocon>=0.3.60"):
+        hocon_mod._hocon_parser()
+
+
+def test_hocon_loads_reraises_a_backend_error_raised_while_parsing(monkeypatch):
+    def _boom():
+        raise BackendError("boom from parser")
+
+    monkeypatch.setattr(hocon_mod, "_hocon_parser", _boom)
+
+    with pytest.raises(BackendError, match="boom from parser"):
+        HOCONBackend().loads("k = v")
