@@ -251,33 +251,48 @@ private engine internals with no stability contract.
     `h.lookup(k, None, "hash")`; `hiera_include(k)` has no equivalent (it
     applies classes to a catalog, which hyera has no notion of) — none of
     the four are implemented as methods; use `.lookup()` directly.
-  - Gotcha: a single `Hiera` instance caches parsed file contents
-    (`.cache`, keyed by file path and the `strict` value that loaded it —
-    a YAML file's own non-hash validation is `strict`-sensitive, so the
-    same file can be cached independently under two different `strict`
-    values), resolved source-path lists (`._source_cache`) and the merged
-    `lookup_options` mapping (`._lookup_options_cache`), the latter two
-    keyed per `Scope` value — it does not notice on-disk changes after
-    first load for a given scope. A `.scoped(...)` view shares all three
-    dicts with the instance it was derived from (and with every other view
-    of the same instance), by design (see `.scoped` above) — never copy
-    them expecting isolation.
+  - Gotcha: a single `Hiera` instance caches parsed file contents (`.cache`,
+    keyed by file path and the `strict` value that loaded it — a YAML
+    file's own non-hash validation is `strict`-sensitive, so the same file
+    can be cached independently under two different `strict` values).
+    Resolved hierarchy locations are cached per the values of the
+    variables their own interpolation reads (as Puppet's
+    `scope_interpolations_stable?` — for example `%{trusted.certname}`,
+    `%{facts.os.family}`, or a `mapped_paths` collection), not per the
+    whole scope: two scopes that differ only in an unreferenced fact or
+    variable (a volatile timestamp, an unrelated top-scope value) share one
+    cached entry, while `True`, `1` and `1.0` never do. The merged
+    `lookup_options` mapping is cached per set of locations plus the
+    variables its own interpolation reads, and never cached at all when
+    that interpolation makes a sub-lookup (`%{lookup(...)}` inside a
+    `merge:` spec, say) — a sub-lookup can reach data the location set
+    alone does not account for. None of this notices an on-disk change
+    after first load for a given set of referenced values. A `.scoped(...)`
+    view shares every cache with the instance it was derived from (and with
+    every other view of the same instance), by design (see `.scoped`
+    above) — never copy them expecting isolation.
   - Gotcha: a path-configured `Hiera` holds no open file, so the config file
     can be replaced or removed on disk while the instance lives (it keeps
     what it read at construction). `Hiera` (a `.scoped(...)` view included)
     survives `copy.deepcopy` and `pickle` (a spawn-start process pool can
     receive one; a relative config path stays relative to the receiving
-    process's working directory), which copies the parsed-data cache too,
-    sops-decrypted values included (`Scope`'s own warning-dedup state is
-    NOT carried over verbatim — its internal lock cannot be pickled, so a
-    copy starts with the same dedup keys but a fresh, unlocked mutex). The
-    same applies to an `eyaml_lookup_key` hierarchy entry: its decrypted
-    plaintext lives in the view's own `_providers`/`LookupContext` cache
-    (see the Gotchas section below), which `copy.deepcopy`/`pickle` copies
-    right along with the rest of the instance.
+    process's working directory): the parsed-file cache, the location and
+    `lookup_options` caches (and the lock they share), and the glob-listing
+    cache do NOT survive a copy — each starts empty, so the next lookup
+    re-reads every data file (re-decrypting sops plaintext along with it)
+    and rebuilds whatever else it needs (`Scope`'s own warning-dedup state
+    is NOT carried over verbatim either — its internal lock cannot be
+    pickled, so a copy starts with the same dedup keys but a fresh,
+    unlocked mutex). The same is NOT true of an `eyaml_lookup_key`/other
+    `lookup_key`/`data_dig` hierarchy entry: its result (decrypted
+    plaintext included) lives in the view's own per-provider
+    `LookupContext` cache (see the Gotchas section below), which is a
+    plain instance attribute `copy.deepcopy`/`pickle` copies right along
+    with the rest of the instance, unlike the caches above.
     Concurrent `.lookup()` calls on one instance (or its views) from
     multiple threads are safe on GIL builds, where they only mutate the
-    shared caches (untested on free-threaded builds).
+    shared caches under one lock per instance (untested on free-threaded
+    builds).
 - **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
   `location_key`, `locations`, `kind`, `options`) — one hierarchy entry,
   stored exactly as written in hiera.yaml (`locations`/`options` are never

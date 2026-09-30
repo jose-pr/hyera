@@ -320,11 +320,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sops` binary is missing.
 - Backends register under multiple `data_hash` names (e.g. `yaml_data`/`yaml`,
   `json_data`/`json`).
-- The per-context filesystem walk in `sources()` is cached, so a merge lookup
-  across many keys no longer re-globs/re-stats the tree for each key.
-- The merged `lookup_options` mapping is cached per resolved context too. It
-  hash-merges every file in the hierarchy and a default-merge `get()` consults
-  it for every key, so a lookup of N keys previously redid that walk N times.
+- Resolved hierarchy locations are cached per the values of the variables the
+  hierarchy interpolates (such as `%{trusted.certname}`, `%{facts.os.family}`
+  or a `mapped_paths` collection), as Puppet rebuilds its data providers only
+  when one of those changes. Scopes that differ only in other variables or
+  facts share one entry, so a merge lookup across many keys no longer
+  re-globs/re-stats the tree for each key, and a service serving many scopes
+  no longer re-walks the tree for a scope differing only in a volatile fact.
+  The merged `lookup_options` are cached per set of locations and the
+  variables their own interpolation reads.
 - Test and release GitHub Actions workflows (the repo previously had no CI).
   `test.yml` runs on demand or from a `ci-*` tag across 3.9–3.14; `release.yml`
   gates a `v*` tag on the suite before building and publishing.

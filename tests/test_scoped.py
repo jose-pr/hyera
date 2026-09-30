@@ -1,8 +1,10 @@
 """A ``Hiera.scoped(...)`` view survives ``copy``, ``copy.deepcopy`` and
 ``pickle`` -- it is a plain :class:`~hyera.Hiera` instance (``_view`` builds
 it with ``object.__new__`` plus a ``__dict__`` copy, no ``__getattr__``
-proxy), so the usual object machinery, not any custom hook of ours, is what
-these exercise.
+proxy), so the usual object machinery is what these exercise, same as any
+other ``Hiera``: ``Hiera.__getstate__``/``__setstate__`` (needed once the
+scope-keyed caches held a ``threading.Lock``) drop and rebuild the caches,
+never anything specific to a view.
 """
 
 import copy

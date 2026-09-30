@@ -8,6 +8,7 @@ callable, and the recursion-detection name stack.
 import contextlib
 import contextvars
 
+from ._cache import _ScopeRef, _freeze
 from .exceptions import InterpolationError
 
 #: The call-time ``strict`` default for a data file's non-hash rule
@@ -47,6 +48,7 @@ class Invocation:
         override_values=None,
         default_values=None,
         lenient=False,
+        scope_interpolations=None,
         _name_stack=None,
     ):
         self.scope = scope
@@ -59,6 +61,14 @@ class Invocation:
         #: list object, never copied, so a name pushed by one still guards a
         #: derived invocation's own lookups.
         self._name_stack = [] if _name_stack is None else _name_stack
+        #: ``None`` (the default -- most lookups never build a cache entry)
+        #: or a list of ``(_ScopeRef, (undefined, frozen_value))`` pairs,
+        #: shared with every ``Invocation`` :meth:`derive`d from this one,
+        #: appended to by :meth:`remember_scope_lookup` (Puppet's
+        #: ``ScopeLookupCollectingInvocation``). A caller building a cache
+        #: entry (``core.Hiera._location_entry_for``/``_lookup_options_map``)
+        #: passes its own fresh list here and reads it back afterwards.
+        self.scope_interpolations = scope_interpolations
 
     def lookup(self, key):
         """Resolve ``key`` through the host's sub-lookup callable.
@@ -92,8 +102,47 @@ class Invocation:
                 self.default_values if default_values is _UNSET else default_values
             ),
             lenient=self.lenient,
+            scope_interpolations=self.scope_interpolations,
             _name_stack=self._name_stack,
         )
+
+    def remember_scope_lookup(self, key, root_key, segments, value, *, undefined):
+        """Record one scope read (Puppet's ``remember_scope_lookup``,
+        ``invocation.rb:119-126``/``hiera_config.rb:11-36``): a no-op unless
+        this invocation (or the one it was :meth:`derive`d from) was given a
+        ``scope_interpolations`` list to record into.
+        """
+        if self.scope_interpolations is None:
+            return
+        self.scope_interpolations.append(
+            (
+                _ScopeRef(key, root_key, tuple(segments), self.lenient),
+                (undefined, _freeze(value)),
+            )
+        )
+
+    @contextlib.contextmanager
+    def with_local_memory_eluding(self, name):
+        """Puppet's ``with_local_memory_eluding`` (``hiera_config.rb:28-35``):
+        while the guarded block runs, any :meth:`remember_scope_lookup` call
+        is recorded as usual; once it exits, every entry recorded *during*
+        the block whose root is ``name`` is dropped again -- used around a
+        ``mapped_paths`` item's own local scope layer, so the item variable
+        itself is never treated as a reference the cache depends on (only
+        the collection variable, read before this context, is). A no-op
+        when this invocation was not given a ``scope_interpolations`` list.
+        """
+        lst = self.scope_interpolations
+        if lst is None:
+            yield
+            return
+        start = len(lst)
+        try:
+            yield
+        finally:
+            added = lst[start:]
+            del lst[start:]
+            lst.extend(entry for entry in added if entry[0].root != name)
 
     @contextlib.contextmanager
     def check(self, name):

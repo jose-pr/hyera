@@ -700,7 +700,16 @@ def _expand_mapped_paths(datadir, level, invocation):
     a scope reference (dotted, ``::``-qualified, lenient); each item binds
     as one local variable layer (so an unqualified template reference reads
     the item, and ``%{::x}`` still reaches the top scope) while the template
-    interpolates (methods disallowed)."""
+    interpolates (methods disallowed).
+
+    The collection read (via ``invocation``, outside the loop) is recorded
+    as usual -- a cache keyed on referenced variables must rebuild when the
+    collection itself changes. Each item's own interpolation runs inside
+    ``invocation.with_local_memory_eluding(item_var)``, so any reference to
+    the per-item local variable it binds is dropped again once the item is
+    done: the item is a derived, per-iteration value, never itself a
+    variable the cache should key on (``location_resolver.rb:90``).
+    """
     collection_var, item_var, template = level.locations
     collection = _scope_lookup(collection_var, invocation, "mapped_path[0]")
     items = _mapped_collection_items(collection, collection_var, level.name)
@@ -708,17 +717,23 @@ def _expand_mapped_paths(datadir, level, invocation):
     results = []
     template_norm = _win_slash(template)
     for item in items:
-        child_scope = invocation.scope.with_local_scope({item_var: item})
-        child_inv = Invocation(child_scope, _no_lookup, lenient=True)
-        p = interpolate(template_norm, child_inv, allow_methods=False)
-        loc = _pathname_plus(datadir, p)
-        results.append(
-            ResolvedLocation(template, Path(loc), False, os.path.exists(loc))
-        )
+        with invocation.with_local_memory_eluding(item_var):
+            child_scope = invocation.scope.with_local_scope({item_var: item})
+            child_inv = Invocation(
+                child_scope,
+                _no_lookup,
+                lenient=True,
+                scope_interpolations=invocation.scope_interpolations,
+            )
+            p = interpolate(template_norm, child_inv, allow_methods=False)
+            loc = _pathname_plus(datadir, p)
+            results.append(
+                ResolvedLocation(template, Path(loc), False, os.path.exists(loc))
+            )
     return results
 
 
-def resolve_locations(level, base_path, scope):
+def resolve_locations(level, base_path, scope, refs=None):
     """The candidate :class:`ResolvedLocation` list for one hierarchy level
     in a bound :class:`~hyera.Scope` (``hiera_config.rb:664-687``).
 
@@ -729,9 +744,18 @@ def resolve_locations(level, base_path, scope):
     error) through the same engine as data values, with method-call syntax
     (``%{lookup(...)}`` etc.) rejected outright -- Puppet's own restriction
     on this context.
+
+    ``refs``, when given, is a list every scope read made while resolving
+    this level appends itself to (:meth:`~hyera._invocation.Invocation.
+    remember_scope_lookup`), shared across every level of one hierarchy
+    build by the caller (``core.Hiera._location_entry_for``) so the whole
+    hierarchy's build is keyed on one combined reference set, matching
+    Puppet's own single ``scope_interpolations_stable?`` check per rebuild.
+    Omitted (``None``, the default), nothing is recorded -- used by
+    :meth:`~hyera._hiera_config.HieraLevel.paths`, which has no cache to key.
     """
-    strict_inv = Invocation(scope, _no_lookup)
-    lenient_inv = Invocation(scope, _no_lookup, lenient=True)
+    strict_inv = Invocation(scope, _no_lookup, scope_interpolations=refs)
+    lenient_inv = Invocation(scope, _no_lookup, lenient=True, scope_interpolations=refs)
 
     config_root = Path(base_path).as_posix()
     datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)

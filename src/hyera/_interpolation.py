@@ -333,14 +333,20 @@ def _scope_lookup(key, inv, subject):
     ``inv.scope``, then any dotted sub-navigation via
     :func:`~hyera._navigation.sub_lookup`.
 
-    A root present in ``inv.override_values`` wins outright. A root present
-    in ``inv.default_values`` is looked up leniently (Puppet's
-    ``catch(:undefined_variable)`` form: an undefined root reads as ``None``
-    here, with no strict side effect); any other root goes through
-    :meth:`~hyera.Scope.lookupvar`, which *does* apply ``inv.scope.strict``.
-    Either way, an undefined root (``None`` and genuinely unbound, per
-    :meth:`~hyera.Scope.exist`) then falls back to ``inv.default_values``
-    when the root is there, else stays ``None``.
+    A root present in ``inv.override_values`` wins outright (recorded with
+    ``undefined=False``, as Puppet records it: an override always defines
+    it). A root present in ``inv.default_values`` is looked up leniently
+    (Puppet's ``catch(:undefined_variable)`` form: an undefined root reads
+    as ``None`` here, with no strict side effect); any other root goes
+    through :meth:`~hyera.Scope.lookupvar`, which *does* apply
+    ``inv.scope.strict``. Either way, an undefined root (``None`` and
+    genuinely unbound, per :meth:`~hyera.Scope.exist`) then falls back to
+    ``inv.default_values`` when the root is there, else stays ``None`` --
+    once resolved, this whole reference is recorded via
+    :meth:`~hyera._invocation.Invocation.remember_scope_lookup` (Puppet's
+    ``interpolation.rb:119``), so a cache keyed on referenced variables can
+    tell whether this same reference would read the same value for another
+    scope.
     """
     segments = split_key(
         key, lambda p: HieraLookupError("{} in string: {}".format(p, subject))
@@ -355,16 +361,20 @@ def _scope_lookup(key, inv, subject):
     scope = inv.scope
     if root in inv.override_values:
         value = inv.override_values[root]
+        undefined = False
     elif root in inv.default_values:
         looked = scope.lookup(root)
         value = None if looked is _MISSING else looked
+        undefined = value is None and not scope.exist(root)
     else:
         value = scope.lookupvar(root, lenient=inv.lenient)
+        undefined = value is None and not scope.exist(root)
     if value is None and not scope.exist(root):
         value = inv.default_values.get(root)
     if value is not None and rest:
         result = sub_lookup(key, rest, value)
         value = None if result is _MISSING else result
+    inv.remember_scope_lookup(key, root, rest, value, undefined=undefined)
     return value
 
 
