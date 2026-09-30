@@ -305,6 +305,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Type checkers accept the documented calls: optional arguments accept
   `None`, and `lookup()`/`dig()`/`get()`/`getvar()`/`__call__`/
   `__getitem__` return `Any` instead of a wrong inferred union.
+- A `value_type`/`convert_to` type-expression string containing a character
+  the type grammar does not recognize (e.g. `"Integer[@]"`) now raises
+  `HieraLookupError`, the same as any other malformed type spec, instead of
+  an internal exception type escaping uncaught.
 
 ### Security
 

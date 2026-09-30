@@ -187,12 +187,6 @@ def _tokenize(text):
     return tokens
 
 
-def _describe(tok):
-    if tok.kind == "eof":
-        return "end of input"
-    return "'{}'".format(tok.text)
-
-
 class _Parser:
     def __init__(self, text):
         self.text = text
@@ -510,8 +504,8 @@ def _build_array(args):
                 len(args)
             )
         )
-    if not args:
-        return PArrayType()
+    # `args` is never empty here: it comes from `Parser.parse_args()`,
+    # which itself raises a syntax error on an empty `[]` before returning.
     if args[0][0] in ("qref", "access"):
         elem = _interp_type(args[0])
         size_args = args[1:]
@@ -555,8 +549,7 @@ def _build_hash(args):
 def _build_collection(args):
     if len(args) > 2:
         raise _NotAValidTypeSpec()
-    if not args:
-        return COLLECTION
+    # `args` is never empty here (see `_build_array`'s own comment).
     if len(args) == 1:
         a = _num_or_default(args[0])
         return PCollectionType(a, None)
@@ -567,8 +560,8 @@ def _build_collection(args):
 
 
 def _build_tuple(args):
-    if not args:
-        raise _NotAValidTypeSpec()
+    # `args` is never empty here (see `_build_array`'s own comment); a bare,
+    # unparameterized `Tuple` goes through `_BARE_TYPES` instead.
     types = list(args)
     size_from = size_to = None
     if len(types) >= 1 and types[-1][0] == "number":
@@ -579,6 +572,8 @@ def _build_tuple(args):
             size_from = _num_or_default(types.pop())
         _check_range(size_from, size_to)
     if not types:
+        # Every element was a size bound and got popped off above
+        # (``Tuple[1,2]``): no element types are left to build from.
         raise _NotAValidTypeSpec()
     interpreted = [_interp_type(t) for t in types]
     return PTupleType(interpreted, size_from, size_to)
@@ -608,14 +603,15 @@ def _struct_key(node):
 
 
 def _build_variant(args):
-    if not args:
-        raise _NotAValidTypeSpec()
+    # `args` is never empty here (see `_build_array`'s own comment); a bare,
+    # unparameterized `Variant` goes through `_BARE_TYPES` instead.
     return PVariantType([_interp_type(a) for a in args])
 
 
 def _build_enum(args):
-    if not args:
-        raise _NotAValidTypeSpec()
+    # `args` is never empty here (see `_build_array`'s own comment); there
+    # is no bare `Enum` at all (not in `_BARE_TYPES`), so an empty `Enum[]`
+    # is a syntax error before this function is ever reached.
     values = []
     for a in args:
         if a[0] == "string":
@@ -644,8 +640,7 @@ def _build_pattern(args):
 def _build_regexp(args):
     if len(args) > 1:
         raise _NotAValidTypeSpec()
-    if not args:
-        return REGEXP
+    # `args` is never empty here (see `_build_array`'s own comment).
     a = args[0]
     if a[0] == "regex":
         return PRegexpType(a[1])
@@ -661,8 +656,9 @@ def _build_sensitive(args):
                 len(args)
             )
         )
-    if not args:
-        return PSensitiveType()
+    # `args` is never empty here (see `_build_array`'s own comment); a bare,
+    # unparameterized `Sensitive` goes through `_BARE_TYPES` instead, never
+    # through this access-form builder at all.
     return PSensitiveType(_interp_type(args[0]))
 
 
@@ -692,8 +688,9 @@ def _build_notundef(args):
                 len(args)
             )
         )
-    if not args:
-        return PNotUndefType()
+    # `args` is never empty here (see `_build_array`'s own comment); a bare,
+    # unparameterized `NotUndef` goes through `_BARE_TYPES` instead, never
+    # through this access-form builder at all.
     return PNotUndefType(_literal_or_type(args[0]))
 
 
@@ -731,9 +728,13 @@ def parse_type(text):
             # An empty program is zero statements, not a syntax error --
             # it just isn't type-shaped either.
             raise _NotAValidTypeSpec()
-        parser = _Parser(text)
-        node_text = lambda s, e: text[s:e]  # noqa: E731
         try:
+            # `_Parser.__init__` tokenizes the whole text up front, and an
+            # unrecognized character (e.g. "@") raises `_SyntaxError` right
+            # there, before `parse_primary` ever runs -- it must land in
+            # this same `except _SyntaxError` below, not escape raw.
+            parser = _Parser(text)
+            node_text = lambda s, e: text[s:e]  # noqa: E731
             expr = parser.parse_primary()
             if parser.peek().kind != "eof":
                 # Leftover input: only a *second*, independently valid
