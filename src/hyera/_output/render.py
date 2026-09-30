@@ -17,8 +17,33 @@ import yaml as _yaml
 from ..backends import Backend
 from .._lookup.interpolation import _to_puppet_str
 from .._types.types import Sensitive
+from .._enums import _StrEnum
 
-__all__ = ["StringRender", "JSONRender", "YAMLRender"]
+__all__ = ["RenderAs", "StringRender", "JSONRender", "YAMLRender"]
+
+
+class RenderAs(_StrEnum):
+    """A ``puppet lookup --render-as`` output format: the name registered
+    for each render backend in :meth:`~hyera.backends.Backend.new`'s
+    ``kind="render"`` namespace (``hyera.BackendKind.RENDER``).
+
+    The ``hyera`` CLI's own ``--render-as`` flag stays a plain string
+    (duho's ``Enum`` support resolves CLI text by member *name*, e.g.
+    ``S``/``JSON``/``YAML``, not by value -- incompatible with Puppet's own
+    lowercase flag values); this enum is for a Python caller of
+    :meth:`~hyera.backends.Backend.new`/:meth:`~hyera.backends.Backend.find`
+    directly, e.g. ``Backend.new(RenderAs.YAML, kind="render")``.
+    """
+
+    S = "s"
+    """Ruby ``to_s`` rendering (:class:`StringRender`)."""
+
+    JSON = "json"
+    """Compact JSON (:class:`JSONRender`)."""
+
+    YAML = "yaml"
+    """YAML, Psych-compatible (:class:`YAMLRender`)."""
+
 
 _YAML_FORCE_QUOTE_STRS = ("y", "Y", "n", "N")
 _YAML_FORCE_QUOTE_RE = _re.compile(r"^:.")

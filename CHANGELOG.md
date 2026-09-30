@@ -104,6 +104,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   layers); `--strict off|warning|error` (default `warning`); `--explain`
   and `--explain-options`.
 - `hyera.MergeSpec`, the type of every `merge=` argument.
+- String enums for every closed set of string values in the public API: a
+  member is a plain `str` (`Merge.DEEP == "deep"`), so every parameter that
+  already took the string still takes the member, and `str()`/`format()`/an
+  f-string give the value on every supported Python. `hyera.Merge`
+  (`FIRST`, `UNIQUE`, `HASH`, `DEEP`: `merge=` on `lookup`/`dig`/`get`/
+  `explain`, and a `MergeSpec` mapping's `"strategy"` key), `hyera.Strict`
+  (`OFF`, `WARNING`, `ERROR`: `Scope(strict=...)`, `Hiera.scoped(strict=...)`),
+  `hyera.FunctionKind` (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`:
+  `HieraLevel.kind`, `HieraLevel.new(kind=...)`), `hyera.BackendKind`
+  (`FUNCTION`, `V3`, `FORMAT`, `RENDER`: the `kind=` namespace argument of
+  `Backend.find`/`Backend.get`/`Backend.new`/`Backend.names`) and
+  `hyera.RenderAs` (`S`, `JSON`, `YAML`: `Backend.new(name, kind="render")`
+  formats). Every stored/returned field (`HieraLevel.kind`, `Scope.strict`,
+  `Backend.strict`, an explain tree, rendered output) stays a plain `str`
+  regardless of whether a member or a string was passed in. The `hyera`
+  CLI's own `--merge`/`--strict`/`--render-as` flags stay plain strings:
+  duho's `Enum` CLI support resolves text by member *name* (`FIRST`,
+  `ERROR`), not by value, which would break Puppet's lowercase flag values.
 
 ### Changed
 

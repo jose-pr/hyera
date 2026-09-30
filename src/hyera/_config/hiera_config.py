@@ -20,6 +20,7 @@ from ..exceptions import BackendError, ConfigError
 from .location_resolver import resolve_locations
 from .._scope.scope import Scope
 from ..backends._yaml_loader import RubySymbol, symkeys_to_string
+from .._enums import _StrEnum, _plain
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1264,6 +1265,25 @@ def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") 
     )
 
 
+class FunctionKind(_StrEnum):
+    """A hierarchy entry's resolved function kind: :attr:`HieraLevel.kind`,
+    and the ``kind=`` argument of :meth:`HieraLevel.new`. Which Puppet
+    Hiera 5 provider hook a level's backend implements."""
+
+    DATA_HASH = "data_hash"
+    """Reads a whole data source at once (``YAMLBackend``/``JSONBackend``/
+    ``HOCONBackend``/...); the found values are merged across locations and
+    levels by hyera itself, never by the backend."""
+
+    LOOKUP_KEY = "lookup_key"
+    """Resolves one root key itself, given a
+    :class:`~hyera.LookupContext`."""
+
+    DATA_DIG = "data_dig"
+    """Resolves one full (possibly dotted) key itself, given a
+    :class:`~hyera.LookupContext`."""
+
+
 class HieraLevel(_ty.NamedTuple):
     """One hierarchy entry, stored exactly as written in hiera.yaml --
     ``locations`` are never interpolated or normalized here; that happens
@@ -1312,7 +1332,7 @@ class HieraLevel(_ty.NamedTuple):
         cls,
         conf: _ty.Dict[str, _ty.Any],
         backend: Backend,
-        kind: str = "data_hash",
+        kind: _ty.Union[FunctionKind, str] = "data_hash",
         *,
         extension: _ty.Optional[str] = None,
         datadir_base: "_ty.Optional[Path]" = None,
@@ -1344,6 +1364,7 @@ class HieraLevel(_ty.NamedTuple):
             locations = tuple(conf[location_key])
         else:
             locations = (conf[location_key],)
+        kind = _plain(kind)
         return cls(
             name=conf["name"],
             backend=backend,

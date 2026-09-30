@@ -3,6 +3,7 @@
 from .backends import (
     Backend,
     BackendError,
+    BackendKind,
     EyamlBackend,
     HOCONBackend,
     JSONBackend,
@@ -12,6 +13,7 @@ from .backends import (
     default_backends,
 )
 from ._output import render as _render  # noqa: F401 (registers s/json/yaml renderers)
+from ._output.render import RenderAs
 from .exceptions import (
     ConfigError,
     HieraError,
@@ -23,9 +25,9 @@ from .exceptions import (
 from .core import Hiera
 from ._output.explain import ExplainResult
 from ._scope.facts import facts_from_facter, load_facts
-from ._config.hiera_config import HieraLevel
-from ._lookup.merge_strategy import MergeSpec
-from ._scope.scope import Scope
+from ._config.hiera_config import FunctionKind, HieraLevel
+from ._lookup.merge_strategy import Merge, MergeSpec
+from ._scope.scope import Scope, Strict
 from ._types.types import Sensitive
 
 __version__ = "0.0.0a0"
@@ -34,7 +36,12 @@ __all__ = [
     "Hiera",
     "ExplainResult",
     "HieraLevel",
+    "Merge",
     "MergeSpec",
+    "Strict",
+    "FunctionKind",
+    "BackendKind",
+    "RenderAs",
     "Scope",
     "Sensitive",
     "load_facts",

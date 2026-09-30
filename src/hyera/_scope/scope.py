@@ -18,9 +18,31 @@ from collections.abc import Mapping
 
 from .._lookup.navigation import _MISSING, _ruby_class
 from ..exceptions import InterpolationError
+from .._enums import _StrEnum, _plain
 
 _LOGGER = logging.getLogger(__name__)
 
+
+class Strict(_StrEnum):
+    """Strictness for an undefined variable: the ``strict=`` argument of
+    :class:`~hyera.Scope`/:meth:`~hyera.Scope.derive` and
+    :meth:`~hyera.Hiera.scoped`, Puppet's own ``strict`` setting
+    (applied by :meth:`~hyera.Scope.lookupvar`)."""
+
+    OFF = "off"
+    """An undefined variable resolves to ``None``, silently."""
+
+    WARNING = "warning"
+    """An undefined variable resolves to ``None``, logged once per name."""
+
+    ERROR = "error"
+    """An undefined variable raises :class:`~hyera.InterpolationError`."""
+
+
+#: Plain strings, not :class:`Strict` members: interpolated into the
+#: ``ValueError`` below, whose text must stay exactly what it was before
+#: this enum existed (``repr()`` of a member would show ``<Strict.OFF:
+#: 'off'>``, not ``'off'``).
 _STRICT_VALUES = ("off", "warning", "error")
 #: Names a Hiera 5 lookup may never bind directly (Puppet's privileged
 #: ``setvar`` targets; only ``set_node_parameters`` itself may set them).
@@ -266,7 +288,7 @@ class Scope:
         trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         environment: _ty.Optional[str] = None,
-        strict: str = "warning",
+        strict: _ty.Union[Strict, str] = "warning",
         node_name: _ty.Optional[str] = None,
     ) -> None:
         self._build(
@@ -298,6 +320,7 @@ class Scope:
             raise ValueError(
                 "strict must be one of {!r}, not {!r}".format(_STRICT_VALUES, strict)
             )
+        strict = _plain(strict)
         if environment is not None and not isinstance(environment, str):
             raise TypeError(
                 "environment must be a str, not {}".format(type(environment).__name__)
@@ -565,7 +588,7 @@ class Scope:
         trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         environment: _ty.Optional[str] = None,
-        strict: _ty.Optional[str] = None,
+        strict: _ty.Optional[_ty.Union[Strict, str]] = None,
         node_name: _ty.Optional[str] = None,
     ) -> "Scope":
         """A new root scope, rebuilt from this scope's own constructor

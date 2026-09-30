@@ -19,14 +19,43 @@ import typing as _ty
 from .interpolation import unshare
 from .navigation import _MISSING
 from ..exceptions import MergeError
+from .._enums import _StrEnum, _plain
 
-#: The type of every public ``merge=`` argument: a strategy name
-#: (``"first"``/``"unique"``/``"hash"``/``"deep"``/...), a
-#: ``{"strategy": ..., ...}`` mapping with Puppet's deep-merge options, or
-#: ``None`` for the level's own default.
-MergeSpec = _ty.Union[str, _ty.Mapping[str, _ty.Any], None]
+__all__ = ["Merge", "MergeSpec"]
 
-__all__ = ["MergeSpec"]
+
+class Merge(_StrEnum):
+    """A merge strategy name: the ``merge=`` argument of
+    :meth:`~hyera.Hiera.lookup`/:meth:`~hyera.Hiera.dig`/
+    :meth:`~hyera.Hiera.get`/:meth:`~hyera.Hiera.explain`, and the
+    ``"strategy"`` key of a :data:`MergeSpec` mapping.
+
+    These are Puppet's own four public strategies
+    (``MergeStrategy.strategy_keys()``); ``default`` (``first``'s hidden
+    alias used when no strategy is given at all), ``unconstrained_deep``
+    and ``reverse_deep`` are real strategies Puppet itself never exposes as
+    a choice, so they stay out of this enum too.
+    """
+
+    FIRST = "first"
+    """The first hierarchy level with a value wins; nothing is merged."""
+
+    UNIQUE = "unique"
+    """Flatten every found value into one list, keeping each item once."""
+
+    HASH = "hash"
+    """Shallow-merge every found ``Hash``; a higher-priority level's keys win."""
+
+    DEEP = "deep"
+    """Recursively merge every found ``Hash``/``Array`` (Puppet's
+    ``deep_merge`` gem, with ``knockout_prefix``/``sort_merged_arrays``/
+    ``merge_hash_arrays`` as extra ``MergeSpec`` mapping keys)."""
+
+
+#: The type of every public ``merge=`` argument: a strategy name or member
+#: (``Merge.DEEP``/``"deep"``/...), a ``{"strategy": ..., ...}`` mapping
+#: with Puppet's deep-merge options, or ``None`` for the level's own default.
+MergeSpec = _ty.Union[Merge, str, _ty.Mapping[str, _ty.Any], None]
 
 #: The shared no-op context manager :meth:`MergeStrategy.lookup` uses when
 #: called with no ``invocation`` at all.
@@ -184,15 +213,20 @@ class MergeStrategy:
         if isinstance(merge, MergeStrategy):
             return merge
         if isinstance(merge, dict):
-            name = merge.get("strategy")
+            name = _plain(merge.get("strategy"))
             if name is None:
                 raise MergeError(
                     "The hash given as 'merge' must contain the name of a "
                     "strategy in string form for the key 'strategy'"
                 )
             options = {} if len(merge) == 1 else dict(merge)
+            if "strategy" in options:
+                # A Merge member is never stored downstream -- normalize
+                # even though merge_strategy.rb never reads this key back
+                # out of options itself.
+                options["strategy"] = name
         else:
-            name = merge
+            name = _plain(merge)
             options = {}
         found = _STRATEGIES.get(name) if isinstance(name, str) else None
         if found is None:

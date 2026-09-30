@@ -340,8 +340,9 @@ is the same tree, keyed the way `--render-as json --explain` renders it.
 
 ### Merging and `lookup_options`
 
-Pass `merge=` to `lookup()` -- one of Puppet's strategy names, or a hash of
-deep options:
+Pass `merge=` to `lookup()` -- one of Puppet's strategy names, a `hyera.Merge`
+member (`Merge.DEEP` is the same value as `"deep"`, so either spelling works
+everywhere `merge=` is accepted), or a hash of deep options:
 
 ```python
 h.lookup("classes", merge="unique")               # flatten + dedupe arrays
@@ -405,12 +406,17 @@ from a `clientcert` variable/fact, else empty). Facts are also reachable as
 a whole through `$facts`, and `server_facts` through `$server_facts`.
 
 ```python
-from hyera import Hiera, Scope, load_facts
+from hyera import Hiera, Scope, Strict, load_facts
 
-scope = Scope(facts=load_facts("facts.yaml"), environment="production", strict="error")
+scope = Scope(facts=load_facts("facts.yaml"), environment="production", strict=Strict.ERROR)
 h = Hiera("hiera.yaml", scope=scope)
 h.lookup("ntp::servers")
 ```
+
+`strict=` takes a `hyera.Strict` member (`OFF`/`WARNING`/`ERROR`) or the
+plain string it equals (`"off"`/`"warning"`/`"error"`); `hyera.Merge`,
+`hyera.FunctionKind`, `hyera.BackendKind` and `hyera.RenderAs` are the same
+kind of `str`-mixin enum for the other closed-set arguments described below.
 
 `load_facts(path)` reads a `puppet lookup --facts`-style file (JSON for
 `.json`, YAML for `.yaml`/`.yml`, otherwise JSON then YAML); the result

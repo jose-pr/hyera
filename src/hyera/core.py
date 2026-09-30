@@ -60,7 +60,7 @@ from ._lookup.navigation import (
     split_key,
     sub_lookup,
 )
-from ._scope.scope import Scope
+from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
 from ._types.parser import parse_type
 from .backends import Backend, default_backends
@@ -1499,7 +1499,7 @@ class Hiera:
         trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         environment: _ty.Optional[str] = None,
-        strict: _ty.Optional[str] = None,
+        strict: _ty.Optional[_ty.Union[Strict, str]] = None,
         node_name: _ty.Optional[str] = None,
     ) -> "Hiera":
         """A view of this instance bound to ``self.scope.derive(...)``.

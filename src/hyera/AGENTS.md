@@ -257,8 +257,10 @@ since Hiera data is dynamic.
     "Value found for key '<k>' in override hash has wrong type, …", "… in
     default values hash has wrong type, …", "Value returned from default
     block has wrong type, …"). `merge`: a `hyera.MergeSpec` (see "Types"
-    below) — an explicit `merge=` overrides only the merge `lookup_options`
-    would have picked; an applicable `convert_to` still runs. `default_value`:
+    below) — a `hyera.Merge` member (`FIRST`/`UNIQUE`/`HASH`/`DEEP`) or the
+    same plain string (`Merge.DEEP == "deep"`) — an explicit `merge=`
+    overrides only the merge `lookup_options` would have picked; an
+    applicable `convert_to` still runs. `default_value`:
     returned (after `value_type`) when nothing else was found; **omitted
     entirely** means no default at all — passing `None` explicitly is a
     real default that beats a miss (and a found `None` beats even that).
@@ -457,13 +459,18 @@ since Hiera data is dynamic.
   `datadir_base`, `datadir_literal`) — one hierarchy entry, stored exactly
   as written in hiera.yaml (`locations`/`options` are never interpolated or
   normalized here).
+- **`hyera.FunctionKind`** (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`) — which
+  Puppet Hiera 5 provider hook a level's backend implements; see
+  `HieraLevel.kind`/`.new` below.
   - **`.new(conf, backend, kind='data_hash', *, extension=None, datadir_base=None, datadir_literal=False)`**
     builds one from a hierarchy dict (`location_key` is the first of
     `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
     `None`; `locations` is that key's raw value(s) — one string for a
     singular key, the declared tuple for a plural one, or `(collection_var,
-    item_var, template)` for `mapped_paths`; `kind` is the resolved function
-    kind, `"data_hash"`/`"lookup_key"`/`"data_dig"`; `options` is the entry's
+    item_var, template)` for `mapped_paths`; `kind` is a `FunctionKind`
+    member (`DATA_HASH`/`LOOKUP_KEY`/`DATA_DIG`) or the same plain string;
+    the built `HieraLevel.kind` field itself always reads back a plain
+    `str`. `options` is the entry's
     own `options`, else `defaults`'s, uninterpolated; `extension` is a
     version-3-only appended suffix; `datadir_base`/`datadir_literal` are
     version-specific `datadir`-resolution flags — see "Version 3"/"Version
@@ -505,14 +512,22 @@ Puppet's top scope, as one immutable, hashable value, bound to every
 `Hiera` instance, views included (`Hiera(..., scope=...)`, `.scope`,
 `.scoped(...)`). Logger `hyera._scope.scope`.
 
+- **`hyera.Strict`** (`OFF`, `WARNING`, `ERROR`) — strictness for an
+  undefined variable; every `strict=` argument below takes a `Strict`
+  member or the same plain string.
+
 - **`Scope(*, variables=None, facts=None, trusted=None, server_facts=None, environment=None, strict='warning', node_name=None)`**
   — every argument keyword-only. `variables`/`facts`/`server_facts`/`trusted`
   are each `None` or a mapping with `str` keys; `variables`/`server_facts`/
   `trusted` values must additionally be Puppet Data (`None`, `bool`, `int`,
   `float`, `str`, a list/tuple — stored as a list — or a `str`-keyed dict of
   Data, recursively) or construction raises `TypeError("Unsupported data
-  type: '<type name>'")`; every input is deep-copied. `strict` must be
-  `"off"`, `"warning"` or `"error"`, else `ValueError`. `environment` must
+  type: '<type name>'")`; every input is deep-copied. `strict` accepts a
+  `hyera.Strict` member (`OFF`/`WARNING`/`ERROR`) or the same plain string
+  (`Strict.ERROR == "error"`; same for `.derive(strict=...)` and
+  `Hiera.scoped(strict=...)`) — anything else raises `ValueError`.
+  `.strict` (read-only property) always reads back a plain `str`.
+  `environment` must
   be `None` or a non-empty `str`; `node_name` must be `None` or a `str` —
   otherwise `TypeError`/`ValueError`.
 
@@ -647,8 +662,10 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
 ## Types
 
 - **`MergeSpec`** — the type of every public `merge=` argument: a
-  strategy name (`"first"`/`"unique"`/`"hash"`/`"deep"`/`"default"`/
-  `"reverse_deep"`/`"unconstrained_deep"`), a `{"strategy": ..., ...}`
+  `hyera.Merge` member or strategy name (`"first"`/`"unique"`/`"hash"`/
+  `"deep"`/`"default"`/`"reverse_deep"`/`"unconstrained_deep"` — the last
+  three are real strategies but have no `Merge` member, since Puppet itself
+  never exposes them as a choice), a `{"strategy": ..., ...}`
   mapping with Puppet's deep-merge options (`knockout_prefix`,
   `sort_merged_arrays`, `merge_hash_arrays`, and, for the two extra Hiera-3
   deep variants, `keep_array_duplicates`, `overwrite_arrays`,
@@ -656,6 +673,10 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   `preserve_unmergeables`), or `None` for the level's own `lookup_options`
   default (an unrecognized name/shape raises `hyera.MergeError`). See
   "Merges" under Gotchas for the exact semantics of each strategy.
+- **`hyera.Merge`** (`FIRST`, `UNIQUE`, `HASH`, `DEEP`) — Puppet's own four
+  public strategy names (`MergeStrategy.strategy_keys()`), as a `str`-mixin
+  `Enum`: `Merge.DEEP == "deep"`, `str(Merge.DEEP) == "deep"`, and every
+  `merge=` argument above takes a member exactly as it takes the string.
 - **`Sensitive(value)`** — redacting wrapper produced by `convert_to:
   Sensitive`, mirroring Puppet's `Sensitive` type (`p_sensitive_type.rb`).
   `str()`/`repr()` both show `Sensitive [value redacted]`; `.unwrap()`
@@ -712,13 +733,18 @@ is a `Backend` subclass, found by name rather than passed around directly.
   become constructor keywords (used by the `sops_<format>` pattern).
   **`Backend.EXTENSIONS: tuple`** — file extensions (with the dot) this
   format answers to, used by `.for_path`.
-- **`Backend(conf=None, *, strict=None)`** — `.conf`. `.strict`
-  (read-only property) is the constructor's `strict=` when given, else the
+- **`Backend(conf=None, *, strict=None)`** — `.conf`. `strict` takes a
+  `hyera.Strict` member or the same plain string. `.strict`
+  (read-only property, always a plain `str`) is the constructor's `strict=`
+  when given, else the
   call-time default (`"warning"` until the lookup scope's `strict`
   setting is threaded through to backends) — read at call time, never
   cached, since one backend instance is shared across scopes. `.name`
   defaults to the class's first registered name; `Backend.new` sets it to
   whatever name was actually asked for.
+- **`hyera.BackendKind`** (`FUNCTION`, `V3`, `FORMAT`, `RENDER`) — the four
+  `kind=` namespaces below (same set as `Backend.KINDS`); every `kind=`
+  argument takes a `BackendKind` member or the same plain string.
 - **Lookup** — `.find(name, kind='function')` (exact
   names win, then patterns in registration order; `None` if unregistered);
   `.get(name, kind='function')` (raises `BackendError` for an unknown
@@ -964,9 +990,14 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `BackendError("invalid dotenv line <n>")` — never the line's own text.
   There is no `IniBackend`: see `SopsBackend` above for why `ini` is
   parsed as JSON instead.
+- **`hyera.RenderAs`** (`S`, `JSON`, `YAML`) — a `puppet lookup
+  --render-as` output format; see "Rendering" below.
 - **Rendering** — three `render`-kind-only, private `Backend` subclasses
-  (`hyera._output.render`), found the same way (`Backend.new(fmt, kind="render")`):
-  Puppet's `puppet lookup --render-as` output. Each implements only
+  (`hyera._output.render`), found the same way (`Backend.new(fmt, kind="render")`,
+  `fmt` a `hyera.RenderAs` member — `S`/`JSON`/`YAML` — or the same plain
+  string): Puppet's `puppet lookup --render-as` output. `hyera.RenderAs` has
+  no place in the CLI's own `--render-as` flag, which stays a plain string
+  (see "CLI" below). Each implements only
   `dumps(obj) -> str`; none of the Hiera 5 provider hooks or `loads`
   apply. `s` renders Ruby `to_s` (Ruby 3.2 AIO hash form `{"k"=>v}`,
   `Sensitive [value redacted]`) — the same renderer a bare `%{var}`/
@@ -1062,7 +1093,11 @@ Every class above is importable directly from `hyera` (e.g.
   - *output*: `render_as` (`--render-as FORMAT`, default `None` meaning
     `"yaml"`, or `"s"` while explaining; case-insensitive; an unrecognized
     format exits 2 with `Unknown rendering format '<f>'` before any lookup
-    runs). Output goes through the `s`/`json`/`yaml` render
+    runs). Plain strings only, by design: `--merge`/`--strict`/`--render-as`
+    never take a `Merge`/`Strict`/`RenderAs` member *name* the way duho's
+    own `Enum` CLI support would (it resolves by member name — `DEEP`,
+    `ERROR` — not by value, which would silently stop accepting Puppet's
+    own lowercase flag values). Output goes through the `s`/`json`/`yaml` render
     backends ("Rendering" above), the same shapes `puppet
     lookup --render-as` prints; a `Sensitive`
     value redacts in every format, including `yaml` (Puppet's own YAML

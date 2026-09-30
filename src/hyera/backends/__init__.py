@@ -18,12 +18,15 @@ from pathlib_next import Path
 
 from ..exceptions import BackendError, ConfigError
 from .._lookup.function_provider import LookupContext
+from .._scope.scope import Strict
+from .._enums import _StrEnum, _plain
 from ._yaml_loader import RubySymbol
 
 _LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     "Backend",
+    "BackendKind",
     "NamePattern",
     "YAMLBackend",
     "JSONBackend",
@@ -38,7 +41,32 @@ __all__ = [
     "default_backends",
 ]
 
+#: Plain strings, not :class:`Strict` members: interpolated into the
+#: ``ValueError`` below, whose text must stay exactly what it was before
+#: this enum existed.
 _STRICT_VALUES = ("error", "warning", "off")
+
+
+class BackendKind(_StrEnum):
+    """Which of :attr:`Backend.KINDS` a registered name belongs to: the
+    ``kind=`` argument of :meth:`Backend.find`/:meth:`Backend.get`/
+    :meth:`Backend.new`/:meth:`Backend.names`. A name is only ever
+    registered, and looked up, within one namespace."""
+
+    FUNCTION = "function"
+    """A Hiera 5 hierarchy entry's ``data_hash``/``lookup_key``/
+    ``data_dig`` function name (``yaml_data``, ``json_data``, ...)."""
+
+    V3 = "v3"
+    """A Hiera 3/``hiera3_backend`` backend name (``yaml``, ``json``, ...)."""
+
+    FORMAT = "format"
+    """A plain data-format name, also matched by :meth:`Backend.for_path`'s
+    file-extension lookup (``yaml``, ``json``, ...)."""
+
+    RENDER = "render"
+    """A ``puppet lookup --render-as`` output format (``s``, ``json``,
+    ``yaml``)."""
 
 
 def _default_strict() -> str:
@@ -112,14 +140,14 @@ class Backend:
         self,
         conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         *,
-        strict: _ty.Optional[str] = None,
+        strict: _ty.Optional[_ty.Union[Strict, str]] = None,
     ) -> None:
         self.conf: _ty.Mapping[str, _ty.Any] = conf or {}
         if strict is not None and strict not in _STRICT_VALUES:
             raise ValueError(
                 "strict must be one of {!r}, not {!r}".format(_STRICT_VALUES, strict)
             )
-        self._strict = strict
+        self._strict = _plain(strict)
         self.name: _ty.Optional[str] = type(self)._default_name()
 
     @property
@@ -187,6 +215,7 @@ class Backend:
 
     @classmethod
     def _match(cls, name, kind="function"):
+        kind = _plain(kind)
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
         found = registry["exact"].get(name)
         if found is not None:
@@ -199,7 +228,7 @@ class Backend:
 
     @classmethod
     def find(
-        cls, name: str, kind: str = "function"
+        cls, name: str, kind: _ty.Union[BackendKind, str] = "function"
     ) -> "_ty.Optional[_ty.Type[Backend]]":
         """The registered class for ``name`` in ``kind``, or ``None``.
 
@@ -211,7 +240,9 @@ class Backend:
         return found
 
     @classmethod
-    def get(cls, name: str, kind: str = "function") -> "_ty.Type[Backend]":
+    def get(
+        cls, name: str, kind: _ty.Union[BackendKind, str] = "function"
+    ) -> "_ty.Type[Backend]":
         """The registered, available class for ``name`` in ``kind``.
 
         Raises :class:`BackendError` for an unknown name (listing the known
@@ -224,6 +255,7 @@ class Backend:
         :raises BackendError: ``name`` is unregistered in ``kind``, or is
             registered but unusable (a missing optional dependency).
         """
+        kind = _plain(kind)
         found = cls.find(name, kind)
         if found is None:
             raise BackendError(
@@ -240,8 +272,8 @@ class Backend:
         name: str,
         conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         *,
-        kind: str = "function",
-        strict: _ty.Optional[str] = None,
+        kind: _ty.Union[BackendKind, str] = "function",
+        strict: _ty.Optional[_ty.Union[Strict, str]] = None,
     ) -> "Backend":
         """Instantiate the registered backend for ``name`` in ``kind``.
 
@@ -259,6 +291,7 @@ class Backend:
         :raises BackendError: ``name`` is unregistered in ``kind``, or is
             registered but unusable (a missing optional dependency).
         """
+        kind = _plain(kind)
         found, captures = cls._match(name, kind)
         if found is None:
             raise BackendError(
@@ -272,13 +305,14 @@ class Backend:
         return instance
 
     @classmethod
-    def names(cls, kind: str = "function") -> _ty.List[str]:
+    def names(cls, kind: _ty.Union[BackendKind, str] = "function") -> _ty.List[str]:
         """Registered names in ``kind``: exact names in registration order,
         then patterns by their :attr:`NamePattern.display`.
 
         :param kind: the namespace to list.
         :returns: the registered names.
         """
+        kind = _plain(kind)
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
         return list(registry["exact"].keys()) + [
             pattern.display for pattern, _klass in registry["patterns"]
