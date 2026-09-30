@@ -120,8 +120,7 @@ def _select_version(
     :meth:`~hyera.core.Hiera._usable`, applied with the invocation's own
     ``strict`` at the point the layer is actually consulted
     (``environment_data_provider.rb``/``module_data_provider.rb``). A
-    version 4 there raises "not supported yet" (``hiera_v3_v4_configs``
-    replaces this). Any other version raises the same way at every layer.
+    version 4 there raises "not supported yet". Any other version raises the same way at every layer.
     """
     v = data.get("version")
     _v3_text = (

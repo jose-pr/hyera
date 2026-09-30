@@ -151,7 +151,7 @@ def load_layer_provider(place, root, backends, *, module_name=None):
     missing-version) config becomes an :class:`_IgnoredConfig`, left for
     :meth:`~hyera.core.Hiera._usable` to warn or raise about, with the
     invocation's own ``strict``. A version-4 config raises immediately
-    (``hiera_v3_v4_configs`` replaces this). A version-5 config is validated
+    (version 4 is not supported yet). A version-5 config is validated
     and built exactly like the global config, with ``layer=place.lower()``
     threaded through so a per-layer rule (``hiera3_backend`` global-only,
     ``default_hierarchy`` module-only) applies.
