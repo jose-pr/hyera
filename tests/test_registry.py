@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from hyera.backends import Backend, HOCONBackend, NamePattern
+from hyera.backends import Backend, HOCONBackend, NamePattern, default_backends
 
 
 @pytest.fixture(autouse=True)
@@ -243,6 +243,26 @@ def test_duplicate_pattern_raises():
 
             def loads(self, text):
                 return {}
+
+
+def test_default_backends_dedups_a_class_registered_under_two_patterns():
+    # default_backends()'s second loop (over pattern entries) skips a class
+    # already seen -- normally only possible via the first (exact-name)
+    # loop, since no built-in backend registers more than one NamePattern.
+    # A throwaway backend with two distinct patterns for the same class
+    # exercises that same dedup within the patterns loop itself.
+    class TwoPatterns(Backend):
+        NAMES = {
+            "function": (
+                NamePattern("tp_a_<n>", re.compile(r"tp_a_(?P<n>\d+)")),
+                NamePattern("tp_b_<n>", re.compile(r"tp_b_(?P<n>\d+)")),
+            )
+        }
+
+        def loads(self, text):
+            return {}
+
+    assert default_backends().count(TwoPatterns) == 1
 
 
 def test_hocon_check_available_names_extra(monkeypatch):

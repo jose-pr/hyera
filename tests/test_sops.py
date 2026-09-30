@@ -405,6 +405,21 @@ def test_sops_data_format_inference_rejected(monkeypatch, tmp_path, name):
     assert not calls, "sops must not be invoked when the format can't be inferred"
 
 
+def test_run_sops_output_type_defaults_to_input_type(monkeypatch, tmp_path):
+    # SopsBackend.data_hash always passes an explicit output_type ("json"
+    # for ini, the same format otherwise), so _run_sops's own "default to
+    # input_type" branch is never reached through the public API --
+    # exercised directly against the private helper instead.
+    from hyera.backends._sops import _run_sops
+
+    calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b"a: 1\n")
+    path = tmp_path / "a.yaml"
+    path.write_bytes(b"")
+    _run_sops(path, "yaml")
+    args, _kwargs = calls[-1]
+    assert "--output-type=yaml" in args
+
+
 # Recorded (format, real sops-re-emitted native stdout, expected parsed
 # value) triples, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2
 # in WSL, decrypting a fixed age key's own encrypted copies of the recorded
@@ -535,6 +550,18 @@ def test_sops_data_secret_free_for_json_ini_dotenv(
         exc = exc.__cause__ or exc.__context__
     assert not any("HUNTER2" in s for s in seen)
     assert not any("HUNTER2" in r.getMessage() for r in caplog.records)
+
+
+def test_sops_data_invalid_utf8_reports_byte_offset_only(monkeypatch, tmp_path):
+    # A lone continuation byte is never valid UTF-8 at any position -- the
+    # message names the byte offset only, never the offending byte value
+    # or any surrounding plaintext.
+    _install_recorder(monkeypatch, tmp_path, stdout=b"a: 1\n\x80\n")
+    with pytest.raises(
+        BackendError, match=r"invalid UTF-8 at byte offset \d+"
+    ) as excinfo:
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert "\\x80" not in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------

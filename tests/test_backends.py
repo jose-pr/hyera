@@ -331,6 +331,10 @@ def test_json_strict_utf8_errors(tmp_path):
     "text,expected",
     [
         ('{"a": 1 /* c */}', {"a": 1}),
+        # A comment spanning a newline: the embedded "\n" is blanked to
+        # itself, not a space, so a later JSON parse error's line number
+        # still lines up with the original text.
+        ('{"a": 1, /* multi\nline */ "b": 2}', {"a": 1, "b": 2}),
         ('{"a": 1 // c\n}', {"a": 1}),
         ('"x"', "x"),
         ("null", None),
