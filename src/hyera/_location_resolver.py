@@ -1,6 +1,9 @@
 # Ported from Puppet 8 lib/puppet/pops/lookup/location_resolver.rb, the
 # location half of hiera_config.rb (https://github.com/puppetlabs/puppet),
 # Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Ruby uri/lib/uri/rfc3986_parser.rb
+# (https://github.com/ruby/uri), BSD-2-Clause. Modified by jose-pr.
+# See NOTICE.
 """Location resolution: expanding hierarchy levels into candidate source paths.
 
 Resolves a :class:`~hyera._hiera_config.HieraLevel`'s ``path``/``paths``/
@@ -20,7 +23,12 @@ import typing as _ty
 
 from pathlib_next import Path
 
-from ._interpolation import _scope_lookup, _to_puppet_str, interpolate
+from ._interpolation import (
+    _ruby_inspect_str,
+    _scope_lookup,
+    _to_puppet_str,
+    interpolate,
+)
 from ._invocation import Invocation
 from .exceptions import ConfigError
 
@@ -494,6 +502,166 @@ def _expand_globs(config_root, datadir, declared, invocation):
     return results
 
 
+# --- Ruby URI() acceptance and normalization (uri/rfc3986_parser.rb) -------
+#
+# A hand port of Ruby's RFC 3986 grammar (`RFC3986_Parser::HOST`, `USERINFO`,
+# `SCHEME`, `SEG`, `SEG_NC`, `FRAGMENT`, `RFC3986_URI`,
+# `RFC3986_relative_ref`), translated to Python `re` with only the changes
+# the language forces: `\h` -> `[0-9A-Fa-f]`; every `\g<name>` subroutine
+# call (a re-invocation of the named pattern, which `re` has no equivalent
+# for) inlined as that pattern's own text; possessive `*+`/`++` -> greedy
+# `*`/`+` (neither 3.9 nor 3.14 has possessive quantifiers, and a backtracking
+# greedy quantifier accepts exactly the same language here); group names
+# without a `-` (a Python identifier); `\A`/`\z` -> `fullmatch`. Only the
+# groups this module actually reads (`scheme`, `port`, `query`) are named;
+# everything else is a plain, non-capturing `(?:...)`.
+_HEXDIG = "[0-9A-Fa-f]"
+_PCT = "%" + _HEXDIG + _HEXDIG
+_USERINFO = "(?:" + _PCT + "|[!$&-.0-9:;=A-Z_a-z~])*"
+_SCHEME_CHARS = "[A-Za-z][+\\-.0-9A-Za-z]*"
+_SEG = "(?:" + _PCT + "|[!$&-.0-9:;=@A-Z_a-z~/])"
+_SEG_NC = "(?:" + _PCT + "|[!$&-.0-9;=@A-Z_a-z~])"
+_FRAGMENT = "(?:" + _PCT + "|[!$&-.0-9:;=@A-Z_a-z~/?])*"
+
+_DEC_OCTET = "(?:[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5]|\\d)"
+_IPV4ADDRESS = _DEC_OCTET + "\\." + _DEC_OCTET + "\\." + _DEC_OCTET + "\\." + _DEC_OCTET
+_LS32 = "(?:" + _HEXDIG + "{1,4}:" + _HEXDIG + "{1,4}|" + _IPV4ADDRESS + ")"
+_H4 = _HEXDIG + "{1,4}"
+_IPV6ADDRESS = (
+    "(?:"
+    + ("(?:" + _H4 + ":){6}" + _LS32)
+    + ("|::(?:" + _H4 + ":){5}" + _LS32)
+    + ("|" + _H4 + "?::(?:" + _H4 + ":){4}" + _LS32)
+    + ("|(?:(?:" + _H4 + ":)?" + _H4 + ")?::(?:" + _H4 + ":){3}" + _LS32)
+    + ("|(?:(?:" + _H4 + ":){0,2}" + _H4 + ")?::(?:" + _H4 + ":){2}" + _LS32)
+    + ("|(?:(?:" + _H4 + ":){0,3}" + _H4 + ")?::" + _H4 + ":" + _LS32)
+    + ("|(?:(?:" + _H4 + ":){0,4}" + _H4 + ")?::" + _LS32)
+    + ("|(?:(?:" + _H4 + ":){0,5}" + _H4 + ")?::" + _H4)
+    + ("|(?:(?:" + _H4 + ":){0,6}" + _H4 + ")?::")
+    + ")"
+)
+_IPVFUTURE = "v" + _HEXDIG + "+\\.[!$&-.0-9:;=A-Z_a-z~]+"
+_IP_LITERAL = "\\[(?:" + _IPV6ADDRESS + "|" + _IPVFUTURE + ")\\]"
+_REG_NAME = "(?:" + _PCT + "|[!$&-.0-9;=A-Z_a-z~])*"
+_HOST = "(?:" + _IP_LITERAL + "|" + _IPV4ADDRESS + "|" + _REG_NAME + ")"
+
+_AUTHORITY = "(?:" + _USERINFO + "@)?" + _HOST + "(?::(?P<port>\\d*))?"
+_PATH_ABEMPTY = "(?:/" + _SEG + "*)?"
+_QUERY = "(?P<query>[^#]*)"
+
+_RFC3986_URI = re.compile(
+    "(?P<scheme>"
+    + _SCHEME_CHARS
+    + "):"
+    + "(?:"
+    + "//"
+    + _AUTHORITY
+    + _PATH_ABEMPTY
+    + "|/(?:(?!/)"
+    + _SEG
+    + "+)?"
+    + "|(?!/)"
+    + _SEG
+    + "+"
+    + "|"
+    + ")"
+    + "(?:\\?"
+    + _QUERY
+    + ")?"
+    + "(?:#(?:"
+    + _FRAGMENT
+    + "))?"
+)
+
+_RFC3986_RELATIVE_REF = re.compile(
+    "(?:"
+    + "//"
+    + _AUTHORITY
+    + _PATH_ABEMPTY
+    + "|/"
+    + _SEG
+    + "*"
+    + "|"
+    + _SEG_NC
+    + "+(?:/"
+    + _SEG
+    + "*)?"
+    + "|"
+    + ")"
+    + "(?:\\?"
+    + _QUERY
+    + ")?"
+    + "(?:#(?:"
+    + _FRAGMENT
+    + "))?"
+)
+
+#: Default port dropped by ``URI#to_s`` when it exactly matches the
+#: scheme's own default (measured against Ruby 4.0.7; only the schemes
+#: Puppet's own oracle exercises are covered).
+_DEFAULT_PORTS = {
+    "http": "80",
+    "ws": "80",
+    "https": "443",
+    "wss": "443",
+    "ftp": "21",
+    "ldap": "389",
+}
+
+
+def _ruby_uri(text: str) -> str:
+    """Validate ``text`` against Ruby's ``URI()`` grammar and reproduce its
+    ``#to_s`` normalization (measured, not derivable from the grammar
+    alone): lowercase the scheme; drop an empty port or one equal to the
+    scheme's own default; percent-encode a literal space in the query as
+    ``%20``. Everything else -- host case, path, fragment -- passes through
+    verbatim. Raises :class:`~hyera.ConfigError` with Ruby's own message
+    when neither the absolute nor the relative grammar matches.
+    """
+    match = _RFC3986_URI.fullmatch(text) or _RFC3986_RELATIVE_REF.fullmatch(text)
+    if match is None:
+        raise ConfigError("bad URI (is not URI?): " + _ruby_inspect_str(text))
+
+    edits = []  # (start, end, replacement), applied right-to-left.
+    scheme = match.groupdict().get("scheme")
+    if scheme is not None:
+        lowered = scheme.lower()
+        if lowered != scheme:
+            edits.append((match.start("scheme"), match.end("scheme"), lowered))
+    port = match.groupdict().get("port")
+    if port is not None:
+        drop = port == "" or (
+            scheme is not None and port == _DEFAULT_PORTS.get(scheme.lower())
+        )
+        if drop:
+            # Drop the port digits and the ':' immediately before them.
+            edits.append((match.start("port") - 1, match.end("port"), ""))
+    query = match.groupdict().get("query")
+    if query is not None and " " in query:
+        edits.append(
+            (match.start("query"), match.end("query"), query.replace(" ", "%20"))
+        )
+
+    result = text
+    for start, end, replacement in sorted(edits, key=lambda e: e[0], reverse=True):
+        result = result[:start] + replacement + result[end:]
+    return result
+
+
+def _expand_uris(declared, invocation):
+    """``uri``/``uris`` (``location_resolver.rb:71-76``'s ``expand_uris``):
+    each declared string interpolates like any other location (lenient, no
+    method calls), is validated/normalized by :func:`_ruby_uri`, and always
+    "exists" -- Puppet never fetches or stats a ``uri`` location; a provider
+    decides what it means."""
+    results = []
+    for declared_uri in declared:
+        interp = interpolate(declared_uri, invocation, allow_methods=False)
+        normalized = _ruby_uri(interp)
+        results.append(ResolvedLocation(declared_uri, normalized, True, True))
+    return results
+
+
 def _mapped_collection_items(collection, collection_var, level_name):
     """The items a mapped_paths collection variable expands to:
     ``None``/``""``/``[]``/``{}`` -> no items; a ``str`` -> itself, alone; a
@@ -581,5 +749,5 @@ def resolve_locations(level, base_path, scope):
         return _expand_globs(config_root, datadir, level.locations, lenient_inv)
     if key == "mapped_paths":
         return _expand_mapped_paths(base, level, lenient_inv)
-    # "uri"/"uris": not implemented yet.
-    return []
+    # key in ("uri", "uris")
+    return _expand_uris(level.locations, lenient_inv)

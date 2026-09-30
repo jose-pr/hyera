@@ -360,8 +360,11 @@ next to hiera.yaml) ·
 `default_hierarchy` (module layer only) · `data_hash` backends (yaml/json/hocon, plus the
 non-Puppet `sops_data`) · `lookup_key`/`data_dig` provider backends, called
 per key and per location with a `hyera.LookupContext` · hierarchy `options`,
-interpolated and passed to the backend with `path` · a hierarchy entry with
-no location key (calls its function once, with no location) · all five
+interpolated and passed to the backend with `path`/`uri` · a hierarchy entry
+with no location key (calls its function once, with no location) · `uri`/
+`uris` locations (for provider backends), validated with Ruby's `URI()`
+grammar and normalized like `URI#to_s`, never fetched or checked for
+existence · all five
 interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with
 Puppet's parsing and rendering rules, hash-key interpolation, and recursion
 detection; `%{alias()}` as the whole value keeps the value's type · merges
@@ -375,8 +378,7 @@ version-3/missing-`version` environment or module hiera.yaml ignored (or
 raising under `strict="error"`).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
-3) · `uri`/`uris`
-sources · `eyaml_lookup_key` (use the `sops` backend instead) ·
+3) · `eyaml_lookup_key` (use the `sops` backend instead) ·
 `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`
 · reading `environment.conf`'s `modulepath`/`environment_data_provider`, or
 metadata.json's deprecated `data_provider`, both superseded here by the

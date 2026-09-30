@@ -86,16 +86,17 @@ Supported: `version: 5` validation, `defaults`, `hierarchy`,
 `data_hash` backends (yaml/json/hocon/sops), `lookup_key`/`data_dig`
 provider backends (called per key and per location with a
 `hyera.LookupContext`), hierarchy `options` (interpolated, passed to the
-backend with `path`), a location-less hierarchy entry (calls its function
-once, with no location), all five interpolation methods
-(`hiera`/`lookup`/`alias`/`scope`/`literal`) with dotted subkeys, merges
-`first`/`default`/`unique`/`hash`/`deep` (with `knockout_prefix`/
-`sort_merged_arrays`/`merge_hash_arrays`), `lookup_options` (per-key/regex
-merge strategy + `convert_to`), and the global/environment/module layer
-stack (`Hiera(..., environmentpath=, basemodulepath=, modulepath=)`;
-`hiera3_backend` global-only).
+backend with `path`/`uri`), a location-less hierarchy entry (calls its
+function once, with no location), `uri`/`uris` locations (validated with
+Ruby's `URI()` grammar, normalized like `URI#to_s`, never fetched), all five
+interpolation methods (`hiera`/`lookup`/`alias`/`scope`/`literal`) with
+dotted subkeys, merges `first`/`default`/`unique`/`hash`/`deep` (with
+`knockout_prefix`/`sort_merged_arrays`/`merge_hash_arrays`), `lookup_options`
+(per-key/regex merge strategy + `convert_to`), and the global/environment/
+module layer stack (`Hiera(..., environmentpath=, basemodulepath=,
+modulepath=)`; `hiera3_backend` global-only).
 
-Not implemented: `uri`/`uris` sources, `eyaml_lookup_key` (use the `sops`
+Not implemented: `eyaml_lookup_key` (use the `sops`
 backend instead), and the legacy `hiera3_backend` shim.
 
 ## Develop

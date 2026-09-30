@@ -14,6 +14,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `cache_all`, `cache_has_key`, `cached_value`, `cached_entries`,
   `cached_file_data`, `environment_name`, `module_name`); a hierarchy entry
   with no location key calls its function once, with no location.
+- `uri`/`uris` hierarchy locations are interpolated, checked with Ruby's
+  URI grammar and handed to the entry's function as `options["uri"]`
+  without any fetch or existence check; `yaml_data`, `json_data`,
+  `hocon_data` and `sops_data` entries using them raise Puppet's missing-path
+  `ConfigError` (they used to contribute nothing); a malformed URI raises
+  `ConfigError("bad URI (is not URI?): ...")`.
 - The `default` merge strategy (first match, as in Puppet).
 - The `reverse_deep` and `unconstrained_deep` merge strategies, which
   Puppet accepts for Hiera 3 data. `unconstrained_deep` also takes

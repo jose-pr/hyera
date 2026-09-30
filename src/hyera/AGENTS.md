@@ -275,21 +275,38 @@ private engine internals with no stability contract.
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches (untested on free-threaded builds).
 - **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
-  `location_key`, `locations`) — one hierarchy entry, stored exactly as
-  written in hiera.yaml (`locations` is never interpolated or normalized
-  here). `.new(conf, backend)` builds one from a hierarchy dict
-  (`location_key` is the first of `path`/`paths`/`glob`/`globs`/`uri`/
-  `uris`/`mapped_paths` present, or `None`; `locations` is that key's raw
-  value(s) — one string for a singular key, the declared tuple for a plural
-  one, or `(collection_var, item_var, template)` for `mapped_paths`).
-  `.paths(base_path, scope) -> list[Path]` resolves candidate source paths
-  for a bound `Scope`, through the same `%{...}` engine as data values
-  (`allow_methods=False`): an undefined variable interpolates as `''` plus
-  the scope's `strict`-mode warning and the resulting path is still probed,
-  **never** a skipped level; `datadir` interpolates separately, under the
-  scope's `strict` (raises under `"error"`, unlike a location itself, which
-  is always lenient); method-call syntax (`%{lookup(...)}` etc.) raises
-  `ConfigError` in any of these positions. A `mapped_paths` collection is a
+  `location_key`, `locations`, `kind`, `options`) — one hierarchy entry,
+  stored exactly as written in hiera.yaml (`locations`/`options` are never
+  interpolated or normalized here). `.new(conf, backend, kind="data_hash")`
+  builds one from a hierarchy dict (`location_key` is the first of
+  `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
+  `None`; `locations` is that key's raw value(s) — one string for a
+  singular key, the declared tuple for a plural one, or `(collection_var,
+  item_var, template)` for `mapped_paths`; `kind` is the resolved function
+  kind, `"data_hash"`/`"lookup_key"`/`"data_dig"`; `options` is the entry's
+  own `options`, else `defaults`'s, uninterpolated).
+  `.paths(base_path, scope) -> list[Path]` resolves candidate source
+  *file* paths for a bound `Scope`, through the same `%{...}` engine as
+  data values (`allow_methods=False`): an undefined variable interpolates
+  as `''` plus the scope's `strict`-mode warning and the resulting path is
+  still probed, **never** a skipped level; `datadir` interpolates
+  separately, under the scope's `strict` (raises under `"error"`, unlike a
+  location itself, which is always lenient); method-call syntax
+  (`%{lookup(...)}` etc.) raises `ConfigError` in any of these positions.
+  A location-less entry, or one using `uri`/`uris`, contributes no paths
+  here (`[]`) -- a `uri` is never a filesystem path.
+  `hyera._location_resolver.resolve_locations(level, base_path, scope)`
+  (private; `.paths` is its body) returns `None` for a location-less entry
+  (distinct from a location key that itself expands to zero candidates,
+  `[]`) or a list of `ResolvedLocation(original, location, is_uri, exist)`.
+  A `uri`/`uris` location is validated against Ruby's `URI()` RFC 3986
+  grammar and normalized like `URI#to_s` (lowercase scheme; drop an empty
+  or default port for `http`/`ws` (80), `https`/`wss` (443), `ftp` (21) and
+  `ldap` (389); percent-encode a literal space in the query as `%20`) --
+  `ConfigError("bad URI (is not URI?): <Ruby-inspected text>")` on a
+  malformed one; `.exist` is always `True` for a `uri` (never fetched or
+  stat'ed), and `.location` is the normalized string, not a `Path`. A
+  `mapped_paths` collection is a
   scope reference (dotted, `::`-qualified) — `None`/`""`/an empty
   Array/Hash contributes no paths, a `String` becomes a one-element list, an
   Array is used as-is, a Hash contributes its `[key, value]` pairs; a
@@ -528,9 +545,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `hyera.LookupContext` as `context` (below). Neither hook's return value is
   interpolated by the engine — call `context.interpolate(value)` yourself;
   signal a miss with `context.not_found()`, never a sentinel return value.
-  `options` carries `path` (a `str`) or `uri` (the declared string,
-  uninterpolated fetch) for a located entry, or neither for a location-less
-  one — the same mapping a `data_hash` hook receives.
+  `options` carries `path` (a `str`) or `uri` (interpolated and normalized
+  like Ruby's `URI#to_s`, never fetched) for a located entry, or neither
+  for a location-less one — the same mapping a `data_hash` hook receives.
 - **`LookupContext`** (in `hyera` and `hyera.backends`; Puppet's public
   `Context`, `pops/lookup/context.rb:126-206`) — the `context` argument a
   `lookup_key`/`data_dig` hook receives, one per hierarchy entry and

@@ -9,7 +9,7 @@ authors = [{ name = "jose-pr" }]
 description = "A Python implementation of Puppet Hiera hierarchical data lookup"
 readme = "README.md"
 requires-python = ">=3.9"
-license = "MIT AND Apache-2.0"
+license = "MIT AND Apache-2.0 AND BSD-2-Clause"
 license-files = ["LICENSE", "NOTICE", "LICENSES/*"]
 keywords = ["hiera", "puppet", "config", "hierarchy", "yaml", "lookup"]
 classifiers = [

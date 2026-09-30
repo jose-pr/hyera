@@ -72,6 +72,20 @@ The files ported from Psych are:
     src/hyera/_yaml_loader.py  (from psych/lib/psych/scalar_scanner.rb,
                                  psych/lib/psych/visitors/to_ruby.rb)
 
+Each was modified by jose-pr and carries a notice saying so.
+
+This project also ports selected code from Ruby's uri library:
+
+    https://github.com/ruby/uri
+
+uri is licensed under the Ruby License or the 2-clause BSDL, at the
+licensee's option; this project uses it under the 2-clause BSDL, a copy of
+which is included at LICENSES/uri-BSD-2-Clause.txt.
+
+The files ported from uri are:
+
+    src/hyera/_location_resolver.py  (from uri/lib/uri/rfc3986_parser.rb)
+
 Each was modified by jose-pr and carries a notice saying so. Modifications
 and all other files in this project are licensed under the MIT License
 (see LICENSE).
