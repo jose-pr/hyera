@@ -64,8 +64,9 @@ jobs:
       - name: Install package with all extras
         # Every extra that has tests depending on it, or those tests skip
         # instead of running: cli -> duho (test_cli.py), hocon -> pyhocon
-        # (test_backends.py).
-        run: python -m pip install -e ".[dev,cli,hocon]"
+        # (test_backends.py), eyaml -> cryptography (test_eyaml.py,
+        # test_providers.py).
+        run: python -m pip install -e ".[dev,cli,hocon,eyaml]"
       - name: Run tests
         # -rs so any skip is visible in the log: a green run with the
         # backend tests skipped is not a verified run.
@@ -108,7 +109,7 @@ jobs:
           open("floors.txt", "w").write("\n".join(pins) + "\n")
           print("\n".join(pins) or "(no floors declared)")
       - name: Install at the floors
-        run: python -m pip install -c floors.txt -e ".[dev,cli,hocon]"
+        run: python -m pip install -c floors.txt -e ".[dev,cli,hocon,eyaml]"
       - name: Run tests
         run: python -m pytest -q -rs
 
