@@ -8,7 +8,8 @@ import pytest
 
 from hyera import BackendError, ConfigError, Hiera, InterpolationError, Scope
 from hyera._hiera_config import HieraLevel
-from hyera._location_resolver import _pathname_plus
+from hyera._location_resolver import _no_lookup, _pathname_plus
+from hyera.core import _no_option_lookup
 
 # --- _pathname_plus (Ruby Pathname#+) ---------------------------------
 
@@ -33,6 +34,25 @@ def test_pathname_plus(base, rel, expected):
 def test_pathname_plus_keeps_platform_anchor():
     anchor = "C:/" if os.name == "nt" else "/"
     assert _pathname_plus(anchor + "r", "../../x") == anchor + "x"
+
+
+def test_pathname_plus_unc_anchor():
+    # A "//server/share/..." UNC path's own two-slash anchor, distinct from
+    # a plain single-slash root.
+    assert _pathname_plus("//server/share/data", "../x.yaml") == "//server/share/x.yaml"
+
+
+def test_location_and_option_no_lookup_callables_raise():
+    # Both _no_lookup (a hierarchy location's own Invocation) and
+    # _no_option_lookup (an entry's `options:` Invocation) are unreachable
+    # in practice -- interpolation there always runs with
+    # allow_methods=False, which rejects every method call
+    # (%{hiera()}/%{lookup()}/%{alias()}) before either callable could ever
+    # be reached -- exercised directly.
+    with pytest.raises(RuntimeError, match="hierarchy locations never"):
+        _no_lookup("k", None)
+    with pytest.raises(RuntimeError, match="hierarchy options never"):
+        _no_option_lookup("k", None)
 
 
 # --- HieraLevel.new ------------------------------------------------------
@@ -106,6 +126,31 @@ def test_hiera_level_paths_resolves_locations(tmp_path):
     )
     paths = level.paths(tmp_path, Scope(environment="production"))
     assert [str(p) for p in paths] == [str(tmp_path / "data" / "production.yaml")]
+
+
+def test_hiera_level_paths_resolves_a_glob(tmp_path):
+    # .paths() -- unlike the main lookup pipeline (which lazily
+    # materializes a glob level, see resolve_glob_specs) -- eagerly
+    # expands a glob/globs level through _expand_globs, since it has no
+    # lazy materialization step of its own.
+    from hyera import HieraLevel
+    from hyera.backends import YAMLBackend
+
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "a.yaml").write_bytes(b"k: v\n")
+    (tmp_path / "data" / "b.yaml").write_bytes(b"k: v2\n")
+    # A directory whose own name matches the glob pattern is dropped, not
+    # just one that doesn't match at all.
+    (tmp_path / "data" / "sub.yaml").mkdir()
+
+    level = HieraLevel.new(
+        {"name": "lvl", "datadir": "data", "glob": "*.yaml"}, YAMLBackend()
+    )
+    paths = level.paths(tmp_path, Scope())
+    assert sorted(str(p) for p in paths) == [
+        str(tmp_path / "data" / "a.yaml"),
+        str(tmp_path / "data" / "b.yaml"),
+    ]
 
 
 # --- path/paths extension (used for Hiera 3 configs) ---------------------
@@ -245,6 +290,49 @@ def test_method_syntax_in_datadir_raises(make_tree):
 
 
 # --- mapped_paths collection semantics ------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value, rendered",
+    [
+        (True, "Boolean true"),
+        (5, "Integer 5"),
+        (5.0, "Float 5.0"),
+    ],
+    ids=["bool", "int", "float"],
+)
+def test_mapped_collection_items_scalar_type_error_direct(value, rendered):
+    # A mapped_paths collection variable resolved to a non-collection
+    # scalar: Puppet's own NoMethodError calling .empty? on it, ported as
+    # a ConfigError naming the Ruby type. Exercised directly -- a scope
+    # variable can hold any of these, but not every one has a recorded
+    # Puppet-oracle case.
+    from hyera._location_resolver import _mapped_collection_items
+    from hyera.exceptions import ConfigError
+
+    with pytest.raises(ConfigError) as exc:
+        _mapped_collection_items(value, "var", "lvl")
+    assert str(exc.value) == (
+        "mapped_paths collection 'var' in hierarchy 'lvl' must be a String, "
+        "an Array or a Hash, got {}".format(rendered)
+    )
+
+
+def test_mapped_collection_items_other_type_error_direct():
+    # The final fallback (neither a Puppet scalar/collection type this
+    # project's own scope values can otherwise be): a plain Python
+    # type name and str(), matching what any unmodeled object falls back
+    # to elsewhere in this codebase too.
+    from hyera._location_resolver import _mapped_collection_items
+    from hyera.exceptions import ConfigError
+
+    marker = object()
+    with pytest.raises(ConfigError) as exc:
+        _mapped_collection_items(marker, "var", "lvl")
+    assert str(exc.value) == (
+        "mapped_paths collection 'var' in hierarchy 'lvl' must be a String, "
+        "an Array or a Hash, got object {}".format(marker)
+    )
 
 
 def test_mapped_paths_collection_array(make_tree):

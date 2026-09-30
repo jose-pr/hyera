@@ -11,10 +11,15 @@ import threading
 import pytest
 
 from hyera._location_resolver import (
+    _entry_is_dir,
     _expand_braces,
+    _glob_one,
     _glob_root_and_pattern,
     _has_magic,
+    _is_link,
+    _prepare_segments,
     _segment_matcher,
+    _segment_matches,
     glob,
 )
 
@@ -58,6 +63,10 @@ def _rel(root, matches):
         ("x\\{1\\}", ["x\\{1\\}"]),
         ("{a/b,c}", ["a/b", "c"]),
         ("{top}", ["top"]),
+        # An escaped char *inside* an (unescaped, expanding) brace pair --
+        # distinct from "x\\{1\\}" above, where the brace itself is
+        # escaped and the inner scan never runs at all.
+        ("{a\\,b,c}", ["a\\,b", "c"]),
     ],
 )
 def test_expand_braces(pattern, expected):
@@ -80,6 +89,14 @@ def test_expand_braces(pattern, expected):
         ("x\\*.yaml", "x*.yaml", True),
         ("x\\*.yaml", "xa.yaml", False),
         ("a**b.yaml", "aXYb.yaml", True),
+        # An escaped plain (non-magic) character.
+        ("x\\yz.yaml", "xyz.yaml", True),
+        # An empty bracket class ("[]a]") never matches anything.
+        ("[]a].yaml", "].yaml", False),
+        # An unclosed bracket class never matches anything.
+        ("a[bc.yaml", "a[bc.yaml", False),
+        # An escaped character inside a bracket class.
+        ("[\\]a].yaml", "].yaml", True),
     ],
 )
 def test_segment_matches(seg, name, matches):
@@ -101,6 +118,65 @@ def test_segment_matches(seg, name, matches):
 )
 def test_has_magic(seg, magic):
     assert _has_magic(seg) is magic
+
+
+# --- _prepare_segments / _segment_matches / _glob_one edge cases ---------
+
+
+def test_prepare_segments_collapses_consecutive_recursive():
+    # "a/**/**/b": the second non-trailing "**" collapses into the first
+    # rather than adding a second "recursive" segment.
+    assert _prepare_segments("a/**/**/b") == [
+        ("literal", "a"),
+        ("recursive", None),
+        ("literal", "b"),
+    ]
+
+
+def test_prepare_segments_unescapes_a_literal_segment():
+    # A non-magic segment (its only special char is itself escaped, so
+    # _has_magic says False) still needs its backslash stripped for the
+    # real filename to match against.
+    assert _prepare_segments("x\\*.yaml") == [("literal", "x*.yaml")]
+
+
+def test_segment_matches_unknown_kind_is_false():
+    # _segment_matches's own fallback: every real caller only ever builds
+    # "literal"/"magic" segments through _prepare_segments (a "recursive"
+    # segment is handled by _glob_one's own walk, never passed here) --
+    # exercised directly.
+    assert _segment_matches("recursive", None, "x") is False
+
+
+def test_glob_one_empty_pattern_matches_nothing(tmp_path):
+    assert _glob_one(str(tmp_path), "") == []
+
+
+class _FakeEntry:
+    """A minimal `os.DirEntry`-shaped double: `_is_link`/`_entry_is_dir`
+    only ever call `.is_symlink()`/`.stat()`/`.is_dir()` on their argument,
+    never check its type, so a real `os.DirEntry` (only ever produced by
+    `os.scandir`, not directly constructible) is not needed to exercise
+    their own `except OSError` backstops.
+    """
+
+    def is_symlink(self):
+        return False
+
+    def stat(self, follow_symlinks=False):
+        raise OSError("boom")
+
+    def is_dir(self, follow_symlinks=False):
+        raise OSError("boom")
+
+
+def test_is_link_stat_oserror_is_not_a_link(monkeypatch):
+    monkeypatch.setattr(os, "name", "nt")
+    assert _is_link(_FakeEntry()) is False
+
+
+def test_entry_is_dir_oserror_is_not_a_dir():
+    assert _entry_is_dir(_FakeEntry()) is False
 
 
 # --- the walker over a real tree -------------------------------------------
