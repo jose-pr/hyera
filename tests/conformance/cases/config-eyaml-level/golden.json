@@ -11,8 +11,8 @@
         "warning",
         "k"
       ],
-      "status": "error",
-      "message": "Function Load Error for function 'eyaml_lookup_key': Lookup using eyaml lookup_key function is only supported when the hiera_eyaml library is present"
+      "status": "found",
+      "value": "v"
     },
     "plain": {
       "argv": [
@@ -20,8 +20,8 @@
         "warning",
         "plain"
       ],
-      "status": "error",
-      "message": "Function Load Error for function 'eyaml_lookup_key': Lookup using eyaml lookup_key function is only supported when the hiera_eyaml library is present"
+      "status": "found",
+      "value": "fromsecrets"
     }
   }
 }

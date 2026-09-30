@@ -1,12 +1,10 @@
 description: >-
-  An `eyaml_lookup_key` hierarchy entry, without the hiera-eyaml gem, fails
-  to load the function -- it must not silently fall back to the defaults'
-  `data_hash: yaml_data` and read the .eyaml file as plain YAML.
+  An `eyaml_lookup_key` hierarchy entry must not silently fall back to the
+  defaults' `data_hash: yaml_data` and read the .eyaml file as plain YAML;
+  recorded with hiera-eyaml 5.0.1 present.
 origin: spec-layers-backends/eyaml_level
 queries:
   - key: k
-    error_class: ConfigError
-    error_match: 'eyaml_lookup_key'
+    divergence: spec-layers-backends/eyaml-not-implemented
   - key: plain
-    error_class: ConfigError
-    error_match: 'eyaml_lookup_key'
+    divergence: spec-layers-backends/eyaml-not-implemented
