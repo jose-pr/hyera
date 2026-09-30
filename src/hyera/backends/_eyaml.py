@@ -341,9 +341,11 @@ def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
             idx = 1  # env_children[0] is CMSVersion.
             rinfos_tag, rinfos_value, _ = env_children[idx]
             if rinfos_tag == 0xA0:  # optional [0] originatorInfo
+                # No bounds check needed here: the `len(env_children) < 3`
+                # guard above already guarantees at least 3 elements, and
+                # `idx` only ever reaches 2 in this branch -- always a valid
+                # index into `env_children`.
                 idx += 1
-                if idx >= len(env_children):
-                    raise _DerError("malformed EnvelopedData")
                 rinfos_tag, rinfos_value, _ = env_children[idx]
             if rinfos_tag != 0x31:  # SET OF RecipientInfo
                 raise _DerError("missing recipientInfos")
@@ -404,6 +406,15 @@ def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
         except _DerError as e:
             raise BackendError("Could not parse the PKCS7: {}".format(e)) from None
         except (IndexError, ValueError) as e:
+            # Defense-in-depth, not currently reachable: every subscript
+            # above (`ci_children[...]`, `env_children[...]`,
+            # `ktri_children[...]`, `eci_children[...]`, `alg_children[...]`)
+            # is preceded by an explicit length/emptiness check that raises
+            # `_DerError` first, and `_read_tlv`/`_read_length`/`_children`
+            # never index `buf` without bounds-checking `i` first either.
+            # Kept anyway so a future edit that adds an unguarded index
+            # still surfaces as this same `BackendError` instead of a raw
+            # `IndexError`/`ValueError` escaping the parser.
             raise BackendError("Could not parse the PKCS7: {}".format(e)) from None
 
         try:
