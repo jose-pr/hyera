@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `eyaml_lookup_key` (`hyera.EyamlBackend`), Puppet's hiera-eyaml
+  `lookup_key` function for PKCS7 values, behind the optional
+  `hyera[eyaml]` extra (`cryptography`): only the private key is needed,
+  options `pkcs7_private_key`, `pkcs7_private_key_env_var` and
+  `pkcs7_b64_private_key_env_var` with hiera-eyaml's own precedence,
+  relative key paths resolved against the working directory; other
+  encryptors (GPG) raise the error Puppet raises without their plugin.
 - `lookup_key` and `data_dig` hierarchy entries call the named backend per
   key and per location with Puppet's hierarchy `options` and a
   `hyera.LookupContext` (`interpolate`, `not_found`, `explain`, `cache`,

@@ -117,7 +117,14 @@ class _EnvironmentContext:
             raise BackendError(
                 "Unable to parse ({}): {}".format(path, e), path=path
             ) from e
-        value = parse(text) if parse is not None else text
+        try:
+            value = parse(text) if parse is not None else text
+        except BackendError as e:
+            if e.path is None:
+                raise BackendError(
+                    "Unable to parse ({}): {}".format(path, e), path=path
+                ) from e
+            raise
         self._cache[path] = (stamp, value)
         return value
 

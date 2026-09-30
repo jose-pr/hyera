@@ -732,3 +732,27 @@ def test_sources_exclude_uri_locations(make_tree, backends, script):
     sources = h.sources()
     assert all("mailto" not in str(s) for s in sources)
     assert any(str(s).endswith("common.yaml") for s in sources)
+
+
+# --- eyaml: missing optional dependency -----------------------------------
+
+
+def test_eyaml_missing_cryptography_hint(make_tree, monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "cryptography", None)
+    root = make_tree(
+        {
+            "hierarchy": [
+                {
+                    "name": "secrets",
+                    "lookup_key": "eyaml_lookup_key",
+                    "path": "secrets.eyaml",
+                    "options": {"pkcs7_private_key": "keys/private_key.pkcs7.pem"},
+                }
+            ]
+        },
+        files={"data/secrets.eyaml": "k: v\n"},
+    )
+    with pytest.raises(BackendError, match=r"hyera\[eyaml\]"):
+        Hiera(str(root / "hiera.yaml"))

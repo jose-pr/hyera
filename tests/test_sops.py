@@ -537,7 +537,12 @@ def test_sops_data_secret_free_for_json_ini_dotenv(
 
 def test_sops_names_registered():
     names = Backend.names()
-    assert names[-3:] == ["sops_data", "sops", "sops_<yaml|json|ini|dotenv>"]
+    # `sops_data`/`sops` are exact names, in definition order; every pattern
+    # name (regardless of where its class is defined) sorts after every
+    # exact name (`Backend.names()`'s own contract).
+    assert "sops_data" in names and "sops" in names
+    assert names.index("sops_data") < names.index("sops")
+    assert names[-1] == "sops_<yaml|json|ini|dotenv>"
     assert Backend.find("sops_toml") is None
 
 

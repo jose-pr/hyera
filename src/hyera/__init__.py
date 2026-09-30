@@ -3,6 +3,7 @@
 from .backends import (
     Backend,
     BackendError,
+    EyamlBackend,
     HOCONBackend,
     JSONBackend,
     LookupContext,
@@ -39,6 +40,7 @@ __all__ = [
     "JSONBackend",
     "HOCONBackend",
     "SopsBackend",
+    "EyamlBackend",
     "LookupContext",
     "HieraError",
     "ConfigError",

@@ -772,6 +772,40 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `:symbol` scalar/key survives as plain `:name` text (still parses to a
   `RubySymbol`/normalizes via `symkeys_to_string` on our side, same as
   any other YAML source).
+- **`EyamlBackend`** — `NAMES = {"function": ("eyaml_lookup_key",)}`, a
+  `lookup_key` provider, Puppet's own name for hiera-eyaml. Requires the
+  optional `hyera[eyaml]` extra (`cryptography`); `check_available()`
+  raises `BackendError` naming the extra when it is missing, at level
+  build via `Backend.new`, the same shape as the `hocon_data`/missing-
+  `pyhocon` message. **PKCS7 only** — the private key alone is needed (no
+  certificate); GPG or any other hiera-eyaml encryptor plugin raises
+  hiera-eyaml's own `LoadError` text, unwrapped, naming
+  `hyera[eyaml]`-only support. Options: `pkcs7_private_key` (a path
+  **relative to the process's current working directory**, not
+  `base_path` or the data file's own directory — matches hiera-eyaml
+  itself), `pkcs7_private_key_env_var` (wins over the plain path, with a
+  logged warning if both are set), `pkcs7_b64_private_key_env_var` (wins
+  over the plain path silently, base64-decoded with Ruby's lenient
+  `Base64.decode64` rules); `pkcs7_public_key*` options are accepted
+  (Puppet's own schema has them) but never read. The raw `.eyaml` file's
+  own non-Hash rule matches `yaml_data`'s (reads `self.strict` fresh on
+  every read, never cached, so a later call under a different `strict`
+  sees its own rule — the same trap `Hiera._load_file`'s cache key
+  already guards against for `data_hash`). A decrypted value is
+  interpolated (methods allowed) exactly like a `data_hash` result — a
+  Hash's **keys** are interpolated but never decrypted, only its values
+  recurse; every other type (int/float/bool/None) passes through
+  unchanged. Decrypt failures raise `BackendError("hiera-eyaml backend
+  error decrypting <token> when looking up <key> in <path>. Error was
+  <message>")`; a missing `path`/`uri` location raises `ConfigError` like
+  any other `lookup_key` function. `hyera._eyaml` (private) holds the
+  token grammar, key loading and a bounds-checked BER/DER reader that
+  decrypts PKCS7 `EnvelopedData` (RSA PKCS#1 v1.5 key transport,
+  AES-128/192/256-CBC content, definite or indefinite lengths, no
+  certificate parsing) — any wrong-key/garbled-ciphertext symptom (wrong
+  key, bad padding, implicit-rejection garbage) reports as `"bad
+  decrypt"`, OpenSSL's own text for exactly that case, never a
+  distinguishable error.
 - **`DotenvBackend`** — `format`-namespace only (`dotenv`; no Puppet
   `data_hash` equivalent, reachable only through `SopsBackend`). Parses
   **exactly the shape sops's own writer emits** (`stores/dotenv/

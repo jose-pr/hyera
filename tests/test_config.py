@@ -7,10 +7,11 @@ kind selection is a later addition here, once that phase lands.
 """
 
 import copy
+from pathlib import Path
 
 import pytest
 
-from hyera import ConfigError, Hiera
+from hyera import ConfigError, Hiera, Scope
 
 
 def test_dict_config_is_not_mutated(tmp_path):
@@ -306,8 +307,17 @@ def test_hiera3_backend_replaced_by_data_hash():
 
 def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
     # A `lookup_key` entry must never fall back to `defaults`' `data_hash`
-    # and read its file as plain YAML -- with real eyaml data that would
-    # return ciphertext as the value.
+    # and read its file as plain YAML -- with real eyaml data, that would
+    # return ciphertext as the value instead of the decrypted plaintext.
+    pytest.importorskip("cryptography")
+    key_path = str(
+        Path(__file__).resolve().parent
+        / "conformance"
+        / "cases"
+        / "backend-eyaml-pkcs7"
+        / "keys"
+        / "private_key.pkcs7.pem"
+    )
     root = make_tree(
         {
             "defaults": {"data_hash": "yaml_data"},
@@ -315,18 +325,29 @@ def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
                 {
                     "name": "secret",
                     "lookup_key": "eyaml_lookup_key",
-                    "path": "secret.yaml",
+                    "path": "secret.eyaml",
+                    "options": {"pkcs7_private_key": key_path},
                 }
             ],
         },
-        files={"data/secret.yaml": "plain: fromsecrets\n"},
+        files={
+            "data/secret.eyaml": (
+                "plain: ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIB"
+                "HQIBADAFMAACAQAwDQYJKoZIhvcNAQEBBQAEggEAUxMeECBRt6S3CUuSBrPq"
+                "gJMeVmfTz32pZZDYxT8STIJH/fcJwH8dXBtJXO1+cORUStymhaSFRBon4s2C"
+                "U1ivZh/Y7FPGELpv0DgO7p6FbjrBj3KTGRBoLPwLvF7c7g1mKIX+wVfqY5J6"
+                "CeNPazoZ7OdymtpIOVtVk6iM+DNoFJiJ1ExiflNj/evx/7LL4p8DxEUn7SBx"
+                "4GzVe1Tbixh1HXPOucWZf2gS9Q6oF5AonmesYV81tK7ZVnMWq0L6ofDEw7rn"
+                "V4WwOg3jvbZqUVTfW7VmWCNH/WRc9H0q8ALF6iFyLcVzgGR9FzkY6pwuA09D"
+                "gIz9K4nALPOkMbDPwz4GADBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCW"
+                "vJ27L0KBIZxF4C0PAWFbgCC+x0smWw5EliuxtFyWGVFTSqtZZV/Ew3zhxy8I"
+                "3B1r0Q==]\n"
+            )
+        },
     )
 
-    with pytest.raises(
-        ConfigError,
-        match="Unable to find 'lookup_key' function named 'eyaml_lookup_key'",
-    ):
-        Hiera(str(root / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"os": {"family": "RedHat"}}))
+    assert h.lookup("plain") == "s3cr3t RedHat"
 
 
 @pytest.mark.parametrize(

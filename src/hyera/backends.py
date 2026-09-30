@@ -34,6 +34,7 @@ __all__ = [
     "JSONBackend",
     "HOCONBackend",
     "SopsBackend",
+    "EyamlBackend",
     "DotenvBackend",
     "BackendError",
     "RubySymbol",
@@ -1585,6 +1586,78 @@ class SopsBackend(Backend):
         raise BackendError(
             "Unable to parse ({}): {}".format(path, problem), path=str(path)
         )
+
+
+class EyamlBackend(Backend):
+    """Puppet's hiera-eyaml ``lookup_key`` function, PKCS7 only (behind the
+    optional ``hyera[eyaml]`` extra). Ports ``functions/eyaml_lookup_key.
+    rb:25-79``: the raw ``.eyaml`` file loads once per location (through
+    :meth:`~hyera._function_provider.LookupContext.cached_file_data`, its
+    *raw* parse only -- caching the non-Hash rule's strict-sensitive result
+    would freeze whichever strictness read it first, exactly the trap
+    ``Hiera._load_file`` guards against for ``data_hash``), then each
+    requested key's value is decrypted (:func:`hyera._eyaml.decrypt_string`)
+    and cached; the raw hash is never returned to the engine, and its
+    values are never interpolated except through
+    :func:`~hyera._eyaml.decrypt_string`'s own trailing ``context.
+    interpolate`` call.
+    """
+
+    NAMES = {"function": ("eyaml_lookup_key",)}
+
+    @classmethod
+    def check_available(cls):
+        from ._eyaml import check_cryptography
+
+        check_cryptography()
+
+    def lookup_key(self, key, options, context):
+        if context.cache_has_key(key):
+            return context.cached_value(key)
+        if "path" not in options:
+            raise ConfigError(
+                "'eyaml_lookup_key': one of 'path', 'paths' 'glob', 'globs' "
+                "or 'mapped_paths' must be declared in hiera.yaml when "
+                "using this lookup_key function"
+            )
+        path = options["path"]
+        if context.cache_has_key(None):
+            parsed = context.cached_value(None)
+        else:
+            yaml_backend = YAMLBackend()
+            parsed = context.cached_file_data(path, parse=yaml_backend.loads)
+            context.cache(None, parsed)
+
+        # The non-Hash rule reads `self.strict` at call time, same as
+        # `yaml_data`'s own -- applied fresh on every read (never cached),
+        # so a later call under different strictness sees its own rule.
+        raw = YAMLBackend(strict=self.strict)._as_data_hash(parsed, path)
+        if key not in raw:
+            context.not_found()
+        value = raw[key]
+        decrypted = self._decrypt(value, options, context, key, path)
+        return context.cache(key, decrypted)
+
+    def _decrypt(self, value, options, context, key, path):
+        """Recurse into ``value`` decrypting every string
+        (``eyaml_lookup_key.rb:66-79``): a Hash's keys are interpolated but
+        never decrypted, a List/Hash's elements/values recurse, and every
+        other type (int/float/bool/None) passes through unchanged. Only the
+        decrypted string leaves through ``context.interpolate`` -- a value
+        with no ``ENC[...]`` token is interpolated too (mirroring Puppet's
+        own unconditional call)."""
+        from ._eyaml import decrypt_string
+
+        if isinstance(value, str):
+            return context.interpolate(decrypt_string(value, options, key, path))
+        if isinstance(value, dict):
+            return {
+                context.interpolate(k): self._decrypt(v, options, context, key, path)
+                for k, v in value.items()
+            }
+        if isinstance(value, list):
+            return [self._decrypt(v, options, context, key, path) for v in value]
+        return value
 
 
 def default_backends():

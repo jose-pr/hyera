@@ -5,6 +5,4 @@ description: >-
 origin: spec-layers-backends/eyaml_level
 queries:
   - key: k
-    divergence: spec-layers-backends/eyaml-not-implemented
   - key: plain
-    divergence: spec-layers-backends/eyaml-not-implemented
