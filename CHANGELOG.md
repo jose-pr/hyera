@@ -227,6 +227,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Integer, `l=[a,b]` an Array) and a dotted NAME builds a hash
   (`os.family=RedHat`). `--merge` accepts only `first`, `unique`, `hash`
   and `deep`; anything else exits 2 with Puppet's message.
+- CLI logging follows `puppet lookup`: warnings by default, `-v` adds
+  info, `-vv` or `-d`/`--debug` adds debug, `-q` hides warnings (`-qq`
+  hides errors too). A missing key prints nothing and exits 1, as in
+  Puppet; the message is logged at debug level. `-v`, `-d` or
+  `DUHO_TRACEBACK=1` add the traceback to a `2`-exit error.
 
 ### Removed
 
@@ -267,6 +272,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (dotfile matching, a trailing `**`), no longer loop or read outside a
   hierarchy's own tree through a symlink or Windows junction loop, and
   sort the same way on every OS.
+- `--help` and `--version` name the program `hyera`; they used to say
+  `Lookup` (the command class's own name).
+- `-v`, `-q` and `--loglevel` now change what the CLI logs; they used to
+  have no effect on it. `--help` is plain text and describes `--merge`
+  correctly: omitting it lets `lookup_options` decide.
 
 ### Security
 

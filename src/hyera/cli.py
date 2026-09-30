@@ -1,14 +1,14 @@
 """Command-line interface for hyera, built on duho.
 
-Accepts ``puppet lookup``'s own flag set (see README.md "Command line"):
+Accepts puppet lookup's own flag set (see README.md "Command line"):
 
-``hyera KEY --hiera_config hiera.yaml --facts facts.yaml --node N``
+hyera KEY --hiera_config hiera.yaml --facts facts.yaml --node N
 
 Designed for unattended use: no interactive prompts, deterministic output,
-and meaningful exit codes: ``0`` found (or ``--default`` printed), ``1``
-key not found, ``2`` any other error (one stderr line; ``-v`` or
-``DUHO_TRACEBACK=1`` adds the traceback). Output is rendered the way
-``puppet lookup --render-as s|json|yaml`` does (:mod:`hyera._render`),
+and meaningful exit codes: 0 found (or --default printed), 1
+key not found, 2 any other error (one stderr line; -v or
+DUHO_TRACEBACK=1 adds the traceback). Output is rendered the way
+puppet lookup --render-as s|json|yaml does (hyera._render),
 written as UTF-8 bytes with LF line endings whatever the console/locale
 encoding.
 """
@@ -38,13 +38,13 @@ from .backends import Backend
 
 _LOGGER = _logging.getLogger(__name__)
 
-#: The four merge strategy names ``puppet lookup --merge`` accepts; there
-#: are no ``array``/``set`` aliases.
+#: The four merge strategy names puppet lookup --merge accepts; there
+#: are no array/set aliases.
 _MERGE_STRATEGIES = ("first", "unique", "hash", "deep")
 
-#: Long-spelling value options ``_puppet_argv`` joins with their following
-#: token (``--opt value`` -> ``--opt=value``), so a value that itself looks
-#: like an option (``--knock-out-prefix --``, ``--default -x``) reaches
+#: Long-spelling value options _puppet_argv joins with their following
+#: token (--opt value -> --opt=value), so a value that itself looks
+#: like an option (--knock-out-prefix --, --default -x) reaches
 #: argparse the way Puppet's own option parser would consume it.
 _VALUE_OPTIONS = (
     "--merge",
@@ -65,8 +65,8 @@ _VALUE_OPTIONS = (
     "--loglevel",
 )
 
-#: Printed (to stderr) when the ``cli`` extra (duho) is not installed.
-# Double-quoted, not single-quoted: `pip install 'hyera[cli]'` fails when
+#: Printed (to stderr) when the cli extra (duho) is not installed.
+# Double-quoted, not single-quoted: pip install 'hyera[cli]' fails when
 # pasted into cmd.exe, where single quotes are literal (pip then sees the
 # argv "'hyera[cli]'" verbatim and rejects it); double quotes work in
 # cmd.exe, PowerShell and POSIX shells alike.
@@ -74,37 +74,37 @@ _NO_CLI_EXTRA_HINT = (
     "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )
 
-#: The ``puppet lookup`` release this CLI's flags and ``$server_facts``
+#: The puppet lookup release this CLI's flags and $server_facts
 #: mirror. Not read from anywhere else -- there is no local Puppet to ask.
 _PUPPET_VERSION = "8.10.0"
 
 
 class _UsageError(ValueError):
-    """Puppet's ``Could not run: ...`` text: reported bare, no key prefix."""
+    """Puppet's Could not run: ... text: reported bare, no key prefix."""
 
 
 class _ScopeError(_UsageError):
-    """A ``--scope`` entry was not in ``key=value`` form, or its name is invalid."""
+    """A --scope entry was not in key=value form, or its name is invalid."""
 
     def __init__(self, item: str, reason: str = "expected key=value"):
         super().__init__("invalid --scope {!r} ({})".format(item, reason))
 
 
 def _parse_scope_value(text: str):
-    """A ``--scope`` value is YAML; an empty value is ``None`` (not the
-    ``yaml_data`` loader's own empty-document ``False``)."""
+    """A --scope value is YAML; an empty value is None (not the
+    yaml_data loader's own empty-document False)."""
     if text == "":
         return None
     return Backend.new("yaml", kind="format").loads(text)
 
 
 def _parse_scope(items: "_ty.Iterable[str]") -> dict:
-    """Parse ``NAME=VALUE`` scope entries into a node-parameters dict.
+    """Parse NAME=VALUE scope entries into a node-parameters dict.
 
-    ``NAME`` may be dotted (``os.family=RedHat``) to build a nested hash;
+    NAME may be dotted (os.family=RedHat) to build a nested hash;
     later items win, and a segment landing under an already-scalar value
-    raises. An empty ``NAME``, or an item with no ``=`` at all, raises
-    :class:`_ScopeError`.
+    raises. An empty NAME, or an item with no = at all, raises
+    _ScopeError.
     """
     result: dict = {}
     for item in items or ():
@@ -133,8 +133,8 @@ def _parse_scope(items: "_ty.Iterable[str]") -> dict:
 
 
 def _paths(value):
-    """Split a Puppet path-list setting (``os.pathsep``-joined) into
-    absolute paths; ``None`` stays ``None`` (the flag was not given)."""
+    """Split a Puppet path-list setting (os.pathsep-joined) into
+    absolute paths; None stays None (the flag was not given)."""
     if value is None:
         return None
     return [_os.path.abspath(p) for p in value.split(_os.pathsep) if p]
@@ -148,15 +148,15 @@ def _describe(e) -> str:
 
 
 def _emit(text: str) -> None:
-    """Write ``text`` to stdout the way Ruby's ``puts`` does: a trailing
-    newline is appended only if ``text`` does not already end with one.
+    """Write text to stdout the way Ruby's puts does: a trailing
+    newline is appended only if text does not already end with one.
 
     Always UTF-8 bytes with LF line endings, regardless of the console or
-    locale encoding: written to ``sys.stdout.buffer`` when one exists (a
-    real console or pipe), else (a ``StringIO`` under
-    ``contextlib.redirect_stdout``, as the conformance harness uses)
-    ``sys.stdout.write`` directly. Never ``sys.stdout.reconfigure`` --
-    that would change the caller's own stream when ``main()`` runs
+    locale encoding: written to sys.stdout.buffer when one exists (a
+    real console or pipe), else (a StringIO under
+    contextlib.redirect_stdout, as the conformance harness uses)
+    sys.stdout.write directly. Never sys.stdout.reconfigure --
+    that would change the caller's own stream when main() runs
     in-process.
     """
     if not text.endswith("\n"):
@@ -174,11 +174,11 @@ def _emit(text: str) -> None:
 def _silence_stdout() -> None:
     """Redirect the stdout file descriptor to the null device.
 
-    Called after a :class:`BrokenPipeError`: the reader is already gone,
+    Called after a BrokenPipeError: the reader is already gone,
     so nothing further should try to write to (or complain about) the
     broken pipe, including whatever the interpreter does with stdout at
     exit. Best-effort: a stream with no real file descriptor (a
-    ``StringIO``) just leaves this a no-op.
+    StringIO) just leaves this a no-op.
     """
     try:
         _os.dup2(_os.open(_os.devnull, _os.O_WRONLY), _sys.stdout.fileno())
@@ -187,30 +187,30 @@ def _silence_stdout() -> None:
 
 
 #: A placeholder substituted for a value-option's argument when that
-#: argument is exactly ``"--"`` (see ``_puppet_argv``), and translated back
-#: by ``_unplaceholder``. Not a valid Puppet scope/type/path value, so it
+#: argument is exactly "--" (see _puppet_argv), and translated back
+#: by _unplaceholder. Not a valid Puppet scope/type/path value, so it
 #: never collides with a real one.
 _DOUBLE_DASH_PLACEHOLDER = "\x00hyera-literal-double-dash\x00"
 
 
 def _puppet_argv(argv):
     """Join a long value-option with its following token
-    (``--opt value`` -> ``--opt=value``) so argparse never sees a bare
-    ``--`` or a dash-leading value as the *next* option -- Puppet's own
-    option parser consumes a value this way. A bare ``--`` not
+    (--opt value -> --opt=value) so argparse never sees a bare
+    -- or a dash-leading value as the *next* option -- Puppet's own
+    option parser consumes a value this way. A bare -- not
     immediately following a value option (Puppet's own "everything after
     this is a key" marker) is left untouched.
 
-    A value that is exactly ``"--"`` (Puppet's own knockout-prefix example)
-    is routed through :data:`_DOUBLE_DASH_PLACEHOLDER` instead of being
-    joined as-is: CPython's own ``argparse.Action._get_values`` (through
-    3.12) unconditionally removes one literal ``"--"`` from an action's
-    collected argument strings before dispatching on ``nargs``, even when
-    that ``"--"`` arrived as an option's *value* (via ``--opt=--``) rather
+    A value that is exactly "--" (Puppet's own knockout-prefix example)
+    is routed through _DOUBLE_DASH_PLACEHOLDER instead of being
+    joined as-is: CPython's own argparse.Action._get_values (through
+    3.12) unconditionally removes one literal "--" from an action's
+    collected argument strings before dispatching on nargs, even when
+    that "--" arrived as an option's *value* (via --opt=--) rather
     than the "end of options" separator -- silently turning a single-value
-    option's own value into an empty list instead of the string ``"--"``.
-    Fixed in Python 3.13; this project's floor is 3.9. ``__call__`` calls
-    :func:`_unplaceholder` on every field that went through this join.
+    option's own value into an empty list instead of the string "--".
+    Fixed in Python 3.13; this project's floor is 3.9. __call__ calls
+    _unplaceholder on every field that went through this join.
     """
     out = []
     i, n = 0, len(argv)
@@ -229,19 +229,24 @@ def _puppet_argv(argv):
 
 
 def _unplaceholder(value):
-    """Translate :data:`_DOUBLE_DASH_PLACEHOLDER` back to ``"--"``; any
-    other value (``None`` included) passes through unchanged."""
+    """Translate _DOUBLE_DASH_PLACEHOLDER back to "--"; any
+    other value (None included) passes through unchanged."""
     return "--" if value == _DOUBLE_DASH_PLACEHOLDER else value
 
 
 if duho is not None:
 
     class Lookup(duho.LoggingArgs, duho.Cli):
-        """Look up keys in Hiera data the way puppet lookup does."""
+        """Look up keys in Hiera data the way puppet lookup does.
+
+        Exit status: 0 found (or --default printed), 1 no key found, 2
+        any other error.
+        """
 
         _version_ = __version__
         _mcp_ = True
         _parsername_ = "hyera"
+        _logger_name_ = "hyera"
 
         keys: "duho.Arg[_ty.List[str], duho.NS(flags=['keys'], metavar='KEY')]" = None
         """Keys to look up; the first one found wins."""
@@ -316,15 +321,31 @@ if duho is not None:
         render_as: "duho.Arg[_ty.Optional[str], duho.NS(flags=['--render-as'], metavar='FORMAT')]" = (None)
         """Output format: s, json or yaml (default yaml; s when explaining)."""
 
+        debug: "duho.Arg[bool, duho.NS(flags=['--debug', '-d'])]" = False
+        """Log debug messages (same as -vv)."""
+
+        def _verbose_loglevel_(self) -> int:
+            """Puppet's own scheme from a WARNING base: none warning, -v
+            info, -vv or -d/--debug debug, -vvv trace, -q error, -qq
+            critical."""
+            levels = list(_duho_logging.VERBOSE_LEVELS.keys())
+            base = levels.index(_logging.WARNING)
+            index = base + self.verbose - self.quiet
+            index = max(0, min(index, len(levels) - 1))
+            level = levels[index]
+            if self.debug:
+                level = min(level, _logging.DEBUG)
+            return level
+
         def _fail(self, text) -> int:
             """Log one ERROR-level line and return exit code 2.
 
             The traceback is attached only when explicitly asked for
-            (``-v`` or ``DUHO_TRACEBACK=1``); an unattended caller gets a
-            single line, not a stack.
+            (-v, -d/--debug or DUHO_TRACEBACK=1); an
+            unattended caller gets a single line, not a stack.
             """
             kw = {}
-            if self.verbose > 0 or _duho_logging.traceback_enabled():
+            if self.verbose > 0 or self.debug or _duho_logging.traceback_enabled():
                 kw = {"exc_info": True}
             _LOGGER.error("%s", text, **kw)
             return 2
@@ -451,7 +472,10 @@ if duho is not None:
                         names, value_type, merge_options, **lookup_kwargs
                     )
             except KeyNotFoundError as e:
-                _LOGGER.error("%s", e)
+                # Puppet's own miss prints nothing and exits 1, with or
+                # without -v; only -d/--debug (or -vv, or --loglevel) shows
+                # this DEBUG line.
+                _LOGGER.debug("%s", e)
                 return 1
             except Exception as e:  # HieraError, OSError, anything unexpected
                 return self._fail(
