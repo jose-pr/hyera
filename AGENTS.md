@@ -173,6 +173,11 @@ test instead of a hand-written expectation.
 - **Never hand-edit `golden.json`.** It is only ever written by
   `record.py`, keyed by query id, and lint-checked (`test_case_is_current`)
   against a digest of everything that was asked of Puppet.
+- A query's `explain: data|options` (`--explain`/`--explain-options`)
+  records two Puppet runs (`--render-as json` and `--render-as s`) into one
+  `explained` result holding both `tree` and `text`, replayed against
+  `Hiera.explain(...)`/the CLI with the tree compared canonically and the
+  text line for line.
 
 ## License
 
