@@ -72,6 +72,16 @@ def test_bad_call_shapes_raise_type_error(fn):
         h.lookup("k", merge=5)
     with pytest.raises(TypeError):
         h.lookup("k", block=1)
+    with pytest.raises(TypeError, match="a name hash must be a dict with str keys"):
+        h.lookup({5: "x"})
+    with pytest.raises(
+        TypeError, match="each name in a list must be a str or a tuple key path"
+    ):
+        h.lookup([5])
+    with pytest.raises(TypeError, match="override must be a dict with str keys"):
+        h.lookup("k", override={5: "x"})
+    with pytest.raises(TypeError, match="value_type must be a str, not int"):
+        h.lookup("k", value_type=5)
 
 
 def test_name_lists(fn):
@@ -174,6 +184,28 @@ def test_override_and_defaults_feed_value_interpolation(fn, make_tree):
     h2 = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"role": "web"}))
     assert h2.lookup("pick", override={"role": "db"}) == "web"
     assert h2.lookup("echo", override={"role": "db"}) == "r=db"
+
+
+def test_override_and_defaults_propagate_into_nested_lookup(make_tree):
+    # nested_lookup's own override/default_values check (for a %{lookup()}/
+    # %{hiera()} call embedded in an interpolated value) -- distinct from
+    # the outer lookup's own override/default handling
+    # test_override_and_defaults_feed_value_interpolation above exercises
+    # through a plain %{scope-variable} reference instead.
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
+        files={
+            "data/a.yaml": (
+                "outer: \"x%{lookup('inner')}y\"\n"
+                "outer_missing: \"x%{lookup('missingkey')}y\"\n"
+            )
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("outer", override={"inner": "OVR"}) == "xOVRy"
+    assert (
+        h.lookup("outer_missing", default_values_hash={"missingkey": "DVH"}) == "xDVHy"
+    )
 
 
 def test_override_is_returned_unconverted(fn):
