@@ -189,6 +189,55 @@ def test_reserved_and_numeric_names_rejected():
             Scope(variables={name: "x"})
 
 
+def test_scope_constructor_type_validation():
+    with pytest.raises(TypeError, match="environment must be a str, not int"):
+        Scope(environment=5)
+    with pytest.raises(ValueError, match="environment must not be empty"):
+        Scope(environment="")
+    with pytest.raises(TypeError, match="node_name must be a str, not int"):
+        Scope(node_name=5)
+    with pytest.raises(TypeError, match="variables must be a mapping, not str"):
+        Scope(variables="notamapping")
+    with pytest.raises(TypeError, match="variables keys must be strings, not int"):
+        Scope(variables={1: "x"})
+    with pytest.raises(TypeError, match="Unsupported data type: 'object'"):
+        Scope(variables={"a": object()})
+    with pytest.raises(TypeError, match="Unsupported data type: 'int'"):
+        Scope(variables={"a": {1: "x"}})
+
+
+def test_lookupvar_and_exist_reject_non_str_names():
+    scope = Scope()
+    with pytest.raises(TypeError, match="scope variable name must be a str, not int"):
+        scope.lookupvar(5)
+    with pytest.raises(TypeError, match="scope variable name must be a str, not int"):
+        scope.exist(5)
+
+
+def test_with_local_scope_rejects_none():
+    with pytest.raises(TypeError, match="variables must be a mapping, not None"):
+        Scope().with_local_scope(None)
+
+
+def test_exist_finds_a_local_layer_variable():
+    child = Scope().with_local_scope({"x": 1})
+    assert child.exist("x") is True
+
+
+def test_sanitize_fact_key_rejects_a_list():
+    from hyera._scope import _sanitize_fact_key
+
+    with pytest.raises(TypeError, match="a list cannot be used as a fact key"):
+        _sanitize_fact_key(["a"])
+
+
+def test_scope_repr():
+    scope = Scope(variables={"a": 1}, facts={"os": "x"})
+    assert repr(scope) == (
+        "Scope(environment='production', strict='warning', variables=9, facts=1)"
+    )
+
+
 def test_main_class_and_builtin_variables():
     scope = Scope()
     assert scope.lookup("name") == "main"
