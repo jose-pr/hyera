@@ -511,3 +511,29 @@ def test_default_hierarchy_only_for_qualified_keys(tmp_path, make_tree):
     h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
     with pytest.raises(KeyNotFoundError):
         h.lookup("unq")
+
+
+def test_modulepath_rejects_a_non_path_entry(make_tree):
+    base = _global(make_tree)
+    with pytest.raises(TypeError, match="modulepath must be a path"):
+        Hiera(str(base / "hiera.yaml"), modulepath=[5])
+
+
+def test_nonexistent_modulepath_and_environmentpath_entries_are_skipped(
+    tmp_path, make_tree
+):
+    # find_environment/module_dirs's own os.listdir OSError catch: an
+    # entry that plain doesn't exist at all (not merely empty, the case
+    # test_missing_production_environment_uses_basemodulepath already
+    # covers) is silently skipped, not a crash.
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(modules / "m" / "hiera.yaml", _LEVEL)
+    _write(modules / "m" / "data" / "c.yaml", "m::k: v\n")
+
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[tmp_path / "no-such-envs"],
+        basemodulepath=[tmp_path / "no-such-mods", modules],
+    )
+    assert h.lookup("m::k") == "v"
