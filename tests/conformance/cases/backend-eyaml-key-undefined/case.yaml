@@ -1,0 +1,9 @@
+description: >-
+  No pkcs7_private_key (nor either env-var option) at all fails only the
+  query that needs to decrypt. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: secret
+    error_class: BackendError
+    error_match: "Error was pkcs7_private_key is not defined"
+  - key: plain

@@ -1,0 +1,6 @@
+description: >-
+  A Ruby symbol key in the eyaml file's raw hash is normalized to its
+  plain-string name, same as yaml_data. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: symk

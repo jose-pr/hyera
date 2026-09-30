@@ -1,0 +1,8 @@
+description: >-
+  eyaml_lookup_key, like every lookup_key/data_dig function, still requires
+  a path/paths/glob/globs/mapped_paths location -- `uri` is not one. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: plain
+    error_class: ConfigError
+    error_match: "'eyaml_lookup_key': one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this lookup_key function"

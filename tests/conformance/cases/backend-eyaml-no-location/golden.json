@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d168dec34e881daf98dde8b7769a249806f5ab278945f6010243d6a30970f357",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "'eyaml_lookup_key': one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this lookup_key function"
+    }
+  }
+}

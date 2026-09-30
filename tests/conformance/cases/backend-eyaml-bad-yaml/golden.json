@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "3eb1807574173a637cef44445bae61ede42f0e9c699765c0c569de8677e1645f",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/secrets.eyaml): did not find expected node content while parsing a flow node at line 2 column 1"
+    }
+  }
+}

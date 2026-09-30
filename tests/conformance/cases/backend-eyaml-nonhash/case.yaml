@@ -1,0 +1,11 @@
+description: >-
+  A non-Hash eyaml file follows the same warn-and-fall-through /
+  strict-error rule as yaml_data's own non-Hash rule. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: plain
+  - id: plain-strict-error
+    key: plain
+    puppet_args: ["--strict", "error"]
+    error_class: BackendError
+    error_match: "secrets\\.eyaml: file does not contain a valid yaml hash"

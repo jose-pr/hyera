@@ -1,0 +1,3 @@
+---
+plain: fromcommon
+secret_merge: {b: 2}

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "98152d70630aa5256db93a84bdfa9941f7dd2a0437b3daf8098ada41f351a3ab",
+  "results": {
+    "secret": {
+      "argv": [
+        "--strict",
+        "warning",
+        "secret"
+      ],
+      "status": "found",
+      "value": "s3cr3t RedHat"
+    }
+  }
+}

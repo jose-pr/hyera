@@ -1,0 +1,8 @@
+description: >-
+  Naming eyaml_lookup_key (a lookup_key-only function) as a data_hash
+  entry is a Puppet config error at level build. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: secret
+    error_class: ConfigError
+    error_match: "'eyaml_lookup_key' expects 3 arguments, got 2"

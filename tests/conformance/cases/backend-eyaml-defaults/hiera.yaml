@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, lookup_key: eyaml_lookup_key, options: {pkcs7_private_key: keys/private_key.pkcs7.pem}}
+hierarchy:
+  - {name: secrets, path: secrets.eyaml}
+  - {name: common, path: common.yaml}

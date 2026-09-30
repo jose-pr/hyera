@@ -1,0 +1,8 @@
+description: >-
+  A syntactically broken eyaml file fails to parse, same as any other
+  YAML-backed data file. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: plain
+    error_class: BackendError
+    error_match: "Unable to parse \\(?\\S*secrets\\.eyaml\\)"

@@ -9,6 +9,7 @@ commit, removing the ``AdapterUnsupported`` branches it makes expressible.
 import contextlib
 import io
 import json
+import os
 
 from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive, load_facts
 from hyera.cli import main as _cli_main
@@ -65,6 +66,21 @@ def _unrecognized_flags(args: list) -> list:
                 continue
         i += 1
     return bad
+
+
+@contextlib.contextmanager
+def _chdir(path):
+    """``os.chdir`` for the duration of the block, restored in ``finally``
+    (``contextlib.chdir`` is 3.11+; this project's floor is 3.9). A relative
+    ``pkcs7_private_key`` resolves against the process cwd, exactly like
+    hiera-eyaml itself -- ``record.py`` runs Puppet with ``wsl.exe --cd
+    <case dir>``, so replaying a query here needs the same cwd."""
+    previous = os.getcwd()
+    os.chdir(str(path))
+    try:
+        yield
+    finally:
+        os.chdir(previous)
 
 
 def _load_facts(case_dir) -> dict:
@@ -155,21 +171,24 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     args = _puppet_args(case, query)
     merge = query.get("merge")
     try:
-        facts = _load_facts(case_dir)
-        scope = Scope(
-            facts=facts,
-            environment=env,
-            server_facts={"serverversion": golden["puppet_version"]},
-            strict=strict,
-            node_name=golden["node"],
-        )
-        hiera = Hiera(
-            str(case_dir / "hiera.yaml"), scope=scope, **_layer_kwargs(case_dir, args)
-        )
-        kwargs = {"value_type": query.get("type"), "merge": merge}
-        if query.get("default") is not None:
-            kwargs["default_value"] = query["default"]
-        value = hiera.lookup(key, **kwargs)
+        with _chdir(case_dir):
+            facts = _load_facts(case_dir)
+            scope = Scope(
+                facts=facts,
+                environment=env,
+                server_facts={"serverversion": golden["puppet_version"]},
+                strict=strict,
+                node_name=golden["node"],
+            )
+            hiera = Hiera(
+                str(case_dir / "hiera.yaml"),
+                scope=scope,
+                **_layer_kwargs(case_dir, args),
+            )
+            kwargs = {"value_type": query.get("type"), "merge": merge}
+            if query.get("default") is not None:
+                kwargs["default_value"] = query["default"]
+            value = hiera.lookup(key, **kwargs)
     except KeyNotFoundError as e:
         # The recorder's own "not_found" heuristic (_NOT_FOUND in record.py)
         # matches only Puppet's *singular* miss message ("the name"); a
@@ -217,7 +236,7 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
 
     out = io.StringIO()
     try:
-        with contextlib.redirect_stdout(out):
+        with _chdir(case_dir), contextlib.redirect_stdout(out):
             rc = _cli_main(argv)
     except SystemExit as e:
         return {"status": "usage", "code": e.code}

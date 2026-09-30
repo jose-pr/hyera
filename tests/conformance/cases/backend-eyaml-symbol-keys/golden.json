@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "8a96e9889cda69b83729af3eb1163363cf35614a7677e76e61b245bc96774810",
+  "results": {
+    "symk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "symk"
+      ],
+      "status": "found",
+      "value": "symv"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+description: >-
+  eyaml_lookup_key (PKCS7) decrypting a full range of value shapes: scalars,
+  arrays, hashes, a hash key holding ciphertext, aliased/literal
+  interpolation inside a decrypted value, unsupported encryptor schemes,
+  and lookup_options declared inside the eyaml file itself. Recorded with
+  hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: plain
+  - key: secret
+  - key: arr
+  - key: hash
+  - key: block
+  - key: mixed
+  - key: hash.k
+  - key: nope
+  - key: int
+  - key: bool
+  - key: nullv
+  - key: nl
+  - key: aliased
+  - key: pct
+  - key: keyenc
+  - key: gpg
+    error_class: BackendError
+    error_match: encryptors/gpg
+  - key: foo
+    error_class: BackendError
+    error_match: encryptors/foo
+  - key: lower
+  - key: noscheme
+  - key: corrupt
+    error_class: BackendError
+    error_match: "hiera-eyaml backend error decrypting ENC\\[PKCS7,aGVsbG8=\\] when looking up corrupt in \\S*secrets\\.eyaml\\. Error was Could not parse the PKCS7"
+  - key: twoline
+    error_class: BackendError
+    error_match: "decrypting ENC\\[PKCS7,abc def\\] when looking up twoline in \\S*secrets\\.eyaml\\. Error was Could not parse the PKCS7"
+  - key: sens
+  - key: secret_merge
+  - id: secret_merge-first
+    key: secret_merge
+    merge: first

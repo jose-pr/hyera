@@ -1,0 +1,6 @@
+description: >-
+  A nonexistent eyaml file is a miss without a call (like any other
+  lookup_key location), falling through to the next level. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: plain

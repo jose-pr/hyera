@@ -1,0 +1,6 @@
+description: >-
+  A `%{facts...}` interpolated pkcs7_private_key path resolves the real
+  key. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: secret

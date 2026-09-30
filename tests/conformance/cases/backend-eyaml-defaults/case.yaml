@@ -1,0 +1,7 @@
+description: >-
+  `lookup_key: eyaml_lookup_key` and its options declared in `defaults`
+  (inherited by an entry that names neither itself). Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: secret
+  - key: plain

@@ -1,0 +1,5 @@
+version: 5
+defaults: {datadir: data, data_hash: yaml_data}
+hierarchy:
+  - {name: secrets, lookup_key: eyaml_lookup_key, uri: "http://example.invalid/%{facts.os.family}", options: {pkcs7_private_key: keys/private_key.pkcs7.pem}}
+  - {name: common, path: common.yaml}

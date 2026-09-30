@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "0dbc1ad6f3c75b9451bc176861893348c3f9953f1f154d98987505e5b0f66d24",
+  "results": {
+    "secret": {
+      "argv": [
+        "--strict",
+        "warning",
+        "secret"
+      ],
+      "status": "error",
+      "message": "'eyaml_lookup_key' expects 3 arguments, got 2"
+    }
+  }
+}

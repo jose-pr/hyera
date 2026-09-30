@@ -1,0 +1,10 @@
+description: >-
+  A missing pkcs7_private_key file fails only the query that needs to
+  decrypt; a plain (undecrypted) value in the same eyaml file still
+  succeeds. Recorded with hiera-eyaml 5.0.1 present.
+requires: [cryptography]
+queries:
+  - key: secret
+    error_class: BackendError
+    error_match: "Error was file keys/missing\\.pem does not exist"
+  - key: plain

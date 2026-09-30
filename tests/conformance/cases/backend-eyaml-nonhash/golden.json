@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "bdb14cd2bc6726a334fe1a3e6b431936f5955719c9315614b2932fd53b393051",
+  "results": {
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "warnings": [
+        "<case>/data/secrets.eyaml: file does not contain a valid yaml hash"
+      ],
+      "status": "found",
+      "value": "fromcommon"
+    },
+    "plain-strict-error": {
+      "argv": [
+        "--strict",
+        "error",
+        "plain"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: <case>/data/secrets.eyaml: file does not contain a valid yaml hash"
+    }
+  }
+}
