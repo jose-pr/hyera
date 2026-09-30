@@ -1,0 +1,7 @@
+description: >-
+  A v3 config whose :hierarchy: is a Hash instead of a String or Array.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''hierarchy'' expects a value of type String or Array, got Struct'

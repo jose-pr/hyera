@@ -1,0 +1,7 @@
+description: >-
+  A v3 config (symbol-keyed) with an unrecognized top-level key.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'unrecognized key ''foo'''

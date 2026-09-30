@@ -1,0 +1,7 @@
+description: >-
+  A v3 config whose :hierarchy: is an empty String.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'expects a value of type String\[1\] or Array\[String\[1\]\], got String'

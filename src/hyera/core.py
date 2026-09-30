@@ -34,7 +34,8 @@ from ._hiera_config import (
     _config_error,
     _fill_v5_defaults,
     _read_base_config,
-    _select_version,
+    _read_v3,
+    _config_version,
     _validate_v5,
 )
 from ._function_provider import PROVIDER_CLASSES, _EnvironmentContext
@@ -523,27 +524,37 @@ class Hiera:
 
         source, self.base = _read_base_config(self.base_config, base_path)
         self.base_path = source.root
-        _select_version(self.base, source)
-        _fill_v5_defaults(self.base)
-        _validate_v5(self.base, source)
+        version = _config_version(self.base, source)
 
         if not self.backends:
             raise ConfigError("No backends could be loaded")
 
-        try:
-            self.hierarchy, self.default_hierarchy = _build_hierarchies(
-                self.base, self.backends, source
+        if version == 3:
+            # Global-layer version 3 (or versionless) config: read and
+            # validated in full against Puppet's own v3 schema. A version-3
+            # config outside the global layer is never read this way -- it
+            # is ignored (with a warning) or raised about by
+            # :meth:`_usable` instead.
+            self.hierarchy, self.default_hierarchy = _read_v3(
+                self.base, source, self.scope
             )
-        except HieraError as e:  # keep the class and text, add the file
-            e.path = e.path or source.path
-            raise
-        except Exception as e:
-            raise ConfigError(
-                "The Lookup Configuration at '{}' is invalid: {}: {}".format(
-                    source.label, type(e).__name__, _one_line(e)
-                ),
-                path=source.path,
-            ) from e
+        else:
+            _fill_v5_defaults(self.base)
+            _validate_v5(self.base, source)
+            try:
+                self.hierarchy, self.default_hierarchy = _build_hierarchies(
+                    self.base, self.backends, source
+                )
+            except HieraError as e:  # keep the class and text, add the file
+                e.path = e.path or source.path
+                raise
+            except Exception as e:
+                raise ConfigError(
+                    "The Lookup Configuration at '{}' is invalid: {}: {}".format(
+                        source.label, type(e).__name__, _one_line(e)
+                    ),
+                    path=source.path,
+                ) from e
 
         #: The global layer, wrapped for the provider-aware stack walk
         #: (:meth:`_lookup_layers`) -- the same ``self.hierarchy``/
@@ -555,7 +566,7 @@ class Hiera:
             source,
             self.hierarchy,
             self.default_hierarchy,
-            5,
+            version,
         )
         # Puppet fails every lookup on a broken environment config; loading
         # the construction scope's own environment now gives the same

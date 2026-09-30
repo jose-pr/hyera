@@ -1,0 +1,7 @@
+description: >-
+  A v3 config whose backend config (:yaml:) is a String instead of a Hash.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''yaml'' expects a Hash value, got String'

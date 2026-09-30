@@ -1,0 +1,6 @@
+description: >-
+  A v3 config whose :backends: is an Integer. Real Puppet 8 crashes on this input (undefined method 'string' for ... TypeCalculator) rather than giving a clean schema error, so only status/error_class are pinned, not the message text.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError

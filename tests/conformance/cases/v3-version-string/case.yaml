@@ -1,0 +1,7 @@
+description: >-
+  A v3 config with version given as a String instead of an Integer.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''version'' expects an Integer value, got String'

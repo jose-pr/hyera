@@ -1,0 +1,7 @@
+---
+:backends: [yaml]
+:yaml:
+  :datadir: data
+:hierarchy: [common]
+:deep_merge_options:
+  knockout_prefix: 5

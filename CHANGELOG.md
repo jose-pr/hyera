@@ -471,17 +471,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   named `"a.b"` instead. The CLI's `--scope` follows the same rule: a
   dotted `--scope` name (`--scope a.b=v`) now exits `2` rather than storing
   a variable nothing could ever read.
-- A hiera.yaml without `version`, or with `version: 3`, raises `ConfigError`
-  instead of being read as version 5 -- add `version: 5`.
+- A hiera.yaml without `version`, or with `version: 3`, is read as version 3,
+  as Puppet does, and validated against Puppet's own version 3 schema with
+  Puppet's messages -- so a version 5 layout missing `version:` fails with
+  them (add `version: 5`). A version 3 config still raises `ConfigError`
+  ("hiera.yaml version 3 hierarchies are not supported yet") once it
+  validates; only the schema is implemented so far.
 - `version: 4` raises "hiera.yaml version 4 cannot be used in the global
   layer" instead of being read as version 5.
 - Any other unsupported version raises "This runtime does not support
   hiera.yaml version N".
 - A `version` that is not an Integer (`"5"`, `5.0`) raises, instead of
   being accepted or silently truncated.
-- An empty or non-mapping hiera.yaml raises a `ConfigError` that names the
-  Hiera version 3 fallback it does not yet support, instead of being read
-  as an empty version 5 config.
+- An empty or non-mapping hiera.yaml logs Puppet's own warning and falls
+  back to Puppet's version 3 default configuration, then reads that as
+  version 3, instead of raising a `ConfigError` naming the fallback as
+  unsupported.
+- Every version 3 (or missing-`version`) hiera.yaml logs Puppet's
+  deprecation warning ("Use of 'hiera.yaml' version 3 is deprecated. It
+  should be converted to version 5") unless `Scope(strict="off")`.
 - A relative config path, and a relative `base_path`, are made absolute at
   construction instead of resolving against the current working directory
   on every read.

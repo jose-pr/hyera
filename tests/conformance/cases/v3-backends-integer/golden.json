@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "5aa0279a9d92f8fab4e966c2169b647cd66e60a7524047a4336e181aaf23706f",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "undefined method 'string' for an instance of Puppet::Pops::Types::TypeCalculator"
+    }
+  }
+}

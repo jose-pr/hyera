@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "298e0b593d91d40ff852e7fb0fc656b784f704ff7fef4663c34cc87358443f3d",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed:  The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'hierarchy' variant 0 expects a String value, got Tuple"
+    }
+  }
+}

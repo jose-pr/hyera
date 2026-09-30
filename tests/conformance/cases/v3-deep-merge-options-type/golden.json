@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "ef4f776991d282c842bdf8e754e90b1ed877dd79051f854ff2ad9e2a1fdad592",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'deep_merge_options' entry 'knockout_prefix' expects a value of type String or Boolean, got Integer"
+    }
+  }
+}

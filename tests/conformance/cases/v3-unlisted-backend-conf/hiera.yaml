@@ -1,0 +1,8 @@
+---
+:backends: [yaml]
+:yaml:
+  :datadir: data
+:hierarchy: [common]
+:logger: console
+:json:
+  :datadir: nope

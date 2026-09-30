@@ -20,7 +20,7 @@ from pathlib_next import Path
 from .backends import Backend, YAMLBackend, has_hocon
 from .exceptions import BackendError, ConfigError
 from ._location_resolver import resolve_locations
-from ._yaml_loader import symkeys_to_string
+from ._yaml_loader import RubySymbol, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +31,18 @@ DEFAULT_CONFIG_HASH = {
     "version": 5,
     "defaults": {"datadir": "data", "data_hash": "yaml_data"},
     "hierarchy": [{"name": "Common", "path": "common.yaml"}],
+}
+
+#: Puppet's Hiera 3 default configuration (``hiera_config.rb:433-437``,
+#: ``HieraConfigV3::DEFAULT_CONFIG_HASH``): used both as the ``||=`` fill for
+#: missing/``false`` top-level v3 keys (:func:`_fill_v3_defaults`) and, via
+#: :func:`_read_base_config`, when a hiera.yaml exists but does not parse to
+#: a YAML hash at all (Puppet falls back to this, then reads it as v3, at
+#: every layer -- ``hiera_config.rb:139-144``). Every use deep-copies this.
+V3_DEFAULT_CONFIG_HASH = {
+    "backends": ["yaml"],
+    "hierarchy": ["nodes/%{::trusted.certname}", "common"],
+    "merge_behavior": "native",
 }
 
 
@@ -86,6 +98,12 @@ def _ruby_type_name(value) -> str:
         return "Boolean"
     if value is None:
         return "Undef"
+    if isinstance(value, RubySymbol):
+        # A Ruby Symbol value survives `symkeys_to_string` (only dict *keys*
+        # are normalized) and has no Puppet type of its own -- Puppet's own
+        # TypeCalculator reports it as a bare `Runtime` (probe
+        # `v3symmb`: `:merge_behavior: :deeper`).
+        return "Runtime"
     if isinstance(value, str):
         return "String"
     if isinstance(value, int):
@@ -104,32 +122,23 @@ def _ruby_type_name(value) -> str:
 _VERSION_LEADING_INT = re.compile(r"\s*[+-]?\d+")
 
 
-def _select_version(
+def _config_version(
     data: dict, source: "_ConfigSource", *, layer: str = "global"
 ) -> int:
     """Puppet's version dispatch (``hiera_config.rb:153-167``), returning the
-    resolved version.
+    resolved version: ``3``, ``4`` or ``5``.
 
-    At the global layer (``layer="global"``), anything but a literal Integer
-    ``5`` raises :class:`ConfigError` -- version 3/4 parsing at the global
-    layer is not implemented yet, so a missing ``version`` (Hiera 3's own
-    signal) and an explicit ``3``/``4`` just name what they are, unsupported
-    for now. Outside the global layer (``"environment"``/``"module"``), a
-    missing ``version`` or an explicit ``3`` is not an error here: it
-    returns ``3`` and leaves the ignore-or-raise decision to
-    :meth:`~hyera.core.Hiera._usable`, applied with the invocation's own
-    ``strict`` at the point the layer is actually consulted
-    (``environment_data_provider.rb``/``module_data_provider.rb``). A
-    version 4 there raises "not supported yet". Any other version raises the same way at every layer.
+    A missing ``version`` is Hiera 3's own signal and resolves to ``3`` at
+    every layer (``hiera_config.rb:130``: ``version = data['version'] ||
+    3``) -- the caller reads it with :func:`_read_v3`. An explicit ``4`` at
+    the global layer (``layer="global"``) raises :class:`ConfigError`
+    immediately (Puppet accepts version 4 only in the environment/module
+    layers); outside the global layer it currently raises "not supported
+    yet" (a later phase reads it with a v4 reader instead). Any other
+    version (``1``, ``2``, ``6``, ...) raises the same way at every layer.
     """
     v = data.get("version")
-    _v3_text = (
-        "hiera.yaml version 3 is not supported yet (a hiera.yaml without "
-        "'version' is version 3)"
-    )
     if v is None:
-        if layer == "global":
-            raise _config_error(source, _v3_text)
         return 3
     if isinstance(v, bool) or not isinstance(v, (int, float, str)):
         raise _type_error(
@@ -155,8 +164,6 @@ def _select_version(
             )
         return 5
     if n == 3:
-        if layer == "global":
-            raise _config_error(source, _v3_text)
         return 3
     if n == 4:
         if layer == "global":
@@ -172,12 +179,266 @@ def _select_version(
 def _fill_v5_defaults(data: dict) -> None:
     """Puppet's ``defaults ||=``/``hierarchy ||=`` fill
     (``validate_config``, ``hiera_config.rb:742-745``), run after
-    :func:`_select_version`. ``is``, not ``==``: ``0 == False`` in Python,
+    :func:`_config_version`. ``is``, not ``==``: ``0 == False`` in Python,
     and Puppet's ``||=`` triggers on Ruby ``nil``/``false`` alike."""
     if data.get("defaults") is None or data.get("defaults") is False:
         data["defaults"] = copy.deepcopy(DEFAULT_CONFIG_HASH["defaults"])
     if data.get("hierarchy") is None or data.get("hierarchy") is False:
         data["hierarchy"] = copy.deepcopy(DEFAULT_CONFIG_HASH["hierarchy"])
+
+
+def _warn_deprecated(source: "_ConfigSource", version: int, scope) -> None:
+    """Puppet's per-version deprecation warning (``hiera_config.rb:85``,
+    ``:440``, ``:554``): logged once per read, silenced only when
+    ``scope.strict == "off"`` (locations stay lenient regardless)."""
+    if scope is not None and getattr(scope, "strict", None) == "off":
+        return
+    _LOGGER.warning(
+        "%s: Use of 'hiera.yaml' version %d is deprecated. It should be "
+        "converted to version 5",
+        source.label,
+        version,
+    )
+
+
+def _fill_v3_defaults(data: dict) -> None:
+    """Puppet's v3 ``||=`` fill (``HieraConfigV3#validate_config``,
+    ``hiera_config.rb:444-448``), run after :func:`_config_version` returns
+    ``3``. ``is``, not ``==``, as :func:`_fill_v5_defaults` already notes."""
+    if data.get("version") is None or data.get("version") is False:
+        data["version"] = 3
+    if data.get("backends") is None or data.get("backends") is False:
+        data["backends"] = copy.deepcopy(V3_DEFAULT_CONFIG_HASH["backends"])
+    if data.get("hierarchy") is None or data.get("hierarchy") is False:
+        data["hierarchy"] = copy.deepcopy(V3_DEFAULT_CONFIG_HASH["hierarchy"])
+    if data.get("merge_behavior") is None or data.get("merge_behavior") is False:
+        data["merge_behavior"] = V3_DEFAULT_CONFIG_HASH["merge_behavior"]
+    if (
+        data.get("deep_merge_options") is None
+        or data.get("deep_merge_options") is False
+    ):
+        data["deep_merge_options"] = {}
+
+
+#: ``HieraConfigV3``'s own struct keys (``hiera_config.rb:355-370``), in
+#: schema-declaration order -- the order :func:`_validate_v3` reports
+#: mismatches in. A backend's own config key (``:yaml:``, ``:eyaml:``, ...)
+#: is a *dynamic* addition to this set, one per distinct name in
+#: ``backends`` (``:397``), so it is not listed here.
+_V3_TOP_KEYS = (
+    "version",
+    "backends",
+    "logger",
+    "merge_behavior",
+    "deep_merge_options",
+    "hierarchy",
+)
+_V3_MERGE_BEHAVIORS = ("deep", "deeper", "native")
+
+
+def _v3_string_detail(value) -> "_ty.Optional[str]":
+    """Puppet's ``String[1]`` mismatch detail, or ``None``."""
+    if not isinstance(value, str):
+        return "expects a String value, got {}".format(_ruby_type_name(value))
+    if value == "":
+        return "expects a String[1] value, got String"
+    return None
+
+
+def _v3_string_or_array_details(value) -> "_ty.List[str]":
+    """Puppet's ``Variant[String[1], Array[String[1]]]`` mismatch detail(s)
+    (``backends``/``hierarchy``), unwrapped (the caller applies ``entry
+    '<name>'`` via :func:`_msg`). A structurally-wrong value (not a String,
+    not an Array) merges into one "expects a value of type ... or ..." line;
+    an Array with bad items instead names BOTH failing variants, one line
+    per failing item, exactly as Puppet's ``TypeMismatchDescriber`` does for
+    a ``Variant`` whose value is at least shaped like one of its members
+    (probed: ``[5, common]`` -> two lines, one naming the Array variant's
+    own bad index)."""
+    if isinstance(value, str):
+        if value == "":
+            return ["expects a value of type String[1] or Array[String[1]], got String"]
+        return []
+    if isinstance(value, list):
+        bad = [
+            (i, item)
+            for i, item in enumerate(value)
+            if not isinstance(item, str) or item == ""
+        ]
+        if not bad:
+            return []
+        lines = ["variant 0 expects a String value, got Tuple"]
+        for i, item in bad:
+            if not isinstance(item, str):
+                lines.append(
+                    "variant 1 index {} expects a String value, got {}".format(
+                        i, _ruby_type_name(item)
+                    )
+                )
+            else:
+                lines.append(
+                    "variant 1 index {} expects a String[1] value, got String".format(i)
+                )
+        return lines
+    return [
+        "expects a value of type String or Array, got {}".format(_ruby_type_name(value))
+    ]
+
+
+def _v3_merge_behavior_detail(value) -> "_ty.Optional[str]":
+    """``Enum['deep', 'deeper', 'native']`` mismatch detail, or ``None``."""
+    enum = "Enum['deep', 'deeper', 'native']"
+    if isinstance(value, str):
+        if value in _V3_MERGE_BEHAVIORS:
+            return None
+        return "expects a match for {}, got '{}'".format(enum, value)
+    return "expects a match for {}, got {}".format(enum, _ruby_type_name(value))
+
+
+def _v3_backend_names(value) -> "_ty.List[str]":
+    """Distinct backend names from a ``backends`` value, in first-appearance
+    order -- ``[]`` when it is not validly shaped (its own mismatch is
+    reported by :func:`_v3_string_or_array_details` instead). Used both to
+    know which dynamic per-backend config keys are allowed top-level keys
+    here, and (a later phase) to build one provider per name."""
+    if isinstance(value, str):
+        items = [value] if value else []
+    elif isinstance(value, list):
+        items = [v for v in value if isinstance(v, str) and v]
+    else:
+        items = []
+    seen: "list" = []
+    for name in items:
+        if name not in seen:
+            seen.append(name)
+    return seen
+
+
+def _validate_v3(data: dict, source: "_ConfigSource") -> None:
+    """Every Puppet v3 schema mismatch, in Puppet's struct-declaration order
+    (``HieraConfigV3::CONFIG_TYPE``, ``hiera_config.rb:355-370``, walked by
+    ``pops/types/type_mismatch_describer.rb``'s ``describe_PStructType``):
+    each mismatch renders as its own "The Lookup Configuration ... has
+    wrong type, ..." detail line; all of them join with ``"\\n"`` into one
+    :class:`ConfigError` (unlike v5's :func:`_validate_v5`, which reports
+    only the first: a versionless v5-shaped file needs every mismatch
+    visible in one pass to be fixable). Assumes :func:`_fill_v3_defaults`
+    already ran, so ``version``/``backends``/``hierarchy``/
+    ``merge_behavior``/``deep_merge_options`` are always present.
+    """
+    details: "list" = []
+
+    v = data.get("version")
+    if isinstance(v, bool) or not isinstance(v, int):
+        details.append(
+            _msg(
+                ("version",),
+                "expects an Integer value, got {}".format(_ruby_type_name(v)),
+            )
+        )
+
+    backends = data.get("backends")
+    for detail in _v3_string_or_array_details(backends):
+        details.append(_msg(("backends",), detail))
+
+    if "logger" in data:
+        detail = _v3_string_detail(data["logger"])
+        if detail:
+            details.append(_msg(("logger",), detail))
+
+    detail = _v3_merge_behavior_detail(data.get("merge_behavior"))
+    if detail:
+        details.append(_msg(("merge_behavior",), detail))
+
+    dmo = data.get("deep_merge_options")
+    if not isinstance(dmo, dict):
+        details.append(
+            _msg(
+                ("deep_merge_options",),
+                "expects a Hash value, got {}".format(_ruby_type_name(dmo)),
+            )
+        )
+    else:
+        for k, val in dmo.items():
+            if not isinstance(k, str) or k == "":
+                details.append(
+                    _msg(
+                        ("deep_merge_options",),
+                        "key of entry '{}' expects a String[1] value, got {}".format(
+                            k, _ruby_type_name(k)
+                        ),
+                    )
+                )
+                continue
+            if not isinstance(val, (str, bool)):
+                details.append(
+                    _msg(
+                        ("deep_merge_options", k),
+                        "expects a value of type String or Boolean, got {}".format(
+                            _ruby_type_name(val)
+                        ),
+                    )
+                )
+
+    hierarchy = data.get("hierarchy")
+    for detail in _v3_string_or_array_details(hierarchy):
+        details.append(_msg(("hierarchy",), detail))
+
+    backend_names = _v3_backend_names(backends)
+    for name in backend_names:
+        if name not in data:
+            continue
+        conf = data[name]
+        if not isinstance(conf, dict):
+            details.append(
+                _msg(
+                    (name,),
+                    "expects a Hash value, got {}".format(_ruby_type_name(conf)),
+                )
+            )
+            continue
+        for k in conf:
+            if not isinstance(k, str) or k == "":
+                details.append(
+                    _msg(
+                        (name,),
+                        "key of entry '{}' expects a String[1] value, got {}".format(
+                            k, _ruby_type_name(k)
+                        ),
+                    )
+                )
+
+    allowed = set(_V3_TOP_KEYS) | set(backend_names)
+    for k in data:
+        if k not in allowed:
+            details.append(_msg((), "unrecognized key '{}'".format(k)))
+
+    if not details:
+        return
+    label = source.label if source else "<dict>"
+    message = "The Lookup Configuration at '{}' has wrong type, {}".format(
+        label, "\n".join(details)
+    )
+    raise ConfigError(message, path=source.path if source else None)
+
+
+def _read_v3(data: dict, source: "_ConfigSource", scope) -> "_ty.Tuple[list, list]":
+    """Read a Hiera version 3 base config (``HieraConfigV3``,
+    ``hiera_config.rb:350-485``): the deprecation warning, the ``||=``
+    fill, then full schema validation.
+
+    The backend-major provider build (``create_configured_data_providers``,
+    ``hiera_config.rb:372-431``) is not implemented yet, so a config that
+    validates still raises. A later change replaces the final ``raise``
+    with the real hierarchy build and starts returning
+    ``(hierarchy_levels, default_hierarchy_levels)``.
+    """
+    _warn_deprecated(source, 3, scope)
+    _fill_v3_defaults(data)
+    _validate_v3(data, source)
+    raise _config_error(
+        source, "hiera.yaml version 3 hierarchies are not supported yet"
+    )
 
 
 #: ``hiera_config.rb:71-73``.
@@ -432,7 +693,7 @@ def _check_top(data: dict, source: "_ConfigSource") -> None:
             )
     for key, value in data.items():
         if key == "version":
-            continue  # already validated by _select_version
+            continue  # already validated by _config_version
         if key == "defaults":
             _check_defaults_type(value, ("defaults",), source)
         elif key in ("hierarchy", "plan_hierarchy", "default_hierarchy"):
@@ -649,9 +910,7 @@ class HieraLevel(_ty.NamedTuple):
         return [loc.location for loc in resolved if not loc.is_uri]
 
 
-def _read_base_config(
-    base_config, base_path, *, layer: str = "global"
-) -> "_ty.Tuple[_ConfigSource, dict]":
+def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":
     """Load the base configuration (``HieraConfig.create``, ``hiera_config.rb:127-168``).
 
     Returns ``(source, base)``: ``base`` is a dict this call owns outright
@@ -661,12 +920,13 @@ def _read_base_config(
     (``.path`` set for a path- or stream-configured hiera.yaml) on any read,
     parse, or top-level-shape problem.
 
-    At the global layer, a file that parses but is not a YAML hash raises.
-    Outside it (``layer="environment"``/``"module"``), the same case instead
-    logs Puppet's own warning and returns an empty ``base`` (``hiera_config.
-    rb:143``), which :func:`_select_version` then reads as version 3 --
-    left, like any other version-3 layer config, for
-    :meth:`~hyera.core.Hiera._usable` to ignore or raise about.
+    A file that parses but is not a YAML hash never raises here, at any
+    layer: it logs Puppet's own warning and falls back to
+    :data:`V3_DEFAULT_CONFIG_HASH` (``hiera_config.rb:139-144``), which
+    :func:`_config_version` then reads as version 3 -- read in full by
+    :func:`_read_v3` at the global layer, or left, like any other version-3
+    layer config, for :meth:`~hyera.core.Hiera._usable` to ignore or raise
+    about outside it.
     """
     if base_config is None:
         # Puppet's missing-file default (`hiera_config.rb:147-149`): no file
@@ -742,19 +1002,12 @@ def _read_base_config(
         base = symkeys_to_string(base)
 
     if not isinstance(base, dict):
-        if layer != "global":
-            _LOGGER.warning(
-                "%s: File exists but does not contain a valid YAML hash. "
-                "Falling back to Hiera version 3 default config",
-                source.label,
-            )
-            return source, {}
-        raise _config_error(
-            source,
-            "File exists but does not contain a valid YAML hash; Puppet "
-            "falls back to the Hiera version 3 default config, which is "
-            "not supported yet",
+        _LOGGER.warning(
+            "%s: File exists but does not contain a valid YAML hash. "
+            "Falling back to Hiera version 3 default config",
+            source.label,
         )
+        return source, copy.deepcopy(V3_DEFAULT_CONFIG_HASH)
 
     return source, base
 
@@ -781,7 +1034,7 @@ def _build_hierarchies(base, backends, source: "_ConfigSource"):
     """Build ``hierarchy`` and ``default_hierarchy`` from base config.
 
     Returns ``(hierarchy_levels, default_hierarchy_levels)``. Assumes
-    :func:`_select_version`, :func:`_fill_v5_defaults` and
+    :func:`_config_version`, :func:`_fill_v5_defaults` and
     :func:`_validate_v5` already ran, so ``defaults``/``hierarchy`` are
     present and every entry has exactly one function key (its own, or one
     from ``defaults``), at most one location key, and well-typed values.

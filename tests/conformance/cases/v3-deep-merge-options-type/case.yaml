@@ -1,0 +1,7 @@
+description: >-
+  A v3 config whose :deep_merge_options: knockout_prefix is an Integer instead of a String or Boolean.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''deep_merge_options'' entry ''knockout_prefix'' expects a value of type String or Boolean, got Integer'

@@ -20,7 +20,7 @@ from ._hiera_config import (
     _build_hierarchies,
     _fill_v5_defaults,
     _read_base_config,
-    _select_version,
+    _config_version,
     _validate_v5,
 )
 from ._lookup_adapter import LOOKUP_OPTIONS
@@ -164,8 +164,8 @@ def load_layer_provider(place, root, backends, *, module_name=None):
     if not is_file:
         return None
     layer = place.lower()
-    source, data = _read_base_config(hiera_yaml, None, layer=layer)
-    version = _select_version(data, source, layer=layer)
+    source, data = _read_base_config(hiera_yaml, None)
+    version = _config_version(data, source, layer=layer)
     if version == 3:
         return _IgnoredConfig(place, source)
     _fill_v5_defaults(data)

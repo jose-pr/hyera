@@ -1,0 +1,7 @@
+description: >-
+  A v3 config with an invalid :merge_behavior: value.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''merge_behavior'' expects a match for Enum\[''deep'', ''deeper'', ''native''\], got ''array'''

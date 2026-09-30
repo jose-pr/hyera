@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "4600d49b093d044f0bcf3031a20f14f2bac9daaccbe3d980dcde522060a0ec8e",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'merge_behavior' expects a match for Enum['deep', 'deeper', 'native'], got 'array'"
+    }
+  }
+}

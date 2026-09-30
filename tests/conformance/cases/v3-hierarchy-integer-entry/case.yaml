@@ -1,0 +1,7 @@
+description: >-
+  A v3 config whose :hierarchy: array has a non-String (Integer) entry.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''hierarchy'' variant 0 expects a String value, got Tuple'

@@ -1,0 +1,7 @@
+description: >-
+  A v3 config with a backend config block (:json:) for a backend not listed in :backends:.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'unrecognized key ''json'''

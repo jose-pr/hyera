@@ -76,8 +76,8 @@ def test_missing_config_file_raises(tmp_path):
 @pytest.mark.parametrize(
     "version, expected",
     [
-        (None, "hiera.yaml version 3 is not supported yet"),
-        (3, "hiera.yaml version 3 is not supported yet"),
+        (None, "entry 'hierarchy' variant 0 expects a String value, got Tuple"),
+        (3, "entry 'hierarchy' variant 0 expects a String value, got Tuple"),
         (4, "cannot be used in the global layer"),
         (6, "does not support hiera.yaml version 6"),
         ("abc", "does not support hiera.yaml version 0"),
@@ -98,14 +98,6 @@ def test_version_dispatch(version, expected):
         Hiera(cfg)
 
     assert expected in str(exc.value)
-
-
-@pytest.mark.parametrize("text", ["", "- a\n"], ids=["empty", "non-mapping"])
-def test_empty_or_non_mapping_config_file_raises(make_tree, text):
-    root = make_tree(text, raw=True)
-
-    with pytest.raises(ConfigError, match="does not contain a valid YAML hash"):
-        Hiera(str(root / "hiera.yaml"))
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,7 @@
+description: >-
+  A v3 config with a Ruby-symbol :merge_behavior: value (normalized to a RubySymbol runtime type, not a String).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: 'entry ''merge_behavior'' expects a match for Enum\[.*\], got Runtime'
