@@ -1151,6 +1151,26 @@ def test_ruby_format_table():
     assert _string_convert(5, "nope") == "5"
     # Sensitive redacts through every directive, not just the default one.
     assert _string_convert(Sensitive("secret"), "%p") == "Sensitive [value redacted]"
+    # "%c": the integer's own character (Kernel#format's char directive).
+    assert _string_convert(65, "%c") == "A"
+    # Integer body width/padding: zero-padded, negative zero-padded (sign
+    # then digits), left-justified, and plain space-padded.
+    assert _string_convert(5, "%05d") == "00005"
+    assert _string_convert(-5, "%05d") == "-0005"
+    assert _string_convert(5, "%-5d") + "|" == "5    |"
+    assert _string_convert(5, "%5x") == "    5"
+    # "%g": Ruby's general float format (the exponent form's own sign is
+    # already normalized by Python's repr, so _ruby_float_inspect's own
+    # "prepend a sign" branch is effectively unreachable -- not a
+    # discrepancy Puppet fidelity depends on).
+    assert _string_convert(3.14159, "%g") == "3.14159"
+    assert _string_convert(1e10, "%g") == "1e+10"
+    # The final, otherwise-unmodeled-type fallback: a RubySymbol (or any
+    # other object with no Ruby equivalent this subset renders specially)
+    # falls back to plain str().
+    from hyera.backends import RubySymbol
+
+    assert _string_convert(RubySymbol("x"), None) == ":x"
 
 
 def test_puppet_quote():
