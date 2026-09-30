@@ -11,6 +11,7 @@ instances from a Puppet type-expression string via :func:`parse_type`.
 """
 
 import re
+import typing as _ty
 
 
 def _ruby_regex(source):
@@ -1066,21 +1067,22 @@ class Sensitive:
 
     __slots__ = ("_value",)
 
-    def __init__(self, value):
+    def __init__(self, value: _ty.Any) -> None:
         self._value = value
 
-    def unwrap(self):
+    def unwrap(self) -> _ty.Any:
+        """The wrapped value, unredacted."""
         return self._value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Sensitive [value redacted]"
 
     __str__ = __repr__
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Sensitive):
             return NotImplemented
         return _eql_key(self._value) == _eql_key(other._value)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(_eql_key(self._value))

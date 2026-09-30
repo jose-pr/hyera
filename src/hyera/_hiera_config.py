@@ -20,6 +20,7 @@ from pathlib_next import Path
 from .backends import Backend, YAMLBackend, has_hocon
 from .exceptions import BackendError, ConfigError
 from ._location_resolver import resolve_locations
+from ._scope import Scope
 from ._yaml_loader import RubySymbol, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
@@ -1287,7 +1288,7 @@ class HieraLevel(_ty.NamedTuple):
     kind: str = "data_hash"
     #: The entry's own ``options``, else ``defaults``'s (never merged),
     #: exactly as declared -- interpolated per lookup, per scope, not here.
-    options: "_ty.Optional[dict]" = None
+    options: "_ty.Optional[_ty.Dict[str, _ty.Any]]" = None
     #: A version 3/``hiera3_backend`` extension, appended to each declared
     #: ``path``/``paths`` location (after interpolation) unless it already
     #: ends with it (``location_resolver.rb:59-61``). ``None`` for a v4/v5
@@ -1311,13 +1312,13 @@ class HieraLevel(_ty.NamedTuple):
     @classmethod
     def new(
         cls,
-        conf: dict,
+        conf: _ty.Dict[str, _ty.Any],
         backend: Backend,
         kind: str = "data_hash",
         *,
-        extension=None,
-        datadir_base=None,
-        datadir_literal=False,
+        extension: _ty.Optional[str] = None,
+        datadir_base: "_ty.Optional[Path]" = None,
+        datadir_literal: bool = False,
     ) -> "HieraLevel":
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
         if location_key is None:
@@ -1339,7 +1340,7 @@ class HieraLevel(_ty.NamedTuple):
             datadir_literal=datadir_literal,
         )
 
-    def paths(self, base_path: Path, scope) -> "list":
+    def paths(self, base_path: Path, scope: Scope) -> "_ty.List[str]":
         """The candidate source (file) paths for this level in a bound
         :class:`~hyera.Scope`. A location-less entry, or one using ``uri``/
         ``uris`` (which never resolve to a filesystem path), yields ``[]``.

@@ -30,19 +30,19 @@ class RubySymbol:
 
     __slots__ = ("name",)
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, name: str) -> None:
+        self.name: str = name
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, RubySymbol) and self.name == other.name
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((RubySymbol, self.name))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ":{}".format(self.name)
 
 

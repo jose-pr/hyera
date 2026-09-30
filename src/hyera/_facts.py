@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import subprocess
+import typing as _ty
 
 from . import _yaml_loader
 from .backends import _reject_json_constant
@@ -80,7 +81,7 @@ def _parse_yaml_facts(raw: bytes, label: str):
     return parsed
 
 
-def load_facts(path) -> dict:
+def load_facts(path: _ty.Union[str, "os.PathLike[str]"]) -> _ty.Dict[str, _ty.Any]:
     """Read a Puppet ``--facts`` file (``application/lookup.rb:349-371``).
 
     ``path`` is a ``str`` or ``os.PathLike``; every message uses
@@ -135,7 +136,7 @@ def load_facts(path) -> dict:
     return parsed
 
 
-def facts_from_facter(*, timeout: int = 30) -> dict:
+def facts_from_facter(*, timeout: int = 30) -> _ty.Dict[str, _ty.Any]:
     """Run a bare ``facter -j`` and return its facts.
 
     No queries, no ``--show-legacy``: a queried ``facter -j a b`` returns

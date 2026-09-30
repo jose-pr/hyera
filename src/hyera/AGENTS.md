@@ -10,6 +10,13 @@ Install and import as `hyera` (`pip install hyera`, extras
 `hyera` itself, never from a submodule directly — `hyera._*` modules are
 private engine internals with no stability contract.
 
+Fully typed (`py.typed`; `pyright --verifytypes hyera` scores 100%). Every
+lookup-shaped call (`lookup`/`__call__`/`__getitem__`/`dig`/`get`/`getvar`)
+returns `Any`, since Hiera data is dynamic. `hyera.MergeSpec` is the type
+of every `merge=` argument: a strategy name (`"first"`/`"unique"`/
+`"hash"`/`"deep"`/...), a `{"strategy": ..., ...}` mapping with Puppet's
+deep-merge options, or `None` for the level's own default.
+
 ## Engine
 
 - **`Hiera(base_config, backends=None, base_path=None, *, scope=None,

@@ -17,6 +17,7 @@ from pathlib_next import Path
 
 from ._explain import _LocationRef
 from ._interpolation import interpolate, unshare
+from ._invocation import Invocation
 from ._lookup_adapter import validate_data_value
 from ._navigation import _MISSING, key_to_a, undig
 from .exceptions import BackendError
@@ -125,14 +126,21 @@ class _EnvironmentContext:
     ``(inode, mtime_ns, size)``, not by content.
     """
 
-    def __init__(self):
-        self._cache: dict = {}
+    def __init__(self) -> None:
+        self._cache: _ty.Dict[str, _ty.Tuple[_ty.Any, _ty.Any]] = {}
 
     def clear(self) -> None:
         """Drop every cached file (``Hiera.clear_cache()``)."""
         self._cache.clear()
 
-    def cached_file_data(self, path, parse=None):
+    def cached_file_data(
+        self,
+        path: _ty.Union[str, "os.PathLike[str]"],
+        parse: _ty.Optional[_ty.Callable[[str], _ty.Any]] = None,
+    ) -> _ty.Any:
+        """The cached result of ``parse(text)`` (or the raw text when
+        ``parse`` is ``None``) for the file at ``path``, revalidated by
+        ``(inode, mtime_ns, size)``, not by content."""
         path = os.fspath(path)
         try:
             st = os.stat(path)
@@ -172,20 +180,20 @@ class _FunctionContext:
     def __init__(
         self,
         environment_context: _EnvironmentContext,
-        environment_name,
-        module_name=None,
-    ):
+        environment_name: _ty.Optional[str],
+        module_name: _ty.Optional[str] = None,
+    ) -> None:
         self.environment_context = environment_context
         self.environment_name = environment_name
         self.module_name = module_name
         #: Filled once per location by a ``data_hash`` provider.
-        self.data_hash = None
+        self.data_hash: _ty.Optional[_ty.Dict[str, _ty.Any]] = None
         #: The location label a ``data_hash`` provider validated ``data_hash``
         #: with -- ``None`` for a location-less entry, else ``str(location)``.
-        self.label = None
-        self._cache: dict = {}
+        self.label: _ty.Optional[str] = None
+        self._cache: _ty.Dict[_ty.Any, _ty.Any] = {}
 
-    def has_cached(self, key) -> bool:
+    def has_cached(self, key: _ty.Any) -> bool:
         return key in self._cache
 
 
@@ -194,11 +202,13 @@ class LookupContext:
     backend hook (Puppet's public ``Context`` API, ``context.rb:126-206``).
     """
 
-    def __init__(self, function_context: _FunctionContext, invocation):
+    def __init__(
+        self, function_context: _FunctionContext, invocation: Invocation
+    ) -> None:
         self._fc = function_context
         self._invocation = invocation
 
-    def interpolate(self, value):
+    def interpolate(self, value: _ty.Any) -> _ty.Any:
         """Interpolate ``value`` (methods allowed) against the current
         lookup's scope -- a backend calls this itself; the engine never
         interpolates a ``lookup_key``/``data_dig`` result on its own."""
@@ -208,34 +218,53 @@ class LookupContext:
         """Signal a miss for this location -- Puppet's ``throw :no_such_key``."""
         raise _NotFound()
 
-    def explain(self, producer) -> None:
+    def explain(self, producer: _ty.Callable[[], str]) -> None:
+        """Add ``producer``'s text to this lookup's ``explain()`` report."""
         self._invocation.report_text(producer)
 
-    def cache(self, key, value):
+    def cache(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
+        """Cache ``value`` under ``key`` for this location, for the life of
+        the owning ``Hiera``/``h.scoped(...)`` view. Returns ``value``."""
         self._fc._cache[key] = value
         return value
 
-    def cache_all(self, mapping) -> None:
+    def cache_all(self, mapping: _ty.Mapping[_ty.Any, _ty.Any]) -> None:
+        """:meth:`cache` every key/value pair of ``mapping``."""
         self._fc._cache.update(mapping)
 
-    def cache_has_key(self, key) -> bool:
+    def cache_has_key(self, key: _ty.Any) -> bool:
+        """Whether ``key`` was already :meth:`cache`\\ d for this location."""
         return key in self._fc._cache
 
-    def cached_value(self, key):
+    def cached_value(self, key: _ty.Any) -> _ty.Any:
+        """The value :meth:`cache`\\ d under ``key``, or ``None``."""
         return self._fc._cache.get(key)
 
-    def cached_entries(self):
+    def cached_entries(self) -> "_ty.Iterator[_ty.Tuple[_ty.Any, _ty.Any]]":
+        """An iterator over every ``(key, value)`` pair :meth:`cache`\\ d
+        for this location."""
         return iter(list(self._fc._cache.items()))
 
-    def cached_file_data(self, path, parse=None):
+    def cached_file_data(
+        self,
+        path: _ty.Union[str, "os.PathLike[str]"],
+        parse: _ty.Optional[_ty.Callable[[str], _ty.Any]] = None,
+    ) -> _ty.Any:
+        """The cached result of ``parse(text)`` (or the raw text when
+        ``parse`` is ``None``) for the file at ``path``, shared with every
+        other location of this ``Hiera`` instance (see
+        :class:`_EnvironmentContext`)."""
         return self._fc.environment_context.cached_file_data(path, parse)
 
     @property
-    def environment_name(self):
+    def environment_name(self) -> _ty.Optional[str]:
+        """The current lookup's environment name, or ``None``."""
         return self._fc.environment_name
 
     @property
-    def module_name(self):
+    def module_name(self) -> _ty.Optional[str]:
+        """The current hierarchy entry's module name, or ``None`` at the
+        global/environment layer."""
         return self._fc.module_name
 
 

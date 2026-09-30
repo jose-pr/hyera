@@ -99,6 +99,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--modulepath` and `--basemodulepath` (global, environment and module
   layers); `--strict off|warning|error` (default `warning`); `--explain`
   and `--explain-options`.
+- `hyera.MergeSpec`, the type of every `merge=` argument.
 
 ### Changed
 
@@ -236,6 +237,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the first lookup that needs them, so a malformed data file raises
   `BackendError` from `lookup()` instead of from the constructor. To
   validate data eagerly, look up any key.
+- `Hiera.hierarchy`, `.default_hierarchy`, `.base`, `.base_path`,
+  `.backends`, `.codedir`, `.cache_size` and `.revalidate` are private; use
+  the documented methods and constructor arguments. `SopsBackend`'s
+  `.format` (the resolved output format) is private too.
 
 ### Removed
 
@@ -287,6 +292,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   slow on some hosts (measured: 60+ seconds on a CI runner), which made
   an ordinary, successful lookup with no facts-related error hang for no
   visible reason.
+- Type checkers accept the documented calls: optional arguments accept
+  `None`, and `lookup()`/`dig()`/`get()`/`getvar()`/`__call__`/
+  `__getitem__` return `Any` instead of a wrong inferred union.
 
 ### Security
 

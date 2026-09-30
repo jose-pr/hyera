@@ -7,9 +7,17 @@ set) the recording hooks a lookup's explain tree is built through.
 
 import contextlib
 import contextvars
+import typing as _ty
 
 from ._cache import _ScopeRef, _freeze, _probe
+from ._scope import Scope
 from .exceptions import InterpolationError
+
+#: A lookup's host sub-lookup callable: ``(key, invocation) -> value``, or
+#: ``hyera._navigation._MISSING`` for a miss. Resolves ``%{hiera()}``/
+#: ``%{lookup()}``/``%{alias()}`` and is what :meth:`Invocation.lookup`
+#: delegates to.
+_LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
 
 #: The shared no-op context manager every recording hook uses when
 #: ``explainer`` is ``None`` -- an ordinary lookup allocates no explain
@@ -47,23 +55,27 @@ class Invocation:
 
     def __init__(
         self,
-        scope,
-        lookup,
+        scope: Scope,
+        lookup: _LookupFn,
         *,
-        override_values=None,
-        default_values=None,
-        lenient=False,
-        scope_interpolations=None,
-        explainer=None,
-        _name_stack=None,
-        _fs_memo=None,
-        _lo_cache=None,
-        global_only=False,
-    ):
+        override_values: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        default_values: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        lenient: bool = False,
+        scope_interpolations: "_ty.Optional[_ty.List[_ty.Any]]" = None,
+        explainer: "_ty.Optional[_ty.Any]" = None,
+        _name_stack: _ty.Optional[_ty.List[str]] = None,
+        _fs_memo: "_ty.Optional[_ty.Dict[_ty.Any, _ty.Any]]" = None,
+        _lo_cache: _ty.Optional[_ty.Any] = None,
+        global_only: bool = False,
+    ) -> None:
         self.scope = scope
         self._lookup = lookup
-        self.override_values = {} if override_values is None else override_values
-        self.default_values = {} if default_values is None else default_values
+        self.override_values: _ty.Mapping[str, _ty.Any] = (
+            {} if override_values is None else override_values
+        )
+        self.default_values: _ty.Mapping[str, _ty.Any] = (
+            {} if default_values is None else default_values
+        )
         self.lenient = lenient
         #: The :class:`~hyera._explain.Explainer` this lookup's recording
         #: hooks report to, or ``None`` (the overwhelming common case: no
@@ -123,7 +135,7 @@ class Invocation:
             self._fs_memo[path] = probe
         return probe
 
-    def lookup(self, key):
+    def lookup(self, key: str) -> _ty.Any:
         """Resolve ``key`` through the host's sub-lookup callable.
 
         ``lookup_options`` and a ``"lookup_options."``-prefixed key are
@@ -136,11 +148,11 @@ class Invocation:
 
     def derive(
         self,
-        lookup,
+        lookup: _LookupFn,
         *,
-        override_values=_UNSET,
-        default_values=_UNSET,
-        global_only=_UNSET,
+        override_values: _ty.Any = _UNSET,
+        default_values: _ty.Any = _UNSET,
+        global_only: _ty.Any = _UNSET,
     ) -> "Invocation":
         """A new :class:`Invocation` sharing this one's scope, ``lenient``
         and recursion stack, with a different sub-lookup callable.
@@ -171,7 +183,15 @@ class Invocation:
             global_only=(self.global_only if global_only is _UNSET else global_only),
         )
 
-    def remember_scope_lookup(self, key, root_key, segments, value, *, undefined):
+    def remember_scope_lookup(
+        self,
+        key: str,
+        root_key: str,
+        segments: _ty.Sequence[_ty.Any],
+        value: _ty.Any,
+        *,
+        undefined: bool,
+    ) -> None:
         """Record one scope read (Puppet's ``remember_scope_lookup``,
         ``invocation.rb:119-126``/``hiera_config.rb:11-36``): a no-op unless
         this invocation (or the one it was :meth:`derive`d from) was given a
@@ -228,7 +248,7 @@ class Invocation:
         finally:
             self._name_stack.pop()
 
-    def recording(self, kind: str, qualifier):
+    def recording(self, kind: str, qualifier: _ty.Any) -> "_ty.ContextManager[None]":
         """Push an explain node of ``kind`` for the guarded block, popping it
         (even on an exception) when the block exits -- the shared
         :data:`_NULL_CONTEXT` while :attr:`explainer` is ``None``, so an
@@ -260,22 +280,22 @@ class Invocation:
     def only_explain_options(self) -> bool:
         return self.explainer is not None and self.explainer.only_explain_options
 
-    def report_found(self, key, value):
+    def report_found(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
         if self.explainer is not None:
             self.explainer.accept_found(key, value)
         return value
 
-    def report_found_in_overrides(self, key, value):
+    def report_found_in_overrides(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
         if self.explainer is not None:
             self.explainer.accept_found_in_overrides(key, value)
         return value
 
-    def report_found_in_defaults(self, key, value):
+    def report_found_in_defaults(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
         if self.explainer is not None:
             self.explainer.accept_found_in_defaults(key, value)
         return value
 
-    def report_not_found(self, key) -> None:
+    def report_not_found(self, key: _ty.Any) -> None:
         if self.explainer is not None:
             self.explainer.accept_not_found(key)
 
@@ -283,24 +303,24 @@ class Invocation:
         if self.explainer is not None:
             self.explainer.accept_location_not_found()
 
-    def report_merge_source(self, source) -> None:
+    def report_merge_source(self, source: _ty.Any) -> None:
         if self.explainer is not None:
             self.explainer.accept_merge_source(source)
 
-    def report_result(self, value):
+    def report_result(self, value: _ty.Any) -> _ty.Any:
         if self.explainer is not None:
             self.explainer.accept_result(value)
         return value
 
-    def report_module_not_found(self, name) -> None:
+    def report_module_not_found(self, name: str) -> None:
         if self.explainer is not None:
             self.explainer.accept_module_not_found(name)
 
-    def report_module_provider_not_found(self, name) -> None:
+    def report_module_provider_not_found(self, name: str) -> None:
         if self.explainer is not None:
             self.explainer.accept_module_provider_not_found(name)
 
-    def report_text(self, producer) -> None:
+    def report_text(self, producer: _ty.Callable[[], str]) -> None:
         """Puppet's ``Context#explain``/``invocation.rb``'s ``report_text``
         (``context.rb:186-188``): ``producer`` is a zero-argument callable,
         called only while :attr:`explainer` is set -- a plain backend-level
@@ -309,7 +329,7 @@ class Invocation:
         if self.explainer is not None:
             self.explainer.accept_text(producer())
 
-    def emit_debug_info(self, preamble) -> None:
+    def emit_debug_info(self, preamble: str) -> None:
         """Puppet's ``Lookup.lookup``'s own debug emission
         (``pops/lookup.rb:62,66``): a no-op unless :attr:`explainer` is a
         :class:`~hyera._explain._DebugExplainer` -- checked by duck type

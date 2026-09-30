@@ -43,7 +43,7 @@ def test_relative_config_path_survives_chdir(monkeypatch, tmp_path):
     (tmp_path / "rel" / "data" / "common.yaml").write_bytes(b"k: common\n")
 
     h = Hiera("rel/hiera.yaml")
-    assert h.base_path.is_absolute()
+    assert h._base_path.is_absolute()
 
     # A cwd that no longer has any relation to the config: `base_path` was
     # made absolute at construction, so the lookup below must not re-derive

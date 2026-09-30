@@ -24,6 +24,7 @@ from .core import Hiera
 from ._explain import ExplainResult
 from ._facts import facts_from_facter, load_facts
 from ._hiera_config import HieraLevel
+from ._merge_strategy import MergeSpec
 from ._scope import Scope
 from ._types import Sensitive
 
@@ -33,6 +34,7 @@ __all__ = [
     "Hiera",
     "ExplainResult",
     "HieraLevel",
+    "MergeSpec",
     "Scope",
     "Sensitive",
     "load_facts",

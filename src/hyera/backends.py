@@ -17,9 +17,11 @@ import re
 import shutil
 import subprocess
 import threading
+import typing as _ty
 from typing import NamedTuple
 
 import yaml
+from pathlib_next import Path
 
 from .exceptions import BackendError, ConfigError, _one_line
 from ._function_provider import LookupContext
@@ -78,6 +80,11 @@ class NamePattern(NamedTuple):
     regex: "re.Pattern[str]"
 
 
+#: The type of a ``Backend.NAMES``/subclass-``NAMES`` value: one tuple of
+#: plain strings and/or :class:`NamePattern` per registered namespace.
+_Names = _ty.Mapping[str, _ty.Tuple[_ty.Union[str, NamePattern], ...]]
+
+
 class Backend:
     """A data format and/or Hiera 5 provider, found by name.
 
@@ -93,27 +100,34 @@ class Backend:
     into a specific, user-facing error.
     """
 
-    KINDS = ("function", "v3", "format", "render")
+    KINDS: _ty.ClassVar[_ty.Tuple[str, ...]] = ("function", "v3", "format", "render")
 
     #: ``{kind: (name | NamePattern, ...)}``. Read only from the defining
     #: class's own ``__dict__`` at subclass time, so a subclass never
     #: re-registers its parent's names.
-    NAMES: "dict" = {}
+    NAMES: _ty.ClassVar[_Names] = {}
 
     #: File extensions (with leading dot) this backend's format answers to,
     #: longest-suffix-match, used by :meth:`for_path`.
-    EXTENSIONS: "tuple" = ()
+    EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = ()
 
-    _REGISTRY = {kind: {"exact": {}, "patterns": []} for kind in KINDS}
+    _REGISTRY: _ty.Dict[str, _ty.Dict[str, _ty.Any]] = {
+        kind: {"exact": {}, "patterns": []} for kind in KINDS
+    }
 
-    def __init__(self, conf: dict = None, *, strict: str = None):
-        self.conf = conf or {}
+    def __init__(
+        self,
+        conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        *,
+        strict: _ty.Optional[str] = None,
+    ) -> None:
+        self.conf: _ty.Mapping[str, _ty.Any] = conf or {}
         if strict is not None and strict not in _STRICT_VALUES:
             raise ValueError(
                 "strict must be one of {!r}, not {!r}".format(_STRICT_VALUES, strict)
             )
         self._strict = strict
-        self.name = type(self)._default_name()
+        self.name: _ty.Optional[str] = type(self)._default_name()
 
     @property
     def strict(self) -> str:
@@ -132,7 +146,7 @@ class Backend:
                     return entry
         return None
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: _ty.Any) -> None:
         super().__init_subclass__(**kwargs)
         names = cls.__dict__.get("NAMES", {})
         if not names:
@@ -191,13 +205,15 @@ class Backend:
         return None, {}
 
     @classmethod
-    def find(cls, name, kind="function"):
+    def find(
+        cls, name: str, kind: str = "function"
+    ) -> "_ty.Optional[_ty.Type[Backend]]":
         """The registered class for ``name`` in ``kind``, or ``None``."""
         found, _captures = cls._match(name, kind)
         return found
 
     @classmethod
-    def get(cls, name, kind="function"):
+    def get(cls, name: str, kind: str = "function") -> "_ty.Type[Backend]":
         """The registered, available class for ``name`` in ``kind``.
 
         Raises :class:`BackendError` for an unknown name (listing the known
@@ -215,7 +231,14 @@ class Backend:
         return found
 
     @classmethod
-    def new(cls, name, conf=None, *, kind="function", strict=None):
+    def new(
+        cls,
+        name: str,
+        conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        *,
+        kind: str = "function",
+        strict: _ty.Optional[str] = None,
+    ) -> "Backend":
         """Instantiate the registered backend for ``name`` in ``kind``.
 
         Any named groups captured by a matching :class:`NamePattern` are
@@ -236,7 +259,7 @@ class Backend:
         return instance
 
     @classmethod
-    def names(cls, kind="function"):
+    def names(cls, kind: str = "function") -> _ty.List[str]:
         """Registered names in ``kind``: exact names in registration order,
         then patterns by their :attr:`NamePattern.display`."""
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
@@ -245,7 +268,9 @@ class Backend:
         ]
 
     @classmethod
-    def for_path(cls, path):
+    def for_path(
+        cls, path: _ty.Union[str, "os.PathLike[str]"]
+    ) -> "_ty.Optional[_ty.Type[Backend]]":
         """The ``format``-namespace backend class whose :attr:`EXTENSIONS`
         has the longest case-sensitive suffix match against ``path``, or
         ``None``."""
@@ -267,7 +292,7 @@ class Backend:
         return getattr(cls, method_name) is not getattr(Backend, method_name)
 
     @classmethod
-    def implements(cls, op):
+    def implements(cls, op: str) -> bool:
         """Whether this class overrides what ``op`` needs.
 
         ``load``/``dump`` follow ``loads``/``dumps``; ``data_hash`` is true
@@ -285,24 +310,28 @@ class Backend:
         raise ValueError("unknown Backend operation {!r}".format(op))
 
     @classmethod
-    def check_available(cls):
+    def check_available(cls) -> None:
         """Raise :class:`BackendError` if this backend cannot be used (e.g.
         a missing optional dependency). A no-op by default."""
 
     # -- serialization (json-module shaped) --------------------------------
 
-    def loads(self, text):
+    def loads(self, text: str) -> _ty.Any:
         """Parse ``text`` (a ``str``). Raises path-free problem text."""
         raise NotImplementedError(
             "{} does not implement .loads()".format(type(self).__name__)
         )
 
-    def dumps(self, obj, **kw):
+    def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
+        """Render ``obj`` back to text. Raises path-free problem text."""
         raise NotImplementedError(
             "{} does not implement .dumps()".format(type(self).__name__)
         )
 
-    def load(self, source):
+    def load(
+        self,
+        source: _ty.Union[str, "os.PathLike[str]", "_ty.IO[str]", "_ty.IO[bytes]"],
+    ) -> _ty.Any:
         """Parse ``source`` -- a path-like or a file object.
 
         Reads the bytes and decodes them as strict UTF-8 (Puppet's data
@@ -339,7 +368,8 @@ class Backend:
             "Unable to parse ({}): {}".format(path, problem), path=str(path)
         )
 
-    def dump(self, obj, fp, **kw):
+    def dump(self, obj: _ty.Any, fp: "_ty.IO[str]", **kw: _ty.Any) -> None:
+        """Render ``obj`` and write it to the open text file ``fp``."""
         fp.write(self.dumps(obj, **kw))
 
     # -- Hiera 5 provider hooks ---------------------------------------------
@@ -359,7 +389,11 @@ class Backend:
                 "this data_hash function".format(self.name)
             )
 
-    def data_hash(self, path, options):
+    def data_hash(
+        self,
+        path: "Path",
+        options: _ty.Mapping[str, _ty.Any],
+    ) -> _ty.Dict[str, _ty.Any]:
         """The ``data_hash`` provider hook: parse the whole file at
         ``path`` and adapt it into hiera data (see :meth:`_as_data_hash`).
 
@@ -377,28 +411,49 @@ class Backend:
         non-Hash rule (``yaml_data.rb:27-35``)."""
         return parsed
 
-    def lookup_key(self, key, options, context):
+    def lookup_key(
+        self,
+        key: str,
+        options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
+    ) -> _ty.Any:
+        """The ``lookup_key`` provider hook: resolve one dotted ``key`` in
+        one hierarchy location. Raises :class:`NotImplementedError` unless
+        overridden (see :class:`EyamlBackend`)."""
         raise NotImplementedError(
             "{} does not implement .lookup_key()".format(type(self).__name__)
         )
 
-    def data_dig(self, key_segments, options, context):
+    def data_dig(
+        self,
+        key_segments: _ty.Sequence[str],
+        options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
+    ) -> _ty.Any:
+        """The ``data_dig`` provider hook: resolve one already-split
+        ``key_segments`` path in one hierarchy location. Raises
+        :class:`NotImplementedError` unless overridden."""
         raise NotImplementedError(
             "{} does not implement .data_dig()".format(type(self).__name__)
         )
 
 
 class YAMLBackend(Backend):
-    NAMES = {"function": ("yaml_data",), "format": ("yaml",)}
-    EXTENSIONS = (".yaml", ".yml")
+    NAMES: _ty.ClassVar[_Names] = {"function": ("yaml_data",), "format": ("yaml",)}
+    EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".yaml", ".yml")
 
-    def loads(self, text):
+    def loads(self, text: str) -> _ty.Any:
+        """Parse YAML the way Puppet's ``yaml_data`` does (Ruby Psych
+        semantics via :mod:`hyera._yaml_loader`), not PyYAML's own
+        Python-flavored resolver."""
         # Psych's rules (types, BOM, one-document, symbol keys/values),
         # ported in ``_yaml_loader``: numbers/booleans/dates/symbols per
         # Ruby's ScalarScanner, not PyYAML's own Python-flavored resolver.
         return safe_load(text)
 
-    def dumps(self, obj, **kw):
+    def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
+        """Render ``obj`` as YAML (block style, sorted keys off, Unicode
+        left unescaped)."""
         kw.setdefault("sort_keys", False)
         kw.setdefault("allow_unicode", True)
         kw.setdefault("default_flow_style", False)
@@ -501,10 +556,13 @@ def _reject_lone_surrogates(obj) -> None:
 
 
 class JSONBackend(Backend):
-    NAMES = {"function": ("json_data",), "format": ("json",)}
-    EXTENSIONS = (".json",)
+    NAMES: _ty.ClassVar[_Names] = {"function": ("json_data",), "format": ("json",)}
+    EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".json",)
 
-    def loads(self, text):
+    def loads(self, text: str) -> _ty.Any:
+        """Parse JSON the way Ruby's ``json`` gem does: ``/* */``/``//``
+        comments allowed, ``NaN``/``Infinity``/``-Infinity`` and a lone
+        surrogate rejected."""
         problem = None
         try:
             result = json.loads(
@@ -519,7 +577,8 @@ class JSONBackend(Backend):
         # Outside the except block, matching YAMLBackend's chain-free style.
         raise BackendError(problem)
 
-    def dumps(self, obj, **kw):
+    def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
+        """Render ``obj`` as JSON, with non-ASCII characters left as-is."""
         kw.setdefault("ensure_ascii", False)
         return json.dumps(obj, **kw)
 
@@ -1257,15 +1316,21 @@ class HOCONBackend(Backend):
     module copy (see :func:`_hocon_parser`) so they stay text.
     """
 
-    NAMES = {"function": ("hocon_data",), "format": ("hocon",)}
-    EXTENSIONS = (".conf",)
+    NAMES: _ty.ClassVar[_Names] = {"function": ("hocon_data",), "format": ("hocon",)}
+    EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".conf",)
 
     _MISSING_DEP_MESSAGE = (
         "hocon_data requires the optional 'pyhocon' package: "
         'pip install "hyera[hocon]"'
     )
 
-    def __init__(self, conf=None, *, strict=None, hocon_includes=None):
+    def __init__(
+        self,
+        conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        *,
+        strict: _ty.Optional[str] = None,
+        hocon_includes: _ty.Optional[bool] = None,
+    ) -> None:
         super().__init__(conf, strict=strict)
         # No `Hiera(backend_options=...)` plumbing exists
         # yet, so the opt-in reads from the level's own `conf` (its
@@ -1273,14 +1338,18 @@ class HOCONBackend(Backend):
         # directly.
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
-        self.hocon_includes = bool(hocon_includes)
+        self.hocon_includes: bool = bool(hocon_includes)
 
     @classmethod
-    def check_available(cls):
+    def check_available(cls) -> None:
         if not has_hocon():
             raise BackendError(cls._MISSING_DEP_MESSAGE)
 
-    def loads(self, text):
+    def loads(self, text: str) -> _ty.Any:
+        """Parse HOCON the way Puppet's ``hocon_data`` does: ``include
+        file(...)`` really reads the file, ``include url(...)``/
+        ``classpath(...)``/``required(...)`` and durations raise/stay text
+        (see the class docstring for the full fidelity rule)."""
         try:
             from pyhocon import ConfigTree
         except ImportError:
@@ -1325,11 +1394,13 @@ class DotenvBackend(Backend):
     :class:`SopsBackend`.
     """
 
-    NAMES = {"format": ("dotenv",)}
-    EXTENSIONS = (".env",)
+    NAMES: _ty.ClassVar[_Names] = {"format": ("dotenv",)}
+    EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".env",)
 
-    def loads(self, text):
-        result = {}
+    def loads(self, text: str) -> _ty.Dict[str, str]:
+        """Parse dotenv the way sops's own writer emits it: ``KEY=value``
+        lines, ``#`` comments, blank lines skipped, ``\\n`` unescaped."""
+        result: _ty.Dict[str, str] = {}
         for lineno, line in enumerate(text.split("\n"), start=1):
             if line == "" or line.startswith("#"):
                 continue
@@ -1527,7 +1598,7 @@ class SopsBackend(Backend):
     constructor keyword.
     """
 
-    NAMES = {
+    NAMES: _ty.ClassVar[_Names] = {
         "function": (
             "sops_data",
             "sops",
@@ -1538,13 +1609,24 @@ class SopsBackend(Backend):
         )
     }
 
-    def __init__(self, conf=None, *, strict=None, format=None):
+    def __init__(
+        self,
+        conf: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        *,
+        strict: _ty.Optional[str] = None,
+        format: _ty.Optional[str] = None,
+    ) -> None:
         super().__init__(conf, strict=strict)
-        self.format = format
+        self._format = format
 
-    def data_hash(self, path, options):
+    def data_hash(
+        self, path: "Path", options: _ty.Mapping[str, _ty.Any]
+    ) -> _ty.Dict[str, _ty.Any]:
+        """Decrypt ``path`` with the ``sops`` CLI and parse the plaintext
+        in the format sops itself reports for it (or the ``format``
+        constructor keyword, when given)."""
         self._require_path_only(path, options)
-        fmt = self.format or _sops_format(str(path))
+        fmt = self._format or _sops_format(str(path))
         if fmt is None:
             raise ConfigError(
                 "sops_data: '{}' has no .yaml/.yml/.json/.env/.ini suffix, "
@@ -1603,15 +1685,23 @@ class EyamlBackend(Backend):
     interpolate`` call.
     """
 
-    NAMES = {"function": ("eyaml_lookup_key",)}
+    NAMES: _ty.ClassVar[_Names] = {"function": ("eyaml_lookup_key",)}
 
     @classmethod
-    def check_available(cls):
+    def check_available(cls) -> None:
         from ._eyaml import check_cryptography
 
         check_cryptography()
 
-    def lookup_key(self, key, options, context):
+    def lookup_key(
+        self,
+        key: str,
+        options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
+    ) -> _ty.Any:
+        """Decrypt ``key``'s PKCS7 ``ENC[...]`` value from the ``.eyaml``
+        file named by the hierarchy location, matching Puppet's
+        ``eyaml_lookup_key``."""
         if context.cache_has_key(key):
             return context.cached_value(key)
         if "path" not in options:
@@ -1660,7 +1750,7 @@ class EyamlBackend(Backend):
         return value
 
 
-def default_backends():
+def default_backends() -> "_ty.List[_ty.Type[Backend]]":
     """The distinct backend classes registered in the ``function``
     namespace, in definition order (YAML, JSON, HOCON, sops)."""
     registry = Backend._REGISTRY.get("function", {"exact": {}, "patterns": []})

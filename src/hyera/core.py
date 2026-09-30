@@ -59,12 +59,19 @@ from ._navigation import _MISSING, parse_lookup_key, split_key, sub_lookup
 from ._scope import Scope
 from ._type_mismatch import assert_instance_of
 from ._type_parser import parse_type
-from .backends import default_backends
+from .backends import Backend, default_backends
 from .exceptions import _escapes
+from ._merge_strategy import MergeSpec
 
 __all__ = ["Hiera"]
 
 _LOGGER = logging.getLogger(__name__)
+
+#: A single path, an iterable of paths, or a string of paths joined by
+#: ``os.pathsep`` -- the shape every ``*path`` constructor argument takes.
+_PathSpec = _ty.Union[
+    str, "os.PathLike[str]", _ty.Iterable[_ty.Union[str, "os.PathLike[str]"]], None
+]
 
 #: Puppet's provider stack (``lookup_adapter.rb:296``): a key is looked up
 #: through each layer in turn, merged the same way as levels/locations
@@ -300,19 +307,19 @@ class Hiera:
 
     def __init__(
         self,
-        base_config,
-        backends=None,
-        base_path=None,
+        base_config: "_ty.Union[str, os.PathLike[str], _ty.IO[str], _ty.IO[bytes], _ty.Dict[str, _ty.Any], None]",
+        backends: "_ty.Optional[_ty.Sequence[_ty.Type[Backend]]]" = None,
+        base_path: "_ty.Union[str, os.PathLike[str], None]" = None,
         *,
-        scope: Scope = None,
-        environmentpath=None,
-        basemodulepath=(),
-        modulepath=None,
-        cache_size=256,
-        revalidate=True,
-        codedir=None,
-    ):
-        self.base_config = base_config
+        scope: _ty.Optional[Scope] = None,
+        environmentpath: _PathSpec = None,
+        basemodulepath: _PathSpec = (),
+        modulepath: _PathSpec = None,
+        cache_size: _ty.Optional[int] = 256,
+        revalidate: bool = True,
+        codedir: "_ty.Union[str, os.PathLike[str], None]" = None,
+    ) -> None:
+        self.base_config: "_ty.Union[str, os.PathLike[str], _ty.IO[str], _ty.IO[bytes], _ty.Dict[str, _ty.Any], None]" = (base_config)
         #: Whether this is Puppet's own built-in default config
         #: (``Hiera(None, ...)``), the one case ``explain()`` prunes a
         #: missing candidate from at all (``hiera_config.rb:688``,
@@ -324,7 +331,7 @@ class Hiera:
         #: (``<codedir>/environments/%{::environment}/hieradata``). An
         #: explicit value is made absolute against the working directory at
         #: construction, exactly like ``base_path``.
-        self.codedir = (
+        self._codedir: Path = (
             _default_codedir() if codedir is None else Path(codedir).absolute()
         )
         if scope is None:
@@ -341,12 +348,12 @@ class Hiera:
                 )
             if cache_size < 0:
                 raise ValueError("cache_size must be >= 0")
-        self.cache_size = cache_size
+        self._cache_size: _ty.Optional[int] = cache_size
         if not isinstance(revalidate, bool):
             raise TypeError(
                 "revalidate must be a bool, not {}".format(type(revalidate).__name__)
             )
-        self.revalidate = revalidate
+        self._revalidate: bool = revalidate
 
         #: Puppet's three layer-discovery settings (``_data_provider.
         #: split_path_setting``): ``environmentpath`` stays ``None`` when
@@ -387,8 +394,8 @@ class Hiera:
         #: right, only a speedup to get to skip.
         self._compiled_options_cache: dict = {}
 
-        self.hierarchy: "list[HieraLevel]" = []
-        self.default_hierarchy: "list[HieraLevel]" = []
+        self._hierarchy: "list[HieraLevel]" = []
+        self._default_hierarchy: "list[HieraLevel]" = []
         #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
         #: keyed by ``(tag, base_path, level index)`` -- never shared with
         #: another view (see :meth:`_view`), since a provider's interpolated
@@ -428,12 +435,14 @@ class Hiera:
         #: ``base_path`` -- the owning layer's own root -- disambiguates a
         #: layer's hierarchy from any other's, the same way ``_providers``'
         #: own cache key already does.
-        self._location_cache = _ScopeKeyedCache(self._cache_lock, self.cache_size)
+        self._location_cache = _ScopeKeyedCache(self._cache_lock, self._cache_size)
         #: The ``lookup_options`` value gathered from one layer's own
         #: hierarchy alone (never merged across layers), keyed the same way,
         #: plus the location entry it was built against. See
         #: ``_layer_options_cached``.
-        self._lookup_options_cache = _ScopeKeyedCache(self._cache_lock, self.cache_size)
+        self._lookup_options_cache = _ScopeKeyedCache(
+            self._cache_lock, self._cache_size
+        )
         #: ``(scope, tag, base_path)`` tuples whose ``lookup_options`` gather
         #: is currently running on this instance -- guards against a value
         #: inside ``lookup_options`` that sub-looks-up a key whose own
@@ -462,7 +471,7 @@ class Hiera:
         #: two scope-keyed caches (a listing depends on directory contents,
         #: not on scope, so a plain ``_LRU`` is enough). See
         #: :meth:`_glob_matches`.
-        self._glob_cache = _LRU(self._cache_lock, self.cache_size)
+        self._glob_cache = _LRU(self._cache_lock, self._cache_size)
 
     def clear_cache(self) -> None:
         """Drop every cached location, ``lookup_options`` mapping, glob
@@ -490,7 +499,7 @@ class Hiera:
         self._providers.clear()
         self._environment_context.clear()
 
-    def __getstate__(self):
+    def __getstate__(self) -> _ty.Dict[str, _ty.Any]:
         """Drop every cache and the lock they share -- a ``threading.Lock``
         is never picklable, and a freshly rebuilt, empty set of caches is a
         perfectly valid starting state for a pickle/``copy.copy``/
@@ -510,7 +519,9 @@ class Hiera:
             del state[name]
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: _ty.Dict[str, _ty.Any]) -> None:
+        """Restore from :meth:`__getstate__`'s state and rebuild every
+        cache empty (:meth:`_init_caches`)."""
         self.__dict__.update(state)
         self._init_caches()
 
@@ -539,7 +550,7 @@ class Hiera:
         #: Allow-list of backend classes a hierarchy level's ``data_hash``
         #: may resolve to (the Backend registry, looked up by name in
         #: ``_hiera_config._build_levels``).
-        self.backends: "list[type]" = list(backends)
+        self._backends: "list[type]" = list(backends)
 
         # Captured before reading the config: a relative version 3 datadir
         # follows the process cwd AT CONSTRUCTION (Puppet's own
@@ -547,11 +558,12 @@ class Hiera:
         # never the cwd of a later lookup.
         cwd = Path(os.getcwd())
 
-        source, self.base = _read_base_config(self.base_config, base_path)
-        self.base_path = source.root
-        version = _config_version(self.base, source)
+        source, base = _read_base_config(self.base_config, base_path)
+        self._base: _ty.Dict[str, _ty.Any] = base
+        self._base_path: Path = source.root
+        version = _config_version(self._base, source)
 
-        if not self.backends:
+        if not self._backends:
             raise ConfigError("No backends could be loaded")
 
         if version == 3:
@@ -560,8 +572,8 @@ class Hiera:
             # config outside the global layer is never read this way -- it
             # is ignored (with a warning) or raised about by
             # :meth:`_usable` instead.
-            self.hierarchy, self.default_hierarchy = _read_v3(
-                self.base, source, self.scope, self.backends, self.codedir, cwd
+            self._hierarchy, self._default_hierarchy = _read_v3(
+                self._base, source, self.scope, self._backends, self._codedir, cwd
             )
         elif version == 4:
             # Puppet validates a version 4 config's own schema (building
@@ -569,17 +581,17 @@ class Hiera:
             # allowed in this layer -- probed: a schema-invalid version 4
             # file at the global layer raises its schema error, never this
             # one. Only a config that validates reaches the layer check.
-            _read_v4(self.base, source, self.scope, self.backends)
+            _read_v4(self._base, source, self.scope, self._backends)
             raise ConfigError(
                 "hiera.yaml version 4 cannot be used in the global layer",
                 path=source.path,
             )
         else:
-            _fill_v5_defaults(self.base)
-            _validate_v5(self.base, source)
+            _fill_v5_defaults(self._base)
+            _validate_v5(self._base, source)
             try:
-                self.hierarchy, self.default_hierarchy = _build_hierarchies(
-                    self.base, self.backends, source, scope=self.scope
+                self._hierarchy, self._default_hierarchy = _build_hierarchies(
+                    self._base, self._backends, source, scope=self.scope
                 )
             except HieraError as e:  # keep the class and text, add the file
                 e.path = e.path or source.path
@@ -593,15 +605,15 @@ class Hiera:
                 ) from e
 
         #: The global layer, wrapped for the provider-aware stack walk
-        #: (:meth:`_lookup_layers`) -- the same ``self.hierarchy``/
-        #: ``self.base_path``/``self.default_hierarchy`` objects, not a copy.
+        #: (:meth:`_lookup_layers`) -- the same ``self._hierarchy``/
+        #: ``self._base_path``/``self._default_hierarchy`` objects, not a copy.
         self._global = _Provider(
             "Global",
             None,
-            self.base_path,
+            self._base_path,
             source,
-            self.hierarchy,
-            self.default_hierarchy,
+            self._hierarchy,
+            self._default_hierarchy,
             version,
         )
         # Puppet fails every lookup on a broken environment config; loading
@@ -676,7 +688,7 @@ class Hiera:
         with self._cache_lock:
             entry = self._file_cache.get(cache_key)
 
-        if self.revalidate:
+        if self._revalidate:
             probe = (
                 invocation._memo_probe(path) if invocation is not None else _probe(path)
             )
@@ -760,7 +772,7 @@ class Hiera:
                 )
 
         provider = (
-            load_layer_provider("Environment", root, self.backends, self.scope)
+            load_layer_provider("Environment", root, self._backends, self.scope)
             if root is not None
             else None
         )
@@ -786,7 +798,11 @@ class Hiera:
         module_dir = state.modules().get(module_name)
         if module_dir is not None:
             result = load_layer_provider(
-                "Module", module_dir, self.backends, self.scope, module_name=module_name
+                "Module",
+                module_dir,
+                self._backends,
+                self.scope,
+                module_name=module_name,
             )
         cache[module_name] = result
         return result
@@ -929,7 +945,7 @@ class Hiera:
         a given entry and cached on it (``entry.materialized``), exactly as
         first seen, until :meth:`clear_cache`.
         """
-        if not self.revalidate and entry.materialized is not None:
+        if not self._revalidate and entry.materialized is not None:
             return entry.materialized
 
         levels = []
@@ -944,14 +960,14 @@ class Hiera:
                         resolved.append(_Location(loc.original, match, False, True))
                 elif loc.is_uri:
                     resolved.append(loc)
-                elif self.revalidate:
+                elif self._revalidate:
                     exist = self._require_not_dir(loc.location, invocation)
                     resolved.append(_Location(loc.original, loc.location, False, exist))
                 else:
                     resolved.append(loc)
             levels.append(tuple(resolved))
         materialized = tuple(levels)
-        if not self.revalidate:
+        if not self._revalidate:
             entry.materialized = materialized
         return materialized
 
@@ -973,7 +989,7 @@ class Hiera:
         key = (root, pattern)
         cached = self._glob_cache.get(key)
         if cached is not _MISSING:
-            if not self.revalidate:
+            if not self._revalidate:
                 return cached.matches
             fresh = True
             for d, sig in cached.dirs:
@@ -1000,8 +1016,8 @@ class Hiera:
         raw = _dir_glob(
             root,
             pattern,
-            on_scandir if self.revalidate else None,
-            probe_isdir if self.revalidate else None,
+            on_scandir if self._revalidate else None,
+            probe_isdir if self._revalidate else None,
         )
         matches = []
         for m in raw:
@@ -1010,7 +1026,7 @@ class Hiera:
             # is kept, exactly like the eager path: `_load_file` is what
             # raises for it, when something actually tries to read it, not
             # this listing step.
-            if self.revalidate:
+            if self._revalidate:
                 probe = (
                     invocation._memo_probe(m) if invocation is not None else _probe(m)
                 )
@@ -1070,7 +1086,7 @@ class Hiera:
                 hierarchy, index, scope, base_path, tag, invocation, module_name
             )
             self._providers[key] = provider
-        elif self.revalidate:
+        elif self._revalidate:
             provider.locations = self._resolved_locations_for(
                 hierarchy, index, base_path, scope, tag, invocation
             )
@@ -1118,7 +1134,7 @@ class Hiera:
             scope.environment,
             load_file=self._load_file,
             prune=prune,
-            revalidate=self.revalidate,
+            revalidate=self._revalidate,
         )
 
     def _pruned_module_data(self, data, module_name, function_name, path):
@@ -1152,7 +1168,7 @@ class Hiera:
         full key).
 
         ``hierarchy``/``base_path`` are one layer's own hierarchy and root
-        (``self.hierarchy``/``self.base_path`` for the global layer, or a
+        (``self._hierarchy``/``self._base_path`` for the global layer, or a
         :class:`~hyera._data_provider._Provider`'s own ``hierarchy``/
         ``root``); ``tag`` names which of that layer's hierarchies (its
         main one, or -- for a module -- its ``default_hierarchy``), for
@@ -1429,13 +1445,13 @@ class Hiera:
     def scoped(
         self,
         *,
-        variables=None,
-        facts=None,
-        trusted=None,
-        server_facts=None,
-        environment=None,
-        strict=None,
-        node_name=None,
+        variables: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        environment: _ty.Optional[str] = None,
+        strict: _ty.Optional[str] = None,
+        node_name: _ty.Optional[str] = None,
     ) -> "Hiera":
         """A view of this instance bound to ``self.scope.derive(...)``.
 
@@ -1471,7 +1487,7 @@ class Hiera:
         view._providers = {}
         return view
 
-    def sources(self):
+    def sources(self) -> _ty.List[str]:
         """Resolve the ordered list of source paths for this instance's
         bound scope.
 
@@ -1491,7 +1507,7 @@ class Hiera:
 
     def _sources(self, scope, invocation=None):
         return self._files_for(
-            self.hierarchy, self.base_path, scope, "main", invocation
+            self._hierarchy, self._base_path, scope, "main", invocation
         )
 
     def _files_for(self, hierarchy, base_path, scope, tag, invocation=None):
@@ -1595,7 +1611,7 @@ class Hiera:
         entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
         materialized = self._materialize(entry, invocation)
         kind = ("lookup_options", tag, base_path)
-        if self.revalidate:
+        if self._revalidate:
             versions = tuple(
                 (
                     loc.location,
@@ -1742,7 +1758,7 @@ class Hiera:
         ordinary lookup already cached everything.
         """
         scope = invocation.scope
-        if not self.revalidate and cache is None:
+        if not self._revalidate and cache is None:
             cached = self._compiled_options_cache.get(module_name)
             if cached is not None and cached[0] is scope:
                 return cached[1]
@@ -1780,7 +1796,7 @@ class Hiera:
                     else:
                         opts = None
         compiled = compile_patterns(opts)
-        if not self.revalidate and cache is None:
+        if not self._revalidate and cache is None:
             self._compiled_options_cache[module_name] = (scope, compiled)
         return compiled
 
@@ -1863,15 +1879,15 @@ class Hiera:
 
     def lookup(
         self,
-        name,
-        value_type=None,
-        merge=None,
-        default_value=_MISSING,
+        name: "_ty.Union[str, _ty.Sequence[str], _ty.Mapping[str, _ty.Any]]",
+        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeSpec = None,
+        default_value: _ty.Any = _MISSING,
         *,
-        default_values_hash=None,
-        override=None,
-        block=None,
-    ):
+        default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
+    ) -> _ty.Any:
         """Puppet's ``lookup()``: resolve ``name`` against this instance's
         bound scope, in Puppet's own precedence order.
 
@@ -1937,12 +1953,17 @@ class Hiera:
 
     __call__ = lookup
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: _ty.Any) -> _ty.Any:
+        """``h[key]``/``h[key, *args]``/``h[key, {options}]``: the same
+        five call forms as :meth:`lookup`, unpacking a tuple subscript into
+        positional arguments."""
         if isinstance(item, tuple):
             return self.lookup(*item)
         return self.lookup(item)
 
-    def __contains__(self, name) -> bool:
+    def __contains__(self, name: _ty.Any) -> bool:
+        """``name in h``: whether :meth:`lookup` finds a value for
+        ``name`` (any form :meth:`lookup` accepts)."""
         try:
             self.lookup(name)
             return True
@@ -1958,12 +1979,12 @@ class Hiera:
 
     def dig(
         self,
-        *keys,
-        value_type=None,
-        merge=None,
-        default_values_hash=None,
-        override=None,
-    ):
+        *keys: _ty.Any,
+        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeSpec = None,
+        default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+    ) -> _ty.Any:
         """Puppet's ``dig()`` (``functions/dig.rb``): look up ``keys[0]``,
         then dig the rest of ``keys`` out of it, Ruby ``Hash#dig``/
         ``Array#dig`` style.
@@ -1996,15 +2017,15 @@ class Hiera:
 
     def get(
         self,
-        dotted,
-        default_value=None,
-        block=None,
+        dotted: str,
+        default_value: _ty.Any = None,
+        block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
         *,
-        value_type=None,
-        merge=None,
-        default_values_hash=None,
-        override=None,
-    ):
+        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeSpec = None,
+        default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+    ) -> _ty.Any:
         """Puppet's ``get()`` (``functions/get.rb``): resolve the root of
         ``dotted`` through `.lookup()`, then dig the rest of it out of the
         result -- unlike the removed old ``.get()``, this ``dotted``
@@ -2068,7 +2089,12 @@ class Hiera:
             assert_instance_of(subject, parse_type(value_type), result)
         return result
 
-    def getvar(self, dotted, default_value=None, block=None):
+    def getvar(
+        self,
+        dotted: str,
+        default_value: _ty.Any = None,
+        block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
+    ) -> _ty.Any:
         """Puppet's ``getvar()`` (``functions/getvar.rb``): Puppet's
         ``get()`` over a scope variable's value instead of a looked-up one.
 
@@ -2083,15 +2109,15 @@ class Hiera:
 
     def explain(
         self,
-        name,
-        value_type=None,
-        merge=None,
-        default_value=_MISSING,
+        name: "_ty.Union[str, _ty.Sequence[str], _ty.Mapping[str, _ty.Any]]",
+        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeSpec = None,
+        default_value: _ty.Any = _MISSING,
         *,
-        default_values_hash=None,
-        override=None,
-        block=None,
-        explain_options=False,
+        default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
+        explain_options: bool = False,
     ) -> ExplainResult:
         """What ``puppet lookup --explain``/``--explain-options`` shows:
         every hierarchy entry and path consulted for `.lookup()`, and
@@ -2125,7 +2151,7 @@ class Hiera:
         )
         explainer = Explainer(explain_options, explain_options)
         lo_memo = _ExplainOptionsMemo(
-            _ScopeKeyedCache(threading.Lock(), self.cache_size)
+            _ScopeKeyedCache(threading.Lock(), self._cache_size)
         )
         invocation = Invocation(
             self.scope,

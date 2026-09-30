@@ -14,10 +14,19 @@ import contextlib
 import functools
 import json
 import re
+import typing as _ty
 
 from ._interpolation import unshare
 from ._navigation import _MISSING
 from .exceptions import MergeError
+
+#: The type of every public ``merge=`` argument: a strategy name
+#: (``"first"``/``"unique"``/``"hash"``/``"deep"``/...), a
+#: ``{"strategy": ..., ...}`` mapping with Puppet's deep-merge options, or
+#: ``None`` for the level's own default.
+MergeSpec = _ty.Union[str, _ty.Mapping[str, _ty.Any], None]
+
+__all__ = ["MergeSpec"]
 
 #: The shared no-op context manager :meth:`MergeStrategy.lookup` uses when
 #: called with no ``invocation`` at all.

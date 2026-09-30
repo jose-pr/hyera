@@ -13,8 +13,32 @@ import re
 
 from .exceptions import HieraLookupError
 
+
+class _Unset:
+    """The type of :data:`_MISSING`, hiera's "no default was given"
+    sentinel (Puppet's own concept: a lookup with a real default of
+    ``None`` still differs from one with no default at all).
+
+    A plain ``object()`` would work as a sentinel too, but would render as
+    ``<object object at 0x...>`` in ``help()``/``inspect.signature()`` and
+    give a different object back from ``copy.deepcopy``/``pickle`` --
+    :meth:`__repr__` and :meth:`__reduce__` fix both, with no other
+    behavior change.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "<unset>"
+
+    def __reduce__(self) -> str:
+        return "_MISSING"
+
+
 #: Sentinel for "not found"/"undefined" (``None`` is a legitimate value).
-_MISSING = object()
+#: The only instance of :class:`_Unset`; renders as ``<unset>`` and keeps
+#: its identity through ``copy``/``pickle``.
+_MISSING = _Unset()
 #: The shared no-op context manager :func:`sub_lookup` uses when it was
 #: called with no ``invocation`` at all (``dig``/``get``/``getvar``).
 _NULL_CONTEXT = contextlib.nullcontext()

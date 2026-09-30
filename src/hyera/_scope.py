@@ -13,6 +13,7 @@ before any manifest evaluates (``parser/compiler.rb``'s ``set_node_parameters``,
 import logging
 import re
 import threading
+import typing as _ty
 from collections.abc import Mapping
 
 from ._navigation import _MISSING, _ruby_class
@@ -250,14 +251,14 @@ class Scope:
     def __init__(
         self,
         *,
-        variables=None,
-        facts=None,
-        trusted=None,
-        server_facts=None,
-        environment=None,
-        strict="warning",
-        node_name=None,
-    ):
+        variables: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        environment: _ty.Optional[str] = None,
+        strict: str = "warning",
+        node_name: _ty.Optional[str] = None,
+    ) -> None:
         self._build(
             variables=variables,
             facts=facts,
@@ -410,12 +411,14 @@ class Scope:
         return self._strict
 
     @property
-    def node_name(self):
+    def node_name(self) -> _ty.Optional[str]:
+        """The ``--node``/``node_name`` this scope was built for, or
+        ``None``."""
         return self._node_name
 
     # -- lookup ----------------------------------------------------------
 
-    def lookup(self, name: str):
+    def lookup(self, name: str) -> _ty.Any:
         """``self[name]``, without strict side effects (Puppet's
         ``catch(:undefined_variable)`` form): the bound value (even
         ``None``), or :data:`Scope.UNDEFINED`.
@@ -466,7 +469,7 @@ class Scope:
                     return True
         return unqualified in self._table
 
-    def lookupvar(self, name: str, *, lenient: bool = False):
+    def lookupvar(self, name: str, *, lenient: bool = False) -> _ty.Any:
         """:meth:`lookup`, with Puppet's :attr:`strict` applied to a miss
         (``parser/scope.rb:491-547``). ``lenient`` is Puppet's
         ``avoid_hiera_interpolation_errors``, used for hierarchy locations."""
@@ -499,7 +502,7 @@ class Scope:
 
     # -- layering ----------------------------------------------------------
 
-    def with_local_scope(self, variables) -> "Scope":
+    def with_local_scope(self, variables: _ty.Mapping[str, _ty.Any]) -> "Scope":
         """A child scope adding one local variable layer, sharing this
         scope's table and warning state. This scope is unchanged."""
         checked = _check_mapping_keys(variables, "variables")
@@ -520,13 +523,13 @@ class Scope:
     def derive(
         self,
         *,
-        variables=None,
-        facts=None,
-        trusted=None,
-        server_facts=None,
-        environment=None,
-        strict=None,
-        node_name=None,
+        variables: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        trusted: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        server_facts: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+        environment: _ty.Optional[str] = None,
+        strict: _ty.Optional[str] = None,
+        node_name: _ty.Optional[str] = None,
     ) -> "Scope":
         """A new root scope, rebuilt from this scope's own constructor
         inputs: ``variables``/``facts``/``server_facts`` shallow-update the
@@ -562,19 +565,19 @@ class Scope:
 
     # -- value semantics ---------------------------------------------------
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Scope):
             return NotImplemented
         return self._identity == other._identity
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         return result if result is NotImplemented else not result
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._identity)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Scope(environment={!r}, strict={!r}, variables={}, facts={})".format(
             self._environment, self._strict, len(self._table), len(self._facts_input)
         )

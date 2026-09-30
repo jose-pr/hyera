@@ -18,6 +18,7 @@ import logging
 import typing as _ty
 
 from ._interpolation import _ruby_inspect, _to_puppet_str
+from .exceptions import HieraError
 
 __all__ = ["ExplainResult"]  # everything else here is private.
 
@@ -90,18 +91,21 @@ class _Node:
     with its own queued texts, dumped depth-first."""
 
     def __init__(self) -> None:
-        self.branches = []  # type: list
-        self.texts = None  # type: _ty.Optional[list]
-        self.parent = None  # type: _ty.Optional["_Node"]
+        self.branches: "_ty.List[_Node]" = []
+        self.texts: "_ty.Optional[_ty.List[str]]" = None
+        self.parent: "_ty.Optional[_Node]" = None
 
-    def to_hash(self) -> dict:
-        hash_ = {}
+    def to_hash(self) -> "_ty.Dict[str, _ty.Any]":
+        """This node (and every branch, recursively) as the plain
+        ``dict``/``list`` shape ``puppet lookup --explain`` renders as
+        JSON."""
+        hash_: "_ty.Dict[str, _ty.Any]" = {}
         if self.branches:
             hash_["branches"] = [b.to_hash() for b in self.branches]
         return hash_
 
     def explain(self) -> str:
-        parts = []  # type: list
+        parts: _ty.List[str] = []
         self.dump_on(parts, "", "")
         return "".join(parts)
 
@@ -110,7 +114,9 @@ class _Node:
             self.texts = []
         self.texts.append(text)
 
-    def dump_on(self, parts: list, indent: str, first_indent: str) -> None:
+    def dump_on(self, parts: _ty.List[str], indent: str, first_indent: str) -> None:
+        """Append this node's (and every branch's) text form to ``parts``,
+        depth-first."""
         self._dump_texts(parts, indent)
 
     def _dump_texts(self, parts: list, indent: str) -> None:
@@ -564,11 +570,13 @@ class Explainer(_Node):
         self, explain_options: bool = False, only_explain_options: bool = False
     ) -> None:
         super().__init__()
-        self.current = self  # type: _Node
+        self.current: _Node = self
         self.explain_options = explain_options
         self.only_explain_options = only_explain_options
 
-    def push(self, kind: str, qualifier) -> None:
+    def push(self, kind: str, qualifier: _ty.Any) -> None:
+        """Push a new node of ``kind`` (``"location"``, ``"module"``, ...)
+        as a branch of the current node, and make it current."""
         build = _PUSH.get(kind)
         if build is None:
             raise ValueError("Unknown Explain type {}".format(kind))
@@ -580,19 +588,25 @@ class Explainer(_Node):
         if self.current.parent is not None:
             self.current = self.current.parent
 
-    def accept_found_in_overrides(self, key, value) -> None:
+    def accept_found_in_overrides(self, key: _ty.Any, value: _ty.Any) -> None:
+        """Record a value found through ``override_values``."""
         self.current.found_in_overrides(key, value)
 
-    def accept_found_in_defaults(self, key, value) -> None:
+    def accept_found_in_defaults(self, key: _ty.Any, value: _ty.Any) -> None:
+        """Record a value found through ``default_values_hash``."""
         self.current.found_in_defaults(key, value)
 
-    def accept_found(self, key, value) -> None:
+    def accept_found(self, key: _ty.Any, value: _ty.Any) -> None:
+        """Record a value found in ordinary hierarchy data."""
         self.current.found(key, value)
 
-    def accept_merge_source(self, merge_source) -> None:
+    def accept_merge_source(self, merge_source: _ty.Any) -> None:
+        """Record which ``lookup_options`` source a merge strategy came
+        from."""
         self.current.branches.append(_MergeSource(merge_source))
 
-    def accept_not_found(self, key) -> None:
+    def accept_not_found(self, key: _ty.Any) -> None:
+        """Record a miss for the current node."""
         self.current.not_found(key)
 
     def accept_location_not_found(self) -> None:
@@ -608,18 +622,24 @@ class Explainer(_Node):
         self.current.module_provider_not_found()
         self.pop()
 
-    def accept_result(self, value) -> None:
+    def accept_result(self, value: _ty.Any) -> None:
+        """Record the top-level lookup's final result."""
         self.current.result(value)
 
-    def accept_text(self, text) -> None:
+    def accept_text(self, text: str) -> None:
+        """Record one free-text line (``LookupContext.explain``) on the
+        current node."""
         self.current.text(text)
 
-    def dump_on(self, parts: list, indent: str, first_indent: str) -> None:
+    def dump_on(self, parts: _ty.List[str], indent: str, first_indent: str) -> None:
         for b in self.branches:
             b.dump_on(parts, indent, first_indent)
         self._dump_texts(parts, indent)
 
-    def to_hash(self) -> dict:
+    def to_hash(self) -> "_ty.Dict[str, _ty.Any]":
+        """The tree's own ``dict``/``list`` shape: unwrapped one level when
+        there is exactly one top-level branch, matching
+        ``puppet lookup --explain``'s own JSON."""
         if len(self.branches) == 1:
             return self.branches[0].to_hash()
         return super().to_hash()
@@ -631,11 +651,13 @@ class ExplainResult:
     same two ways (``--render-as json`` -> :meth:`to_hash`, ``--render-as
     s`` -> :meth:`text`)."""
 
-    def __init__(self, explainer: Explainer, error=None) -> None:
+    def __init__(
+        self, explainer: Explainer, error: _ty.Optional[HieraError] = None
+    ) -> None:
         self._explainer = explainer
         self._error = error
 
-    def to_hash(self) -> dict:
+    def to_hash(self) -> "_ty.Dict[str, _ty.Any]":
         """A deep copy of the explain tree, projected through ``to_hash()``
         -- mutating the returned structure, or a later lookup/explain on the
         same instance, never changes what an earlier result holds."""
@@ -650,7 +672,7 @@ class ExplainResult:
         return self.text()
 
     @property
-    def error(self):
+    def error(self) -> _ty.Optional[HieraError]:
         """The :class:`~hyera.HieraError` this lookup ended with, reported
         as the report's own last line -- ``None`` when a value was found or
         defaulted to."""

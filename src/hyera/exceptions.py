@@ -1,7 +1,19 @@
 """Exception hierarchy for hiera."""
 
+import typing as _ty
 
-def _one_line(text) -> str:
+__all__ = [
+    "HieraError",
+    "ConfigError",
+    "BackendError",
+    "HieraLookupError",
+    "InterpolationError",
+    "MergeError",
+    "KeyNotFoundError",
+]
+
+
+def _one_line(text: object) -> str:
     """Collapse ``text`` to a single line, normalizing internal whitespace."""
     return " ".join(str(text).split())
 
@@ -12,9 +24,9 @@ class HieraError(Exception):
     ``path``, when known, names the file the problem concerns.
     """
 
-    def __init__(self, *args, path=None):
+    def __init__(self, *args: object, path: _ty.Optional[str] = None) -> None:
         super().__init__(*args)
-        self.path = path
+        self.path: _ty.Optional[str] = path
 
 
 class ConfigError(HieraError):
@@ -24,9 +36,14 @@ class ConfigError(HieraError):
     found at (e.g. a malformed hierarchy entry).
     """
 
-    def __init__(self, *args, path=None, line=None):
+    def __init__(
+        self,
+        *args: object,
+        path: _ty.Optional[str] = None,
+        line: _ty.Optional[int] = None,
+    ) -> None:
         super().__init__(*args, path=path)
-        self.line = line
+        self.line: _ty.Optional[int] = line
 
 
 class BackendError(HieraError):
@@ -75,7 +92,7 @@ class KeyNotFoundError(HieraLookupError, KeyError):
     tried; a list of one uses the singular message form.
     """
 
-    def __init__(self, name):
+    def __init__(self, name: _ty.Union[str, _ty.Sequence[str]]) -> None:
         if isinstance(name, (list, tuple)) and len(name) != 1:
             message = (
                 "Function lookup() did not find a value for any of the "
@@ -88,10 +105,12 @@ class KeyNotFoundError(HieraLookupError, KeyError):
                 "{!r}".format(single)
             )
         super().__init__(message)
-        self.name = name
+        self.name: _ty.Union[str, _ty.Sequence[str]] = name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return Exception.__str__(self)
 
-    def __reduce__(self):
+    def __reduce__(
+        self,
+    ) -> "_ty.Tuple[type, _ty.Tuple[_ty.Union[str, _ty.Sequence[str]]], _ty.Dict[str, _ty.Any]]":
         return (type(self), (self.name,), dict(self.__dict__))

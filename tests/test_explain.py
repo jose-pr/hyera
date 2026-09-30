@@ -210,7 +210,7 @@ def test_hierarchy_level_name(make_tree):
         files={"data/c.yaml": "k: v\n"},
     )
     h = Hiera(str(root / "hiera.yaml"))
-    assert h.hierarchy[0].name == "custom-name"
+    assert h._hierarchy[0].name == "custom-name"
 
 
 def test_environment_layer_errors_are_reported(tmp_path, make_tree):

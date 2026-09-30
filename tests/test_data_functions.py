@@ -106,7 +106,7 @@ def test_getvar_reads_scope(fn):
     assert h.getvar("nosuch.x", "GD") == "GD"
 
     strict_h = Hiera(
-        str(h.base_path / "hiera.yaml"),
+        str(h._base_path / "hiera.yaml"),
         scope=Scope(facts={"role": "web"}, strict="error"),
     )
     # An undefined variable returns the default regardless of strict.
