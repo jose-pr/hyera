@@ -20,7 +20,20 @@ from hyera._string_converter import convert as _string_convert
 from hyera._string_converter import puppet_quote as _puppet_quote
 from hyera._type_mismatch import assert_instance_of
 from hyera._type_parser import parse_type
-from hyera._types import ALIASES, PTypeReferenceType, infer, infer_set
+from hyera._types import (
+    ALIASES,
+    PAnyType,
+    PEnumType,
+    PNotUndefType,
+    POptionalType,
+    PTypeReferenceType,
+    _eql_key,
+    _literal_str,
+    _num_str,
+    generalize,
+    infer,
+    infer_set,
+)
 
 _CASES = Path(__file__).parent / "conformance" / "cases"
 
@@ -153,6 +166,288 @@ def test_aliases_and_references():
 
     RubySymbol.__module__ = "hyera._yaml_loader"
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
+
+
+# -------------------------------------------------- type-model internals
+#
+# assignable()/_key()/__eq__()/__hash__()/normalize()/alias_expanded_str()
+# have no entry point of their own -- convert_to/value_type only ever call
+# instance()/new()/str() on a parsed type. This module ports Puppet's whole
+# type model (type_calculator.rb/type_formatter.rb), not only what hiera's
+# lookup path currently wires up, so the rest of that API is exercised
+# directly against parsed/inferred type instances, same as the rest of this
+# file.
+
+
+def test_any_type_base_defaults():
+    any_t = parse_type("Any")
+    assert isinstance(any_t, PAnyType) and type(any_t) is PAnyType
+    assert any_t.assignable(parse_type("Integer")) is True
+    assert any_t.assignable(any_t) is True
+    assert any_t.normalize() is any_t
+    assert any_t.simple_name == "Any"
+    assert any_t.alias_expanded_str() == "Any"
+    assert repr(any_t) == "<Any>"
+    assert any_t._key() == ()
+    assert hash(any_t) == hash(parse_type("Any"))
+
+
+def test_type_key_equality_and_hash():
+    pairs = [
+        ("Integer[1,5]", "Integer[1,5]", "Integer[1,6]"),
+        ("Float[1,5]", "Float[1,5]", "Float[1,6]"),
+        ("String[1,3]", "String[1,3]", "String[1,4]"),
+        ("Boolean[true]", "Boolean[true]", "Boolean[false]"),
+        ("Regexp[/^a/]", "Regexp[/^a/]", "Regexp[/^b/]"),
+        ("Pattern[/^a/]", "Pattern[/^a/]", "Pattern[/^b/]"),
+        ("Enum[a,b]", "Enum[a,b]", "Enum[a,c]"),
+        ("Collection[1,3]", "Collection[1,3]", "Collection[1,4]"),
+        ("Array[Integer,1,3]", "Array[Integer,1,3]", "Array[String,1,3]"),
+        ("Hash[String,Integer]", "Hash[String,Integer]", "Hash[String,String]"),
+        ("Tuple[String,Integer]", "Tuple[String,Integer]", "Tuple[String,String]"),
+        ("Struct[{a=>String}]", "Struct[{a=>String}]", "Struct[{a=>Integer}]"),
+        ("Variant[String,Integer]", "Variant[String,Integer]", "Variant[String,Float]"),
+        ("Sensitive[Integer]", "Sensitive[Integer]", "Sensitive[String]"),
+        ("NotUndef[Integer]", "NotUndef[Integer]", "NotUndef[String]"),
+        ("Optional[Integer]", "Optional[Integer]", "Optional[String]"),
+        ("SemVer", "SemVer", "Binary"),
+    ]
+    for spec, same, different in pairs:
+        a, b, c = parse_type(spec), parse_type(same), parse_type(different)
+        assert a == b, spec
+        assert hash(a) == hash(b), spec
+        assert a != c, spec
+        assert a != "not a type"
+
+    ref_a = parse_type("Stdlib::Port")
+    ref_b = PTypeReferenceType("Stdlib::Port")
+    assert ref_a == ref_b
+    assert hash(ref_a) == hash(ref_b)
+    assert ref_a._key() == ("Stdlib::Port",)
+
+    assert ALIASES["data"] == parse_type("Data")
+
+    class RubySymbol:
+        pass
+
+    RubySymbol.__module__ = "hyera._yaml_loader"
+    rt_a, rt_b = infer(RubySymbol()), infer(RubySymbol())
+    assert rt_a == rt_b
+    assert hash(rt_a) == hash(rt_b)
+    assert rt_a._key() == ("ruby", "Symbol")
+
+
+def test_assignable_across_type_family():
+    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[1,5]")) is True
+    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[2,4]")) is True
+    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[0,5]")) is False
+    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[1,6]")) is False
+    assert parse_type("Integer[1,5]").assignable(parse_type("String")) is False
+
+    assert parse_type("Float[1,5]").assignable(parse_type("Float[2,4]")) is True
+    assert parse_type("Float[1,5]").assignable(parse_type("Float[0,5]")) is False
+    assert parse_type("Float[1,5]").assignable(parse_type("Float[1,6]")) is False
+    assert parse_type("Float[1,5]").assignable(parse_type("Integer")) is False
+
+    assert parse_type("String[1,3]").assignable(infer("ab")) is True
+    assert parse_type("String[1,3]").assignable(infer("abcd")) is False
+    assert parse_type("String[1,3]").assignable(parse_type("String[2,4]")) is False
+    assert parse_type("String[1,3]").assignable(parse_type("String")) is False
+    assert parse_type("String").assignable(infer("a")) is True
+    literal = infer("a")
+    assert literal.assignable(infer("a")) is True
+    assert literal.assignable(infer("b")) is False
+    assert literal.assignable(parse_type("String")) is False
+    assert parse_type("String").assignable(parse_type("Integer")) is False
+
+    assert parse_type("Boolean[true]").assignable(parse_type("Boolean[true]")) is True
+    assert parse_type("Boolean[true]").assignable(parse_type("Boolean[false]")) is False
+    assert parse_type("Boolean[true]").assignable(parse_type("Integer")) is False
+    assert parse_type("Boolean").assignable(parse_type("Boolean[true]")) is True
+
+    assert (
+        parse_type("Variant[String,Integer]").assignable(parse_type("Integer")) is True
+    )
+    assert (
+        parse_type("Variant[String,Integer]").assignable(parse_type("Float")) is False
+    )
+
+    assert parse_type("Optional[Integer]").assignable(parse_type("Undef")) is True
+    assert parse_type("Optional[Integer]").assignable(parse_type("Integer")) is True
+    assert parse_type("Optional").assignable(parse_type("Undef")) is True
+    assert parse_type("NotUndef[Integer]").assignable(parse_type("Undef")) is False
+    assert parse_type("NotUndef[Integer]").assignable(parse_type("Integer")) is True
+    assert parse_type("NotUndef").assignable(parse_type("Integer")) is True
+
+    data_t = parse_type("Data")
+    assert data_t.assignable(data_t) is True
+    assert data_t.assignable(parse_type("Integer")) is True
+    # `Data`'s own Variant branch matches ScalarData, which (like most types
+    # in this ported model that never override `assignable()`) falls back to
+    # PAnyType's own base implementation -- "any other PAnyType at all" --
+    # rather than a real structural subtype check.
+    assert data_t.assignable(parse_type("Sensitive")) is True
+
+    assert parse_type("Undef").assignable(parse_type("Undef")) is True
+    assert parse_type("Undef").assignable(parse_type("Integer")) is False
+
+    # Bare Optional/NotUndef (no contained type argument at all -- distinct
+    # from `Optional[Integer]`) accept any non-Undef instance/assignable
+    # target, per their own `contained is None` fast path.
+    assert parse_type("Optional").instance(5) is True
+    assert parse_type("NotUndef").instance(5) is True
+    assert parse_type("Optional").assignable(parse_type("Integer")) is True
+
+    # A bareword contained type argument (`Optional[integer]`) is kept as a
+    # raw Python str, not parsed into a real type (`_literal_or_type`) --
+    # `_type_instance`/`_type_assignable`'s own string branch is what makes
+    # that literal comparable.
+    literal_opt = parse_type("Optional[integer]")
+    assert literal_opt.instance("integer") is True
+    assert literal_opt.instance("other") is False
+    assert literal_opt.assignable(parse_type("String")) is False
+    assert literal_opt == parse_type("Optional[integer]")
+    assert parse_type("Optional") == parse_type("Optional")
+
+
+def test_alias_normalize_and_expansion():
+    data_t = parse_type("Data")
+    assert str(data_t.normalize()) == str(data_t.resolved_type)
+
+    # An unguarded expansion inlines the alias's own body text...
+    assert (
+        data_t.alias_expanded_str()
+        == "Variant[ScalarData, Undef, Hash[String, Data], Array[Data]]"
+    )
+    # ...but a self-referencing alias (Data contains Data) stops recursing
+    # once its own name is already in the guard set, printing the bare name
+    # instead of looping forever.
+    assert data_t.alias_expanded_str({"Data"}) == "Data"
+
+
+def test_optional_notundef_literal_container_rendering():
+    # `Optional[integer]`/`NotUndef[integer]` (a bareword *contained type
+    # argument*) keep the contained value as a raw Python str, rendered
+    # through the plain-string branch -- but Optional/NotUndef can also wrap
+    # a real PStringType with `.literal` set (never produced by parse_type,
+    # only by infer()); that flavor renders its quoted literal directly
+    # rather than recursing into the child's own (bare "String") renderer.
+    assert str(POptionalType(infer("x"))) == "Optional['x']"
+    assert str(PNotUndefType(infer("y"))) == "NotUndef['y']"
+
+
+def test_collection_pattern_regexp_enum_instance_and_render():
+    assert parse_type("Regexp").instance(re.compile("^a")) is True
+    assert parse_type("Regexp[/^a/]").instance(re.compile("^a")) is True
+    assert parse_type("Regexp[/^a/]").instance(re.compile("^b")) is False
+    assert parse_type("Regexp").instance("not a regex") is False
+
+    assert parse_type("Pattern[/^a/]").instance("abc") is True
+    assert parse_type("Pattern[/^a/]").instance("bbc") is False
+    assert parse_type("Pattern[/^a/]").instance(5) is False
+
+    assert parse_type("Enum[a,b]").instance("a") is True
+    assert parse_type("Enum[a,b]").instance("c") is False
+    assert parse_type("Enum[a,b]").instance(5) is False
+
+    assert parse_type("Collection").instance([1, 2]) is True
+    assert parse_type("Collection").instance("x") is False
+    assert parse_type("Collection[1,2]").instance([1]) is True
+    assert parse_type("Collection[1,2]").instance([]) is False
+    assert parse_type("Collection[1,2]").instance([1, 2, 3]) is False
+    assert str(parse_type("Collection[1,3]").generalize()) == "Collection"
+    assert str(parse_type("Collection")) == "Collection"
+    assert str(parse_type("Collection[1,3]")) == "Collection[1, 3]"
+
+
+def test_numeric_and_string_range_bounds():
+    assert parse_type("Float[1.0,5.0]").instance(6.0) is False
+    assert parse_type("Float[1.0,5.0]").instance(3.0) is True
+
+    literal = infer("a")
+    assert literal.instance("a") is True
+    assert literal.instance("b") is False
+
+    assert parse_type("String[1,3]").instance("ab") is True
+
+    assert (
+        parse_type("Hash[String,Integer,1,2]").instance({"a": 1, "b": 2, "c": 3})
+        is False
+    )
+    assert str(parse_type("Hash[String,Integer]").generalize()) == (
+        "Hash[String, Integer]"
+    )
+
+    assert parse_type("Tuple[String,Integer,1,3]").instance(["a", 1, 2]) is True
+    assert parse_type("Tuple[String]").instance("not a list") is False
+    assert str(parse_type("Tuple[Integer[1,1]]").generalize()) == "Tuple[Integer]"
+
+    assert parse_type("Struct[{a=>String}]").instance([1, 2]) is False
+
+    # A range-bound rendered through `_num_str`, not the value's own
+    # instance-check: `infer()` on a NaN/Infinity/large-exponent float turns
+    # it into `Float[<that value>, <that value>]`, and the mismatch-message
+    # path (`_data_functions.py`/`_lookup_adapter.py`/`_type_mismatch.py`,
+    # all calling `infer(value)`) renders it right there.
+    assert str(infer(float("nan"))) == "Float[nan, nan]"
+    assert str(infer(float("inf"))) == "Float[inf, inf]"
+    assert str(infer(float("-inf"))) == "Float[-inf, -inf]"
+    # `repr(1e21)` has no "." in its mantissa ("1e+21"); `_num_str` inserts
+    # one so the rendered bound still reads as a Puppet Float literal.
+    assert str(infer(1e21)) == "Float[1.0e+21, 1.0e+21]"
+
+
+def test_infer_edge_cases():
+    with pytest.raises(TypeError, match="no Puppet type for"):
+        infer(object())
+
+    assert str(infer_set([])) == "Tuple[]"
+    assert str(infer_set({})) == "Hash[Any, Any, 0, 0]"
+
+    assert str(infer([1, 1.0]).generalize()) == "Array[Variant[Integer, Float]]"
+    assert str(infer(re.compile("^a"))) == "Regexp[/^a/]"
+    assert str(infer([])) == "Array[Any, 0, 0]"
+
+    class RubySymbol:
+        pass
+
+    RubySymbol.__module__ = "hyera._yaml_loader"
+    rt = infer(RubySymbol())
+    assert rt.instance(RubySymbol()) is True
+    assert rt.instance("x") is False
+
+    # `generalize()`'s module-level dispatcher passes a non-PAnyType value
+    # (a bareword literal contained type, e.g. Optional[integer]'s "integer")
+    # through unchanged, since it has no `.generalize()` of its own.
+    assert generalize("integer") == "integer"
+
+
+def test_num_str_and_literal_str_direct():
+    # `_num_str`'s bool branch and `_literal_str`'s float/other branches are
+    # unreachable through `parse_type()`: the parser's own `_num_or_default`
+    # only ever hands Integer/Float range bounds a "number" or "default"
+    # node (never "bool"), and `_build_enum` only ever hands `PEnumType` a
+    # "string" or "bool" node -- so neither a bool bound nor a non-str/bool
+    # Enum value can arise from real Puppet type-expression text. Both
+    # helpers are still exercised directly, the same as every other private
+    # function in this module.
+    assert _num_str(True) == "true"
+    assert _num_str(False) == "false"
+
+    assert _literal_str(True) == "true"
+    assert _literal_str(3.14) == "3.14"
+    assert _literal_str(5) == "5"
+
+    assert str(PEnumType([3.14, 5])) == "Enum[3.14, 5]"
+
+
+def test_eql_key_undef_sensitive_and_identity_fallback():
+    assert _eql_key(None) == ("undef", None)
+    assert _eql_key(Sensitive(5)) == ("sensitive", ("int", 5))
+
+    obj = object()
+    assert _eql_key(obj) == ("id", id(obj))
+    assert _eql_key(obj) != _eql_key(object())
 
 
 def test_parse_type_is_cached():
