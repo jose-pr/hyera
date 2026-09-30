@@ -344,6 +344,20 @@ def test_v3_extension_rules(make_tree, monkeypatch):
     assert h.lookup("d") == "not_doubled_dynamic"
 
 
+def test_v3_hocon_backend_default_extension_and_dispatch(make_tree, monkeypatch):
+    # backends: [hocon] is a data_hash/hocon_data level, and its default
+    # extension is ".conf" (distinct from yaml/json/eyaml's "." + name
+    # rule, and from the "." + b fallback for a third-party name).
+    pytest.importorskip("pyhocon")
+    root = make_tree(
+        ":backends: [hocon]\n:hocon:\n  :datadir: data\n:hierarchy: [common]\n",
+        files={"data/common.conf": "k = v\n"},
+        raw=True,
+    )
+    monkeypatch.chdir(root)
+    assert Hiera(str(root / "hiera.yaml")).lookup("k") == "v"
+
+
 def test_v3_relative_datadir_uses_cwd_at_construction(monkeypatch, tmp_path):
     a = tmp_path / "a"
     b = tmp_path / "b"
@@ -578,6 +592,38 @@ def test_find_line_matching():
             {"version": 4, "datadir": "data", "hierarchy": ["oops"]},
             ["index 0 expects a Struct value, got String"],
         ),
+        (
+            {
+                "version": 4,
+                "datadir": 5,
+                "hierarchy": [{"name": "c", "backend": "yaml"}],
+            },
+            ["entry 'datadir' expects a String value, got Integer"],
+        ),
+        (
+            {
+                "version": 4,
+                "datadir": "data",
+                "hierarchy": [{"name": 5, "backend": "yaml"}],
+            },
+            ["index 0 entry 'name' expects a String value, got Integer"],
+        ),
+        (
+            {
+                "version": 4,
+                "datadir": "data",
+                "hierarchy": [{"name": "c", "backend": "yaml", "paths": "not-a-list"}],
+            },
+            ["index 0 entry 'paths' expects an Array value, got String"],
+        ),
+        (
+            {
+                "version": 4,
+                "datadir": "data",
+                "hierarchy": [{"name": "c", "backend": "yaml", "paths": [5]}],
+            },
+            ["index 0 entry 'paths' index 0 expects a String value, got Integer"],
+        ),
     ],
     ids=[
         "missing-name-and-extra-key",
@@ -585,6 +631,10 @@ def test_find_line_matching():
         "version-string",
         "nested-before-top-level",
         "entry-is-a-string",
+        "datadir-integer",
+        "entry-name-integer",
+        "paths-not-a-list",
+        "paths-item-integer",
     ],
 )
 def test_v4_schema_errors(data, expected_lines):
@@ -642,6 +692,31 @@ def test_v4_paths_and_extension(make_tree):
     assert h.lookup("mymod::k2") == "from_a"
     # an entry's own datadir overrides the config's.
     assert h.lookup("mymod::k3") == "from_owndir"
+
+
+def test_v4_hocon_backend_default_extension_and_dispatch(make_tree, caplog):
+    # backend: hocon is a data_hash/hocon_data level, and its default
+    # extension is ".conf" (distinct from yaml/json's "." + name rule) --
+    # proven by the module-prefix warning naming both 'hocon_data' and the
+    # '.conf' path it read (pyhocon itself keeps the surrounding quotes on
+    # a quoted "mymod::k"-shaped key literally, so the value can never
+    # actually round-trip through the module-prefix check to be looked up).
+    pytest.importorskip("pyhocon")
+    root = make_tree(
+        {"hierarchy": []},
+        files={
+            "modules/mymod/hiera.yaml": (
+                "version: 4\nhierarchy:\n  - name: c\n    backend: hocon\n"
+            ),
+            "modules/mymod/data/c.conf": '"mymod::k" = v\n',
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(KeyNotFoundError):
+            h.lookup("mymod::k")
+    assert "hocon_data" in caplog.text
+    assert "c.conf" in caplog.text
 
 
 def test_v4_datadir_is_literal(make_tree):

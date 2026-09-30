@@ -308,6 +308,31 @@ def test_options_interpolated_and_merged_with_path(make_tree, backends, calls, s
     assert options["path"].endswith("a.yaml")
 
 
+def test_options_nested_data_value_reaches_the_provider(
+    make_tree, backends, calls, script
+):
+    # A Data value can nest scalars inside a list inside a hash -- every
+    # branch of the hiera.yaml schema's own _is_data recursion, none of
+    # them raising.
+    root = make_tree(
+        {
+            "hierarchy": [
+                {
+                    "name": "s",
+                    "lookup_key": "test_lookup_key",
+                    "path": "a.yaml",
+                    "options": {"nested": {"a": 1, "b": [1, 2, None, True]}},
+                }
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    script["lookup_key"] = lambda key, options, context: "v"
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v"
+    assert calls[0][2]["nested"] == {"a": 1, "b": [1, 2, None, True]}
+
+
 def test_entry_options_replace_defaults_options(make_tree, backends, calls, script):
     root = make_tree(
         {

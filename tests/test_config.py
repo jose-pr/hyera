@@ -198,6 +198,48 @@ _BASE_V5 = {
             },
             "at least 1, got 0",
         ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {
+                        "name": "one",
+                        "path": "one.yaml",
+                        "data_hash": "yaml_data",
+                        "options": "not-a-hash",
+                    }
+                ],
+            },
+            "entry 'options' expects a Hash value, got String",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {
+                        "name": "one",
+                        "path": "one.yaml",
+                        "data_hash": "yaml_data",
+                        "options": {"bad key!": 1},
+                    }
+                ],
+            },
+            "key of entry 'bad key!' expects a match for Pattern",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {
+                        "name": "one",
+                        "path": "one.yaml",
+                        "data_hash": "yaml_data",
+                        "options": {"ok": {1: "x"}},
+                    }
+                ],
+            },
+            "entry 'ok' expects a Data value, got Hash",
+        ),
     ],
     ids=[
         "mapped-paths-2-tuple",
@@ -208,6 +250,9 @@ _BASE_V5 = {
         "paths-string",
         "missing-name",
         "paths-empty",
+        "options-not-a-hash",
+        "options-bad-key",
+        "options-value-not-data",
     ],
 )
 def test_malformed_config_raises_config_error(cfg, expected):
