@@ -1,0 +1,7 @@
+---
+shared: env
+env_only: e
+mymod::shared: env
+mymod::merged: {e: 2}
+mymod::arr: [e]
+mymod::env_vs_mod: env

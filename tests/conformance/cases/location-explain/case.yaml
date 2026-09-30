@@ -1,0 +1,14 @@
+description: >
+  --explain over mapped_paths (a missing mapped candidate kept in the
+  report) and a glob level, including a full miss across both.
+queries:
+  - key: k
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+    note: Puppet 8.10 probe
+  - key: nope
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+    note: Puppet 8.10 probe

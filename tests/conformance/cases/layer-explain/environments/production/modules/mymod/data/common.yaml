@@ -1,0 +1,7 @@
+---
+mymod::only_mod: m
+mymod::merged: {m: 3}
+mymod::arr: [m]
+mymod::env_vs_mod: mod
+unqualified_in_module: nope
+other::key: nope

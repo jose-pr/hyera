@@ -1,0 +1,323 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "e5bec6f57c8b28066057a35d412075f95b617879ad2d5109fbfbf8f3a69456b6",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "k"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "roles/%{role}.yaml",
+                                "path": "<case>/data/roles/web.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "roles/%{role}.yaml",
+                                "path": "<case>/data/roles/db.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"roles\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "<case>/data/g/*.yaml",
+                                "path": "<case>/data/g/one.yaml"
+                              },
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "<case>/data/g/*.yaml",
+                                "path": "<case>/data/g/two.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"globbed\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "k",
+                        "value": "web",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "roles/%{role}.yaml",
+                        "path": "<case>/data/roles/web.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"roles\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "k",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"roles\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/roles/web.yaml\"",
+        "            Original path: \"roles/%{role}.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/roles/db.yaml\"",
+        "            Original path: \"roles/%{role}.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"globbed\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/g/one.yaml\"",
+        "            Original path: \"<case>/data/g/*.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/g/two.yaml\"",
+        "            Original path: \"<case>/data/g/*.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "Searching for \"k\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"roles\"",
+        "      Path \"<case>/data/roles/web.yaml\"",
+        "        Original path: \"roles/%{role}.yaml\"",
+        "        Found key: \"k\" value: \"web\""
+      ]
+    },
+    "nope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "nope"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "roles/%{role}.yaml",
+                                "path": "<case>/data/roles/web.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "roles/%{role}.yaml",
+                                "path": "<case>/data/roles/db.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"roles\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "<case>/data/g/*.yaml",
+                                "path": "<case>/data/g/one.yaml"
+                              },
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "<case>/data/g/*.yaml",
+                                "path": "<case>/data/g/two.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"globbed\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "roles/%{role}.yaml",
+                        "path": "<case>/data/roles/web.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "roles/%{role}.yaml",
+                        "path": "<case>/data/roles/db.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"roles\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "<case>/data/g/*.yaml",
+                        "path": "<case>/data/g/one.yaml"
+                      },
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "<case>/data/g/*.yaml",
+                        "path": "<case>/data/g/two.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"globbed\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "nope",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"roles\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/roles/web.yaml\"",
+        "            Original path: \"roles/%{role}.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/roles/db.yaml\"",
+        "            Original path: \"roles/%{role}.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"globbed\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/g/one.yaml\"",
+        "            Original path: \"<case>/data/g/*.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/g/two.yaml\"",
+        "            Original path: \"<case>/data/g/*.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "Searching for \"nope\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"roles\"",
+        "      Path \"<case>/data/roles/web.yaml\"",
+        "        Original path: \"roles/%{role}.yaml\"",
+        "        No such key: \"nope\"",
+        "      Path \"<case>/data/roles/db.yaml\"",
+        "        Original path: \"roles/%{role}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"globbed\"",
+        "      Path \"<case>/data/g/one.yaml\"",
+        "        Original path: \"<case>/data/g/*.yaml\"",
+        "        No such key: \"nope\"",
+        "      Path \"<case>/data/g/two.yaml\"",
+        "        Original path: \"<case>/data/g/*.yaml\"",
+        "        No such key: \"nope\"",
+        "Function lookup() did not find a value for the name 'nope'"
+      ]
+    }
+  }
+}

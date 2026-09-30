@@ -1,0 +1,6 @@
+---
+unknown_fn: "%{nosuch('x')}"
+alias_emb: "x%{alias('s')}"
+s: str
+mismatch: "%{lookup('s.x')}"
+self: "%{lookup('self')}"

@@ -1,0 +1,293 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "04dbcece0b69c71608d51bead11d56e71994e01578b7eef7e4622ad0d0a23def",
+  "results": {
+    "unknown_fn": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "unknown_fn"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "type": "interpolate",
+                            "expression": "%{nosuch('x')}"
+                          }
+                        ],
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "unknown_fn",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Searching for \"unknown_fn\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Interpolation on \"%{nosuch('x')}\"",
+        "Unknown interpolation method 'nosuch'"
+      ]
+    },
+    "alias_emb": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "alias_emb"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "type": "interpolate",
+                            "expression": "x%{alias('s')}"
+                          }
+                        ],
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "alias_emb",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Searching for \"alias_emb\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Interpolation on \"x%{alias('s')}\"",
+        "'alias' interpolation is only permitted if the expression is equal to the entire string"
+      ]
+    },
+    "s.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "s.x"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "s",
+                        "value": "str",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "type": "segment"
+                  }
+                ],
+                "type": "sub_key"
+              }
+            ],
+            "key": "s.x",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Searching for \"s.x\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"s\" value: \"str\"",
+        "  Sub key: \"x\"",
+        "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's.x'"
+      ]
+    },
+    "mismatch": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "mismatch"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'mismatch' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's.x'"
+    },
+    "self": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "self"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'self' failed: Lookup of key 'self' failed: Recursive lookup detected in [self]"
+    }
+  }
+}

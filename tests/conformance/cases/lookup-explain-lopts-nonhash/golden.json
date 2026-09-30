@@ -1,0 +1,59 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6421aad7f637e124542b2d192da9993d7a8d836023d5d847325a9d632ff40778",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "k"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "value": [
+                      "x"
+                    ],
+                    "event": "found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/data/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"common\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Global Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/hiera.yaml"
+          }
+        ],
+        "key": "lookup_options",
+        "type": "root"
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: [",
+        "          \"x\"",
+        "        ]",
+        "value of lookup_options must be a hash"
+      ]
+    }
+  }
+}

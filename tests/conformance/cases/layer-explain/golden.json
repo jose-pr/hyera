@@ -1,0 +1,1206 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "0f41bfd912f7b9610142e64213e2a9c3380ec7b84f9004da6eaf2694bdc62a8a",
+  "results": {
+    "mymod::arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "mymod::arr"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/environments/production/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-common\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"mod-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                "module": "mymod"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "mymod::arr",
+                            "value": [
+                              "g"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/gdata/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"global-common\""
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Global Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/hiera.yaml"
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "mymod::arr",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "os/%{facts.os.family}.yaml",
+                                "path": "<case>/environments/production/data/os/RedHat.yaml"
+                              }
+                            ],
+                            "type": "data_provider",
+                            "name": "Hierarchy entry \"env-os\""
+                          },
+                          {
+                            "branches": [
+                              {
+                                "key": "mymod::arr",
+                                "value": [
+                                  "e"
+                                ],
+                                "event": "found",
+                                "type": "path",
+                                "original_path": "common.yaml",
+                                "path": "<case>/environments/production/data/common.yaml"
+                              }
+                            ],
+                            "type": "data_provider",
+                            "name": "Hierarchy entry \"env-common\""
+                          }
+                        ],
+                        "value": [
+                          "e"
+                        ],
+                        "event": "result",
+                        "type": "merge",
+                        "merge": "unique"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Environment Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/environments/production/hiera.yaml"
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "mymod::arr",
+                            "value": [
+                              "m"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"mod-common\""
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                    "module": "mymod"
+                  }
+                ],
+                "value": [
+                  "g",
+                  "e",
+                  "m"
+                ],
+                "event": "result",
+                "type": "merge",
+                "merge": "unique"
+              }
+            ],
+            "key": "mymod::arr",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"env-os\"",
+        "        Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"env-common\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"mod-common\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"mymod::arr\"",
+        "  Merge strategy unique",
+        "    Global Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/hiera.yaml\"",
+        "      Hierarchy entry \"global-common\"",
+        "        Path \"<case>/gdata/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"mymod::arr\" value: [",
+        "            \"g\"",
+        "          ]",
+        "    Environment Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "      Merge strategy unique",
+        "        Hierarchy entry \"env-os\"",
+        "          Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "            Original path: \"os/%{facts.os.family}.yaml\"",
+        "            No such key: \"mymod::arr\"",
+        "        Hierarchy entry \"env-common\"",
+        "          Path \"<case>/environments/production/data/common.yaml\"",
+        "            Original path: \"common.yaml\"",
+        "            Found key: \"mymod::arr\" value: [",
+        "              \"e\"",
+        "            ]",
+        "        Merged result: [",
+        "          \"e\"",
+        "        ]",
+        "    Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "      Hierarchy entry \"mod-common\"",
+        "        Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"mymod::arr\" value: [",
+        "            \"m\"",
+        "          ]",
+        "    Merged result: [",
+        "      \"g\",",
+        "      \"e\",",
+        "      \"m\"",
+        "    ]"
+      ]
+    },
+    "mymod::dflt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "mymod::dflt"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/environments/production/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-common\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"mod-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                "module": "mymod"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "mymod::dflt",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "mymod::dflt",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/environments/production/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "mymod::dflt",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "mymod::dflt",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"mod-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                "module": "mymod"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "branches": [
+                                  {
+                                    "key": "lookup_options",
+                                    "value": {
+                                      "mymod::dflt_opt": {
+                                        "merge": "unique"
+                                      }
+                                    },
+                                    "event": "found",
+                                    "type": "path",
+                                    "original_path": "defaults.yaml",
+                                    "path": "<case>/environments/production/modules/mymod/data/defaults.yaml"
+                                  }
+                                ],
+                                "type": "data_provider",
+                                "name": "Hierarchy entry \"mod-defaults\""
+                              },
+                              {
+                                "branches": [
+                                  {
+                                    "key": "lookup_options",
+                                    "event": "not_found",
+                                    "type": "path",
+                                    "original_path": "defaults2.yaml",
+                                    "path": "<case>/environments/production/modules/mymod/data/defaults2.yaml"
+                                  }
+                                ],
+                                "type": "data_provider",
+                                "name": "Hierarchy entry \"mod-defaults2\""
+                              }
+                            ],
+                            "value": {
+                              "mymod::dflt_opt": {
+                                "merge": "unique"
+                              }
+                            },
+                            "event": "result",
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                        "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                        "module": "mymod"
+                      }
+                    ],
+                    "type": "scope",
+                    "name": "Searching for \"lookup_options\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "mymod::dflt",
+                                "value": "d1",
+                                "event": "found",
+                                "type": "path",
+                                "original_path": "defaults.yaml",
+                                "path": "<case>/environments/production/modules/mymod/data/defaults.yaml"
+                              }
+                            ],
+                            "type": "data_provider",
+                            "name": "Hierarchy entry \"mod-defaults\""
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                        "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                        "module": "mymod"
+                      }
+                    ],
+                    "type": "scope",
+                    "name": "Searching for \"mymod::dflt\""
+                  }
+                ],
+                "type": "scope",
+                "name": "Searching default_hierarchy of module \"mymod\""
+              }
+            ],
+            "key": "mymod::dflt",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"env-os\"",
+        "        Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"env-common\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"mod-common\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Searching for \"mymod::dflt\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"mymod::dflt\"",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"env-os\"",
+        "      Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"mymod::dflt\"",
+        "    Hierarchy entry \"env-common\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"mymod::dflt\"",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"mod-common\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"mymod::dflt\"",
+        "  Searching default_hierarchy of module \"mymod\"",
+        "    Searching for \"lookup_options\"",
+        "      Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "        Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "        Merge strategy hash",
+        "          Hierarchy entry \"mod-defaults\"",
+        "            Path \"<case>/environments/production/modules/mymod/data/defaults.yaml\"",
+        "              Original path: \"defaults.yaml\"",
+        "              Found key: \"lookup_options\" value: {",
+        "                \"mymod::dflt_opt\" => {",
+        "                  \"merge\" => \"unique\"",
+        "                }",
+        "              }",
+        "          Hierarchy entry \"mod-defaults2\"",
+        "            Path \"<case>/environments/production/modules/mymod/data/defaults2.yaml\"",
+        "              Original path: \"defaults2.yaml\"",
+        "              No such key: \"lookup_options\"",
+        "          Merged result: {",
+        "            \"mymod::dflt_opt\" => {",
+        "              \"merge\" => \"unique\"",
+        "            }",
+        "          }",
+        "    Searching for \"mymod::dflt\"",
+        "      Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "        Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "        Hierarchy entry \"mod-defaults\"",
+        "          Path \"<case>/environments/production/modules/mymod/data/defaults.yaml\"",
+        "            Original path: \"defaults.yaml\"",
+        "            Found key: \"mymod::dflt\" value: \"d1\""
+      ]
+    },
+    "plain::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "plain::k"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/environments/production/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-common\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "event": "module_provider_not_found",
+                "type": "module"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "plain::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "plain::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/environments/production/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "plain::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "event": "module_provider_not_found",
+                "type": "module"
+              }
+            ],
+            "key": "plain::k",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"env-os\"",
+        "        Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"env-common\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "  Module data provider for module \"plain\" not found",
+        "Searching for \"plain::k\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"plain::k\"",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"env-os\"",
+        "      Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"plain::k\"",
+        "    Hierarchy entry \"env-common\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"plain::k\"",
+        "  Module data provider for module \"plain\" not found",
+        "Function lookup() did not find a value for the name 'plain::k'"
+      ]
+    },
+    "nomod::k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "nomod::k"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/environments/production/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"env-common\""
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "event": "module_not_found",
+                "type": "module"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nomod::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"global-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nomod::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/environments/production/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nomod::k",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "event": "module_not_found",
+                "type": "module"
+              }
+            ],
+            "key": "nomod::k",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"env-os\"",
+        "        Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"env-common\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "  Module \"nomod\" not found",
+        "Searching for \"nomod::k\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"nomod::k\"",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"env-os\"",
+        "      Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"nomod::k\"",
+        "    Hierarchy entry \"env-common\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"nomod::k\"",
+        "  Module \"nomod\" not found",
+        "Function lookup() did not find a value for the name 'nomod::k'"
+      ]
+    },
+    "mymod::arr-options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain-options",
+        "mymod::arr"
+      ],
+      "warnings": [
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
+        "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "value": {
+                      "mymod::arr": {
+                        "merge": "unique"
+                      }
+                    },
+                    "event": "found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/gdata/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"global-common\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Global Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/hiera.yaml"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/environments/production/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"env-common\""
+                  }
+                ],
+                "type": "merge",
+                "merge": "hash"
+              }
+            ],
+            "type": "data_provider",
+            "name": "Environment Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/environments/production/hiera.yaml"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "event": "not_found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"mod-common\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+            "module": "mymod"
+          }
+        ],
+        "value": {
+          "mymod::arr": {
+            "merge": "unique"
+          }
+        },
+        "event": "result",
+        "type": "merge",
+        "merge": "hash"
+      },
+      "text": [
+        "Merge strategy hash",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"global-common\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"env-os\"",
+        "        Path \"<case>/environments/production/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"env-common\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"mod-common\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "  Merged result: {",
+        "    \"mymod::arr\" => {",
+        "      \"merge\" => \"unique\"",
+        "    }",
+        "  }"
+      ]
+    }
+  }
+}

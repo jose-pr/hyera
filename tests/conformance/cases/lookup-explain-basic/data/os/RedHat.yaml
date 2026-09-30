@@ -1,0 +1,4 @@
+---
+greet: "hi %{facts.os.family}"
+h: {a: 1, n: {x: 1}}
+arr: [os]

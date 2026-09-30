@@ -1,0 +1,13 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: roles
+    mapped_paths:
+      - roles
+      - role
+      - "roles/%{role}.yaml"
+  - name: globbed
+    glob: "g/*.yaml"

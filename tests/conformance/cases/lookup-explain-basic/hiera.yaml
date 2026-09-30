@@ -1,0 +1,16 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: os
+    path: "os/%{facts.os.family}.yaml"
+  - name: missing
+    path: "nodes/%{facts.nothere}.yaml"
+  - name: multi
+    paths:
+      - a.yaml
+      - b.yaml
+  - name: common
+    path: common.yaml

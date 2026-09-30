@@ -1,0 +1,11 @@
+---
+h: {b: 2, n: {y: 2}}
+arr: [common]
+num: "42"
+target: {deep: [1, 2]}
+aliased: "%{alias('target')}"
+looked: "x%{lookup('target.deep.1')}"
+lookup_options:
+  arr: {merge: unique}
+  '^h$': {merge: {strategy: deep, knockout_prefix: '--'}}
+  num: {convert_to: Integer}

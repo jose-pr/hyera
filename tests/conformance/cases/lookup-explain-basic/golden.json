@@ -1,0 +1,3985 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "01d14e211b8edf5d6900df6c1749fc9e0ba0eea30030b3f858ba9c414cfedf60",
+  "results": {
+    "greet": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "greet"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "facts",
+                                "value": {
+                                  "os": {
+                                    "family": "RedHat"
+                                  }
+                                },
+                                "event": "found",
+                                "type": "scope",
+                                "name": "Global Scope"
+                              },
+                              {
+                                "branches": [
+                                  {
+                                    "key": "os",
+                                    "value": {
+                                      "family": "RedHat"
+                                    },
+                                    "event": "found",
+                                    "type": "segment"
+                                  },
+                                  {
+                                    "key": "family",
+                                    "value": "RedHat",
+                                    "event": "found",
+                                    "type": "segment"
+                                  }
+                                ],
+                                "type": "sub_key"
+                              }
+                            ],
+                            "type": "interpolate",
+                            "expression": "hi %{facts.os.family}"
+                          }
+                        ],
+                        "key": "greet",
+                        "value": "hi RedHat",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "greet",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"greet\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        Interpolation on \"hi %{facts.os.family}\"",
+        "          Global Scope",
+        "            Found key: \"facts\" value: {",
+        "              \"os\" => {",
+        "                \"family\" => \"RedHat\"",
+        "              }",
+        "            }",
+        "          Sub key: \"os.family\"",
+        "            Found key: \"os\" value: {",
+        "              \"family\" => \"RedHat\"",
+        "            }",
+        "            Found key: \"family\" value: \"RedHat\"",
+        "        Found key: \"greet\" value: \"hi RedHat\""
+      ]
+    },
+    "h": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "h"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "h",
+                            "value": {
+                              "a": 1,
+                              "n": {
+                                "x": 1
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "h",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "deep",
+                            "options": {
+                              "knockout_prefix": "--"
+                            }
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "h",
+                            "value": {
+                              "b": 2,
+                              "n": {
+                                "y": 2
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "b": 2,
+                      "n": {
+                        "y": 2,
+                        "x": 1
+                      },
+                      "a": 1
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "deep",
+                    "options": {
+                      "knockout_prefix": "--"
+                    }
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "h",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"h\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy deep",
+        "      Options: {",
+        "        \"knockout_prefix\" => \"--\"",
+        "      }",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          Found key: \"h\" value: {",
+        "            \"a\" => 1,",
+        "            \"n\" => {",
+        "              \"x\" => 1",
+        "            }",
+        "          }",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy deep",
+        "          Options: {",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"h\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"h\" value: {",
+        "            \"b\" => 2,",
+        "            \"n\" => {",
+        "              \"y\" => 2",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"b\" => 2,",
+        "        \"n\" => {",
+        "          \"y\" => 2,",
+        "          \"x\" => 1",
+        "        },",
+        "        \"a\" => 1",
+        "      }"
+      ]
+    },
+    "h.n.x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "h.n.x"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "h",
+                            "value": {
+                              "a": 1,
+                              "n": {
+                                "x": 1
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "h",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "deep",
+                            "options": {
+                              "knockout_prefix": "--"
+                            }
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "h",
+                            "value": {
+                              "b": 2,
+                              "n": {
+                                "y": 2
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "b": 2,
+                      "n": {
+                        "y": 2,
+                        "x": 1
+                      },
+                      "a": 1
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "deep",
+                    "options": {
+                      "knockout_prefix": "--"
+                    }
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "key": "n",
+                    "value": {
+                      "y": 2,
+                      "x": 1
+                    },
+                    "event": "found",
+                    "type": "segment"
+                  },
+                  {
+                    "key": "x",
+                    "value": 1,
+                    "event": "found",
+                    "type": "segment"
+                  }
+                ],
+                "type": "sub_key"
+              }
+            ],
+            "key": "h.n.x",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"h.n.x\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy deep",
+        "      Options: {",
+        "        \"knockout_prefix\" => \"--\"",
+        "      }",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          Found key: \"h\" value: {",
+        "            \"a\" => 1,",
+        "            \"n\" => {",
+        "              \"x\" => 1",
+        "            }",
+        "          }",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy deep",
+        "          Options: {",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"h\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"h\" value: {",
+        "            \"b\" => 2,",
+        "            \"n\" => {",
+        "              \"y\" => 2",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"b\" => 2,",
+        "        \"n\" => {",
+        "          \"y\" => 2,",
+        "          \"x\" => 1",
+        "        },",
+        "        \"a\" => 1",
+        "      }",
+        "  Sub key: \"n.x\"",
+        "    Found key: \"n\" value: {",
+        "      \"y\" => 2,",
+        "      \"x\" => 1",
+        "    }",
+        "    Found key: \"x\" value: 1"
+      ]
+    },
+    "arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "arr"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "arr",
+                            "value": [
+                              "os"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "arr",
+                                "value": [
+                                  "a"
+                                ],
+                                "event": "found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "value": [
+                              "a"
+                            ],
+                            "event": "result",
+                            "type": "merge",
+                            "merge": "unique"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "arr",
+                            "value": [
+                              "common"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": [
+                      "os",
+                      "a",
+                      "common"
+                    ],
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "unique"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "arr",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"arr\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy unique",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          Found key: \"arr\" value: [",
+        "            \"os\"",
+        "          ]",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy unique",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            Found key: \"arr\" value: [",
+        "              \"a\"",
+        "            ]",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "          Merged result: [",
+        "            \"a\"",
+        "          ]",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"arr\" value: [",
+        "            \"common\"",
+        "          ]",
+        "      Merged result: [",
+        "        \"os\",",
+        "        \"a\",",
+        "        \"common\"",
+        "      ]"
+      ]
+    },
+    "arr-explicit-unique": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "unique",
+        "--explain",
+        "arr"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "arr",
+                            "value": [
+                              "os"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "arr",
+                                "value": [
+                                  "a"
+                                ],
+                                "event": "found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "value": [
+                              "a"
+                            ],
+                            "event": "result",
+                            "type": "merge",
+                            "merge": "unique"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "arr",
+                            "value": [
+                              "common"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": [
+                      "os",
+                      "a",
+                      "common"
+                    ],
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "unique"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "arr",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"arr\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy unique",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          Found key: \"arr\" value: [",
+        "            \"os\"",
+        "          ]",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy unique",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            Found key: \"arr\" value: [",
+        "              \"a\"",
+        "            ]",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "          Merged result: [",
+        "            \"a\"",
+        "          ]",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"arr\" value: [",
+        "            \"common\"",
+        "          ]",
+        "      Merged result: [",
+        "        \"os\",",
+        "        \"a\",",
+        "        \"common\"",
+        "      ]"
+      ]
+    },
+    "h-first": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "first",
+        "--explain",
+        "h"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "h",
+                        "value": {
+                          "a": 1,
+                          "n": {
+                            "x": 1
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "h",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"h\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        Found key: \"h\" value: {",
+        "          \"a\" => 1,",
+        "          \"n\" => {",
+        "            \"x\" => 1",
+        "          }",
+        "        }"
+      ]
+    },
+    "nope": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "nope"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "nope",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"nope\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"nope\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"nope\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"nope\"",
+        "Function lookup() did not find a value for the name 'nope'"
+      ]
+    },
+    "nope-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "dflt",
+        "--explain",
+        "nope"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "nope",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"nope\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"nope\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"nope\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"nope\""
+      ]
+    },
+    "nope|greet": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "nope",
+        "greet"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "nope",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "nope",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "facts",
+                                "value": {
+                                  "os": {
+                                    "family": "RedHat"
+                                  }
+                                },
+                                "event": "found",
+                                "type": "scope",
+                                "name": "Global Scope"
+                              },
+                              {
+                                "branches": [
+                                  {
+                                    "key": "os",
+                                    "value": {
+                                      "family": "RedHat"
+                                    },
+                                    "event": "found",
+                                    "type": "segment"
+                                  },
+                                  {
+                                    "key": "family",
+                                    "value": "RedHat",
+                                    "event": "found",
+                                    "type": "segment"
+                                  }
+                                ],
+                                "type": "sub_key"
+                              }
+                            ],
+                            "type": "interpolate",
+                            "expression": "hi %{facts.os.family}"
+                          }
+                        ],
+                        "key": "greet",
+                        "value": "hi RedHat",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "greet",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"nope\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"nope\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"nope\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"nope\"",
+        "Searching for \"greet\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        Interpolation on \"hi %{facts.os.family}\"",
+        "          Global Scope",
+        "            Found key: \"facts\" value: {",
+        "              \"os\" => {",
+        "                \"family\" => \"RedHat\"",
+        "              }",
+        "            }",
+        "          Sub key: \"os.family\"",
+        "            Found key: \"os\" value: {",
+        "              \"family\" => \"RedHat\"",
+        "            }",
+        "            Found key: \"family\" value: \"RedHat\"",
+        "        Found key: \"greet\" value: \"hi RedHat\""
+      ]
+    },
+    "num": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "num"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "num",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "num",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "num",
+                        "value": "42",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "num",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"num\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"num\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"num\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"num\" value: \"42\"",
+        "Applying convert_to lookup_option with arguments [Integer]"
+      ]
+    },
+    "aliased": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "aliased"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "aliased",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "aliased",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "branches": [
+                                  {
+                                    "branches": [
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "event": "not_found",
+                                            "type": "path",
+                                            "original_path": "os/%{facts.os.family}.yaml",
+                                            "path": "<case>/data/os/RedHat.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"os\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "event": "location_not_found",
+                                            "type": "path",
+                                            "original_path": "nodes/%{facts.nothere}.yaml",
+                                            "path": "<case>/data/nodes/.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"missing\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "event": "not_found",
+                                            "type": "path",
+                                            "original_path": "a.yaml",
+                                            "path": "<case>/data/a.yaml"
+                                          },
+                                          {
+                                            "event": "location_not_found",
+                                            "type": "path",
+                                            "original_path": "b.yaml",
+                                            "path": "<case>/data/b.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"multi\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "value": {
+                                              "deep": [
+                                                1,
+                                                2
+                                              ]
+                                            },
+                                            "event": "found",
+                                            "type": "path",
+                                            "original_path": "common.yaml",
+                                            "path": "<case>/data/common.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"common\""
+                                      }
+                                    ],
+                                    "type": "data_provider",
+                                    "name": "Global Data Provider (hiera configuration version 5)",
+                                    "configuration_path": "<case>/hiera.yaml"
+                                  }
+                                ],
+                                "key": "target",
+                                "type": "root"
+                              }
+                            ],
+                            "type": "interpolate",
+                            "expression": "%{alias('target')}"
+                          }
+                        ],
+                        "key": "aliased",
+                        "value": {
+                          "deep": [
+                            1,
+                            2
+                          ]
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "aliased",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"aliased\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"aliased\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"aliased\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Interpolation on \"%{alias('target')}\"",
+        "          Searching for \"target\"",
+        "            Global Data Provider (hiera configuration version 5)",
+        "              Using configuration \"<case>/hiera.yaml\"",
+        "              Hierarchy entry \"os\"",
+        "                Path \"<case>/data/os/RedHat.yaml\"",
+        "                  Original path: \"os/%{facts.os.family}.yaml\"",
+        "                  No such key: \"target\"",
+        "              Hierarchy entry \"missing\"",
+        "                Path \"<case>/data/nodes/.yaml\"",
+        "                  Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "                  Path not found",
+        "              Hierarchy entry \"multi\"",
+        "                Path \"<case>/data/a.yaml\"",
+        "                  Original path: \"a.yaml\"",
+        "                  No such key: \"target\"",
+        "                Path \"<case>/data/b.yaml\"",
+        "                  Original path: \"b.yaml\"",
+        "                  Path not found",
+        "              Hierarchy entry \"common\"",
+        "                Path \"<case>/data/common.yaml\"",
+        "                  Original path: \"common.yaml\"",
+        "                  Found key: \"target\" value: {",
+        "                    \"deep\" => [",
+        "                      1,",
+        "                      2",
+        "                    ]",
+        "                  }",
+        "        Found key: \"aliased\" value: {",
+        "          \"deep\" => [",
+        "            1,",
+        "            2",
+        "          ]",
+        "        }"
+      ]
+    },
+    "looked": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "looked"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "event": "not_found",
+                            "type": "path",
+                            "original_path": "os/%{facts.os.family}.yaml",
+                            "path": "<case>/data/os/RedHat.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"os\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "event": "location_not_found",
+                            "type": "path",
+                            "original_path": "nodes/%{facts.nothere}.yaml",
+                            "path": "<case>/data/nodes/.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"missing\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "key": "lookup_options",
+                                "event": "not_found",
+                                "type": "path",
+                                "original_path": "a.yaml",
+                                "path": "<case>/data/a.yaml"
+                              },
+                              {
+                                "event": "location_not_found",
+                                "type": "path",
+                                "original_path": "b.yaml",
+                                "path": "<case>/data/b.yaml"
+                              }
+                            ],
+                            "type": "merge",
+                            "merge": "hash"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"multi\""
+                      },
+                      {
+                        "branches": [
+                          {
+                            "key": "lookup_options",
+                            "value": {
+                              "arr": {
+                                "merge": "unique"
+                              },
+                              "^h$": {
+                                "merge": {
+                                  "strategy": "deep",
+                                  "knockout_prefix": "--"
+                                }
+                              },
+                              "num": {
+                                "convert_to": "Integer"
+                              }
+                            },
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"common\""
+                      }
+                    ],
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "result",
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "looked",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "os/%{facts.os.family}.yaml",
+                        "path": "<case>/data/os/RedHat.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"os\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "nodes/%{facts.nothere}.yaml",
+                        "path": "<case>/data/nodes/.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"missing\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "key": "looked",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"multi\""
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "branches": [
+                              {
+                                "branches": [
+                                  {
+                                    "branches": [
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "event": "not_found",
+                                            "type": "path",
+                                            "original_path": "os/%{facts.os.family}.yaml",
+                                            "path": "<case>/data/os/RedHat.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"os\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "event": "location_not_found",
+                                            "type": "path",
+                                            "original_path": "nodes/%{facts.nothere}.yaml",
+                                            "path": "<case>/data/nodes/.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"missing\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "event": "not_found",
+                                            "type": "path",
+                                            "original_path": "a.yaml",
+                                            "path": "<case>/data/a.yaml"
+                                          },
+                                          {
+                                            "event": "location_not_found",
+                                            "type": "path",
+                                            "original_path": "b.yaml",
+                                            "path": "<case>/data/b.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"multi\""
+                                      },
+                                      {
+                                        "branches": [
+                                          {
+                                            "key": "target",
+                                            "value": {
+                                              "deep": [
+                                                1,
+                                                2
+                                              ]
+                                            },
+                                            "event": "found",
+                                            "type": "path",
+                                            "original_path": "common.yaml",
+                                            "path": "<case>/data/common.yaml"
+                                          }
+                                        ],
+                                        "type": "data_provider",
+                                        "name": "Hierarchy entry \"common\""
+                                      }
+                                    ],
+                                    "type": "data_provider",
+                                    "name": "Global Data Provider (hiera configuration version 5)",
+                                    "configuration_path": "<case>/hiera.yaml"
+                                  },
+                                  {
+                                    "branches": [
+                                      {
+                                        "key": "deep",
+                                        "value": [
+                                          1,
+                                          2
+                                        ],
+                                        "event": "found",
+                                        "type": "segment"
+                                      },
+                                      {
+                                        "key": "1",
+                                        "value": 2,
+                                        "event": "found",
+                                        "type": "segment"
+                                      }
+                                    ],
+                                    "type": "sub_key"
+                                  }
+                                ],
+                                "key": "target.deep.1",
+                                "type": "root"
+                              }
+                            ],
+                            "type": "interpolate",
+                            "expression": "x%{lookup('target.deep.1')}"
+                          }
+                        ],
+                        "key": "looked",
+                        "value": "x2",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"common\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "looked",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Merge strategy hash",
+        "      Hierarchy entry \"os\"",
+        "        Path \"<case>/data/os/RedHat.yaml\"",
+        "          Original path: \"os/%{facts.os.family}.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "      Hierarchy entry \"missing\"",
+        "        Path \"<case>/data/nodes/.yaml\"",
+        "          Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "          Path not found",
+        "      Hierarchy entry \"multi\"",
+        "        Merge strategy hash",
+        "          Path \"<case>/data/a.yaml\"",
+        "            Original path: \"a.yaml\"",
+        "            No such key: \"lookup_options\"",
+        "          Path \"<case>/data/b.yaml\"",
+        "            Original path: \"b.yaml\"",
+        "            Path not found",
+        "      Hierarchy entry \"common\"",
+        "        Path \"<case>/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"lookup_options\" value: {",
+        "            \"arr\" => {",
+        "              \"merge\" => \"unique\"",
+        "            },",
+        "            \"^h$\" => {",
+        "              \"merge\" => {",
+        "                \"strategy\" => \"deep\",",
+        "                \"knockout_prefix\" => \"--\"",
+        "              }",
+        "            },",
+        "            \"num\" => {",
+        "              \"convert_to\" => \"Integer\"",
+        "            }",
+        "          }",
+        "      Merged result: {",
+        "        \"arr\" => {",
+        "          \"merge\" => \"unique\"",
+        "        },",
+        "        \"^h$\" => {",
+        "          \"merge\" => {",
+        "            \"strategy\" => \"deep\",",
+        "            \"knockout_prefix\" => \"--\"",
+        "          }",
+        "        },",
+        "        \"num\" => {",
+        "          \"convert_to\" => \"Integer\"",
+        "        }",
+        "      }",
+        "Searching for \"looked\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"looked\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Path \"<case>/data/a.yaml\"",
+        "        Original path: \"a.yaml\"",
+        "        No such key: \"looked\"",
+        "      Path \"<case>/data/b.yaml\"",
+        "        Original path: \"b.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Interpolation on \"x%{lookup('target.deep.1')}\"",
+        "          Searching for \"target.deep.1\"",
+        "            Global Data Provider (hiera configuration version 5)",
+        "              Using configuration \"<case>/hiera.yaml\"",
+        "              Hierarchy entry \"os\"",
+        "                Path \"<case>/data/os/RedHat.yaml\"",
+        "                  Original path: \"os/%{facts.os.family}.yaml\"",
+        "                  No such key: \"target\"",
+        "              Hierarchy entry \"missing\"",
+        "                Path \"<case>/data/nodes/.yaml\"",
+        "                  Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "                  Path not found",
+        "              Hierarchy entry \"multi\"",
+        "                Path \"<case>/data/a.yaml\"",
+        "                  Original path: \"a.yaml\"",
+        "                  No such key: \"target\"",
+        "                Path \"<case>/data/b.yaml\"",
+        "                  Original path: \"b.yaml\"",
+        "                  Path not found",
+        "              Hierarchy entry \"common\"",
+        "                Path \"<case>/data/common.yaml\"",
+        "                  Original path: \"common.yaml\"",
+        "                  Found key: \"target\" value: {",
+        "                    \"deep\" => [",
+        "                      1,",
+        "                      2",
+        "                    ]",
+        "                  }",
+        "            Sub key: \"deep.1\"",
+        "              Found key: \"deep\" value: [",
+        "                1,",
+        "                2",
+        "              ]",
+        "              Found key: \"1\" value: 2",
+        "        Found key: \"looked\" value: \"x2\""
+      ]
+    },
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain",
+        "lookup_options"
+      ],
+      "status": "explained",
+      "tree": {
+        "key": "lookup_options",
+        "type": "invalid_key"
+      },
+      "text": [
+        "Invalid key \"lookup_options\"",
+        "Function lookup() did not find a value for the name 'lookup_options'"
+      ]
+    },
+    "arr-options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--explain-options",
+        "arr"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "event": "not_found",
+                    "type": "path",
+                    "original_path": "os/%{facts.os.family}.yaml",
+                    "path": "<case>/data/os/RedHat.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"os\""
+              },
+              {
+                "branches": [
+                  {
+                    "event": "location_not_found",
+                    "type": "path",
+                    "original_path": "nodes/%{facts.nothere}.yaml",
+                    "path": "<case>/data/nodes/.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"missing\""
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "a.yaml",
+                        "path": "<case>/data/a.yaml"
+                      },
+                      {
+                        "event": "location_not_found",
+                        "type": "path",
+                        "original_path": "b.yaml",
+                        "path": "<case>/data/b.yaml"
+                      }
+                    ],
+                    "type": "merge",
+                    "merge": "hash"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"multi\""
+              },
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "value": {
+                      "arr": {
+                        "merge": "unique"
+                      },
+                      "^h$": {
+                        "merge": {
+                          "strategy": "deep",
+                          "knockout_prefix": "--"
+                        }
+                      },
+                      "num": {
+                        "convert_to": "Integer"
+                      }
+                    },
+                    "event": "found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/data/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"common\""
+              }
+            ],
+            "value": {
+              "arr": {
+                "merge": "unique"
+              },
+              "^h$": {
+                "merge": {
+                  "strategy": "deep",
+                  "knockout_prefix": "--"
+                }
+              },
+              "num": {
+                "convert_to": "Integer"
+              }
+            },
+            "event": "result",
+            "type": "merge",
+            "merge": "hash"
+          }
+        ],
+        "type": "data_provider",
+        "name": "Global Data Provider (hiera configuration version 5)",
+        "configuration_path": "<case>/hiera.yaml"
+      },
+      "text": [
+        "Global Data Provider (hiera configuration version 5)",
+        "  Using configuration \"<case>/hiera.yaml\"",
+        "  Merge strategy hash",
+        "    Hierarchy entry \"os\"",
+        "      Path \"<case>/data/os/RedHat.yaml\"",
+        "        Original path: \"os/%{facts.os.family}.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "    Hierarchy entry \"missing\"",
+        "      Path \"<case>/data/nodes/.yaml\"",
+        "        Original path: \"nodes/%{facts.nothere}.yaml\"",
+        "        Path not found",
+        "    Hierarchy entry \"multi\"",
+        "      Merge strategy hash",
+        "        Path \"<case>/data/a.yaml\"",
+        "          Original path: \"a.yaml\"",
+        "          No such key: \"lookup_options\"",
+        "        Path \"<case>/data/b.yaml\"",
+        "          Original path: \"b.yaml\"",
+        "          Path not found",
+        "    Hierarchy entry \"common\"",
+        "      Path \"<case>/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          },",
+        "          \"^h$\" => {",
+        "            \"merge\" => {",
+        "              \"strategy\" => \"deep\",",
+        "              \"knockout_prefix\" => \"--\"",
+        "            }",
+        "          },",
+        "          \"num\" => {",
+        "            \"convert_to\" => \"Integer\"",
+        "          }",
+        "        }",
+        "    Merged result: {",
+        "      \"arr\" => {",
+        "        \"merge\" => \"unique\"",
+        "      },",
+        "      \"^h$\" => {",
+        "        \"merge\" => {",
+        "          \"strategy\" => \"deep\",",
+        "          \"knockout_prefix\" => \"--\"",
+        "        }",
+        "      },",
+        "      \"num\" => {",
+        "        \"convert_to\" => \"Integer\"",
+        "      }",
+        "    }"
+      ]
+    }
+  }
+}

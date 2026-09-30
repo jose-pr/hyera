@@ -1,0 +1,70 @@
+description: >
+  puppet lookup --explain's own report: a hash merge with a nested
+  strategy-per-key sub-merge, a missing hierarchy candidate, dotted
+  sub-keys, alias/lookup interpolation, a miss (single and name-list),
+  a default, and --explain-options against a lookup_options entry.
+origin: spec-layers-backends/explain
+queries:
+  - key: greet
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: h
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: h.n.x
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: arr
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: arr
+    id: arr-explicit-unique
+    merge: unique
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: h
+    id: h-first
+    merge: first
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: nope
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: nope
+    id: nope-default
+    default: dflt
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: [nope, greet]
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: num
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: aliased
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: looked
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: lookup_options
+    explain: data
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
+  - key: arr
+    id: arr-options
+    explain: options
+    ordered: true
+    divergence: spec-layers-backends/explain-missing
