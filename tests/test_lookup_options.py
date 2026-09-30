@@ -121,3 +121,42 @@ def test_patterns_follow_merged_order(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("a::b::list") == [1, 2]
+
+
+def test_validate_lookup_options_module_prefix_direct():
+    from hyera._lookup_adapter import validate_lookup_options
+
+    # A "^"-prefixed key whose own prefix DOES match the module name: the
+    # loop keeps checking the rest of the keys instead of raising.
+    assert validate_lookup_options({"^m::x": {}, "m::y": {}}, "m") == {
+        "^m::x": {},
+        "m::y": {},
+    }
+
+
+def test_validate_data_value_no_location_direct():
+    from hyera._lookup_adapter import validate_data_value
+
+    # The location-less message clause (a data_hash function called with
+    # no path/uri at all) -- distinct from the "when using location"
+    # clause every other validate_data_value test in this file reaches
+    # through a real path-based hierarchy entry.
+    with pytest.raises(HieraLookupError) as exc_info:
+        validate_data_value({True: "a"}, "test_data_hash", None, "k")
+    assert str(exc_info.value) == (
+        "Value for key 'k', in hash returned from data_hash function "
+        "'test_data_hash', has wrong type, expects Puppet::LookupValue, "
+        "got Hash[Boolean, String, 1, 1]"
+    )
+    assert "when using location" not in str(exc_info.value)
+
+
+def test_convert_result_list_spec_and_non_string_type_arg_direct():
+    from hyera._lookup_adapter import convert_result
+
+    # convert_to as a list (type plus new()'s extra arguments), and a
+    # non-string first element (already a type-shaped value, skipping
+    # parse_type entirely).
+    assert convert_result("k", ["Integer"], "5") == 5
+    with pytest.raises(HieraLookupError, match="expects a Type value, got Integer"):
+        convert_result("k", [5], "x")
