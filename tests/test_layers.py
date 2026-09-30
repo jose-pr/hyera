@@ -79,6 +79,42 @@ def test_first_environmentpath_entry_wins(tmp_path, make_tree):
     assert h.lookup("k") == "first"
 
 
+def test_environmentpath_entry_whose_match_is_a_file_is_skipped(tmp_path, make_tree):
+    # A directory LISTING is matched (the name appears at all), never
+    # (entry / name).is_dir() alone -- a *file* named exactly "target" in
+    # the first entry must not stop the search; the second entry's real
+    # "target" directory is still found.
+    base = _global(make_tree)
+    envs1 = tmp_path / "envs1"
+    envs2 = tmp_path / "envs2"
+    envs1.mkdir(parents=True)
+    (envs1 / "target").write_bytes(b"not a directory\n")
+    _write(envs2 / "target" / "hiera.yaml", _LEVEL)
+    _write(envs2 / "target" / "data" / "c.yaml", "k: second\n")
+
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[envs1, envs2],
+        scope=Scope(environment="target"),
+    )
+    assert h.lookup("k") == "second"
+
+
+def test_modulepath_entry_with_a_file_and_a_real_module(tmp_path, make_tree):
+    # module_dirs walks every name in one entry's directory listing; a
+    # file matching the module-name pattern must not stop it from also
+    # finding a real module directory listed alongside it.
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    modules.mkdir(parents=True)
+    (modules / "moda").write_bytes(b"not a directory\n")
+    _write(modules / "modb" / "hiera.yaml", _LEVEL)
+    _write(modules / "modb" / "data" / "c.yaml", "modb::k: v\n")
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    assert h.lookup("modb::k") == "v"
+
+
 def test_missing_production_environment_uses_basemodulepath(tmp_path, make_tree):
     base = _global(make_tree)
     envs = tmp_path / "envs"
