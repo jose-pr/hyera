@@ -73,6 +73,34 @@ def test_server_facts_under_facts_and_variables(caplog):
     assert any("serverversion" in r.getMessage() for r in caplog.records)
 
 
+def test_duplicate_collision_message_warns_only_once(caplog):
+    # A variable colliding with both a fact (Step 3) and a same-named,
+    # same-valued server_fact (Step 4) produces the exact same collision
+    # text twice in one construction (the node parameter is untouched by
+    # the first collision, so its "old" value is still the same the
+    # second time, and here "new" matches too) -- the second one must be
+    # suppressed by the shared warn_state's own message-text dedup, the
+    # same mechanism variable_once uses per name.
+    with caplog.at_level(logging.WARNING):
+        scope = Scope(variables={"x": 1}, facts={"x": 2}, server_facts={"x": 2})
+    assert scope.lookup("x") == 1
+    hits = [r for r in caplog.records if "already set to '1'" in r.getMessage()]
+    assert len(hits) == 1
+
+
+def test_variable_once_caps_at_100_distinct_keys(caplog):
+    # Puppet's own cap (parser/scope.rb): once 100 distinct undefined
+    # variables have each warned once, a 101st new name is silently never
+    # tracked (and so never suppressed either) -- distinct from the
+    # per-name dedup test_lookupvar_strict_modes already covers.
+    warning = Scope(strict="warning")
+    with caplog.at_level(logging.WARNING):
+        for i in range(101):
+            assert warning.lookupvar("nope{}".format(i)) is None
+    hits = [r for r in caplog.records if "Undefined variable" in r.getMessage()]
+    assert len(hits) == 101
+
+
 def test_trusted_local_default():
     scope = Scope()
     trusted = scope.lookup("trusted")
@@ -298,6 +326,7 @@ def test_with_local_scope():
     grandchild = child.with_local_scope({"x": 4})
     assert grandchild.lookup("x") == 4
     assert grandchild.lookup("y") == 3  # inherited from the outer layer
+    assert grandchild.exist("y") is True  # exist() walks _locals the same way
 
 
 def test_derive_layers_facts_shallow():
