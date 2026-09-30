@@ -8,29 +8,24 @@ queries:
   - key: unknown_fn
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     note: Puppet 8.10 probe
   - key: alias_emb
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     note: Puppet 8.10 probe
   - key: s.x
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     note: Puppet 8.10 probe
   - key: mismatch
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     error_match: "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's\\.x'"
     error_class: HieraLookupError
     note: Puppet 8.10 probe
   - key: self
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     error_match: "Recursive lookup detected in \\[self\\]"
-    error_class: HieraLookupError
+    error_class: InterpolationError
     note: Puppet 8.10 probe

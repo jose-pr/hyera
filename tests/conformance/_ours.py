@@ -226,14 +226,10 @@ def run_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one ``explain:`` query through :class:`hyera.Hiera.explain`,
     projected like ``puppet lookup --explain``/``--explain-options``.
 
-    Raises :class:`AdapterUnsupported` while ``hyera.Hiera`` has no
-    ``explain`` attribute (this harness lands ahead of the API it exercises,
-    per the plan's own phase order). Once it exists, mirrors ``run_api``:
-    ``Hiera(...)``/``.explain(...)`` share one try/except, so a construction-
-    time ``ConfigError`` reports the same as a lookup-time one.
+    Mirrors ``run_api``: ``Hiera(...)``/``.explain(...)`` share one
+    try/except, so a construction-time ``ConfigError`` reports the same as
+    a lookup-time one.
     """
-    if not hasattr(Hiera, "explain"):
-        raise AdapterUnsupported("explain")
     try:
         with _chdir(case_dir):
             hiera, key = _build(case_dir, case, query, golden)

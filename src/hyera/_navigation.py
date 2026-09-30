@@ -7,6 +7,7 @@ Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and
 ``lookup_key.rb`` (``parse_lookup_key``).
 """
 
+import contextlib
 import functools
 import re
 
@@ -14,6 +15,18 @@ from .exceptions import HieraLookupError
 
 #: Sentinel for "not found"/"undefined" (``None`` is a legitimate value).
 _MISSING = object()
+#: The shared no-op context manager :func:`sub_lookup` uses when it was
+#: called with no ``invocation`` at all (``dig``/``get``/``getvar``).
+_NULL_CONTEXT = contextlib.nullcontext()
+
+
+def _rec(invocation, kind, qualifier):
+    return (
+        invocation.recording(kind, qualifier)
+        if invocation is not None
+        else _NULL_CONTEXT
+    )
+
 
 #: A key needs sub-key parsing only if it contains a quote or a dot
 #: (``sub_lookup.rb`` ``SPECIAL``).
@@ -102,7 +115,7 @@ def split_key(
 
 
 def sub_lookup(
-    key: str, segments: "Sequence[Union[str, int]]", value: object
+    key: str, segments: "Sequence[Union[str, int]]", value: object, invocation=None
 ) -> object:
     """Walk ``segments`` into ``value`` (``sub_lookup.rb:62-93``).
 
@@ -116,33 +129,50 @@ def sub_lookup(
     a key that is also an ``int`` (never a ``bool`` or ``float``), and a
     ``str`` segment matches only a ``str`` key -- never Python's looser
     ``==``, under which ``1 == True == 1.0``.
+
+    ``invocation``, when given, records the walk (``recording("sub_lookup",
+    segments)``, then one ``recording("segment", seg)`` per step with
+    ``report_found``/``report_not_found``); every call site that already
+    holds an ``Invocation`` passes it, except ``dig``/``get``/``getvar``,
+    whose own navigation is not a hierarchy lookup dig at all.
     """
-    for segment in segments:
-        if value is None:
-            return _MISSING
-        seg_is_int = isinstance(segment, int) and not isinstance(segment, bool)
-        if seg_is_int and isinstance(value, list):
-            if not (0 <= segment < len(value)):
-                return _MISSING
-            value = value[segment]
-            continue
-        if not isinstance(value, dict):
-            raise HieraLookupError(
-                "Data Provider type mismatch: Got {} when a hash-like object "
-                "was expected to access value using '{}' from key '{}'".format(
-                    _ruby_class(value), segment, key
-                )
-            )
-        seg_type = type(segment)
-        found = _MISSING
-        for k, v in value.items():
-            if type(k) is seg_type and k == segment:
-                found = v
-                break
-        if found is _MISSING:
-            return _MISSING
-        value = found
-    return value
+    with _rec(invocation, "sub_lookup", segments):
+        for segment in segments:
+            with _rec(invocation, "segment", segment):
+                if value is None:
+                    if invocation is not None:
+                        invocation.report_not_found(segment)
+                    return _MISSING
+                seg_is_int = isinstance(segment, int) and not isinstance(segment, bool)
+                if seg_is_int and isinstance(value, list):
+                    if not (0 <= segment < len(value)):
+                        if invocation is not None:
+                            invocation.report_not_found(segment)
+                        return _MISSING
+                    value = value[segment]
+                    if invocation is not None:
+                        invocation.report_found(segment, value)
+                    continue
+                if not isinstance(value, dict):
+                    raise HieraLookupError(
+                        "Data Provider type mismatch: Got {} when a hash-like "
+                        "object was expected to access value using '{}' from "
+                        "key '{}'".format(_ruby_class(value), segment, key)
+                    )
+                seg_type = type(segment)
+                found = _MISSING
+                for k, v in value.items():
+                    if type(k) is seg_type and k == segment:
+                        found = v
+                        break
+                if found is _MISSING:
+                    if invocation is not None:
+                        invocation.report_not_found(segment)
+                    return _MISSING
+                value = found
+                if invocation is not None:
+                    invocation.report_found(segment, value)
+        return value
 
 
 def key_to_a(root, segments) -> "Tuple[Union[str, int], ...]":

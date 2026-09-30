@@ -239,6 +239,43 @@ private engine internals with no stability contract.
     string does not start with a valid variable name")`. An undefined
     variable returns `default_value` regardless of the bound scope's
     `strict` — never raises for that alone.
+  - **`.explain(name, value_type=None, merge=None, default_value=<unset>, *,
+    default_values_hash=None, override=None, block=None,
+    explain_options=False) -> ExplainResult`** — what `puppet lookup
+    --explain`/`--explain-options` shows: takes exactly `.lookup()`'s own
+    signature and dispatcher (the same five call forms, the same keyword
+    spellings). `explain_options=True` mirrors `--explain-options`: only
+    how `lookup_options` was assembled for `name` (and its own module, if
+    qualified) is reported; combined with an otherwise-normal call it is
+    Puppet's `--explain --explain-options`, byte-identical to
+    `explain_options=False`. Always returns an `ExplainResult`:
+    `.text()` is the indented report (every hierarchy entry and path
+    consulted, `Path not found`, `No such key`, `Found key`, merges and
+    their results, interpolations and sub-keys, the `lookup_options`
+    search, `default_hierarchy`); `.to_hash()` is the same tree, projected
+    with Puppet's own keys (`branches`, `type`, `key`, `value`, `event`,
+    `name`, `path`, `original_path`, ...) — a fresh `copy.deepcopy` on
+    every call, so mutating the result never reaches a later `.explain()`/
+    `.lookup()`. `.error` is the `HieraError` the lookup ended with, or
+    `None`. An error `puppet lookup --explain` prints as its own last line
+    is reported the same way here (`.error` set, `.text()` ends with its
+    message) instead of raising: a miss (`KeyNotFoundError`), an invalid
+    `lookup_options` value, a failed `convert_to`, an interpolation syntax
+    error, a sub-key navigated into a non-hash, or a `HieraLookupError`
+    raised from *environment or module* data (not the *global* layer's
+    own). Everything else raises exactly as `.lookup()` does: a `--type`
+    mismatch, a `HieraLookupError` left unhandled by the *global* layer's
+    own data (Puppet's own boundary — the same recursive-lookup error is
+    reported from environment data and escapes from global data), a
+    `BackendError` (an unreadable or unparsable data file, from any
+    layer), and `ConfigError` always (a `hiera.yaml` problem is read
+    before the lookup starts, so there is never one to report mid-lookup,
+    even where `puppet lookup --explain` prints some as its own last
+    line). Explaining bypasses the instance's own `lookup_options` cache
+    (a fresh, call-scoped one is used instead), so the `lookup_options`
+    search always shows, even right after an ordinary `.lookup()` already
+    cached everything; it never bypasses or corrupts any other cache, and
+    changes nothing an ordinary `.lookup()`/`.sources()` afterwards sees.
   - **`.scoped(*, variables=None, facts=None, trusted=None,
     server_facts=None, environment=None, strict=None, node_name=None) ->
     Hiera`** — a *view*: `self._view(self.scope.derive(...))` builds a new
@@ -387,6 +424,10 @@ private engine internals with no stability contract.
   values are Ruby-`eql?` — `1`, `1.0` and `True` are distinct wrapped
   values, but a list or dict payload compares/hashes by content (in any key
   order for a dict) despite being unhashable in plain Python.
+- **`ExplainResult`** — `Hiera.explain(...)`'s return value; see `.explain`
+  above for the full contract. `.to_hash() -> dict`, `.text() -> str`
+  (also `str(result)`), and the read-only property `.error ->
+  Optional[HieraError]`. Never constructed directly.
 
 ## Scope (`_scope.py`)
 

@@ -45,6 +45,28 @@ class MergeError(HieraLookupError):
     """An unknown or invalid merge strategy was requested."""
 
 
+def _issue_coded(exc: HieraLookupError) -> HieraLookupError:
+    """Mark ``exc`` as one of Puppet's *issue-coded* lookup errors
+    (``invocation.rb:100-103``): raised from the global layer's own data, it
+    still survives as ``explain()``'s last line rather than escaping --
+    unlike an ordinary code-less ``LookupError``, which a global-layer
+    boundary (:func:`_escapes`) re-raises as a plain error instead. Wrap
+    exactly the three raise sites Puppet gives an issue code: an unknown
+    interpolation method, an ``alias`` not spanning the whole string, and
+    method syntax used where it is disallowed."""
+    exc._explain_issue = True
+    return exc
+
+
+def _escapes(exc: HieraLookupError) -> HieraLookupError:
+    """Mark ``exc`` as one that always escapes ``explain()`` (never becomes
+    its last line): a value-type assertion failure, or a ``HieraLookupError``/
+    ``BackendError`` that leaves the *global* layer without an issue code
+    (``lookup_adapter.rb:148-153``). Idempotent."""
+    exc._explain_escape = True
+    return exc
+
+
 class KeyNotFoundError(HieraLookupError, KeyError):
     """Puppet's ``lookup()`` miss: no value was found for ``name``.
 

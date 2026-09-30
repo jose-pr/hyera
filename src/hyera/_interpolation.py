@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from ._navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
 from ._types import Sensitive
-from .exceptions import ConfigError, HieraLookupError, InterpolationError
+from .exceptions import ConfigError, HieraLookupError, InterpolationError, _issue_coded
 
 #: One ``%{...}`` occurrence (``interpolation.rb:51``'s
 #: ``/%\{([^}]*)\}/``). Takes any text up to the first ``}``, stripped
@@ -259,41 +259,53 @@ def _interpolate_string(subject, inv, allow_methods):
     (``interpolation.rb:48-73``). Inserted text is never re-scanned by this
     pass; only a resolved method result is interpolated again, through a
     fresh call to :func:`interpolate`.
+
+    The whole pass runs under one ``recording("interpolate", subject)`` node
+    (a no-op unless ``inv.explainer`` is set): every string containing
+    ``%{`` gets exactly one, regardless of how many expressions it holds.
     """
-    out = []
-    pos = 0
-    for m in _EXPR_RE.finditer(subject):
-        out.append(subject[pos : m.start()])
-        pos = m.end()
-        expr = m.group(1).strip(_RUBY_STRIP_CHARS)
-        if expr in _EMPTY_INTERPOLATIONS:
-            out.append("")
-            continue
-        method, key = _get_method_and_data(expr, allow_methods)
-        if method == "alias" and m.group(0) != subject:
-            raise InterpolationError(
-                "'alias' interpolation is only permitted if the expression "
-                "is equal to the entire string"
-            )
-        resolver = _METHODS.get(method)
-        if resolver is None:
-            raise InterpolationError("Unknown interpolation method '{}'".format(method))
-        value = resolver(key, inv, subject)
-        if method == "alias":
-            # The whole result, returned immediately: an alias replaces the
-            # entire value (already asserted equal to `subject` above), with
-            # no re-interpolation and no stringification.
-            return value
-        # Re-interpolating a method's own result can recurse (a fact whose
-        # value is itself "%{that same fact}", or mutual recursion through
-        # two chained values) -- guard it with the same name-stack check the
-        # sub-lookup path already applies to a whole key (`interpolation.rb:68`).
-        check_name = "scope:" + key if method == "scope" else key
-        with inv.check(check_name):
-            value = interpolate(value, inv, allow_methods)
-        out.append(_to_puppet_str(value))
-    out.append(subject[pos:])
-    return "".join(out)
+    with inv.recording("interpolate", subject):
+        out = []
+        pos = 0
+        for m in _EXPR_RE.finditer(subject):
+            out.append(subject[pos : m.start()])
+            pos = m.end()
+            expr = m.group(1).strip(_RUBY_STRIP_CHARS)
+            if expr in _EMPTY_INTERPOLATIONS:
+                out.append("")
+                continue
+            method, key = _get_method_and_data(expr, allow_methods)
+            if method == "alias" and m.group(0) != subject:
+                raise _issue_coded(
+                    InterpolationError(
+                        "'alias' interpolation is only permitted if the "
+                        "expression is equal to the entire string"
+                    )
+                )
+            resolver = _METHODS.get(method)
+            if resolver is None:
+                raise _issue_coded(
+                    InterpolationError(
+                        "Unknown interpolation method '{}'".format(method)
+                    )
+                )
+            value = resolver(key, inv, subject)
+            if method == "alias":
+                # The whole result, returned immediately: an alias replaces
+                # the entire value (already asserted equal to `subject`
+                # above), with no re-interpolation and no stringification.
+                return value
+            # Re-interpolating a method's own result can recurse (a fact
+            # whose value is itself "%{that same fact}", or mutual
+            # recursion through two chained values) -- guard it with the
+            # same name-stack check the sub-lookup path already applies to
+            # a whole key (`interpolation.rb:68`).
+            check_name = "scope:" + key if method == "scope" else key
+            with inv.check(check_name):
+                value = interpolate(value, inv, allow_methods)
+            out.append(_to_puppet_str(value))
+        out.append(subject[pos:])
+        return "".join(out)
 
 
 def _get_method_and_data(expr, allow_methods):
@@ -359,20 +371,34 @@ def _scope_lookup(key, inv, subject):
             )
         )
     scope = inv.scope
-    if root in inv.override_values:
-        value = inv.override_values[root]
-        undefined = False
-    elif root in inv.default_values:
-        looked = scope.lookup(root)
-        value = None if looked is _MISSING else looked
-        undefined = value is None and not scope.exist(root)
-    else:
-        value = scope.lookupvar(root, lenient=inv.lenient)
-        undefined = value is None and not scope.exist(root)
-    if value is None and not scope.exist(root):
-        value = inv.default_values.get(root)
+    with inv.recording("scope", "Global Scope"):
+        if root in inv.override_values:
+            value = inv.override_values[root]
+            undefined = False
+            inv.report_found_in_overrides(root, value)
+        elif root in inv.default_values:
+            looked = scope.lookup(root)
+            value = None if looked is _MISSING else looked
+            undefined = value is None and not scope.exist(root)
+            if not undefined:
+                inv.report_found(root, value)
+        else:
+            value = scope.lookupvar(root, lenient=inv.lenient)
+            undefined = value is None and not scope.exist(root)
+            if not undefined:
+                inv.report_found(root, value)
+        if value is None and not scope.exist(root):
+            value = inv.default_values.get(root)
+            if root in inv.default_values:
+                inv.report_found_in_defaults(root, value)
+        # An undefined root (no override, no scope value, no default) is
+        # reported neither found nor not_found (Puppet's own Explainer never
+        # calls either for it) -- only the read itself was attempted.
+    # The dig runs after the "Global Scope" node's own push/pop -- Puppet's
+    # own tree has `sub_key` as a sibling of `scope`, both children of the
+    # enclosing `interpolate` node, never nested inside `scope` itself.
     if value is not None and rest:
-        result = sub_lookup(key, rest, value)
+        result = sub_lookup(key, rest, value, inv)
         value = None if result is _MISSING else result
     inv.remember_scope_lookup(key, root, rest, value, undefined=undefined)
     return value

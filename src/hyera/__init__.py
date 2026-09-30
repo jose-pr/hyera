@@ -20,6 +20,7 @@ from .exceptions import (
     MergeError,
 )
 from .core import Hiera
+from ._explain import ExplainResult
 from ._facts import facts_from_facter, load_facts
 from ._hiera_config import HieraLevel
 from ._scope import Scope
@@ -29,6 +30,7 @@ __version__ = "0.0.0a0"
 
 __all__ = [
     "Hiera",
+    "ExplainResult",
     "HieraLevel",
     "Scope",
     "Sensitive",

@@ -6,5 +6,4 @@ queries:
   - key: k
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
     note: Puppet 8.10 probe

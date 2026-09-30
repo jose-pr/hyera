@@ -286,6 +286,19 @@ receives a walk error (a non-collection or a non-integer list index)
 instead of raising. `getvar` runs `get`'s own navigation over a scope
 variable instead of a looked-up key.
 
+### Explaining a lookup
+
+```python
+print(h.explain("ntp::servers").text())
+```
+
+`explain` takes exactly `lookup`'s own arguments and returns a
+`hyera.ExplainResult`: `.text()` is the indented report `puppet lookup
+--explain` prints (every hierarchy entry and path consulted, merges and
+their results, interpolations, the `lookup_options` search); `.to_hash()`
+is the same tree, keyed the way `--render-as json --explain` renders it.
+`explain_options=True` reports only how `lookup_options` was assembled.
+
 ## Command line
 
 ```sh
@@ -404,7 +417,9 @@ global/environment/module layers (`Hiera(..., environmentpath=,
 basemodulepath=, modulepath=)`), with `hiera3_backend` global-only and a
 version-3/missing-`version` environment or module hiera.yaml ignored (or
 raising under `strict="error"`) ·
-`eyaml_lookup_key` (PKCS7 only, behind the `hyera[eyaml]` extra).
+`eyaml_lookup_key` (PKCS7 only, behind the `hyera[eyaml]` extra) ·
+`explain()`, reporting a lookup the way `puppet lookup
+--explain`/`--explain-options` does.
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
 3) · `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond

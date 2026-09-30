@@ -12,11 +12,12 @@ holds the tree itself, so it has no engine imports at all beyond the one
 Ruby-rendering helper every value passes through.
 """
 
+import copy
 import typing as _ty
 
 from ._interpolation import _ruby_inspect, _to_puppet_str
 
-__all__ = ()  # private module; nothing here is part of the public API.
+__all__ = ["ExplainResult"]  # everything else here is private.
 
 
 class _ProviderRef(_ty.NamedTuple):
@@ -618,3 +619,35 @@ class Explainer(_Node):
         if len(self.branches) == 1:
             return self.branches[0].to_hash()
         return super().to_hash()
+
+
+class ExplainResult:
+    """``Hiera.explain(...)``'s return value: the report
+    ``puppet lookup --explain``/``--explain-options`` builds, projected the
+    same two ways (``--render-as json`` -> :meth:`to_hash`, ``--render-as
+    s`` -> :meth:`text`)."""
+
+    def __init__(self, explainer: Explainer, error=None) -> None:
+        self._explainer = explainer
+        self._error = error
+
+    def to_hash(self) -> dict:
+        """A deep copy of the explain tree, projected through ``to_hash()``
+        -- mutating the returned structure, or a later lookup/explain on the
+        same instance, never changes what an earlier result holds."""
+        return copy.deepcopy(self._explainer.to_hash())
+
+    def text(self) -> str:
+        """The indented report ``puppet lookup --explain``'s ``s`` render
+        shows: every line ends in ``"\\n"``."""
+        return self._explainer.explain()
+
+    def __str__(self) -> str:
+        return self.text()
+
+    @property
+    def error(self):
+        """The :class:`~hyera.HieraError` this lookup ended with, reported
+        as the report's own last line -- ``None`` when a value was found or
+        defaulted to."""
+        return self._error

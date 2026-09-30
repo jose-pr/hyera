@@ -178,7 +178,7 @@ def _entry_options(entry, root_key):
     )
 
 
-def convert_result(key, convert_to, value):
+def convert_result(key, convert_to, value, invocation=None):
     """Apply a ``lookup_options`` ``convert_to`` spec to a found value.
 
     Ports ``lookup_adapter.rb:98-124``. ``convert_to`` is ``None`` (no
@@ -195,6 +195,11 @@ def convert_result(key, convert_to, value):
     type and the remaining arguments then go to
     :func:`hyera._new_function.new_instance`; its failure re-raises as "The
     convert_to lookup_option for key '<key>' raised error: <msg>".
+
+    ``invocation``, when given, reports the applied conversion as explain
+    text (``lookup_adapter.rb:117``) -- called after the root ``data`` node
+    has already closed (a no-op while its own explainer is unset, same as
+    every other recording hook).
     """
     if convert_to is None:
         return value
@@ -215,6 +220,14 @@ def convert_result(key, convert_to, value):
             ) from e
     else:
         type_ = type_arg
+
+    if invocation is not None:
+        from ._string_converter import convert as _puppet_string
+
+        invocation.report_text(
+            lambda: "Applying convert_to lookup_option with arguments "
+            + _puppet_string([type_] + rest)
+        )
 
     try:
         return new_instance(type_, value, *rest)

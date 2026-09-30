@@ -1,8 +1,8 @@
 """Invocation: per-lookup state for interpolation.
 
-Ports the part of Puppet's ``pops/lookup/invocation.rb`` the interpolation
-engine (``_interpolation.py``) uses: the bound scope, the current sub-lookup
-callable, and the recursion-detection name stack.
+Ports Puppet's ``pops/lookup/invocation.rb``: the bound scope, the current
+sub-lookup callable, the recursion-detection name stack, and (``explainer``
+set) the recording hooks a lookup's explain tree is built through.
 """
 
 import contextlib
@@ -10,6 +10,11 @@ import contextvars
 
 from ._cache import _ScopeRef, _freeze, _probe
 from .exceptions import InterpolationError
+
+#: The shared no-op context manager every recording hook uses when
+#: ``explainer`` is ``None`` -- an ordinary lookup allocates no explain
+#: nodes at all.
+_NULL_CONTEXT = contextlib.nullcontext()
 
 #: The call-time ``strict`` default for a data file's non-hash rule
 #: (``yaml_data.rb:31`` reads ``Puppet[:strict]`` per call, not at
@@ -49,14 +54,33 @@ class Invocation:
         default_values=None,
         lenient=False,
         scope_interpolations=None,
+        explainer=None,
         _name_stack=None,
         _fs_memo=None,
+        _lo_cache=None,
     ):
         self.scope = scope
         self._lookup = lookup
         self.override_values = {} if override_values is None else override_values
         self.default_values = {} if default_values is None else default_values
         self.lenient = lenient
+        #: The :class:`~hyera._explain.Explainer` this lookup's recording
+        #: hooks report to, or ``None`` (the overwhelming common case: no
+        #: explanation was asked for, so every hook below is a no-op).
+        #: Shared, unchanged, with every ``Invocation`` :meth:`derive`d from
+        #: this one (``invocation.rb:61-62``).
+        self.explainer = explainer
+        #: ``Hiera.explain()``'s own per-call ``lookup_options`` memo (a
+        #: fresh ``_ScopeKeyedCache``), or ``None`` (every ordinary lookup:
+        #: ``core.Hiera._retrieve_lookup_options`` and friends then use the
+        #: instance's real, persistent cache instead). Shared, unchanged,
+        #: with every ``Invocation`` :meth:`derive`d from this one, so a
+        #: nested sub-lookup made *during* one ``explain()`` call reuses the
+        #: same never-persisted memo the top-level search already built,
+        #: exactly like Puppet's own per-compilation ``LookupAdapter``
+        #: cache would -- discarded once the call returns, never reaching
+        #: the instance's own cache.
+        self._lo_cache = _lo_cache
         #: Recursion-detection stack, shared with every ``Invocation``
         #: :meth:`derive`d from this one (``invocation.rb:47-52``): the same
         #: list object, never copied, so a name pushed by one still guards a
@@ -123,8 +147,10 @@ class Invocation:
             ),
             lenient=self.lenient,
             scope_interpolations=self.scope_interpolations,
+            explainer=self.explainer,
             _name_stack=self._name_stack,
             _fs_memo=self._fs_memo,
+            _lo_cache=self._lo_cache,
         )
 
     def remember_scope_lookup(self, key, root_key, segments, value, *, undefined):
@@ -184,8 +210,83 @@ class Invocation:
         finally:
             self._name_stack.pop()
 
+    def recording(self, kind: str, qualifier):
+        """Push an explain node of ``kind`` for the guarded block, popping it
+        (even on an exception) when the block exits -- the shared
+        :data:`_NULL_CONTEXT` while :attr:`explainer` is ``None``, so an
+        ordinary lookup allocates no explain nodes at all."""
+        if self.explainer is None:
+            return _NULL_CONTEXT
+        return self._recording(kind, qualifier)
+
+    @contextlib.contextmanager
+    def _recording(self, kind: str, qualifier):
+        self.explainer.push(kind, qualifier)
+        try:
+            yield
+        finally:
+            self.explainer.pop()
+
+    @contextlib.contextmanager
+    def without_explain(self):
+        """Suspend explaining for the guarded block (``invocation.rb:151-
+        163``): locations interpolate through this, so resolving a hierarchy
+        path itself is never itself recorded (``hiera_config.rb:257``)."""
+        saved, self.explainer = self.explainer, None
+        try:
+            yield
+        finally:
+            self.explainer = saved
+
+    @property
+    def only_explain_options(self) -> bool:
+        return self.explainer is not None and self.explainer.only_explain_options
+
+    def report_found(self, key, value):
+        if self.explainer is not None:
+            self.explainer.accept_found(key, value)
+        return value
+
+    def report_found_in_overrides(self, key, value):
+        if self.explainer is not None:
+            self.explainer.accept_found_in_overrides(key, value)
+        return value
+
+    def report_found_in_defaults(self, key, value):
+        if self.explainer is not None:
+            self.explainer.accept_found_in_defaults(key, value)
+        return value
+
+    def report_not_found(self, key) -> None:
+        if self.explainer is not None:
+            self.explainer.accept_not_found(key)
+
+    def report_location_not_found(self) -> None:
+        if self.explainer is not None:
+            self.explainer.accept_location_not_found()
+
+    def report_merge_source(self, source) -> None:
+        if self.explainer is not None:
+            self.explainer.accept_merge_source(source)
+
+    def report_result(self, value):
+        if self.explainer is not None:
+            self.explainer.accept_result(value)
+        return value
+
+    def report_module_not_found(self, name) -> None:
+        if self.explainer is not None:
+            self.explainer.accept_module_not_found(name)
+
+    def report_module_provider_not_found(self, name) -> None:
+        if self.explainer is not None:
+            self.explainer.accept_module_provider_not_found(name)
+
     def report_text(self, producer) -> None:
-        """Puppet's ``Context#explain``/``invocation.rb``'s ``report_text``:
-        a no-op until an explain facility subscribes to it. ``producer`` is
-        a zero-argument callable a caller (a ``LookupContext.explain``) would
-        only ever invoke lazily, so nothing here calls it either."""
+        """Puppet's ``Context#explain``/``invocation.rb``'s ``report_text``
+        (``context.rb:186-188``): ``producer`` is a zero-argument callable,
+        called only while :attr:`explainer` is set -- a plain backend-level
+        ``context.explain(lambda: ...)`` call costs nothing when no one is
+        explaining."""
+        if self.explainer is not None:
+            self.explainer.accept_text(producer())

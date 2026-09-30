@@ -10,6 +10,7 @@ Ports Puppet's ``pops/merge_strategy.rb`` and the deep_merge gem's
 ``deep_merge_core.rb``.
 """
 
+import contextlib
 import functools
 import json
 import re
@@ -17,6 +18,10 @@ import re
 from ._interpolation import unshare
 from ._navigation import _MISSING
 from .exceptions import MergeError
+
+#: The shared no-op context manager :meth:`MergeStrategy.lookup` uses when
+#: called with no ``invocation`` at all.
+_NULL_CTX = contextlib.nullcontext()
 
 #: Registered strategy name -> MergeStrategy subclass, in definition order.
 _STRATEGIES: dict = {}
@@ -208,7 +213,7 @@ class MergeStrategy:
         """merge_strategy.rb:186-188 -- the base accepts only ``strategy``."""
         return ["unrecognized key '{}'".format(k) for k in options if k != "strategy"]
 
-    def lookup(self, variants, fn):
+    def lookup(self, variants, fn, invocation=None):
         """merge_strategy.rb:126-151.
 
         A value that actually enters a merge (two or more contributing
@@ -221,6 +226,12 @@ class MergeStrategy:
         that happens to share the same node. A lone (never-merged) value is
         returned exactly as found, sharing included -- nothing here ever
         mutates it.
+
+        With ``invocation`` given: zero variants report nothing (a plain
+        miss); exactly one runs with no ``merge`` node at all (Puppet's own
+        ``merge_single`` never explains); two or more run under
+        ``recording("merge", self)``, with ``report_result`` when a value
+        was actually found (never on an all-missing reduce).
         """
         variants = list(variants)
         if not variants:
@@ -230,17 +241,22 @@ class MergeStrategy:
             if result is _MISSING:
                 return _MISSING
             return self.merge_single(result)
-        memo = _MISSING
-        for variant in variants:
-            value = fn(variant)
-            if value is _MISSING:
-                continue
-            value = unshare(value)
-            if memo is _MISSING:
-                memo = self.convert_value(value)
-            else:
-                memo = self.merge(memo, value)
-        return memo
+        with (
+            invocation.recording("merge", self) if invocation is not None else _NULL_CTX
+        ):
+            memo = _MISSING
+            for variant in variants:
+                value = fn(variant)
+                if value is _MISSING:
+                    continue
+                value = unshare(value)
+                if memo is _MISSING:
+                    memo = self.convert_value(value)
+                else:
+                    memo = self.merge(memo, value)
+            if invocation is not None and memo is not _MISSING:
+                invocation.report_result(memo)
+            return memo
 
     def merge(self, e1, e2):
         """merge_strategy.rb:95-100."""
@@ -273,8 +289,11 @@ class FirstFoundStrategy(MergeStrategy):
 
     KEY = "first"
 
-    def lookup(self, variants, fn):
-        """merge_strategy.rb:223-228 -- stop at the first found; never merge."""
+    def lookup(self, variants, fn, invocation=None):
+        """merge_strategy.rb:223-228 -- stop at the first found; never
+        merge. ``invocation`` is accepted and ignored: a first-found
+        reduce never records a merge node of its own (Puppet's own
+        ``FirstFoundStrategy`` never calls ``with``)."""
         for variant in variants:
             value = fn(variant)
             if value is not _MISSING:

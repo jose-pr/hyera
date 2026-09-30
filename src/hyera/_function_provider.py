@@ -9,15 +9,46 @@ Original code (no phiera lineage); ports the *design* of Puppet's
 header.
 """
 
+import contextlib
 import os
 import typing as _ty
 
+from pathlib_next import Path
+
+from ._explain import _LocationRef
 from ._interpolation import interpolate, unshare
 from ._lookup_adapter import validate_data_value
 from ._navigation import _MISSING, key_to_a, undig
 from .exceptions import BackendError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
+
+#: The shared no-op context manager every ``at_location`` closure below uses
+#: for a location-less entry (``locations is None`` -> a single ``None``
+#: "location"): Puppet's own function providers call their function with no
+#: location at all there, so nothing about a location is ever pushed.
+_NULL_CONTEXT = contextlib.nullcontext()
+
+
+def _location_ref(location) -> _LocationRef:
+    """A :class:`~hyera._explain._LocationRef` for one resolved location
+    (``core._Location``/``_location_resolver.ResolvedLocation`` -- both
+    ``(original, location, is_uri, exist)``-shaped). The path form always
+    renders POSIX (``Path.as_posix()``), matching what Ruby's ``Pathname``
+    prints on every OS, regardless of this interned string's own separator.
+    """
+    if location.is_uri:
+        return _LocationRef(location.original, location.location, "uri")
+    return _LocationRef(location.original, Path(location.location).as_posix(), "path")
+
+
+def _recording_location(invocation, location):
+    """``invocation.recording("location", ...)`` for a real location, else
+    the shared no-op -- factored out since all three provider kinds need it
+    identically."""
+    if location is None:
+        return _NULL_CONTEXT
+    return invocation.recording("location", _location_ref(location))
 
 
 class _NotFound(BaseException):
@@ -303,7 +334,12 @@ class _DataHashProvider(_FunctionProvider):
         locations = self.locations if self.locations is not None else [None]
 
         def at_location(location):
+            with _recording_location(invocation, location):
+                return _at_location(location)
+
+        def _at_location(location):
             if location is not None and not location.exist:
+                invocation.report_location_not_found()
                 return _MISSING
             ctx = self._context(location)
             if location is not None and not location.is_uri:
@@ -349,12 +385,14 @@ class _DataHashProvider(_FunctionProvider):
                 data = ctx.data_hash
                 label = ctx.label
             if root not in data:
+                invocation.report_not_found(root)
                 return _MISSING
             value = data[root]
             validate_data_value(value, self.backend.name, label, root)
-            return interpolate(value, invocation, allow_methods=True)
+            result = interpolate(value, invocation, allow_methods=True)
+            return invocation.report_found(root, result)
 
-        return merge.lookup(locations, at_location)
+        return merge.lookup(locations, at_location, invocation)
 
 
 class _LookupKeyProvider(_FunctionProvider):
@@ -364,23 +402,26 @@ class _LookupKeyProvider(_FunctionProvider):
         locations = self.locations if self.locations is not None else [None]
 
         def at_location(location):
-            if location is not None and not location.exist:
-                return _MISSING
-            ctx = self._context(location)
-            if ctx.has_cached(root):
-                return unshare(ctx._cache[root])
-            options = self.options_for(location)
-            label = None if location is None else str(location.location)
-            context = LookupContext(ctx, invocation)
-            try:
-                value = self.backend.lookup_key(root, options, context)
-            except _NotFound:
-                return _MISSING
-            _validate_provider_value(value, "lookup_key", self.backend.name, label)
-            ctx._cache[root] = value
-            return unshare(value)
+            with _recording_location(invocation, location):
+                if location is not None and not location.exist:
+                    invocation.report_location_not_found()
+                    return _MISSING
+                ctx = self._context(location)
+                if ctx.has_cached(root):
+                    return invocation.report_found(root, unshare(ctx._cache[root]))
+                options = self.options_for(location)
+                label = None if location is None else str(location.location)
+                context = LookupContext(ctx, invocation)
+                try:
+                    value = self.backend.lookup_key(root, options, context)
+                except _NotFound:
+                    invocation.report_not_found(root)
+                    return _MISSING
+                _validate_provider_value(value, "lookup_key", self.backend.name, label)
+                ctx._cache[root] = value
+                return invocation.report_found(root, unshare(value))
 
-        return merge.lookup(locations, at_location)
+        return merge.lookup(locations, at_location, invocation)
 
 
 class _DataDigProvider(_FunctionProvider):
@@ -392,24 +433,27 @@ class _DataDigProvider(_FunctionProvider):
         cache_key = str(full_key)
 
         def at_location(location):
-            if location is not None and not location.exist:
-                return _MISSING
-            ctx = self._context(location)
-            if ctx.has_cached(cache_key):
-                return unshare(ctx._cache[cache_key])
-            options = self.options_for(location)
-            label = None if location is None else str(location.location)
-            context = LookupContext(ctx, invocation)
-            try:
-                value = self.backend.data_dig(list(full_key), options, context)
-            except _NotFound:
-                return _MISSING
-            _validate_provider_value(value, "data_dig", self.backend.name, label)
-            wrapped = undig(segments, value)
-            ctx._cache[cache_key] = wrapped
-            return unshare(wrapped)
+            with _recording_location(invocation, location):
+                if location is not None and not location.exist:
+                    invocation.report_location_not_found()
+                    return _MISSING
+                ctx = self._context(location)
+                if ctx.has_cached(cache_key):
+                    return invocation.report_found(root, unshare(ctx._cache[cache_key]))
+                options = self.options_for(location)
+                label = None if location is None else str(location.location)
+                context = LookupContext(ctx, invocation)
+                try:
+                    value = self.backend.data_dig(list(full_key), options, context)
+                except _NotFound:
+                    invocation.report_not_found(root)
+                    return _MISSING
+                _validate_provider_value(value, "data_dig", self.backend.name, label)
+                wrapped = undig(segments, value)
+                ctx._cache[cache_key] = wrapped
+                return invocation.report_found(root, unshare(wrapped))
 
-        return merge.lookup(locations, at_location)
+        return merge.lookup(locations, at_location, invocation)
 
 
 PROVIDER_CLASSES = {

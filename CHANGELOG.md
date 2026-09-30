@@ -75,6 +75,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `path`/`paths`/`mapped_paths` locations and under globbed directories are
   seen by the next lookup. `revalidate=False` keeps every file and glob
   listing as first read until `clear_cache()`.
+- `Hiera.explain(...)`, also on scoped views: takes the same arguments as
+  `lookup()` and returns a `hyera.ExplainResult` describing the lookup the
+  way `puppet lookup --explain` does. `.text()` is the indented report
+  (each hierarchy entry and path consulted, `Path not found`, `No such
+  key`, `Found key`, merges and their results, interpolations and
+  sub-keys, the `lookup_options` search, `default_hierarchy`); `.to_hash()`
+  is the same tree with Puppet's own keys (`branches`, `type`, `key`,
+  `value`, `event`, `name`, `path`, `original_path`, ...). Passing
+  `explain_options=True` reports only how `lookup_options` was assembled
+  for the key (mirroring `puppet lookup --explain-options`). An error that
+  `puppet lookup --explain` prints as its own last line (a miss, an
+  invalid `lookup_options` value, a failed `convert_to`, an interpolation
+  syntax error, a sub-key into a non-hash, or a lookup error raised from
+  *environment or module* data) becomes the report's last line and
+  `.error`; any other error (a `--type` mismatch, an unreadable/unparsable
+  data file, or a lookup error left unhandled by the *global* layer's own
+  data) raises instead, exactly as `lookup()` does.
 
 ### Changed
 

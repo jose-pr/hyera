@@ -11,21 +11,16 @@ queries:
   - key: mymod::arr
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
   - key: mymod::dflt
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
   - key: plain::k
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
   - key: nomod::k
     explain: data
     ordered: true
-    divergence: spec-layers-backends/explain-missing
   - key: mymod::arr
     id: mymod::arr-options
     explain: options
     ordered: true
-    divergence: spec-layers-backends/explain-missing

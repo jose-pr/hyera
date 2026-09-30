@@ -12,6 +12,8 @@ import threading
 import typing as _ty
 from typing import Any
 
+from pathlib_next import Path
+
 from . import _data_functions
 from ._cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from ._data_provider import (
@@ -24,6 +26,7 @@ from ._data_provider import (
     prune_module_data,
     split_path_setting,
 )
+from ._explain import Explainer, ExplainResult, _ProviderRef
 from ._hiera_config import (
     HieraLevel,
     _build_hierarchies,
@@ -53,6 +56,7 @@ from ._scope import Scope
 from ._type_mismatch import assert_instance_of
 from ._type_parser import parse_type
 from .backends import default_backends
+from .exceptions import _escapes
 
 __all__ = ["Hiera"]
 
@@ -71,6 +75,31 @@ _LAYERS = ("global", "environment", "module")
 #: already uses :data:`~hyera._navigation._MISSING` to mean "not cached yet"
 #: (:meth:`Hiera._layer_options_cached`).
 _LO_ABSENT = object()
+
+
+class _ExplainOptionsMemo:
+    """``Hiera.explain()``'s own per-call ``lookup_options`` memo (Design
+    decision: a fresh one per ``explain()`` call, discarded when it
+    returns, never touching the instance's own caches).
+
+    ``layer_cache`` is what :meth:`Hiera._layer_options_cached`'s own
+    ``cache`` override replaces ``self._lookup_options_cache`` with,
+    exactly as an ordinary lookup's finer, referenced-variable-keyed
+    caching works. ``compiled`` is coarser -- Puppet's own
+    ``LookupAdapter`` memoizes a *whole* compiled ``lookup_options``
+    mapping per module name (``lookup_adapter.rb:236-247``), which is what
+    makes a name-list lookup search the global+environment layer, and each
+    module, at most once -- so :meth:`Hiera._search_and_merge`/
+    :meth:`Hiera._lookup_default_in_module` only push a ``meta``/nested
+    ``lookup_options`` scope node the first time a given ``(tag,
+    module_name)`` combination is actually searched during this call.
+    """
+
+    __slots__ = ("layer_cache", "compiled")
+
+    def __init__(self, layer_cache) -> None:
+        self.layer_cache = layer_cache
+        self.compiled: dict = {}
 
 
 def _no_option_lookup(key, invocation):
@@ -184,6 +213,26 @@ def _validate_data_hash(data, name, path) -> None:
     )
 
 
+def _provider_ref(provider) -> _ProviderRef:
+    """A :class:`~hyera._explain._ProviderRef` for one layer's provider
+    (``configured_data_provider.rb:33-39``, ``hiera_config.rb:284-286``):
+    ``Global``/``Environment Data Provider (hiera configuration version
+    N)``, or ``Module "<m>" Data Provider (...)``; a config path (never for
+    ``Hiera(None, ...)``'s built-in default) renders POSIX."""
+    if provider.place == "Module":
+        name = 'Module "{}" Data Provider (hiera configuration version {})'.format(
+            provider.module_name, provider.version
+        )
+    else:
+        name = "{} Data Provider (hiera configuration version {})".format(
+            provider.place, provider.version
+        )
+    path = provider.source.path if provider.source is not None else None
+    config_path = None if path is None else Path(path).as_posix()
+    module_name = provider.module_name if provider.place == "Module" else None
+    return _ProviderRef(name, config_path, module_name)
+
+
 class Hiera:
     """A first-class Python interface to Hiera data.
 
@@ -238,6 +287,12 @@ class Hiera:
         revalidate=True,
     ):
         self.base_config = base_config
+        #: Whether this is Puppet's own built-in default config
+        #: (``Hiera(None, ...)``), the one case ``explain()`` prunes a
+        #: missing candidate from at all (``hiera_config.rb:688``,
+        #: ``location_resolver.rb:63``) -- a dict or stream config is
+        #: user-authored and keeps every ``Path not found`` line.
+        self._is_default_config = base_config is None
         if scope is None:
             scope = Scope()
         elif not isinstance(scope, Scope):
@@ -1100,13 +1155,26 @@ class Hiera:
         """
 
         def at_level(entry):
-            index, _level = entry
+            index, level = entry
             provider = self._provider_for(
                 tag, base_path, index, hierarchy, scope, invocation, module_name
             )
-            return provider.key_lookup(root, segments, invocation, strategy)
+            if (
+                self._is_default_config
+                and provider.locations is not None
+                and not any(loc.exist for loc in provider.locations)
+            ):
+                # hiera_config.rb:688: Puppet's own built-in default config
+                # drops an entry left with no existing candidate at all --
+                # never shown, not even as "Path not found" -- functionally
+                # identical to letting it run (every location misses either
+                # way), so this only changes what explain() displays.
+                return _MISSING
+            ref = _ProviderRef('Hierarchy entry "{}"'.format(level.name))
+            with invocation.recording("data_provider", ref):
+                return provider.key_lookup(root, segments, invocation, strategy)
 
-        return strategy.lookup(list(enumerate(hierarchy)), at_level)
+        return strategy.lookup(list(enumerate(hierarchy)), at_level, invocation)
 
     def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
         """Puppet's provider stack (``lookup_adapter.rb:332-340``): reduce
@@ -1132,27 +1200,86 @@ class Hiera:
                 if module_name is None:
                     return _MISSING
                 state = self._environment(scope.environment)
-                provider = self._usable(
-                    self._module_provider(state, module_name), invocation
-                )
+                raw = self._module_provider(state, module_name)
+                if raw is None:
+                    if module_name in state.modules():
+                        invocation.report_module_provider_not_found(module_name)
+                    else:
+                        invocation.report_module_not_found(module_name)
+                    return _MISSING
+                provider = self._usable(raw, invocation)
             else:
                 return _MISSING
             if provider is None:
                 return _MISSING
             mod = provider.module_name if provider.place == "Module" else None
-            return self._lookup_levels(
-                root,
-                provider.hierarchy,
-                provider.root,
-                "main",
-                scope,
-                invocation,
-                strategy,
-                segments,
-                module_name=mod,
-            )
+            ref = _provider_ref(provider)
+            with invocation.recording("data_provider", ref):
+                if not provider.hierarchy:
+                    invocation.report_not_found(root)
+                    return _MISSING
+                try:
+                    result = self._lookup_levels(
+                        root,
+                        provider.hierarchy,
+                        provider.root,
+                        "main",
+                        scope,
+                        invocation,
+                        strategy,
+                        segments,
+                        module_name=mod,
+                    )
+                except HieraLookupError as e:
+                    # lookup_adapter.rb:148-153: only the GLOBAL layer turns
+                    # a code-less LookupError into one that escapes
+                    # explain() outright; environment/module data reports
+                    # the same error as the report's own last line instead.
+                    # (A BackendError needs no marking here: Hiera.explain()
+                    # always re-raises it unconditionally, wherever it came
+                    # from -- a data/infrastructure problem, never one of
+                    # Puppet's own reportable LookupErrors.)
+                    if layer == "global" and not getattr(e, "_explain_issue", False):
+                        raise _escapes(e)
+                    raise
+                if result is _MISSING and self._is_default_config:
+                    # The built-in default config's own "Common" entry can
+                    # be pruned away entirely (above), leaving this layer's
+                    # own node with no nested location to report a miss at
+                    # all -- reported directly on it only in that one case.
+                    invocation.report_not_found(root)
+                return result
 
-        return strategy.lookup(_LAYERS, at_layer)
+        return strategy.lookup(_LAYERS, at_layer, invocation)
+
+    @staticmethod
+    def _explain_layer_cache(invocation):
+        """The ``cache`` override :meth:`_layer_options_cached` and friends
+        take, from ``invocation``'s own :class:`_ExplainOptionsMemo` --
+        ``None`` for an ordinary lookup (use the instance's real cache)."""
+        memo = invocation._lo_cache
+        return memo.layer_cache if memo is not None else None
+
+    @staticmethod
+    def _memoized_options(invocation, tag, module_name, gather):
+        """Run ``gather()`` (a zero-argument callable that both performs
+        and explain-records one ``lookup_options`` search) once per
+        ``(tag, module_name)`` for the lifetime of one ``explain()`` call --
+        Puppet's own ``LookupAdapter`` memoizes a whole compiled mapping per
+        module name (``lookup_adapter.rb:236-247``), which is what keeps a
+        name-list lookup from searching, and re-recording, the same section
+        once per name. A no-op passthrough for an ordinary lookup
+        (``invocation._lo_cache`` is ``None`` there).
+        """
+        memo = invocation._lo_cache
+        if memo is None:
+            return gather()
+        key = (tag, module_name)
+        if key in memo.compiled:
+            return memo.compiled[key]
+        result = gather()
+        memo.compiled[key] = result
+        return result
 
     def _search_and_merge(self, key, invocation, merge, parsed=None):
         """Resolve ``key`` in full: the port of ``LookupAdapter#lookup``
@@ -1183,35 +1310,49 @@ class Hiera:
         ``(root, segments)`` skip re-parsing it.
         """
         if key == LOOKUP_OPTIONS or key.startswith(LOOKUP_OPTIONS + "."):
+            with invocation.recording("invalid_key", LOOKUP_OPTIONS):
+                pass
             return _MISSING
         root, segments = parsed if parsed is not None else parse_lookup_key(key)
         module_name = module_name_of(root)
 
-        compiled_options = self._retrieve_lookup_options(module_name, invocation)
+        def gather_main():
+            with invocation.recording("meta", LOOKUP_OPTIONS):
+                return self._retrieve_lookup_options(
+                    module_name, invocation, self._explain_layer_cache(invocation)
+                )
+
+        compiled_options = self._memoized_options(
+            invocation, "main", module_name, gather_main
+        )
         options = extract_lookup_options_for_key(root, compiled_options) or {}
+        explicit_merge = merge is not None
+        if not explicit_merge and options.get("merge") is not None:
+            invocation.report_merge_source(LOOKUP_OPTIONS)
         strategy = MergeStrategy.strategy(
-            merge if merge is not None else options.get("merge")
+            merge if explicit_merge else options.get("merge")
         )
 
-        with invocation.check(key):
-            value = self._lookup_layers(
-                root, module_name, invocation, strategy, segments
-            )
-        if value is not _MISSING and segments:
-            value = sub_lookup(key, segments, value)
-
-        if value is _MISSING:
-            value = self._lookup_default_in_module(
-                key, root, segments, module_name, invocation
-            )
+        with invocation.recording("data", key):
+            with invocation.check(key):
+                value = self._lookup_layers(
+                    root, module_name, invocation, strategy, segments
+                )
             if value is not _MISSING and segments:
-                value = sub_lookup(key, segments, value)
+                value = sub_lookup(key, segments, value, invocation)
+
+            if value is _MISSING:
+                value = self._lookup_default_in_module(
+                    key, root, segments, module_name, invocation
+                )
+                if value is not _MISSING and segments:
+                    value = sub_lookup(key, segments, value, invocation)
 
         if value is _MISSING:
             return _MISSING
         convert_to = options.get("convert_to")
         if convert_to is not None:
-            value = convert_result(key, convert_to, value)
+            value = convert_result(key, convert_to, value, invocation)
         return value
 
     def _sub_lookup(self, key, invocation):
@@ -1339,7 +1480,9 @@ class Hiera:
                     paths.append(path)
         return tuple(paths)
 
-    def _layer_options_cached(self, hierarchy, base_path, tag, module_name, invocation):
+    def _layer_options_cached(
+        self, hierarchy, base_path, tag, module_name, invocation, cache=None
+    ):
         """The raw ``lookup_options`` value gathered from one layer's own
         hierarchy alone (a HASH-strategy gather over its locations/levels,
         never across layers) -- cached the same referenced-variable way as
@@ -1383,7 +1526,15 @@ class Hiera:
         (``lookup_adapter.rb:376-378``); the marker comes off in ``finally``,
         so a gather that raises does not wedge a later, independent lookup
         for the same ``(scope, tag, base_path)``.
+
+        ``cache``, when given (``Hiera.explain()``'s own per-call, never-
+        stores bypass -- Design decision: explain always re-walks, never
+        reusing the instance's real ``_lookup_options_cache``), replaces
+        ``self._lookup_options_cache`` outright; the gather's own explain
+        hooks come from ``invocation.explainer`` alone, threaded onto the
+        fresh ``gather_invocation`` below.
         """
+        real_cache = self._lookup_options_cache if cache is None else cache
         scope = invocation.scope
         entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
         materialized = self._materialize(entry, invocation)
@@ -1406,7 +1557,7 @@ class Hiera:
         else:
             versions = ()
         extra = (entry.key, versions)
-        cached = self._lookup_options_cache.get(kind, scope, extra)
+        cached = real_cache.get(kind, scope, extra)
         if cached is not _MISSING:
             return cached
 
@@ -1425,7 +1576,12 @@ class Hiera:
 
             fs_memo = invocation._fs_memo if invocation is not None else None
             gather_invocation = Invocation(
-                scope, counting_lookup, scope_interpolations=lo_refs, _fs_memo=fs_memo
+                scope,
+                counting_lookup,
+                scope_interpolations=lo_refs,
+                explainer=invocation.explainer,
+                _fs_memo=fs_memo,
+                _lo_cache=invocation._lo_cache,
             )
             with gather_invocation.check(LOOKUP_OPTIONS):
                 raw = self._lookup_levels(
@@ -1443,11 +1599,11 @@ class Hiera:
 
         result = _LO_ABSENT if raw is _MISSING else raw
         if not made_sub_lookup:
-            put_key = self._lookup_options_cache.key_for(kind, lo_refs, extra)
-            self._lookup_options_cache.put(put_key, result)
+            put_key = real_cache.key_for(kind, lo_refs, extra)
+            real_cache.put(put_key, result)
         return result
 
-    def _global_lookup_options(self, invocation):
+    def _global_lookup_options(self, invocation, cache=None):
         """The global layer's own validated ``lookup_options``, or ``None``.
 
         Passes ``invocation`` straight through, never a ``.derive()`` of it:
@@ -1457,32 +1613,41 @@ class Hiera:
         deriving one first would only add an allocation this hot path (every
         lookup runs it) does not need.
         """
-        raw = self._layer_options_cached(
-            self._global.hierarchy, self._global.root, "main", None, invocation
-        )
+        with invocation.recording("data_provider", _provider_ref(self._global)):
+            raw = self._layer_options_cached(
+                self._global.hierarchy,
+                self._global.root,
+                "main",
+                None,
+                invocation,
+                cache,
+            )
         return validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
 
-    def _environment_lookup_options(self, state, invocation):
+    def _environment_lookup_options(self, state, invocation, cache=None):
         """The global and environment layers' ``lookup_options`` HASH-merged
         (global wins), or ``None`` (``lookup_adapter.rb:375-380``). See
         :meth:`_global_lookup_options` for why ``invocation`` is passed
         through unchanged rather than derived.
         """
-        g = self._global_lookup_options(invocation)
+        g = self._global_lookup_options(invocation, cache)
         provider = self._usable(state.provider, invocation)
         e = None
         if provider is not None:
-            raw = self._layer_options_cached(
-                provider.hierarchy, provider.root, "main", None, invocation
-            )
+            with invocation.recording("data_provider", _provider_ref(provider)):
+                raw = self._layer_options_cached(
+                    provider.hierarchy, provider.root, "main", None, invocation, cache
+                )
             e = validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
         if g is None:
             return e
         if e is None:
             return g
-        return MergeStrategy.strategy("hash").merge(g, e)
+        with invocation.recording("scope", "Global and Environment"):
+            merged = MergeStrategy.strategy("hash").merge(g, e)
+            return invocation.report_found(LOOKUP_OPTIONS, merged)
 
-    def _retrieve_lookup_options(self, module_name, invocation):
+    def _retrieve_lookup_options(self, module_name, invocation, cache=None):
         """The compiled ``lookup_options`` mapping for ``module_name`` (or
         just the global/environment options, when ``module_name`` is
         ``None``), a port of ``lookup_adapter.rb:346-372``.
@@ -1513,37 +1678,57 @@ class Hiera:
         scope identity alone, the same as ``revalidate=False`` safely does,
         would silently ignore a changed ``lookup_options`` value for as
         long as the same scope object keeps being used.
+
+        ``cache``, when given, is ``Hiera.explain()``'s own bypass (see
+        :meth:`_layer_options_cached`): both the ``_compiled_options_cache``
+        read and its write are skipped outright, so a call under explain
+        always re-walks and re-explains every layer, even right after an
+        ordinary lookup already cached everything.
         """
         scope = invocation.scope
-        if not self.revalidate:
+        if not self.revalidate and cache is None:
             cached = self._compiled_options_cache.get(module_name)
             if cached is not None and cached[0] is scope:
                 return cached[1]
 
         state = self._environment(scope.environment)
-        opts = self._environment_lookup_options(state, invocation)
+        opts = self._environment_lookup_options(state, invocation, cache)
         if module_name is not None:
-            mprovider = self._usable(
-                self._module_provider(state, module_name), invocation
-            )
+            raw_provider = self._module_provider(state, module_name)
+            if raw_provider is None:
+                if module_name in state.modules():
+                    invocation.report_module_provider_not_found(module_name)
+                else:
+                    invocation.report_module_not_found(module_name)
+            mprovider = self._usable(raw_provider, invocation)
             if mprovider is not None:
-                raw = self._layer_options_cached(
-                    mprovider.hierarchy, mprovider.root, "main", module_name, invocation
-                )
+                with invocation.recording("data_provider", _provider_ref(mprovider)):
+                    raw = self._layer_options_cached(
+                        mprovider.hierarchy,
+                        mprovider.root,
+                        "main",
+                        module_name,
+                        invocation,
+                        cache,
+                    )
                 if raw is not _LO_ABSENT:
                     m = validate_lookup_options(raw, module_name)
                     if opts is None:
                         opts = m
                     elif m is not None:
-                        opts = MergeStrategy.strategy("hash").merge(opts, m)
+                        with invocation.recording(
+                            "scope", 'Module "{}"'.format(module_name)
+                        ):
+                            opts = MergeStrategy.strategy("hash").merge(opts, m)
+                            invocation.report_found(LOOKUP_OPTIONS, opts)
                     else:
                         opts = None
         compiled = compile_patterns(opts)
-        if not self.revalidate:
+        if not self.revalidate and cache is None:
             self._compiled_options_cache[module_name] = (scope, compiled)
         return compiled
 
-    def _module_default_lookup_options(self, provider, invocation):
+    def _module_default_lookup_options(self, provider, invocation, cache=None):
         """The compiled ``lookup_options`` mapping gathered from
         ``provider``'s own ``default_hierarchy`` data only -- never merged
         with the global/environment/module options
@@ -1551,13 +1736,15 @@ class Hiera:
         ``module_data_provider.rb:26-40``'s ``key_lookup_in_default``
         never touches the main options.
         """
-        raw = self._layer_options_cached(
-            provider.default_hierarchy,
-            provider.root,
-            "default",
-            provider.module_name,
-            invocation,
-        )
+        with invocation.recording("data_provider", _provider_ref(provider)):
+            raw = self._layer_options_cached(
+                provider.default_hierarchy,
+                provider.root,
+                "default",
+                provider.module_name,
+                invocation,
+                cache,
+            )
         opts = validate_lookup_options(
             None if raw is _LO_ABSENT else raw, provider.module_name
         )
@@ -1585,21 +1772,38 @@ class Hiera:
         provider = self._usable(self._module_provider(state, module_name), invocation)
         if provider is None or not provider.default_hierarchy:
             return _MISSING
-        compiled = self._module_default_lookup_options(provider, invocation)
-        entry = extract_lookup_options_for_key(root, compiled) or {}
-        strategy = MergeStrategy.strategy(entry.get("merge"))
-        with invocation.check(key):
-            return self._lookup_levels(
-                root,
-                provider.default_hierarchy,
-                provider.root,
-                "default",
-                invocation.scope,
-                invocation,
-                strategy,
-                segments,
-                module_name=module_name,
+        with invocation.recording(
+            "scope", 'Searching default_hierarchy of module "{}"'.format(module_name)
+        ):
+
+            def gather_default():
+                with invocation.recording("scope", 'Searching for "lookup_options"'):
+                    return self._module_default_lookup_options(
+                        provider, invocation, self._explain_layer_cache(invocation)
+                    )
+
+            compiled = self._memoized_options(
+                invocation, "default", module_name, gather_default
             )
+            entry = extract_lookup_options_for_key(root, compiled) or {}
+            strategy = MergeStrategy.strategy(entry.get("merge"))
+            with invocation.recording("scope", 'Searching for "{}"'.format(key)):
+                with invocation.recording("data_provider", _provider_ref(provider)):
+                    with invocation.check(key):
+                        result = self._lookup_levels(
+                            root,
+                            provider.default_hierarchy,
+                            provider.root,
+                            "default",
+                            invocation.scope,
+                            invocation,
+                            strategy,
+                            segments,
+                            module_name=module_name,
+                        )
+                    if result is _MISSING:
+                        invocation.report_not_found(key)
+                return result
 
     def lookup(
         self,
@@ -1818,6 +2022,90 @@ class Hiera:
         reason alone. The rest navigates exactly as `.get()` does.
         """
         return _data_functions.getvar(self.scope, dotted, default_value, block)
+
+    def explain(
+        self,
+        name,
+        value_type=None,
+        merge=None,
+        default_value=_MISSING,
+        *,
+        default_values_hash=None,
+        override=None,
+        block=None,
+        explain_options=False,
+    ) -> ExplainResult:
+        """What ``puppet lookup --explain``/``--explain-options`` shows:
+        every hierarchy entry and path consulted for `.lookup()`, and
+        whether ``name`` was found there.
+
+        Takes exactly `.lookup()`'s own signature and dispatcher (the same
+        five call forms, the same keyword spellings), plus one keyword-only
+        ``explain_options``: mirroring ``--explain-options``, it reports
+        only how ``lookup_options`` was assembled for ``name`` (its own
+        module, if any) -- ``True`` with ``explain_options`` also true is
+        Puppet's ``--explain --explain-options``, byte-identical to
+        ``explain_options=False`` (measured).
+
+        Returns an :class:`~hyera.ExplainResult` regardless of outcome:
+        ``.text()`` is the indented report, ``.to_hash()`` the same tree
+        with Puppet's own keys. ``.error`` is the :class:`~hyera.HieraError`
+        the lookup ended with -- a miss (:class:`~hyera.KeyNotFoundError`),
+        an invalid ``lookup_options`` value, a failed ``convert_to``, an
+        interpolation syntax error, or a lookup error raised from
+        *environment or module* data -- reported as the report's own last
+        line, exactly as ``puppet lookup --explain`` prints some errors
+        instead of raising. Any other error (a ``--type`` mismatch, or a
+        lookup error left unhandled by the *global* layer's own data)
+        raises instead, same as `.lookup()`; a :class:`~hyera.ConfigError`
+        always raises, even where ``puppet lookup --explain`` would print
+        it as its own last line -- our configs are read before the lookup
+        starts, so there is never one to report mid-lookup.
+        """
+        call = parse_call(
+            name, value_type, merge, default_value, default_values_hash, override, block
+        )
+        explainer = Explainer(explain_options, explain_options)
+        lo_memo = _ExplainOptionsMemo(
+            _ScopeKeyedCache(threading.Lock(), self.cache_size)
+        )
+        invocation = Invocation(
+            self.scope,
+            self._sub_lookup,
+            override_values=call.override,
+            default_values=call.default_values_hash,
+            explainer=explainer,
+            _lo_cache=lo_memo,
+        )
+        error = None
+        try:
+            if invocation.only_explain_options:
+                # lookup_adapter.rb:61-63: look up the literal key
+                # "lookup_options" through the very same layer stack an
+                # ordinary key would use (never `_retrieve_lookup_options`'s
+                # own hand-composed combining, which never builds a `merge`
+                # explain node) -- swallow whatever it finds or misses.
+                module_name = module_name_of(call.names[0]) if call.names else None
+                self._lookup_layers(
+                    LOOKUP_OPTIONS,
+                    module_name,
+                    invocation,
+                    MergeStrategy.strategy("hash"),
+                )
+            else:
+                _lookup_call(call, invocation, self._search_and_merge)
+        except BackendError:
+            # A data file that cannot be read or parsed is a data/
+            # infrastructure problem, not one of Puppet's own reportable
+            # LookupErrors -- it always escapes, wherever it was raised
+            # from, same as an ordinary `.lookup()` never catches it.
+            raise
+        except HieraLookupError as e:
+            if getattr(e, "_explain_escape", False):
+                raise
+            invocation.report_text(lambda: str(e))
+            error = e
+        return ExplainResult(explainer, error)
 
 
 # Import after defining Hiera to avoid circular import

@@ -12,7 +12,7 @@ from ._invocation import _STRICT
 from ._navigation import _MISSING
 from ._type_parser import parse_type
 from ._type_mismatch import assert_instance_of
-from .exceptions import KeyNotFoundError
+from .exceptions import HieraLookupError, KeyNotFoundError, _escapes
 
 #: The keyword-equivalent option names a form-4/5 options hash may carry
 #: (never ``"name"``, which is form 4's own key, and never ``"block"``,
@@ -188,7 +188,14 @@ def parse_call(
 
 def _assert(call: LookupCall, subject: str, value):
     if call.value_type is not None:
-        assert_instance_of(subject, call.value_type, value)
+        try:
+            assert_instance_of(subject, call.value_type, value)
+        except HieraLookupError as e:
+            # A --type mismatch always escapes explain() (Design decision):
+            # it is a type-assertion failure, never one of Puppet's own
+            # LookupErrors, regardless of which layer produced the value.
+            _escapes(e)
+            raise
     return value
 
 
