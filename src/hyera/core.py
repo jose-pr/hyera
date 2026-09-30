@@ -1277,7 +1277,9 @@ class Hiera:
         return self._sources(self.scope)
 
     def _sources(self, scope, invocation=None):
-        return self._files_for(self.hierarchy, self.base_path, scope, "main", invocation)
+        return self._files_for(
+            self.hierarchy, self.base_path, scope, "main", invocation
+        )
 
     def _files_for(self, hierarchy, base_path, scope, tag, invocation=None):
         """The ordered list of existing, successfully loaded ``data_hash``
@@ -1474,9 +1476,7 @@ class Hiera:
         opts = self._environment_lookup_options(state, invocation)
         if module_name is not None:
             meta = invocation.derive(self._sub_lookup)
-            mprovider = self._usable(
-                self._module_provider(state, module_name), meta
-            )
+            mprovider = self._usable(self._module_provider(state, module_name), meta)
             if mprovider is not None:
                 raw = self._layer_options_cached(
                     mprovider.hierarchy, mprovider.root, "main", module_name, meta
