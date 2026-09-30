@@ -1,5 +1,4 @@
-"""A direct test for every public export (Design Q10 of the coverage-gate
-plan): a name that never appears as a bare ``ast.Name``/``ast.Attribute``
+"""A direct test for every public export: a name that never appears as a bare ``ast.Name``/``ast.Attribute``
 inside some ``test_*`` function's body has regressed unnoticed the moment
 nothing else in the suite references it.
 
