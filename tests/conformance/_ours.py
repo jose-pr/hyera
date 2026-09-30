@@ -291,8 +291,8 @@ def run_cli_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
     (``--render-as s``), the same way ``record.py`` calls real Puppet twice.
 
     Pre-wired under `CLI_CHANNEL_DIVERGENCE` like every other CLI-channel
-    query -- ``cli_puppet_lookup_parity`` only needs to add the flags and
-    flip the constant, not touch this function.
+    query -- teaching the CLI these flags only needs to add them and flip
+    the constant, not touch this function.
     """
     result = golden["results"][_golden.query_id(query)]
     base_argv = [
