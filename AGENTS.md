@@ -97,7 +97,7 @@ dotted subkeys, merges `first`/`default`/`unique`/`hash`/`deep` (with
 (per-key/regex merge strategy + `convert_to`), the global/environment/
 module layer stack (`Hiera(..., environmentpath=, basemodulepath=,
 modulepath=)`), and `eyaml_lookup_key` (PKCS7
-only, behind the `hyera[eyaml]` extra). A versionless or `version: 3`
+only, behind the `eyaml` extra). A versionless or `version: 3`
 hiera.yaml (Hiera 1, 2 and 3's own dialect) is read and validated against
 Puppet's v3 schema and resolved through the real backend-major provider
 build (`yaml`/`json`/`hocon`/`eyaml`, or a third-party backend registered
@@ -128,8 +128,8 @@ third-party plugins).
   100% and no symbol without a docstring (CI job `types`, Python 3.9 and
   3.14).
 - Package: built with `hatchling`. The PyPI distribution, the import
-  package and the console script are all `hyera`. `hyera[cli]` pulls in
-  `duho` for the console script, `hyera[hocon]` pulls in `pyhocon` for
+  package and the console script are all `hyera`. The `cli` extra pulls in
+  `duho` for the console script, the `hocon` extra pulls in `pyhocon` for
   `HOCONBackend`.
 - **Version**: lives in exactly one place, `src/hyera/__init__.py`
   (`__version__`); `[tool.hatch.version]` reads it to build the package.

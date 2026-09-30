@@ -17,7 +17,7 @@ pip install hyera
 Extras add optional features:
 
 ```bash
-pip install 'hyera[cli]'
+pip install "hyera[cli]"
 ```
 
 | Extra | Adds | Needed for |

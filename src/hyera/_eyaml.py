@@ -85,7 +85,7 @@ def check_cryptography() -> None:
     except ImportError as e:
         raise BackendError(
             "eyaml_lookup_key requires the optional 'cryptography' package: "
-            "pip install 'hyera[eyaml]'"
+            'pip install "hyera[eyaml]"'
         ) from e
 
 

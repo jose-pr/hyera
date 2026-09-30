@@ -6,10 +6,10 @@ can be consumed without reading its source. Kept current with the public
 API by tests. For the project overview, see the shipped `README.md`, or
 <https://github.com/jose-pr/hyera>.
 
-Install as `hyera` (`pip install hyera`); extras: `pip install 'hyera[cli]'`
-(the console script, `duho`), `pip install 'hyera[hocon]'` (`HOCONBackend`,
-`pyhocon`), `pip install 'hyera[eyaml]'` (`EyamlBackend`, `cryptography`).
-`hyera[dev]`/`hyera[docs]` are contributor-only tooling extras, not needed
+Install as `hyera` (`pip install hyera`); extras: `pip install "hyera[cli]"`
+(the console script, `duho`), `pip install "hyera[hocon]"` (`HOCONBackend`,
+`pyhocon`), `pip install "hyera[eyaml]"` (`EyamlBackend`, `cryptography`).
+The `dev`/`docs` extras are contributor-only tooling extras, not needed
 to use the library. Import as `import hyera`; import every public name from
 `hyera` itself, never from a submodule directly — `hyera._*` modules are
 private engine internals with no stability contract. The console script is
@@ -829,7 +829,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `EXTENSIONS = (".conf",)`. Always registered: a missing/broken `pyhocon`
   fails at `.check_available()` (backend/level construction, so a
   `hocon_data` hierarchy level fails to build) *and* in `.loads`, both
-  naming the `hyera[hocon]` extra, rather than silently vanishing from
+  naming the `hocon` extra, rather than silently vanishing from
   `default_backends()`. `has_hocon()` — `True` iff `pyhocon`
   imports without error; any import-time exception (not just
   `ImportError`) is caught and logged at debug. `.loads(text)` parses through a
@@ -920,13 +920,13 @@ is a `Backend` subclass, found by name rather than passed around directly.
   plain `:name` text (still parses to a `RubySymbol`).
 - **`EyamlBackend`** — `NAMES = {"function": ("eyaml_lookup_key",)}`, a
   `lookup_key` provider, Puppet's own name for hiera-eyaml. Requires the
-  optional `hyera[eyaml]` extra (`cryptography`); `.check_available()`
+  optional `eyaml` extra (`cryptography`); `.check_available()`
   raises `BackendError` naming the extra when it is missing, at level
   build via `Backend.new`, the same shape as the `hocon_data`/missing-
   `pyhocon` message. **PKCS7 only** — the private key alone is needed (no
   certificate); GPG or any other hiera-eyaml encryptor plugin raises
-  hiera-eyaml's own `LoadError` text, unwrapped, naming
-  `hyera[eyaml]`-only support. Options: `pkcs7_private_key` (a path
+  hiera-eyaml's own `LoadError` text, unwrapped, since only the `eyaml`
+  extra's PKCS7 path is supported. Options: `pkcs7_private_key` (a path
   **relative to the process's current working directory**, not
   `base_path` or the data file's own directory — matches hiera-eyaml
   itself), `pkcs7_private_key_env_var` (wins over the plain path, with a

@@ -68,10 +68,10 @@ _VALUE_OPTIONS = (
 )
 
 #: Printed (to stderr) when the cli extra (duho) is not installed.
-# Double-quoted, not single-quoted: pip install 'hyera[cli]' fails when
-# pasted into cmd.exe, where single quotes are literal (pip then sees the
-# argv "'hyera[cli]'" verbatim and rejects it); double quotes work in
-# cmd.exe, PowerShell and POSIX shells alike.
+# Double-quoted, not single-quoted: a single-quoted extras install fails
+# when pasted into cmd.exe, where single quotes are literal and pip sees
+# the quote characters themselves as part of the argument; double quotes
+# work in cmd.exe, PowerShell and POSIX shells alike.
 _NO_CLI_EXTRA_HINT = (
     "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )

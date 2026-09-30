@@ -1396,7 +1396,7 @@ class HOCONBackend(Backend):
 
     Always registered: a missing/broken ``pyhocon`` fails at
     :meth:`check_available` (backend/level construction) and again in
-    :meth:`loads`, both naming the ``hyera[hocon]`` extra -- so the failure
+    :meth:`loads`, both naming the ``hocon`` extra -- so the failure
     is always reachable instead of silently disappearing from
     :func:`default_backends`.
 
@@ -1457,7 +1457,7 @@ class HOCONBackend(Backend):
 
     @classmethod
     def check_available(cls) -> None:
-        """Raise :class:`BackendError` naming the ``hyera[hocon]`` extra
+        """Raise :class:`BackendError` naming the ``hocon`` extra
         when ``pyhocon`` is not importable."""
         if not has_hocon():
             raise BackendError(cls._MISSING_DEP_MESSAGE)
@@ -1815,7 +1815,7 @@ class SopsBackend(Backend):
 
 class EyamlBackend(Backend):
     """Puppet's hiera-eyaml ``lookup_key`` function, PKCS7 only (behind the
-    optional ``hyera[eyaml]`` extra). Ports ``functions/eyaml_lookup_key.
+    optional ``eyaml`` extra). Ports ``functions/eyaml_lookup_key.
     rb:25-79``: the raw ``.eyaml`` file loads once per location (through
     :meth:`~hyera._function_provider.LookupContext.cached_file_data`, its
     *raw* parse only -- caching the non-Hash rule's strict-sensitive result
@@ -1832,7 +1832,7 @@ class EyamlBackend(Backend):
 
     @classmethod
     def check_available(cls) -> None:
-        """Raise :class:`BackendError` naming the ``hyera[eyaml]`` extra
+        """Raise :class:`BackendError` naming the ``eyaml`` extra
         when ``cryptography`` is not importable."""
         from ._eyaml import check_cryptography
 
