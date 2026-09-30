@@ -24,6 +24,7 @@ pip install 'hyera[cli]'
 | --- | --- | --- |
 | `cli` | `duho` | the command-line tool |
 | `hocon` | `pyhocon` | `hocon_data` levels |
+| `eyaml` | `cryptography` | `eyaml_lookup_key` (PKCS7) levels |
 
 ## 30-second tour
 

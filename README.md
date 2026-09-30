@@ -12,6 +12,7 @@ hash, and deep-hash merging.
 ```sh
 pip install hyera          # library only
 pip install hyera[cli]     # + the `hyera` command-line tool (via duho)
+pip install hyera[eyaml]   # + eyaml_lookup_key (PKCS7) support
 ```
 
 The PyPI distribution, the import package and the command are all named
@@ -343,6 +344,33 @@ leaks a decrypted secret:
   ini text — sops's INI writer can otherwise emit a value that a text
   parser reads as a different key or an injected section.
 
+## eyaml_lookup_key
+
+`EyamlBackend` (`lookup_key: eyaml_lookup_key`) decrypts hiera-eyaml's
+`ENC[PKCS7,...]` values, behind the optional `hyera[eyaml]` extra
+(`cryptography`). **PKCS7 only** — the private key alone is needed, no
+certificate:
+
+```yaml
+hierarchy:
+  - name: "secrets"
+    lookup_key: eyaml_lookup_key
+    path: "secrets.eyaml"
+    options:
+      pkcs7_private_key: "keys/private_key.pkcs7.pem"
+```
+
+- `pkcs7_private_key`, `pkcs7_private_key_env_var` and
+  `pkcs7_b64_private_key_env_var` follow hiera-eyaml's own precedence (env
+  var beats a plain path, base64-env-var beats both); `pkcs7_public_key*`
+  options are accepted but never read.
+- A relative `pkcs7_private_key` resolves against the **process's current
+  working directory**, exactly like hiera-eyaml itself — not `base_path`
+  and not the data file's own directory.
+- Other hiera-eyaml encryptors (GPG and third-party plugins) are not
+  supported; a value using one raises the same "cannot load such file"
+  error Puppet itself gives without that plugin installed.
+
 ## Hiera 5 spec coverage
 
 Supported: `version: 5` validation · Puppet's version 5 schema validation
@@ -375,13 +403,14 @@ plus the Hiera-3-era `reverse_deep`/`unconstrained_deep` ·
 global/environment/module layers (`Hiera(..., environmentpath=,
 basemodulepath=, modulepath=)`), with `hiera3_backend` global-only and a
 version-3/missing-`version` environment or module hiera.yaml ignored (or
-raising under `strict="error"`).
+raising under `strict="error"`) ·
+`eyaml_lookup_key` (PKCS7 only, behind the `hyera[eyaml]` extra).
 
 Not implemented: hiera.yaml version 3/4 (a file without `version` is version
-3) · `eyaml_lookup_key` (use the `sops` backend instead) ·
-`hiera3_backend` legacy shim · encrypted-value `convert_to` beyond `Sensitive`
-· reading `environment.conf`'s `modulepath`/`environment_data_provider`, or
-metadata.json's deprecated `data_provider`, both superseded here by the
+3) · `hiera3_backend` legacy shim · encrypted-value `convert_to` beyond
+`Sensitive` · hiera-eyaml encryptors other than PKCS7 (GPG and third-party
+plugins) · reading `environment.conf`'s `modulepath`/`environment_data_provider`,
+or metadata.json's deprecated `data_provider`, both superseded here by the
 explicit `modulepath=` keyword.
 
 ## Differences from Puppet
@@ -395,6 +424,10 @@ with one deliberate exception:
   Puppet equivalent, for decrypting a
   [sops](https://github.com/getsops/sops)-encrypted data file on the fly.
   A hierarchy that uses it does not load under real Puppet.
+- **`eyaml_lookup_key` supports only the PKCS7 encryptor.** hiera-eyaml's
+  other encryptors (GPG, and any third-party plugin) raise the same
+  "cannot load such file" error real Puppet gives without that plugin's
+  gem installed — this project never adds one.
 - **`convert_to` (Puppet's `new()`) does not support every type Puppet
   does.** SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI,
   Type and Object all raise `hyera.HieraLookupError` ("hiera does not
