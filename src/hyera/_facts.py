@@ -94,6 +94,12 @@ def load_facts(path: _ty.Union[str, "os.PathLike[str]"]) -> _ty.Dict[str, _ty.An
     all-or-nothing. Raises :class:`~hyera.BackendError` (``.path`` set) for
     every failure; the caller (typically :class:`~hyera.Scope`) sanitizes
     the returned dict -- this function does not.
+
+    :param path: the facts file to read.
+    :returns: the parsed facts, unsanitized.
+    :raises BackendError: the file could not be read or parsed, is not a
+        mapping, or has only some of ``hostname``/``domain``/``fqdn``/
+        ``clientcert``.
     """
     label = str(path)
     raw = _read_bytes(path)
@@ -146,6 +152,11 @@ def facts_from_facter(*, timeout: int = 30) -> _ty.Dict[str, _ty.Any]:
     ``trusted.certname`` should be set. Raises :class:`~hyera.BackendError`
     for a missing binary, a timeout, a non-zero exit (stderr captured), or
     output that is not a JSON object.
+
+    :param timeout: seconds to wait for ``facter`` before giving up.
+    :returns: the parsed facts, unsanitized.
+    :raises BackendError: ``facter`` is missing, times out, exits non-zero,
+        or its output is not a JSON object.
     """
     exe = shutil.which("facter")
     if exe is None:

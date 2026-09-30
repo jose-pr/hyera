@@ -243,6 +243,16 @@ class Scope:
 
     Do not mutate a value returned by :meth:`lookup`/:meth:`lookupvar`: it
     is the scope's own copy, shared by every caller.
+
+    :param variables: node parameters (top-scope variables).
+    :param facts: facts, sanitized and exposed under ``$facts`` too.
+    :param trusted: trusted data; Puppet's own local hash if omitted.
+    :param server_facts: server facts, exposed under ``$server_facts`` too.
+    :param environment: this scope's ``$environment`` (``"production"`` if
+        omitted).
+    :param strict: strictness for an undefined variable: ``"off"``,
+        ``"warning"`` (the default) or ``"error"``.
+    :param node_name: the ``--node``/node name this scope was built for.
     """
 
     #: Sentinel for "not found" (``None`` is a legitimate, defined value).
@@ -404,10 +414,14 @@ class Scope:
 
     @property
     def environment(self) -> str:
+        """This scope's resolved ``$environment`` (``"production"`` by
+        default)."""
         return self._environment
 
     @property
     def strict(self) -> str:
+        """This scope's strictness for an undefined variable: ``"off"``,
+        ``"warning"`` (the default) or ``"error"``."""
         return self._strict
 
     @property
@@ -429,6 +443,10 @@ class Scope:
         rule, and how a ``mapped_paths`` template's ``%{::item}`` still
         reaches a top-scope fact of the same name as the mapped item
         variable rather than shadowing it.
+
+        :param name: the variable name, optionally ``::``-qualified.
+        :returns: the bound value, or :data:`Scope.UNDEFINED`.
+        :raises TypeError: ``name`` is not a ``str``.
         """
         if not isinstance(name, str):
             raise TypeError(
@@ -450,7 +468,12 @@ class Scope:
         return Scope.UNDEFINED
 
     def exist(self, name: str) -> bool:
-        """``parser/scope.rb:283-304`` ``exist?``."""
+        """``parser/scope.rb:283-304`` ``exist?``.
+
+        :param name: the variable name, optionally ``::``-qualified.
+        :returns: whether ``name`` is bound.
+        :raises TypeError: ``name`` is not a ``str``.
+        """
         if not isinstance(name, str):
             raise TypeError(
                 "scope variable name must be a str, not {}".format(type(name).__name__)
@@ -472,7 +495,16 @@ class Scope:
     def lookupvar(self, name: str, *, lenient: bool = False) -> _ty.Any:
         """:meth:`lookup`, with Puppet's :attr:`strict` applied to a miss
         (``parser/scope.rb:491-547``). ``lenient`` is Puppet's
-        ``avoid_hiera_interpolation_errors``, used for hierarchy locations."""
+        ``avoid_hiera_interpolation_errors``, used for hierarchy locations.
+
+        :param name: the variable name, optionally ``::``-qualified.
+        :param lenient: warn (never raise) on an undefined variable even
+            under ``strict="error"``.
+        :returns: the bound value, or ``None`` for an undefined variable.
+        :raises TypeError: ``name`` is not a ``str``.
+        :raises InterpolationError: the variable is undefined and
+            ``strict="error"`` applies (with ``lenient`` false).
+        """
         value = self.lookup(name)
         if value is not Scope.UNDEFINED:
             return value
@@ -504,7 +536,12 @@ class Scope:
 
     def with_local_scope(self, variables: _ty.Mapping[str, _ty.Any]) -> "Scope":
         """A child scope adding one local variable layer, sharing this
-        scope's table and warning state. This scope is unchanged."""
+        scope's table and warning state. This scope is unchanged.
+
+        :param variables: the local layer's own variables.
+        :returns: the child scope.
+        :raises TypeError: ``variables`` is not a mapping.
+        """
         checked = _check_mapping_keys(variables, "variables")
         if checked is None:
             raise TypeError("variables must be a mapping, not None")
@@ -534,7 +571,17 @@ class Scope:
         """A new root scope, rebuilt from this scope's own constructor
         inputs: ``variables``/``facts``/``server_facts`` shallow-update the
         parent's (the new values win); the rest replace the parent's when
-        given. Local layers are not carried; the warning state is shared."""
+        given. Local layers are not carried; the warning state is shared.
+
+        :param variables: node parameters, shallow-updating this scope's own.
+        :param facts: facts, shallow-updating this scope's own.
+        :param trusted: replaces this scope's trusted data when given.
+        :param server_facts: server facts, shallow-updating this scope's own.
+        :param environment: replaces this scope's ``$environment`` when given.
+        :param strict: replaces this scope's strictness when given.
+        :param node_name: replaces this scope's node name when given.
+        :returns: the new, derived root scope.
+        """
         new_variables = dict(self._variables_input)
         new_variables.update(_check_data_mapping(variables, "variables") or {})
         new_facts = dict(self._facts_input)

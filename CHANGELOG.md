@@ -241,6 +241,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.backends`, `.codedir`, `.cache_size` and `.revalidate` are private; use
   the documented methods and constructor arguments. `SopsBackend`'s
   `.format` (the resolved output format) is private too.
+- Every public class, function and method has a docstring with `:param:`,
+  `:returns:` and `:raises:` fields, shown by `help()` and the API
+  reference.
 
 ### Removed
 

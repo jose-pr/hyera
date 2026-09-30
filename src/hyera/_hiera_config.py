@@ -1320,6 +1320,25 @@ class HieraLevel(_ty.NamedTuple):
         datadir_base: "_ty.Optional[Path]" = None,
         datadir_literal: bool = False,
     ) -> "HieraLevel":
+        """Build a level from one already-resolved hierarchy entry
+        ``conf`` (a hiera.yaml entry, or ``defaults`` filled in): reads
+        ``conf["name"]``/``["datadir"]``, whichever location key is
+        present, and ``conf.get("options")``, leaving every location
+        uninterpolated.
+
+        :param conf: the entry's own mapping, with ``defaults`` already
+            merged in by the caller where the entry names nothing.
+        :param backend: the resolved backend for this level's function.
+        :param kind: this level's function kind (``"data_hash"``,
+            ``"lookup_key"`` or ``"data_dig"``).
+        :param extension: appended to a v3-derived location (``None`` for
+            v4/v5).
+        :param datadir_base: the root a v3 level's ``datadir`` resolves
+            against (``None`` for v4/v5).
+        :param datadir_literal: whether ``datadir`` is joined onto the
+            config root literally, with no interpolation (v4 only).
+        :returns: the built level.
+        """
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
         if location_key is None:
             locations: "_ty.Tuple[str, ...]" = ()
@@ -1344,6 +1363,11 @@ class HieraLevel(_ty.NamedTuple):
         """The candidate source (file) paths for this level in a bound
         :class:`~hyera.Scope`. A location-less entry, or one using ``uri``/
         ``uris`` (which never resolve to a filesystem path), yields ``[]``.
+
+        :param base_path: the root relative locations resolve against.
+        :param scope: the scope location templates interpolate against.
+        :returns: the candidate paths, interpolated but not filtered by
+            existence.
         """
         resolved = resolve_locations(self, base_path, scope)
         if resolved is None:

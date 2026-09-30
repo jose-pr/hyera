@@ -1063,6 +1063,8 @@ class Sensitive:
     values are equal, and hash equal, exactly when their wrapped values are
     Ruby-``eql?`` -- so a list or dict payload hashes despite being
     unhashable in plain Python. ``.unwrap()`` returns the real value.
+
+    :param value: the value to wrap.
     """
 
     __slots__ = ("_value",)
@@ -1071,7 +1073,10 @@ class Sensitive:
         self._value = value
 
     def unwrap(self) -> _ty.Any:
-        """The wrapped value, unredacted."""
+        """The wrapped value, unredacted.
+
+        :returns: the wrapped value.
+        """
         return self._value
 
     def __repr__(self) -> str:

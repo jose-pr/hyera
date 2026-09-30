@@ -194,12 +194,21 @@ class _FunctionContext:
         self._cache: _ty.Dict[_ty.Any, _ty.Any] = {}
 
     def has_cached(self, key: _ty.Any) -> bool:
+        """Whether ``key`` was already cached for this location (by a
+        ``lookup_key``/``data_dig`` provider's own ``context.cache(...)``
+        call on a previous invocation)."""
         return key in self._cache
 
 
 class LookupContext:
     """The ``context`` argument handed to a ``lookup_key``/``data_dig``
     backend hook (Puppet's public ``Context`` API, ``context.rb:126-206``).
+
+    Built by the engine for each call; a backend never constructs one
+    itself.
+
+    :param function_context: the per-location state to read/write through.
+    :param invocation: the current lookup's per-lookup state.
     """
 
     def __init__(
@@ -211,38 +220,68 @@ class LookupContext:
     def interpolate(self, value: _ty.Any) -> _ty.Any:
         """Interpolate ``value`` (methods allowed) against the current
         lookup's scope -- a backend calls this itself; the engine never
-        interpolates a ``lookup_key``/``data_dig`` result on its own."""
+        interpolates a ``lookup_key``/``data_dig`` result on its own.
+
+        :param value: the value (or nested structure) to interpolate.
+        :returns: the interpolated result.
+        """
         return interpolate(value, self._invocation, allow_methods=True)
 
     def not_found(self) -> "_ty.NoReturn":
-        """Signal a miss for this location -- Puppet's ``throw :no_such_key``."""
+        """Signal a miss for this location -- Puppet's ``throw :no_such_key``.
+
+        :raises Exception: always; the raised object is an internal
+            control-flow signal, not a documented public exception.
+        """
         raise _NotFound()
 
     def explain(self, producer: _ty.Callable[[], str]) -> None:
-        """Add ``producer``'s text to this lookup's ``explain()`` report."""
+        """Add ``producer``'s text to this lookup's ``explain()`` report.
+
+        :param producer: a zero-argument callable producing the text.
+        """
         self._invocation.report_text(producer)
 
     def cache(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
         """Cache ``value`` under ``key`` for this location, for the life of
-        the owning ``Hiera``/``h.scoped(...)`` view. Returns ``value``."""
+        the owning ``Hiera``/``h.scoped(...)`` view. Returns ``value``.
+
+        :param key: the cache key.
+        :param value: the value to cache.
+        :returns: ``value``, unchanged.
+        """
         self._fc._cache[key] = value
         return value
 
     def cache_all(self, mapping: _ty.Mapping[_ty.Any, _ty.Any]) -> None:
-        """:meth:`cache` every key/value pair of ``mapping``."""
+        """:meth:`cache` every key/value pair of ``mapping``.
+
+        :param mapping: the key/value pairs to cache.
+        """
         self._fc._cache.update(mapping)
 
     def cache_has_key(self, key: _ty.Any) -> bool:
-        """Whether ``key`` was already :meth:`cache`\\ d for this location."""
+        """Whether ``key`` was already :meth:`cache`\\ d for this location.
+
+        :param key: the cache key.
+        :returns: whether ``key`` is cached.
+        """
         return key in self._fc._cache
 
     def cached_value(self, key: _ty.Any) -> _ty.Any:
-        """The value :meth:`cache`\\ d under ``key``, or ``None``."""
+        """The value :meth:`cache`\\ d under ``key``, or ``None``.
+
+        :param key: the cache key.
+        :returns: the cached value, or ``None``.
+        """
         return self._fc._cache.get(key)
 
     def cached_entries(self) -> "_ty.Iterator[_ty.Tuple[_ty.Any, _ty.Any]]":
         """An iterator over every ``(key, value)`` pair :meth:`cache`\\ d
-        for this location."""
+        for this location.
+
+        :returns: an iterator of ``(key, value)`` pairs.
+        """
         return iter(list(self._fc._cache.items()))
 
     def cached_file_data(
@@ -253,7 +292,14 @@ class LookupContext:
         """The cached result of ``parse(text)`` (or the raw text when
         ``parse`` is ``None``) for the file at ``path``, shared with every
         other location of this ``Hiera`` instance (see
-        :class:`_EnvironmentContext`)."""
+        :class:`_EnvironmentContext`).
+
+        :param path: the file to read.
+        :param parse: applied to the file's text; identity when omitted.
+        :returns: the (cached) parsed result, or raw text.
+        :raises BackendError: ``path`` could not be read, decoded as UTF-8,
+            or ``parse`` raised a :class:`BackendError` of its own.
+        """
         return self._fc.environment_context.cached_file_data(path, parse)
 
     @property

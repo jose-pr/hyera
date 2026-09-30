@@ -281,42 +281,59 @@ class Invocation:
         return self.explainer is not None and self.explainer.only_explain_options
 
     def report_found(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
+        """Record ``value`` as found for ``key`` in ordinary hierarchy
+        data, if :attr:`explainer` is set. Returns ``value`` unchanged."""
         if self.explainer is not None:
             self.explainer.accept_found(key, value)
         return value
 
     def report_found_in_overrides(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
+        """Record ``value`` as found for ``key`` in ``lookup()``'s
+        ``override`` argument. Returns ``value`` unchanged."""
         if self.explainer is not None:
             self.explainer.accept_found_in_overrides(key, value)
         return value
 
     def report_found_in_defaults(self, key: _ty.Any, value: _ty.Any) -> _ty.Any:
+        """Record ``value`` as found for ``key`` in ``lookup()``'s
+        ``default_values_hash`` argument. Returns ``value`` unchanged."""
         if self.explainer is not None:
             self.explainer.accept_found_in_defaults(key, value)
         return value
 
     def report_not_found(self, key: _ty.Any) -> None:
+        """Record a miss for ``key``, if :attr:`explainer` is set."""
         if self.explainer is not None:
             self.explainer.accept_not_found(key)
 
     def report_location_not_found(self) -> None:
+        """Record that the current hierarchy location does not exist, if
+        :attr:`explainer` is set."""
         if self.explainer is not None:
             self.explainer.accept_location_not_found()
 
     def report_merge_source(self, source: _ty.Any) -> None:
+        """Record which ``lookup_options`` source a merge strategy came
+        from, if :attr:`explainer` is set."""
         if self.explainer is not None:
             self.explainer.accept_merge_source(source)
 
     def report_result(self, value: _ty.Any) -> _ty.Any:
+        """Record the top-level lookup's final result, if
+        :attr:`explainer` is set. Returns ``value`` unchanged."""
         if self.explainer is not None:
             self.explainer.accept_result(value)
         return value
 
     def report_module_not_found(self, name: str) -> None:
+        """Record that module ``name`` does not exist, if
+        :attr:`explainer` is set."""
         if self.explainer is not None:
             self.explainer.accept_module_not_found(name)
 
     def report_module_provider_not_found(self, name: str) -> None:
+        """Record that module ``name`` has no ``hiera.yaml`` provider, if
+        :attr:`explainer` is set."""
         if self.explainer is not None:
             self.explainer.accept_module_provider_not_found(name)
 

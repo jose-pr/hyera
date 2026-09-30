@@ -98,6 +98,10 @@ class Backend:
     Anything a backend does not implement raises :class:`NotImplementedError`
     from the methods below (the base class's defaults); callers turn that
     into a specific, user-facing error.
+
+    :param conf: the hierarchy entry's/``defaults``'s own mapping (never
+        used by the base class; a subclass may read its own keys from it).
+    :param strict: overrides the call-time default (see :attr:`strict`).
     """
 
     KINDS: _ty.ClassVar[_ty.Tuple[str, ...]] = ("function", "v3", "format", "render")
@@ -208,7 +212,12 @@ class Backend:
     def find(
         cls, name: str, kind: str = "function"
     ) -> "_ty.Optional[_ty.Type[Backend]]":
-        """The registered class for ``name`` in ``kind``, or ``None``."""
+        """The registered class for ``name`` in ``kind``, or ``None``.
+
+        :param name: the registered name (or a matching pattern) to find.
+        :param kind: the namespace to search.
+        :returns: the class, or ``None`` when unregistered.
+        """
         found, _captures = cls._match(name, kind)
         return found
 
@@ -219,6 +228,12 @@ class Backend:
         Raises :class:`BackendError` for an unknown name (listing the known
         names) or, via :meth:`check_available`, for a registered backend
         whose optional dependency is missing.
+
+        :param name: the registered name (or a matching pattern) to get.
+        :param kind: the namespace to search.
+        :returns: the class.
+        :raises BackendError: ``name`` is unregistered in ``kind``, or is
+            registered but unusable (a missing optional dependency).
         """
         found = cls.find(name, kind)
         if found is None:
@@ -245,6 +260,15 @@ class Backend:
         passed as constructor keywords. ``.name`` is set to ``name`` (the
         name actually asked for, which may be a pattern instance such as
         ``sops_json``, not the class's default name).
+
+        :param name: the registered name (or a matching pattern) to
+            instantiate.
+        :param conf: passed to the backend's constructor.
+        :param kind: the namespace to search.
+        :param strict: passed to the backend's constructor.
+        :returns: the new instance.
+        :raises BackendError: ``name`` is unregistered in ``kind``, or is
+            registered but unusable (a missing optional dependency).
         """
         found, captures = cls._match(name, kind)
         if found is None:
@@ -261,7 +285,11 @@ class Backend:
     @classmethod
     def names(cls, kind: str = "function") -> _ty.List[str]:
         """Registered names in ``kind``: exact names in registration order,
-        then patterns by their :attr:`NamePattern.display`."""
+        then patterns by their :attr:`NamePattern.display`.
+
+        :param kind: the namespace to list.
+        :returns: the registered names.
+        """
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
         return list(registry["exact"].keys()) + [
             pattern.display for pattern, _klass in registry["patterns"]
@@ -273,7 +301,11 @@ class Backend:
     ) -> "_ty.Optional[_ty.Type[Backend]]":
         """The ``format``-namespace backend class whose :attr:`EXTENSIONS`
         has the longest case-sensitive suffix match against ``path``, or
-        ``None``."""
+        ``None``.
+
+        :param path: the file path to match.
+        :returns: the class, or ``None`` when nothing matches.
+        """
         name = os.fspath(path)
         registry = cls._REGISTRY.get("format", {"exact": {}, "patterns": []})
         candidates = {klass for klass in registry["exact"].values()}
@@ -298,6 +330,11 @@ class Backend:
         ``load``/``dump`` follow ``loads``/``dumps``; ``data_hash`` is true
         when ``data_hash`` or ``loads`` is overridden (the base
         ``data_hash`` delegates to ``load`` -> ``loads``).
+
+        :param op: one of ``"load"``, ``"dump"``, ``"data_hash"``,
+            ``"loads"``, ``"dumps"``, ``"lookup_key"``, ``"data_dig"``.
+        :returns: whether this class implements ``op``.
+        :raises ValueError: ``op`` is not one of those names.
         """
         if op == "load":
             return cls._overrides("loads") or cls._overrides("load")
@@ -317,13 +354,26 @@ class Backend:
     # -- serialization (json-module shaped) --------------------------------
 
     def loads(self, text: str) -> _ty.Any:
-        """Parse ``text`` (a ``str``). Raises path-free problem text."""
+        """Parse ``text`` (a ``str``). Raises path-free problem text.
+
+        :param text: the text to parse.
+        :returns: the parsed value.
+        :raises NotImplementedError: the base class; a subclass must
+            override this to support ``format``/``function`` parsing.
+        """
         raise NotImplementedError(
             "{} does not implement .loads()".format(type(self).__name__)
         )
 
     def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
-        """Render ``obj`` back to text. Raises path-free problem text."""
+        """Render ``obj`` back to text. Raises path-free problem text.
+
+        :param obj: the value to render.
+        :param kw: format-specific rendering options.
+        :returns: the rendered text.
+        :raises NotImplementedError: the base class; a subclass must
+            override this to support ``render`` rendering.
+        """
         raise NotImplementedError(
             "{} does not implement .dumps()".format(type(self).__name__)
         )
@@ -343,6 +393,11 @@ class Backend:
         ``BackendError("Unable to parse (<path>): <problem>", path=...)``.
         Because ``.path`` is set here, a caller (``Hiera._load_file``) does
         not need to prefix it again.
+
+        :param source: a path-like, or an already-open file object.
+        :returns: the parsed value.
+        :raises BackendError: ``source`` could not be decoded as UTF-8 or
+            parsed by :meth:`loads`.
         """
         is_file_obj = hasattr(source, "read")
         path = getattr(source, "name", "<unknown>") if is_file_obj else source
@@ -369,7 +424,12 @@ class Backend:
         )
 
     def dump(self, obj: _ty.Any, fp: "_ty.IO[str]", **kw: _ty.Any) -> None:
-        """Render ``obj`` and write it to the open text file ``fp``."""
+        """Render ``obj`` and write it to the open text file ``fp``.
+
+        :param obj: the value to render.
+        :param fp: the open text file to write to.
+        :param kw: format-specific rendering options.
+        """
         fp.write(self.dumps(obj, **kw))
 
     # -- Hiera 5 provider hooks ---------------------------------------------
@@ -401,6 +461,12 @@ class Backend:
         single ``path`` location and no hierarchy ``options``
         (:meth:`_require_path_only`), Puppet's own ``yaml_data``/
         ``json_data``/``hocon_data`` contract.
+
+        :param path: the location's file path.
+        :param options: the hierarchy entry's ``options``.
+        :returns: the parsed data, adapted into a hash.
+        :raises ConfigError: ``options`` carries anything besides ``path``.
+        :raises BackendError: the file could not be read or parsed.
         """
         self._require_path_only(path, options)
         return self._as_data_hash(self.load(path), path)
@@ -419,7 +485,15 @@ class Backend:
     ) -> _ty.Any:
         """The ``lookup_key`` provider hook: resolve one dotted ``key`` in
         one hierarchy location. Raises :class:`NotImplementedError` unless
-        overridden (see :class:`EyamlBackend`)."""
+        overridden (see :class:`EyamlBackend`).
+
+        :param key: the dotted key to resolve.
+        :param options: the hierarchy entry's ``options``.
+        :param context: the per-location :class:`LookupContext`.
+        :returns: the found value.
+        :raises NotImplementedError: the base class; a subclass must
+            override this to support ``lookup_key``.
+        """
         raise NotImplementedError(
             "{} does not implement .lookup_key()".format(type(self).__name__)
         )
@@ -432,20 +506,37 @@ class Backend:
     ) -> _ty.Any:
         """The ``data_dig`` provider hook: resolve one already-split
         ``key_segments`` path in one hierarchy location. Raises
-        :class:`NotImplementedError` unless overridden."""
+        :class:`NotImplementedError` unless overridden.
+
+        :param key_segments: the already-split dotted key path.
+        :param options: the hierarchy entry's ``options``.
+        :param context: the per-location :class:`LookupContext`.
+        :returns: the found value.
+        :raises NotImplementedError: the base class; a subclass must
+            override this to support ``data_dig``.
+        """
         raise NotImplementedError(
             "{} does not implement .data_dig()".format(type(self).__name__)
         )
 
 
 class YAMLBackend(Backend):
+    """YAML (``.yaml``/``.yml``) data via Puppet's own Psych-compatible
+    rules (:mod:`hyera._yaml_loader`): numbers/booleans/dates/symbols
+    parse Ruby's way, and a non-Hash top-level document warns (or raises
+    under ``strict="error"``) and reads as empty."""
+
     NAMES: _ty.ClassVar[_Names] = {"function": ("yaml_data",), "format": ("yaml",)}
     EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".yaml", ".yml")
 
     def loads(self, text: str) -> _ty.Any:
         """Parse YAML the way Puppet's ``yaml_data`` does (Ruby Psych
         semantics via :mod:`hyera._yaml_loader`), not PyYAML's own
-        Python-flavored resolver."""
+        Python-flavored resolver.
+
+        :param text: the YAML text to parse.
+        :returns: the parsed value.
+        """
         # Psych's rules (types, BOM, one-document, symbol keys/values),
         # ported in ``_yaml_loader``: numbers/booleans/dates/symbols per
         # Ruby's ScalarScanner, not PyYAML's own Python-flavored resolver.
@@ -453,7 +544,12 @@ class YAMLBackend(Backend):
 
     def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
         """Render ``obj`` as YAML (block style, sorted keys off, Unicode
-        left unescaped)."""
+        left unescaped).
+
+        :param obj: the value to render.
+        :param kw: forwarded to :func:`yaml.safe_dump`.
+        :returns: the rendered YAML text.
+        """
         kw.setdefault("sort_keys", False)
         kw.setdefault("allow_unicode", True)
         kw.setdefault("default_flow_style", False)
@@ -556,13 +652,22 @@ def _reject_lone_surrogates(obj) -> None:
 
 
 class JSONBackend(Backend):
+    """JSON (``.json``) data, matching Ruby's ``json`` gem: ``/* */``/
+    ``// ...`` comments allowed, ``NaN``/``Infinity``/``-Infinity`` and a
+    lone (unpaired) surrogate code point rejected."""
+
     NAMES: _ty.ClassVar[_Names] = {"function": ("json_data",), "format": ("json",)}
     EXTENSIONS: _ty.ClassVar[_ty.Tuple[str, ...]] = (".json",)
 
     def loads(self, text: str) -> _ty.Any:
         """Parse JSON the way Ruby's ``json`` gem does: ``/* */``/``//``
         comments allowed, ``NaN``/``Infinity``/``-Infinity`` and a lone
-        surrogate rejected."""
+        surrogate rejected.
+
+        :param text: the JSON text to parse.
+        :returns: the parsed value.
+        :raises BackendError: ``text`` is not valid JSON by that rule.
+        """
         problem = None
         try:
             result = json.loads(
@@ -578,7 +683,12 @@ class JSONBackend(Backend):
         raise BackendError(problem)
 
     def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
-        """Render ``obj`` as JSON, with non-ASCII characters left as-is."""
+        """Render ``obj`` as JSON, with non-ASCII characters left as-is.
+
+        :param obj: the value to render.
+        :param kw: forwarded to :func:`json.dumps`.
+        :returns: the rendered JSON text.
+        """
         kw.setdefault("ensure_ascii", False)
         return json.dumps(obj, **kw)
 
@@ -1314,6 +1424,11 @@ class HOCONBackend(Backend):
     in the text scanner still fails closed instead of silently reading a
     file or reaching the network. Durations are parsed via a private
     module copy (see :func:`_hocon_parser`) so they stay text.
+
+    :param conf: the hierarchy entry's/``defaults``'s own mapping.
+    :param strict: overrides the call-time default.
+    :param hocon_includes: ``None`` (the default) reads
+        ``conf.get("hocon_includes", True)``.
     """
 
     NAMES: _ty.ClassVar[_Names] = {"function": ("hocon_data",), "format": ("hocon",)}
@@ -1342,6 +1457,8 @@ class HOCONBackend(Backend):
 
     @classmethod
     def check_available(cls) -> None:
+        """Raise :class:`BackendError` naming the ``hyera[hocon]`` extra
+        when ``pyhocon`` is not importable."""
         if not has_hocon():
             raise BackendError(cls._MISSING_DEP_MESSAGE)
 
@@ -1349,7 +1466,13 @@ class HOCONBackend(Backend):
         """Parse HOCON the way Puppet's ``hocon_data`` does: ``include
         file(...)`` really reads the file, ``include url(...)``/
         ``classpath(...)``/``required(...)`` and durations raise/stay text
-        (see the class docstring for the full fidelity rule)."""
+        (see the class docstring for the full fidelity rule).
+
+        :param text: the HOCON text to parse.
+        :returns: the parsed value.
+        :raises BackendError: ``pyhocon`` is missing, or ``text`` is not
+            valid HOCON (or an ``include``/duration form this rule rejects).
+        """
         try:
             from pyhocon import ConfigTree
         except ImportError:
@@ -1399,7 +1522,12 @@ class DotenvBackend(Backend):
 
     def loads(self, text: str) -> _ty.Dict[str, str]:
         """Parse dotenv the way sops's own writer emits it: ``KEY=value``
-        lines, ``#`` comments, blank lines skipped, ``\\n`` unescaped."""
+        lines, ``#`` comments, blank lines skipped, ``\\n`` unescaped.
+
+        :param text: the dotenv text to parse.
+        :returns: the parsed key/value pairs.
+        :raises BackendError: a non-blank, non-comment line has no ``=``.
+        """
         result: _ty.Dict[str, str] = {}
         for lineno, line in enumerate(text.split("\n"), start=1):
             if line == "" or line.startswith("#"):
@@ -1596,6 +1724,11 @@ class SopsBackend(Backend):
     name (a :class:`NamePattern`, added in a later commit alongside the
     ``sops`` alias) forces one regardless of extension via the ``format``
     constructor keyword.
+
+    :param conf: the hierarchy entry's/``defaults``'s own mapping.
+    :param strict: overrides the call-time default.
+    :param format: forces the decrypted plaintext's format
+        (``yaml``/``json``/``ini``/``dotenv``) regardless of extension.
     """
 
     NAMES: _ty.ClassVar[_Names] = {
@@ -1624,7 +1757,17 @@ class SopsBackend(Backend):
     ) -> _ty.Dict[str, _ty.Any]:
         """Decrypt ``path`` with the ``sops`` CLI and parse the plaintext
         in the format sops itself reports for it (or the ``format``
-        constructor keyword, when given)."""
+        constructor keyword, when given).
+
+        :param path: the encrypted file's location.
+        :param options: the hierarchy entry's ``options``.
+        :returns: the decrypted, parsed data.
+        :raises ConfigError: ``path`` has no recognized suffix and no
+            ``format`` was given, or ``options`` carries anything besides
+            ``path``.
+        :raises BackendError: ``sops`` is missing, times out, exits
+            non-zero, or the decrypted plaintext could not be parsed.
+        """
         self._require_path_only(path, options)
         fmt = self._format or _sops_format(str(path))
         if fmt is None:
@@ -1689,6 +1832,8 @@ class EyamlBackend(Backend):
 
     @classmethod
     def check_available(cls) -> None:
+        """Raise :class:`BackendError` naming the ``hyera[eyaml]`` extra
+        when ``cryptography`` is not importable."""
         from ._eyaml import check_cryptography
 
         check_cryptography()
@@ -1701,7 +1846,16 @@ class EyamlBackend(Backend):
     ) -> _ty.Any:
         """Decrypt ``key``'s PKCS7 ``ENC[...]`` value from the ``.eyaml``
         file named by the hierarchy location, matching Puppet's
-        ``eyaml_lookup_key``."""
+        ``eyaml_lookup_key``.
+
+        :param key: the key to decrypt.
+        :param options: the hierarchy entry's ``options`` (``path`` required).
+        :param context: the per-location :class:`LookupContext`.
+        :returns: the decrypted (and interpolated) value.
+        :raises ConfigError: no ``path`` location was declared.
+        :raises BackendError: the private key or ciphertext could not be
+            read, parsed or decrypted.
+        """
         if context.cache_has_key(key):
             return context.cached_value(key)
         if "path" not in options:
@@ -1752,7 +1906,10 @@ class EyamlBackend(Backend):
 
 def default_backends() -> "_ty.List[_ty.Type[Backend]]":
     """The distinct backend classes registered in the ``function``
-    namespace, in definition order (YAML, JSON, HOCON, sops)."""
+    namespace, in definition order (YAML, JSON, HOCON, sops).
+
+    :returns: the default ``Hiera(backends=...)`` allow-list.
+    """
     registry = Backend._REGISTRY.get("function", {"exact": {}, "patterns": []})
     seen = []
     for cls in registry["exact"].values():
@@ -1771,6 +1928,8 @@ def has_hocon() -> bool:
     broken ``pyhocon`` can raise something else entirely, e.g.
     ``AttributeError`` against a too-new stdlib) is caught and logged at
     debug, so a broken optional dependency never breaks every ``Hiera()``.
+
+    :returns: whether ``pyhocon`` is usable.
     """
     try:
         import pyhocon  # noqa: F401

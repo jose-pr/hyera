@@ -373,6 +373,11 @@ if duho is not None:
             return 2
 
         def __call__(self) -> int:
+            """Run the lookup duho parsed into this instance's fields and
+            return the process exit code (see the class docstring).
+
+            :returns: the process exit code.
+            """
             keys = list(self.keys or ()) + list(self._passthrough_ or ())
             merge = _unplaceholder(self.merge)
             knock_out_prefix = _unplaceholder(self.knock_out_prefix)

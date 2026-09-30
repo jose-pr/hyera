@@ -26,7 +26,10 @@ __all__ = ["RubySymbol", "symkeys_to_string", "safe_load"]
 class RubySymbol:
     """A Ruby ``:symbol`` value (``!ruby/sym``/``!ruby/symbol``, or a plain
     ``:name`` scalar). Not a ``str`` subclass -- no string-typed code path
-    should ever accept one by accident."""
+    should ever accept one by accident.
+
+    :param name: the symbol's name, without the leading ``:``.
+    """
 
     __slots__ = ("name",)
 

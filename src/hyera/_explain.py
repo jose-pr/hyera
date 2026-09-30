@@ -105,11 +105,14 @@ class _Node:
         return hash_
 
     def explain(self) -> str:
+        """This node's (and every branch's) text form, as
+        :meth:`dump_on` renders it."""
         parts: _ty.List[str] = []
         self.dump_on(parts, "", "")
         return "".join(parts)
 
     def text(self, text: str) -> None:
+        """Queue one free-text line on this node."""
         if self.texts is None:
             self.texts = []
         self.texts.append(text)
@@ -585,6 +588,8 @@ class Explainer(_Node):
         self.current = node
 
     def pop(self) -> None:
+        """Make the current node's parent current again, undoing the last
+        :meth:`push` (a no-op at the root)."""
         if self.current.parent is not None:
             self.current = self.current.parent
 
@@ -610,14 +615,18 @@ class Explainer(_Node):
         self.current.not_found(key)
 
     def accept_location_not_found(self) -> None:
+        """Record that the current hierarchy location does not exist."""
         self.current.location_not_found()
 
     def accept_module_not_found(self, module_name: str) -> None:
+        """Record that module ``module_name`` does not exist."""
         self.push("module", module_name)
         self.current.module_not_found()
         self.pop()
 
     def accept_module_provider_not_found(self, module_name: str) -> None:
+        """Record that module ``module_name`` has no ``hiera.yaml``
+        provider."""
         self.push("module", module_name)
         self.current.module_provider_not_found()
         self.pop()
@@ -632,6 +641,8 @@ class Explainer(_Node):
         self.current.text(text)
 
     def dump_on(self, parts: _ty.List[str], indent: str, first_indent: str) -> None:
+        """Append every branch's (and this node's own) text form to
+        ``parts``, depth-first."""
         for b in self.branches:
             b.dump_on(parts, indent, first_indent)
         self._dump_texts(parts, indent)
@@ -649,7 +660,12 @@ class ExplainResult:
     """``Hiera.explain(...)``'s return value: the report
     ``puppet lookup --explain``/``--explain-options`` builds, projected the
     same two ways (``--render-as json`` -> :meth:`to_hash`, ``--render-as
-    s`` -> :meth:`text`)."""
+    s`` -> :meth:`text`).
+
+    :param explainer: the recorded explain tree.
+    :param error: the :class:`~hyera.HieraError` the lookup ended with, or
+        ``None`` when a value was found or defaulted to.
+    """
 
     def __init__(
         self, explainer: Explainer, error: _ty.Optional[HieraError] = None
@@ -660,12 +676,19 @@ class ExplainResult:
     def to_hash(self) -> "_ty.Dict[str, _ty.Any]":
         """A deep copy of the explain tree, projected through ``to_hash()``
         -- mutating the returned structure, or a later lookup/explain on the
-        same instance, never changes what an earlier result holds."""
+        same instance, never changes what an earlier result holds.
+
+        :returns: the report as plain ``dict``/``list`` data, Puppet's
+            own keys.
+        """
         return copy.deepcopy(self._explainer.to_hash())
 
     def text(self) -> str:
         """The indented report ``puppet lookup --explain``'s ``s`` render
-        shows: every line ends in ``"\\n"``."""
+        shows: every line ends in ``"\\n"``.
+
+        :returns: the report text.
+        """
         return self._explainer.explain()
 
     def __str__(self) -> str:

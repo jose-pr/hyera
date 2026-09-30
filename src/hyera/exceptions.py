@@ -22,6 +22,10 @@ class HieraError(Exception):
     """Base class for all hiera errors.
 
     ``path``, when known, names the file the problem concerns.
+
+    :param args: the positional arguments ``Exception`` itself takes
+        (usually one message string).
+    :param path: the file this problem concerns, when known.
     """
 
     def __init__(self, *args: object, path: _ty.Optional[str] = None) -> None:
@@ -34,6 +38,12 @@ class ConfigError(HieraError):
 
     ``line``, when known, is the 1-based line in ``.path`` the problem was
     found at (e.g. a malformed hierarchy entry).
+
+    :param args: the positional arguments ``Exception`` itself takes
+        (usually one message string).
+    :param path: the file this problem concerns, when known.
+    :param line: the 1-based line in ``path`` this problem concerns, when
+        known.
     """
 
     def __init__(
@@ -90,6 +100,8 @@ class KeyNotFoundError(HieraLookupError, KeyError):
     Also a :class:`KeyError`, so an existing ``except KeyError`` keeps
     working. ``name`` is the key string, or list of key strings, that was
     tried; a list of one uses the singular message form.
+
+    :param name: the key(s) that were tried.
     """
 
     def __init__(self, name: _ty.Union[str, _ty.Sequence[str]]) -> None:

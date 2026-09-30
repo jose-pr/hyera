@@ -303,6 +303,20 @@ class Hiera:
         ``/etc/puppetlabs/code`` elsewhere) — never the per-user
         ``~/.puppetlabs/etc/code`` default, and never discovered from
         ``puppet.conf``.
+    :param cache_size: how many distinct scope-dependent entries each of
+        the location/``lookup_options``/glob caches keeps before evicting
+        the least recently used; ``None`` means unbounded. Must be a
+        non-negative ``int``, else ``TypeError``/``ValueError``.
+    :param revalidate: whether every lookup re-checks the data files and
+        glob listings it uses for changes since they were last read.
+        ``False`` keeps everything as first read until :meth:`clear_cache`.
+        Must be a ``bool``, else ``TypeError``.
+    :raises ConfigError: for a missing, unreadable or invalid
+        ``hiera.yaml``, or an environment named by ``scope.environment``
+        that ``environmentpath`` cannot find.
+    :raises TypeError: for a ``scope``/``cache_size``/``revalidate`` of
+        the wrong type.
+    :raises ValueError: for a negative ``cache_size``.
     """
 
     def __init__(
@@ -527,7 +541,15 @@ class Hiera:
 
     def format(self, text: str) -> Any:
         """Interpolate ``text`` against this instance's bound scope, exactly
-        as a data value is interpolated (Puppet's ``Context#interpolate``)."""
+        as a data value is interpolated (Puppet's ``Context#interpolate``).
+
+        :param text: the string to interpolate.
+        :returns: the interpolated result (a ``str``, or another Puppet
+            Data value when ``text`` is a single, un-embedded ``%{...}``).
+        :raises TypeError: if ``text`` is not a ``str``.
+        :raises InterpolationError: if a ``%{...}`` reference or function
+            call could not be resolved.
+        """
         return self._format(text, self.scope)
 
     def _format(self, text, scope: Scope):
@@ -545,7 +567,8 @@ class Hiera:
     def _load_config(self, backends, base_path=None):
         """Load and validate the base configuration, building hierarchy state.
 
-        Raises :class:`ConfigError` on any invalid/missing configuration.
+        Raises :class:`ConfigError` for a missing, unreadable or invalid
+        ``hiera.yaml``.
         """
         #: Allow-list of backend classes a hierarchy level's ``data_hash``
         #: may resolve to (the Backend registry, looked up by name in
@@ -1461,6 +1484,15 @@ class Hiera:
         every method -- ``lookup``/``()``/``[]``/``in``, ``sources()``,
         ``format()`` -- reads the derived scope instead of ``self.scope``.
         Deriving from a view derives from *its* scope, not the original.
+
+        :param variables: node parameters, shallow-updating this scope's own.
+        :param facts: facts, shallow-updating this scope's own.
+        :param trusted: replaces this scope's trusted data when given.
+        :param server_facts: server facts, shallow-updating this scope's own.
+        :param environment: replaces this scope's ``$environment`` when given.
+        :param strict: replaces this scope's strictness when given.
+        :param node_name: replaces this scope's node name when given.
+        :returns: the new, bound :class:`Hiera` view.
         """
         return self._view(
             self.scope.derive(
@@ -1502,6 +1534,9 @@ class Hiera:
         candidate and re-lists any glob whose directory changed; with
         ``revalidate=False`` it reflects the tree as first seen for this
         scope's referenced-variable values, until :meth:`clear_cache`.
+
+        :returns: the existing main-hierarchy ``data_hash`` file paths, in
+            search order.
         """
         return self._sources(self.scope)
 
@@ -1938,6 +1973,18 @@ class Hiera:
         ``convert_to``) -> (next name) -> ``default_values_hash`` (every
         name again) -> ``block`` -> ``default_value`` -> ``KeyNotFoundError``
         (also a ``KeyError``), naming every name tried.
+
+        :returns: the found (or defaulted) value.
+        :raises KeyNotFoundError: no value was found and no default was given.
+        :raises HieraLookupError: a ``value_type``/``convert_to`` assertion
+            failed, or resolving the key otherwise failed.
+        :raises InterpolationError: a ``%{...}`` reference or function call
+            in the found data could not be resolved.
+        :raises MergeError: an unknown or invalid merge strategy was named.
+        :raises BackendError: a data file the lookup needed could not be
+            read or parsed.
+        :raises TypeError: the arguments do not match one of the five call
+            forms above.
         """
         call = parse_call(
             name, value_type, merge, default_value, default_values_hash, override, block
@@ -1956,14 +2003,24 @@ class Hiera:
     def __getitem__(self, item: _ty.Any) -> _ty.Any:
         """``h[key]``/``h[key, *args]``/``h[key, {options}]``: the same
         five call forms as :meth:`lookup`, unpacking a tuple subscript into
-        positional arguments."""
+        positional arguments.
+
+        :param item: a single argument (the ``name``), or a tuple of the
+            positional/dict arguments :meth:`lookup` accepts.
+        :returns: the found (or defaulted) value.
+        :raises KeyNotFoundError: no value was found and no default was given.
+        """
         if isinstance(item, tuple):
             return self.lookup(*item)
         return self.lookup(item)
 
     def __contains__(self, name: _ty.Any) -> bool:
         """``name in h``: whether :meth:`lookup` finds a value for
-        ``name`` (any form :meth:`lookup` accepts)."""
+        ``name`` (any form :meth:`lookup` accepts).
+
+        :param name: the same ``name`` argument :meth:`lookup` accepts.
+        :returns: ``True`` if a value was found, ``False`` on a miss.
+        """
         try:
             self.lookup(name)
             return True
@@ -1999,6 +2056,21 @@ class Hiera:
         found instead. ``value_type``, when given, asserts the final result
         with the subject "Found value". Needs at least one key, the first a
         ``str``, else ``TypeError``.
+
+        :param keys: the root key, then each key/index to dig into the
+            result -- used exactly as given, never dotted-string parsed.
+        :param value_type: a Puppet type expression asserted against the
+            final result.
+        :param merge: the root lookup's merge strategy.
+        :param default_values_hash: consulted for the root key only after
+            the hierarchy itself missed it.
+        :param override: consulted for the root key before the hierarchy.
+        :returns: the dug-out value, or ``None`` on a root miss.
+        :raises TypeError: fewer than one key was given, or the first is
+            not a ``str``.
+        :raises HieraLookupError: a key after the first does not fit the
+            value found there (a non-``int`` against a ``list``, or any key
+            against a non-collection).
         """
         if not keys or not isinstance(keys[0], str):
             raise TypeError("dig() needs at least one key, the first a str")
@@ -2046,6 +2118,23 @@ class Hiera:
         given, asserts the final result with the subject that says where it
         came from ("Found value", "Default value" or "Value returned from
         block").
+
+        :param dotted: a Puppet dotted-navigation string (``"a.b.0"``;
+            quoted segments, numeric segments index arrays unless quoted).
+        :param default_value: returned on a root miss or a found ``None``.
+        :param block: called with the navigation error when a later
+            segment cannot be dug out; its return value is used instead of
+            raising.
+        :param value_type: a Puppet type expression asserted against the
+            final result.
+        :param merge: the root lookup's merge strategy.
+        :param default_values_hash: consulted for the root key only after
+            the hierarchy itself missed it.
+        :param override: consulted for the root key before the hierarchy.
+        :returns: the dug-out value, or ``default_value``.
+        :raises TypeError: ``dotted`` is not a ``str``.
+        :raises HieraLookupError: ``dotted`` is empty or malformed, or a
+            navigation error was reached with no ``block``.
         """
         if not isinstance(dotted, str):
             raise TypeError(
@@ -2104,6 +2193,18 @@ class Hiera:
         ``default_value`` regardless of the bound scope's ``strict`` --
         Puppet's own ``catch(:undefined_variable)``, never a raise for that
         reason alone. The rest navigates exactly as `.get()` does.
+
+        :param dotted: a top-scope variable name, optionally followed by a
+            Puppet dotted-navigation path into its value.
+        :param default_value: returned when the variable is undefined, or
+            a later segment cannot be dug out with no ``block``.
+        :param block: called with the navigation error when a segment
+            after the variable cannot be dug out; its return value is used
+            instead of raising.
+        :returns: the dug-out value, or ``default_value``.
+        :raises HieraLookupError: ``dotted`` does not start with a valid
+            variable name, or a navigation error was reached with no
+            ``block``.
         """
         return _data_functions.getvar(self.scope, dotted, default_value, block)
 
@@ -2145,6 +2246,24 @@ class Hiera:
         always raises, even where ``puppet lookup --explain`` would print
         it as its own last line -- our configs are read before the lookup
         starts, so there is never one to report mid-lookup.
+
+        :param name: as :meth:`lookup`.
+        :param value_type: as :meth:`lookup`.
+        :param merge: as :meth:`lookup`.
+        :param default_value: as :meth:`lookup`.
+        :param default_values_hash: as :meth:`lookup`.
+        :param override: as :meth:`lookup`.
+        :param block: as :meth:`lookup`.
+        :param explain_options: report only how ``lookup_options`` was
+            assembled, instead of the full search.
+        :returns: the explain report, alongside the outcome.
+        :raises HieraLookupError: a ``value_type``/``convert_to`` assertion
+            failed, or resolving the key otherwise failed outside the
+            global/environment/module data itself.
+        :raises ConfigError: the base configuration is invalid (never
+            reachable mid-lookup, but kept for parity with ``lookup()``).
+        :raises TypeError: the arguments do not match one of the five call
+            forms `.lookup()` accepts.
         """
         call = parse_call(
             name, value_type, merge, default_value, default_values_hash, override, block
