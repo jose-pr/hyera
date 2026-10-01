@@ -64,6 +64,25 @@ def test_glob_level_with_missing_datadir(make_tree):
     assert h.lookup("k") == "common"
 
 
+def test_glob_mid_wildcard_matching_a_file_is_not_descended(make_tree):
+    # A non-final "*" segment matches any name, directory or not (only an
+    # os.scandir attempt right after actually tells the two apart) -- a
+    # plain file sitting beside a real subdirectory at that position must
+    # not stop the walk from finding a later match through the real
+    # subdirectory; recursing "into" the file fails harmlessly (caught the
+    # same way an unreadable directory already is), unlike a *final*
+    # segment, where the same file would be a legitimate match.
+    root = make_tree(
+        {"hierarchy": [{"name": "mods", "glob": "mods/*/*.yaml"}]},
+        files={
+            "data/mods/sub/x.yaml": "k: v\n",
+            "data/mods/notadir.yaml": "not actually a directory\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v"
+
+
 def _first_hierarchy_yaml_block(readme_text: str) -> str:
     blocks = re.findall(r"```yaml\n(.*?)\n```", readme_text, flags=re.DOTALL)
     for block in blocks:
