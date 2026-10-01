@@ -290,10 +290,37 @@ def _oid(value: bytes) -> str:
     return ".".join(str(p) for p in parts)
 
 
-def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
+def _load_private_key(key_pem: bytes):
+    """Parse ``key_pem`` into a usable private key object, matching Ruby's
+    ``OpenSSL::PKey::RSA.new(private_key_pem)`` -- the step hiera-eyaml's
+    own ``Pkcs7.decrypt`` performs *before* it ever looks at the
+    ciphertext (``pkcs7.rb``'s ``decrypt`` loads and parses the key, then
+    parses the PKCS7 DER structure, in that order). Called once per
+    :func:`decrypt_string` call (not once per ``ENC[...]`` token the way
+    Ruby's own per-token ``Pkcs7.decrypt`` re-parses it) and the result
+    reused for every token in that value; the key can change between
+    separate :func:`decrypt_string` calls, so nothing here is cached past
+    one call.
+
+    :raises BackendError: ``key_pem`` is not a parseable, unencrypted
+        private key. The underlying `cryptography` exception text is kept
+        rather than matched to OpenSSL's own internal message (Ruby's
+        "Neither PUB key nor PRIV key" and similar): `cryptography` does
+        not re-expose OpenSSL's raw error strings, so no Python message
+        here will ever equal Ruby's byte for byte.
+    """
+    from cryptography.hazmat.primitives import serialization
+
+    try:
+        return serialization.load_pem_private_key(key_pem, password=None)
+    except Exception as e:
+        raise BackendError("Could not read the private key: {}".format(e)) from None
+
+
+def _pkcs7_decrypt(der: bytes, private_key) -> bytes:
     """Decrypt a PKCS7 ``EnvelopedData`` blob with only the recipient's
-    private key (no certificate) -- eyaml's own encrypt-to-one-recipient
-    shape. Every structural problem raises
+    already-loaded private key (no certificate) -- eyaml's own
+    encrypt-to-one-recipient shape. Every structural problem raises
     ``BackendError("Could not parse the PKCS7: <detail>")``; a key or
     cipher problem raises ``BackendError("Could not decrypt the PKCS7:
     <detail>")`` or ``BackendError("bad decrypt")`` for anything that is,
@@ -302,22 +329,22 @@ def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
     length mismatch versus a padding failure versus an implicit-rejection
     "succeeded with garbage".
 
-    On every exit path, ``key_pem``/``private_key``/``key``/``padded`` are
-    overwritten before this function returns or its exception leaves the
-    frame: a ``raise ... from None`` inside an ``except`` block still sets
-    ``__context__`` to the exception being handled (``from None`` only
-    suppresses it in *printed* tracebacks), and that inner exception's own
-    traceback frame is this same frame -- so without this, the private key
-    PEM and, on an unpadding failure, the real plaintext of every AES
-    block before the tampered one stay reachable from the exception a
-    caller sees, through ``__context__.__traceback__``.
+    ``private_key`` is owned by the caller (:func:`decrypt_string` reuses
+    it across every token in one value) and is never cleared here -- only
+    this call's own ``key``/``padded`` locals are. On every exit path
+    those are overwritten before this function returns or its exception
+    leaves the frame: a ``raise ... from None`` inside an ``except`` block
+    still sets ``__context__`` to the exception being handled (``from
+    None`` only suppresses it in *printed* tracebacks), and that inner
+    exception's own traceback frame is this same frame -- so without this,
+    the real plaintext of every AES block before a tampered one (on an
+    unpadding failure) would stay reachable from the exception a caller
+    sees, through ``__context__.__traceback__``.
     """
     from cryptography.hazmat.primitives import padding as sympad
-    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import padding
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-    private_key = None
     key = None
     padded = b""
     try:
@@ -418,11 +445,6 @@ def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
             raise BackendError("Could not parse the PKCS7: {}".format(e)) from None
 
         try:
-            private_key = serialization.load_pem_private_key(key_pem, password=None)
-        except Exception as e:
-            raise BackendError("Could not read the private key: {}".format(e)) from None
-
-        try:
             key = private_key.decrypt(enc_key, padding.PKCS1v15())
         except Exception:
             raise BackendError("bad decrypt") from None
@@ -441,11 +463,10 @@ def _pkcs7_decrypt(der: bytes, key_pem: bytes) -> bytes:
             raise BackendError("bad decrypt") from None
         return plaintext
     finally:
-        # Scrub every frame local that ever held the private key PEM or
-        # decrypted bytes, on every exit path (return or raise) -- see the
-        # docstring above for why `from None` alone does not do this.
-        key_pem = b""
-        private_key = None
+        # Scrub this call's own locals that ever held decrypted bytes, on
+        # every exit path (return or raise) -- see the docstring above for
+        # why `from None` alone does not do this. `private_key` is the
+        # caller's, reused across tokens, and is never touched here.
         key = None
         padded = b""
 
@@ -472,36 +493,62 @@ def decrypt_string(data: str, options: dict, key, path) -> str:
     (Puppet's own ``rescue StandardError`` misses ``LoadError`` too) --
     with a hint naming this project's own PKCS7-only support. Every other
     failure is wrapped as ``BackendError("hiera-eyaml backend error
-    decrypting <token> when looking up <key> in <path>. Error was
-    <message>", path=path)`` and chomped once at the end (never per
-    token), matching hiera-eyaml's own single ``.chomp`` on the whole
-    joined result.
+    decrypting <data> when looking up <key> in <path>. Error was
+    <message>", path=path)`` -- ``<data>`` is the whole stored value, not
+    just the one token that failed, matching hiera-eyaml's own
+    ``eyaml_lookup_key.rb``, which wraps a single ``rescue`` around parsing
+    and decrypting the entire value at once and interpolates its own
+    original (pre-decrypt) argument into the message. Chomped once at the
+    end (never per token), matching hiera-eyaml's own single ``.chomp`` on
+    the whole joined result.
+
+    The private key is loaded and parsed at most once per call (not once
+    per token, the way hiera-eyaml's own per-token ``Pkcs7.decrypt``
+    re-parses it every time) and that parse happens before any ciphertext
+    token is ever decoded or parsed -- matching Ruby's own order
+    (``pkcs7.rb``'s ``decrypt`` loads and validates the key before it ever
+    touches the PKCS7 DER structure), so a bad key is reported as a key
+    problem even when the stored ciphertext is also malformed.
     """
     if not _has_encrypted_token(data):
         return data
 
+    #: The parsed private key, loaded at most once for this call and reused
+    #: across every token in `data` -- a list (not a plain variable) so the
+    #: nested closures below can both read and populate it. Never cached
+    #: past this one call: the key can change between separate
+    #: `decrypt_string` calls.
+    _key_box: "_ty.List[_ty.Any]" = []
+
+    def get_private_key():
+        if not _key_box:
+            key_pem = b""
+            try:
+                key_pem = _private_key_pem(options)
+                _key_box.append(_load_private_key(key_pem))
+            finally:
+                key_pem = b""
+        return _key_box[0]
+
     def decrypt_one(scheme: str, body: str) -> str:
         """Everything that *is* wrapped as a decrypt-error on failure.
 
-        ``key_pem``/``plaintext`` are scrubbed in ``finally`` on every exit
-        path, for the same reason ``_pkcs7_decrypt`` scrubs its own copies
-        (see that function's docstring): this frame is on the traceback of
-        whatever it raises, and a chained ``__context__`` keeps that
-        traceback -- and this frame's locals -- reachable even past a
-        ``from None``.
+        ``plaintext`` is scrubbed in ``finally`` on every exit path, for
+        the same reason ``_pkcs7_decrypt`` scrubs its own copies (see that
+        function's docstring): this frame is on the traceback of whatever
+        it raises, and a chained ``__context__`` keeps that traceback --
+        and this frame's locals -- reachable even past a ``from None``.
         """
-        key_pem = b""
         plaintext = b""
         try:
-            key_pem = _private_key_pem(options)
+            private_key = get_private_key()
             der = _decode64(body)
-            plaintext = _pkcs7_decrypt(der, key_pem)
+            plaintext = _pkcs7_decrypt(der, private_key)
             try:
                 return plaintext.decode("utf-8")
             except UnicodeDecodeError:
                 raise BackendError("invalid byte sequence in UTF-8") from None
         finally:
-            key_pem = b""
             plaintext = b""
 
     def replace(match: "re.Match") -> str:
@@ -512,7 +559,7 @@ def decrypt_string(data: str, options: dict, key, path) -> str:
             raise BackendError(
                 "hiera-eyaml backend error decrypting {} when looking up {} "
                 "in {}. Error was Could not parse the PKCS7: malformed "
-                "token".format(token, key, path),
+                "token".format(data, key, path),
                 path=str(path),
             )
         raw_scheme = clean.group(1)
@@ -532,12 +579,15 @@ def decrypt_string(data: str, options: dict, key, path) -> str:
         except BackendError as e:
             raise BackendError(
                 "hiera-eyaml backend error decrypting {} when looking up {} "
-                "in {}. Error was {}".format(token, key, path, e),
+                "in {}. Error was {}".format(data, key, path, e),
                 path=str(path),
             ) from None
 
-    result = _TOKEN_RE.sub(replace, data)
-    return _chomp(result)
+    try:
+        result = _TOKEN_RE.sub(replace, data)
+        return _chomp(result)
+    finally:
+        _key_box.clear()
 
 
 class EyamlBackend(Backend):

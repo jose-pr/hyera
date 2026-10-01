@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "6a7b53f66e38340ce1df1ffcb4cc977999c9d19949158cbd8689768c193a6f13",
+  "results": {
+    "corrupt": {
+      "argv": [
+        "--strict",
+        "warning",
+        "corrupt"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'corrupt' failed: hiera-eyaml backend error decrypting ENC[PKCS7,aGVsbG8=] when looking up corrupt in <case>/data/secrets.eyaml. Error was Neither PUB key nor PRIV key"
+    }
+  }
+}

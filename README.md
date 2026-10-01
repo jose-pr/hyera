@@ -773,6 +773,13 @@ for.
   "cannot load such file" error real Puppet gives without that plugin's
   gem installed -- this project never adds one, so there is no way to opt
   into GPG support here. (id: `eyaml-pkcs7-only`)
+- **A malformed PKCS7 private key reports hyera's own message, not
+  OpenSSL's.** Both hyera and Puppet check the configured private key
+  before ever looking at the stored ciphertext, so a bad key is always
+  reported as a key problem; Puppet's text is OpenSSL's own ("Neither PUB
+  key nor PRIV key" and similar), which the `cryptography` package does
+  not re-expose, so hyera reports "Could not read the private key: ..."
+  instead. There is no opt-in. (id: `eyaml-key-parse-error-text`)
 - **A deep-merge `knockout_prefix` that Python's `re` module cannot compile
   raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
   about a redundant nested repeat operator) and uses it as a regex; choose

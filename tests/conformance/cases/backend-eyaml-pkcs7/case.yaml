@@ -32,6 +32,9 @@ queries:
   - key: corrupt
     error_class: BackendError
     error_match: "hiera-eyaml backend error decrypting ENC\\[PKCS7,aGVsbG8=\\] when looking up corrupt in \\S*secrets\\.eyaml\\. Error was Could not parse the PKCS7"
+  - key: corrupt_prefixed
+    error_class: BackendError
+    error_match: "hiera-eyaml backend error decrypting prefix ENC\\[PKCS7,aGVsbG8=\\] suffix when looking up corrupt_prefixed in \\S*secrets\\.eyaml\\. Error was Could not parse the PKCS7"
   - key: twoline
     error_class: BackendError
     error_match: "decrypting ENC\\[PKCS7,abc def\\] when looking up twoline in \\S*secrets\\.eyaml\\. Error was Could not parse the PKCS7"

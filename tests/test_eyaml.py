@@ -22,6 +22,7 @@ from hyera import BackendError, EyamlBackend
 from hyera.backends._eyaml import (
     _decode64,
     _has_encrypted_token,
+    _load_private_key,
     _pkcs7_decrypt,
     decrypt_string,
 )
@@ -86,9 +87,12 @@ def public_key():
 
 
 @pytest.fixture(scope="module")
-def key_pem():
+def private_key():
+    # `_pkcs7_decrypt` takes an already-loaded key object (`decrypt_string`
+    # parses it once per call and reuses it across every token), not raw
+    # PEM bytes -- the tests that exercise it directly need the same shape.
     with open(PRIVATE_KEY_PATH, "rb") as fh:
-        return fh.read()
+        return _load_private_key(fh.read())
 
 
 def _envelope(
@@ -341,6 +345,87 @@ def test_wrong_key_is_bad_decrypt(public_key, tmp_path):
         _decrypt(_token(der), {"pkcs7_private_key": str(other_path)})
 
 
+# --- Puppet parity: whole-value error text, key-before-ciphertext order,
+# and the private key loaded at most once per decrypt_string call ----------
+
+
+def test_decrypt_error_embeds_whole_value_not_just_the_token():
+    # hiera-eyaml's own eyaml_lookup_key.rb wraps a single rescue around
+    # parsing *and* decrypting the entire stored value, and interpolates
+    # its own pre-decrypt argument (the whole value) into the message --
+    # never just the one token that failed, even when surrounded by other
+    # text. Confirmed against the WSL hiera-eyaml 5.0.1 oracle (the
+    # backend-eyaml-pkcs7 conformance case's own corrupt_prefixed query).
+    data = "prefix ENC[PKCS7,aGVsbG8=] suffix"
+    with pytest.raises(BackendError) as exc:
+        _decrypt(data)
+    message = str(exc.value)
+    assert "decrypting {} when looking up".format(data) in message
+    assert "decrypting ENC[PKCS7,aGVsbG8=] when looking up" not in message
+
+
+def test_bad_key_is_reported_before_the_ciphertext_is_ever_parsed(tmp_path):
+    # Ruby's own Pkcs7.decrypt loads and parses the private key before it
+    # ever touches the ciphertext (pkcs7.rb's `decrypt`): a malformed key
+    # and a malformed ciphertext together must report the key problem,
+    # never "Could not parse the PKCS7" -- confirmed against the WSL
+    # hiera-eyaml 5.0.1 oracle (Puppet's own text there is OpenSSL's
+    # "Neither PUB key nor PRIV key", not reproduced here; see the
+    # backend-eyaml-pkcs7-bad-key conformance case for the precedent and
+    # why the literal OpenSSL text is not matched).
+    bad_key_path = tmp_path / "garbage.pem"
+    bad_key_path.write_text("this is not a pem key at all\n", encoding="utf-8")
+    with pytest.raises(BackendError, match="Could not read the private key") as exc:
+        _decrypt("ENC[PKCS7,aGVsbG8=]", {"pkcs7_private_key": str(bad_key_path)})
+    assert "Could not parse the PKCS7" not in str(exc.value)
+
+
+def test_private_key_parsed_once_per_decrypt_string_call(public_key, monkeypatch):
+    # hiera-eyaml's own Pkcs7.decrypt re-parses the key fresh for every
+    # single ENC[...] token (~50x the Python `cryptography` cost per parse,
+    # measured separately); this reuses one parse across every token in the
+    # same value instead, with no behavior change (a value's tokens all
+    # share the same configured key within one call).
+    import hyera.backends._eyaml as eyaml_module
+
+    calls = []
+    real_load = eyaml_module._load_private_key
+
+    def counting_load(key_pem):
+        calls.append(key_pem)
+        return real_load(key_pem)
+
+    monkeypatch.setattr(eyaml_module, "_load_private_key", counting_load)
+
+    tokens = [_token(_envelope(v, public_key)) for v in (b"a", b"b", b"c")]
+    data = " ".join(tokens)
+    result = _decrypt(data)
+    assert result == "a b c"
+    assert len(calls) == 1
+
+
+def test_private_key_not_cached_across_decrypt_string_calls(public_key, monkeypatch):
+    # The per-call reuse above must never become a cross-call cache: the
+    # configured key can change between separate lookups (e.g. a
+    # pkcs7_private_key_env_var whose value changes), so a second,
+    # independent decrypt_string call parses it again.
+    import hyera.backends._eyaml as eyaml_module
+
+    calls = []
+    real_load = eyaml_module._load_private_key
+
+    def counting_load(key_pem):
+        calls.append(key_pem)
+        return real_load(key_pem)
+
+    monkeypatch.setattr(eyaml_module, "_load_private_key", counting_load)
+
+    der = _envelope(b"once-per-call", public_key)
+    assert _decrypt(_token(der)) == "once-per-call"
+    assert _decrypt(_token(der)) == "once-per-call"
+    assert len(calls) == 2
+
+
 # --- malformed blobs: never anything but BackendError ----------------------
 
 
@@ -436,49 +521,49 @@ def test_malformed_never_raises_index_or_recursion_error(public_key):
 # resulting `BackendError` message pins down exactly which check fired.
 
 
-def test_tag_with_no_length_byte(key_pem):
+def test_tag_with_no_length_byte(private_key):
     # A single tag byte with nothing after it: `_read_length` has no byte
     # left to read at all.
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: truncated length"
     ):
-        _pkcs7_decrypt(bytes([0x30]), key_pem)
+        _pkcs7_decrypt(bytes([0x30]), private_key)
 
 
-def test_long_form_length_missing_bytes(key_pem):
+def test_long_form_length_missing_bytes(private_key):
     # 0x82 says two more length octets follow; only one is actually present.
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: truncated length"
     ):
-        _pkcs7_decrypt(bytes([0x30, 0x82, 0x01]), key_pem)
+        _pkcs7_decrypt(bytes([0x30, 0x82, 0x01]), private_key)
 
 
-def test_empty_der_is_truncated_tag(key_pem):
+def test_empty_der_is_truncated_tag(private_key):
     with pytest.raises(BackendError, match="Could not parse the PKCS7: truncated tag"):
-        _pkcs7_decrypt(b"", key_pem)
+        _pkcs7_decrypt(b"", private_key)
 
 
-def test_indefinite_length_on_primitive_tag_rejected(key_pem):
+def test_indefinite_length_on_primitive_tag_rejected(private_key):
     # 0x04 (OCTET STRING) is primitive; an indefinite-length primitive is
     # illegal in BER.
     with pytest.raises(
         BackendError,
         match="Could not parse the PKCS7: indefinite length on a primitive value",
     ):
-        _pkcs7_decrypt(bytes([0x04, 0x80]), key_pem)
+        _pkcs7_decrypt(bytes([0x04, 0x80]), private_key)
 
 
-def test_indefinite_length_content_runs_out_before_terminator(key_pem):
+def test_indefinite_length_content_runs_out_before_terminator(private_key):
     # A constructed, indefinite-length SEQUENCE containing one NULL child
     # and then nothing -- no `00 00` End-of-Contents ever arrives.
     with pytest.raises(
         BackendError,
         match="Could not parse the PKCS7: truncated indefinite-length content",
     ):
-        _pkcs7_decrypt(bytes([0x30, 0x80, 0x05, 0x00]), key_pem)
+        _pkcs7_decrypt(bytes([0x30, 0x80, 0x05, 0x00]), private_key)
 
 
-def test_deeply_nested_indefinite_length_rejected(key_pem):
+def test_deeply_nested_indefinite_length_rejected(private_key):
     # Only nested indefinite-length constructed values recurse through
     # `_read_tlv` itself (a definite-length SEQUENCE's children are walked
     # by `_children` at a fixed, hand-picked depth instead), so this needs
@@ -490,44 +575,44 @@ def test_deeply_nested_indefinite_length_rejected(key_pem):
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: nesting too deep"
     ):
-        _pkcs7_decrypt(node, key_pem)
+        _pkcs7_decrypt(node, private_key)
 
 
-def test_empty_object_identifier_rejected(key_pem):
+def test_empty_object_identifier_rejected(private_key):
     der = _tlv(0x30, _tlv(0x06, b"") + _tlv(0xA0, b""))
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: empty OBJECT IDENTIFIER"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_content_info_with_single_child_rejected(key_pem):
+def test_content_info_with_single_child_rejected(private_key):
     der = _tlv(0x30, _oid("1.2.840.113549.1.7.3"))
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed ContentInfo"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_enveloped_data_with_too_few_children_rejected(key_pem):
+def test_enveloped_data_with_too_few_children_rejected(private_key):
     # Just CMSVersion: recipientInfos and encryptedContentInfo are missing.
     der = _wrap_ci(_tlv(0x02, b"\x00"))
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed EnvelopedData"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_empty_recipient_infos_rejected(key_pem):
+def test_empty_recipient_infos_rejected(private_key):
     der = _wrap_ci(_tlv(0x02, b"\x00") + _tlv(0x31, b"") + _tlv(0x30, b""))
     with pytest.raises(
         BackendError,
         match="Could not parse the PKCS7: no recipient in recipientInfos",
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_primitive_recipient_info_rejected(key_pem):
+def test_primitive_recipient_info_rejected(private_key):
     der = _wrap_ci(
         _tlv(0x02, b"\x00")
         + _tlv(0x31, _tlv(0x02, b"\x01"))  # a primitive INTEGER, not constructed
@@ -536,20 +621,20 @@ def test_primitive_recipient_info_rejected(key_pem):
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed RecipientInfo"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_key_trans_recipient_info_with_too_few_children_rejected(key_pem):
+def test_key_trans_recipient_info_with_too_few_children_rejected(private_key):
     ktri = _tlv(0x30, _tlv(0x02, b"\x00") + _tlv(0x02, b"\x01"))
     der = _wrap_ci(_tlv(0x02, b"\x00") + _tlv(0x31, ktri) + _tlv(0x30, b""))
     with pytest.raises(
         BackendError,
         match="Could not parse the PKCS7: malformed KeyTransRecipientInfo",
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_originator_info_present_but_no_encrypted_content_info(public_key, key_pem):
+def test_originator_info_present_but_no_encrypted_content_info(public_key, private_key):
     # originatorInfo present, then only recipientInfos -- nothing left over
     # for encryptedContentInfo.
     ktri = _valid_ktri(public_key)
@@ -557,20 +642,20 @@ def test_originator_info_present_but_no_encrypted_content_info(public_key, key_p
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed EnvelopedData"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_primitive_encrypted_content_info_rejected(public_key, key_pem):
+def test_primitive_encrypted_content_info_rejected(public_key, private_key):
     ktri = _valid_ktri(public_key)
     der = _wrap_ci(_tlv(0x02, b"\x00") + _tlv(0x31, ktri) + _tlv(0x04, b""))
     with pytest.raises(
         BackendError,
         match="Could not parse the PKCS7: malformed EncryptedContentInfo",
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_encrypted_content_info_with_too_few_children_rejected(public_key, key_pem):
+def test_encrypted_content_info_with_too_few_children_rejected(public_key, private_key):
     ktri = _valid_ktri(public_key)
     eci = _tlv(0x30, _oid("1.2.840.113549.1.7.1"))  # contentType only
     der = _wrap_ci(_tlv(0x02, b"\x00") + _tlv(0x31, ktri) + eci)
@@ -578,10 +663,10 @@ def test_encrypted_content_info_with_too_few_children_rejected(public_key, key_p
         BackendError,
         match="Could not parse the PKCS7: malformed EncryptedContentInfo",
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_empty_content_encryption_algorithm_rejected(public_key, key_pem):
+def test_empty_content_encryption_algorithm_rejected(public_key, private_key):
     ktri = _valid_ktri(public_key)
     eci = _tlv(
         0x30,
@@ -592,10 +677,10 @@ def test_empty_content_encryption_algorithm_rejected(public_key, key_pem):
         BackendError,
         match="Could not parse the PKCS7: malformed contentEncryptionAlgorithm",
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
-def test_wrong_iv_length_rejected(public_key, key_pem):
+def test_wrong_iv_length_rejected(public_key, private_key):
     ktri = _valid_ktri(public_key)
     content_alg = _tlv(0x30, _oid(_AES_OIDS[256]) + _tlv(0x04, b"\x01\x02\x03"))
     eci = _tlv(
@@ -606,7 +691,7 @@ def test_wrong_iv_length_rejected(public_key, key_pem):
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed AES-CBC IV"
     ):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
 
 
 # --- plaintext never leaks in errors ---------------------------------------
@@ -737,14 +822,12 @@ def test_has_encrypted_token_matches_original_regex_on_random_strings():
 # quadratic in the OID's byte length; `_oid` now caps content length.
 
 
-def test_oid_length_is_bounded():
-    with open(PRIVATE_KEY_PATH, "rb") as fh:
-        key_pem = fh.read()
+def test_oid_length_is_bounded(private_key):
     huge_oid = b"\x2a" + b"\xff" * 60000 + b"\x01"
     der = _tlv(0x30, _oid_bytes_raw(huge_oid) + _tlv(0xA0, b""))
     t0 = time.perf_counter()
     with pytest.raises(BackendError, match="Could not parse the PKCS7"):
-        _pkcs7_decrypt(der, key_pem)
+        _pkcs7_decrypt(der, private_key)
     assert time.perf_counter() - t0 < 1.0
 
 
@@ -893,7 +976,7 @@ def test_no_secrets_reachable_via_context_after_wrong_key(public_key, tmp_path):
     assert hits == []
 
 
-def test_no_secrets_reachable_via_context_after_bad_padding(public_key):
+def test_no_secrets_reachable_via_context_after_bad_padding(public_key, private_key):
     base_der = bytearray(_envelope(b"x" * 64, public_key))
     with open(PRIVATE_KEY_PATH, "rb") as fh:
         key_pem = fh.read()
@@ -913,7 +996,7 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key):
         der = bytearray(base_der)
         der[-1] ^= flip
         try:
-            _pkcs7_decrypt(bytes(der), key_pem)
+            _pkcs7_decrypt(bytes(der), private_key)
         except BackendError as e:
             if "bad decrypt" in str(e):
                 break

@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "8a56a2d7d51a0ef28407b864020ec58d030c3ac73a9a695f30aeae6d5a43c52e",
+  "inputs_sha256": "165b369f7a81139abd4ab47c658540186660e69a258389b607c2d041a620fd50",
   "results": {
     "plain": {
       "argv": [
@@ -194,6 +194,15 @@
       ],
       "status": "error",
       "message": "Lookup of key 'corrupt' failed: hiera-eyaml backend error decrypting ENC[PKCS7,aGVsbG8=] when looking up corrupt in <case>/data/secrets.eyaml. Error was Could not parse the PKCS7: no start line (Expecting: PKCS7)"
+    },
+    "corrupt_prefixed": {
+      "argv": [
+        "--strict",
+        "warning",
+        "corrupt_prefixed"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'corrupt_prefixed' failed: hiera-eyaml backend error decrypting prefix ENC[PKCS7,aGVsbG8=] suffix when looking up corrupt_prefixed in <case>/data/secrets.eyaml. Error was Could not parse the PKCS7: no start line (Expecting: PKCS7)"
     },
     "twoline": {
       "argv": [

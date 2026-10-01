@@ -349,6 +349,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   own message, only once the function is actually invoked for a location
   that exists -- matching Puppet, which degrades gracefully and still
   resolves every key the other, correctly-configured levels can answer.
+- `eyaml_lookup_key`'s decrypt-error message now embeds the whole stored
+  value, not just the one `ENC[...]` token that failed, matching
+  hiera-eyaml's own text; a malformed private key is now checked (and
+  rejected) before the ciphertext is ever parsed, matching Ruby's own
+  order, so a bad key is reported as a key problem instead of "Could not
+  parse the PKCS7" even when the stored ciphertext is also malformed. The
+  private key is also now parsed at most once per decrypted value instead
+  of once per `ENC[...]` token in it, cutting the cost of a value with many
+  tokens.
 
 ### Security
 
