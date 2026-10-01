@@ -930,10 +930,14 @@ def _config_line(text, where: "_ty.Tuple", *, key: bool = False):
     found = _step(node, where[-1])
     if found is None:
         return None
+    # _step's own two return shapes are (None, a real sequence-item node)
+    # for an int step, or (a real key node, a real value node) for a
+    # found mapping entry -- never a tuple whose second element is None,
+    # and the first element is only None in the int-step case, exactly
+    # when `key and k_node is not None` would be false anyway. So `target`
+    # is never None here.
     k_node, v_node = found
     target = k_node if key and k_node is not None else v_node
-    if target is None:
-        return None
     return target.start_mark.line + 1
 
 
@@ -1037,6 +1041,12 @@ def _check_entry(entry, where: "_ty.Tuple", source) -> None:
             _msg(where, "expects a value for key 'name'"),
             line=_config_line(source.text, where),
         )
+    # Every key reaching this loop is already a member of _ENTRY_KEYS (the
+    # "unrecognized key" check above already rejected anything else), and
+    # the branches below cover _ENTRY_KEYS exactly: "name"/"datadir"/
+    # "options" (3), "path"/"glob"/"uri"/"paths"/"globs"/"uris"/
+    # "mapped_paths" (all 7 of _LOCATION_KEYS), and _ALL_FUNCTION_KEYS as a
+    # whole. So this never falls through without matching one of them.
     for key, value in entry.items():
         if key == "name":
             _check_string(value, where + ("name",), source, nonempty=True)
@@ -1083,6 +1093,12 @@ def _check_defaults_type(value, where: "_ty.Tuple", source) -> None:
                 _msg(where, "unrecognized key '{}'".format(k)),
                 line=_config_line(source.text, where + (k,), key=True),
             )
+    # Every key reaching this loop is already a member of _DEFAULTS_KEYS
+    # (the "unrecognized key" check above already rejected anything else):
+    # "datadir"/"options" are handled by name, and the three remaining
+    # members (data_hash/lookup_key/data_dig) are exactly the _FUNCTION_KEYS
+    # entries _DEFAULTS_KEYS actually allows (hiera3_backend never reaches
+    # here at all -- see _function_of). So this never falls through either.
     for key, v in value.items():
         if key == "datadir":
             _check_string(v, where + ("datadir",), source)
@@ -1100,6 +1116,12 @@ def _check_top(data: dict, source: "_ConfigSource") -> None:
                 _msg((), "unrecognized key '{}'".format(k)),
                 line=_config_line(source.text, (k,), key=True),
             )
+    # Every key reaching this loop is already a member of _TOP_KEYS (the
+    # "unrecognized key" check above already rejected anything else):
+    # "version" is skipped by name, and the other four members
+    # (defaults/hierarchy/plan_hierarchy/default_hierarchy) are exactly
+    # what the two branches below name. So this never falls through
+    # without matching one of them either.
     for key, value in data.items():
         if key == "version":
             continue  # already validated by _config_version
@@ -1587,16 +1609,22 @@ def _kind_mismatch_text(backend_cls, func_name: str, kind: str) -> str:
         return "'{}' expects 3 arguments, got 2".format(func_name)
     if has_dh:
         return "'{}' expects 2 arguments, got 3".format(func_name)
-    if kind == "data_dig" and has_lk:
+    # Only "data_dig" and "lookup_key" are left for `kind` (Puppet has no
+    # fourth function kind), has_dh is now known false, and at least one
+    # of has_lk/has_dh/has_dd was true (the first check above already
+    # returned otherwise) -- so exactly one of has_lk/has_dd is true,
+    # matching whichever of the two kind values `kind` is not (the
+    # precondition above rules out backend_cls implementing `kind`
+    # itself). Neither branch's own "and has_lk"/"and has_dd" condition
+    # can ever be false when reached, so there is no remaining case for a
+    # trailing fallback to catch.
+    if kind == "data_dig":
         return "'{}' parameter 'key' expects a String value, got Tuple".format(
             func_name
         )
-    if kind == "lookup_key" and has_dd:
-        return (
-            "'{}' parameter 'key_segments' expects an Array value, got "
-            "String".format(func_name)
-        )
-    return "'{}' implements none of data_hash, lookup_key or data_dig".format(func_name)
+    return "'{}' parameter 'key_segments' expects an Array value, got String".format(
+        func_name
+    )
 
 
 def _build_level(
