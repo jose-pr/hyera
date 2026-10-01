@@ -30,7 +30,7 @@ from ._lookup.merge_strategy import Merge, MergeSpec
 from ._scope.scope import Scope, Strict
 from ._types.types import Sensitive
 
-__version__ = "0.0.0a0"
+__version__ = "0.0.0"
 
 __all__ = [
     "Hiera",
