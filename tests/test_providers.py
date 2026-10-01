@@ -498,6 +498,34 @@ def test_cached_file_data_missing_file_is_backend_error(
         h.lookup("k")
 
 
+def test_cached_file_data_directory_is_backend_error_like_missing_file(
+    make_tree, backends, script, tmp_path
+):
+    # The stat-based staleness check above already wraps its own OSError
+    # (a missing file); the open()/read() that follows it must wrap one the
+    # same way instead of letting it escape raw -- a directory sitting
+    # where a data file is expected is the easiest OSError to provoke here
+    # (IsADirectoryError on open(), PermissionError on Windows).
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "lookup_key": "test_lookup_key", "path": "a.yaml"}
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    a_directory = tmp_path / "a_directory"
+    a_directory.mkdir()
+
+    def fn(key, options, context):
+        return context.cached_file_data(str(a_directory))
+
+    script["lookup_key"] = fn
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="Unable to read"):
+        h.lookup("k")
+
+
 def test_cached_file_data_bad_utf8_is_backend_error(
     make_tree, backends, script, tmp_path
 ):

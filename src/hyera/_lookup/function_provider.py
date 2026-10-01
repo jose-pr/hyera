@@ -208,8 +208,18 @@ class _EnvironmentContext:
         cached = self._cache.get(path)
         if cached is not None and cached[0] == stamp:
             return cached[1]
-        with open(path, "rb") as fh:
-            raw = fh.read()
+        try:
+            with open(path, "rb") as fh:
+                raw = fh.read()
+        except OSError as e:
+            # Same shape as the stat branch above (e.g. a directory at
+            # `path`, or a permission error): Puppet itself also leaves
+            # this one raw, but the sibling branch here already wraps its
+            # own failures, so this stays consistent with that rather than
+            # with Puppet.
+            raise BackendError(
+                "Unable to read ({}): {}".format(path, e.strerror or e), path=path
+            ) from e
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError as e:

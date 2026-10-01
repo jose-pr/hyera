@@ -358,6 +358,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   private key is also now parsed at most once per decrypted value instead
   of once per `ENC[...]` token in it, cutting the cost of a value with many
   tokens.
+- `LookupContext.cached_file_data` now wraps an `open()`/read failure (a
+  directory at the configured path, a permission error) in `BackendError`
+  the same way it already wraps a `stat()` failure, instead of letting it
+  escape raw.
 
 ### Security
 
