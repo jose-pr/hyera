@@ -1,0 +1,9 @@
+description: >-
+  A kind-mismatched level (lookup_key naming a data_hash-only function)
+  whose own location does not exist is never invoked, so its kind
+  mismatch is never checked either: Puppet degrades gracefully and
+  resolves the key from the next level instead of refusing the whole
+  lookup.
+queries:
+  - key: k
+    note: Puppet 8.10 probe

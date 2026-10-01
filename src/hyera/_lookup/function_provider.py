@@ -20,7 +20,7 @@ from .interpolation import interpolate, unshare
 from .invocation import Invocation
 from .lookup_adapter import validate_data_value
 from .navigation import _MISSING, key_to_a, undig
-from ..exceptions import BackendError
+from ..exceptions import BackendError, ConfigError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
 
@@ -50,6 +50,62 @@ def _recording_location(invocation, location):
     if location is None:
         return _NULL_CONTEXT
     return invocation.recording("location", _location_ref(location))
+
+
+def _kind_mismatch_text(backend, func_name: str, kind: str) -> str:
+    """Puppet's function-arity/parameter-type text when a hierarchy level
+    names a function that does not implement the kind it is used as
+    (``lookup_key_function_provider.rb``/``data_dig_function_provider.rb``/
+    ``data_hash_function_provider.rb``'s own dispatch by arity). Puppet
+    raises this only when the function is actually invoked for a location
+    that exists (or, for a location-less entry, whenever invoked) -- never
+    at config-build time, so a kind-mismatched level whose location does
+    not exist still lets every other level answer, matching Puppet rather
+    than refusing the whole instance. Only called when ``not
+    backend.implements(kind)``.
+    """
+    has_dh = backend.implements("data_hash")
+    has_lk = backend.implements("lookup_key")
+    has_dd = backend.implements("data_dig")
+    if not (has_dh or has_lk or has_dd):
+        return "'{}' implements none of data_hash, lookup_key or data_dig".format(
+            func_name
+        )
+    if kind == "data_hash":
+        return "'{}' expects 3 arguments, got 2".format(func_name)
+    if has_dh:
+        return "'{}' expects 2 arguments, got 3".format(func_name)
+    # Only "data_dig" and "lookup_key" are left for `kind` (Puppet has no
+    # fourth function kind), has_dh is now known false, and at least one
+    # of has_lk/has_dh/has_dd was true (the first check above already
+    # returned otherwise) -- so exactly one of has_lk/has_dd is true,
+    # matching whichever of the two kind values `kind` is not (the
+    # precondition above rules out backend implementing `kind` itself).
+    # Neither branch's own "and has_lk"/"and has_dd" condition can ever be
+    # false when reached, so there is no remaining case for a trailing
+    # fallback to catch.
+    if kind == "data_dig":
+        return "'{}' parameter 'key' expects a String value, got Tuple".format(
+            func_name
+        )
+    return "'{}' parameter 'key_segments' expects an Array value, got String".format(
+        func_name
+    )
+
+
+def _check_kind_implemented(backend, kind: str) -> None:
+    """Raise Puppet's kind-mismatch error (:func:`_kind_mismatch_text`) the
+    moment a level's function is actually invoked, if it does not implement
+    ``kind`` -- the lazy counterpart of the eager name-resolution check
+    :func:`~hyera._config.hiera_config._build_level` still does at config
+    build time. Called from each provider's ``key_lookup``, after the
+    per-location existence gate (or unconditionally for a location-less
+    entry), so a location that does not exist never reaches this and never
+    refuses the rest of the ``Hiera`` instance. ``backend.name`` is the
+    function name as declared (``Backend.new`` sets it to the name actually
+    asked for), not the hierarchy level's own ``name``."""
+    if not backend.implements(kind):
+        raise ConfigError(_kind_mismatch_text(backend, backend.name, kind))
 
 
 class _NotFound(BaseException):
@@ -412,6 +468,7 @@ class _DataHashProvider(_FunctionProvider):
             if location is not None and not location.exist:
                 invocation.report_location_not_found()
                 return _MISSING
+            _check_kind_implemented(self.backend, self.kind)
             ctx = self._context(location)
             if location is not None and not location.is_uri:
                 # A real file. While `self._revalidate`, `Hiera._load_file`
@@ -477,6 +534,7 @@ class _LookupKeyProvider(_FunctionProvider):
                 if location is not None and not location.exist:
                     invocation.report_location_not_found()
                     return _MISSING
+                _check_kind_implemented(self.backend, self.kind)
                 ctx = self._context(location)
                 if ctx.has_cached(root):
                     return invocation.report_found(root, unshare(ctx._cache[root]))
@@ -508,6 +566,7 @@ class _DataDigProvider(_FunctionProvider):
                 if location is not None and not location.exist:
                     invocation.report_location_not_found()
                     return _MISSING
+                _check_kind_implemented(self.backend, self.kind)
                 ctx = self._context(location)
                 if ctx.has_cached(cache_key):
                     return invocation.report_found(root, unshare(ctx._cache[cache_key]))

@@ -342,6 +342,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the type grammar does not recognize (e.g. `"Integer[@]"`) now raises
   `HieraLookupError`, the same as any other malformed type spec, instead of
   an internal exception type escaping uncaught.
+- A hierarchy level naming a function that does not implement the kind it
+  is used as (e.g. a `data_hash`-only function named as a `lookup_key`
+  entry) no longer refuses the whole `Hiera` instance when that level's
+  own location does not exist; the mismatch is now reported, with Puppet's
+  own message, only once the function is actually invoked for a location
+  that exists -- matching Puppet, which degrades gracefully and still
+  resolves every key the other, correctly-configured levels can answer.
 
 ### Security
 

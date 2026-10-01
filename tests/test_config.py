@@ -439,18 +439,24 @@ def test_multi_document_config_error_has_no_line(tmp_path):
 def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
     # `hierarchy: false` fills in Puppet's own built-in default hierarchy
     # (_fill_v5_defaults' ||= rule), which has no corresponding node in the
-    # actual YAML text at all -- a later error naming a position inside
-    # that synthesized entry (here, defaults' own data_hash naming a
-    # function that doesn't implement data_hash) can't find a line for it.
+    # actual YAML text at all. The kind-mismatch check itself (defaults'
+    # own data_hash naming a function that doesn't implement data_hash) is
+    # lazy -- raised only once the function is actually invoked for a
+    # location that exists -- so this needs a real data file and an
+    # actual lookup, not just construction; a lazy check never looks up a
+    # line at all, so it is unconditionally None, not merely "not found".
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
         b"defaults: {datadir: data, data_hash: eyaml_lookup_key}\n"
         b"hierarchy: false\n"
     )
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.yaml").write_bytes(b"k: v\n")
 
+    h = Hiera(str(config))
     with pytest.raises(ConfigError) as exc:
-        Hiera(str(config))
+        h.lookup("k")
 
     assert "'eyaml_lookup_key' expects 3 arguments, got 2" in str(exc.value)
     assert exc.value.line is None
@@ -459,9 +465,10 @@ def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
 def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
     # Unlike the synthesized-default case above, `hierarchy` is written out
     # here and the one entry is real -- it simply inherits its data_hash
-    # from `defaults` (ordinary, encouraged Puppet usage), so the entry's
-    # own YAML mapping has no "data_hash" key for _config_line to find when
-    # that inherited function turns out to be the wrong kind.
+    # from `defaults` (ordinary, encouraged Puppet usage). The kind-mismatch
+    # check is lazy (raised on invocation against an existing location, not
+    # at config build time), so this also needs a real data file and an
+    # actual lookup; a lazy check never looks up a line at all.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -469,9 +476,12 @@ def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
         b"hierarchy:\n"
         b"  - {name: common, path: common.yaml}\n"
     )
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "common.yaml").write_bytes(b"k: v\n")
 
+    h = Hiera(str(config))
     with pytest.raises(ConfigError) as exc:
-        Hiera(str(config))
+        h.lookup("k")
 
     assert "'eyaml_lookup_key' expects 3 arguments, got 2" in str(exc.value)
     assert exc.value.line is None
@@ -620,18 +630,16 @@ def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
     "entry, expected",
     [
         (
-            {"lookup_key": "yaml_data"},
-            "'yaml_data' expects 2 arguments, got 3",
-        ),
-        (
             {"hiera3_backend": "foo"},
             "Hiera 3 backend 'foo' is not available",
         ),
         ({"v4_data_hash": "x"}, "Unable to find 'v4_data_hash' function named 'x'"),
     ],
-    ids=["lookup-key-registered", "hiera3-backend-unmapped", "v4-data-hash"],
+    ids=["hiera3-backend-unmapped", "v4-data-hash"],
 )
 def test_function_kind_errors(entry, expected):
+    # Name-resolution errors: these stay eager, at config build time (Puppet
+    # cannot even resolve what function to call).
     cfg = {
         "version": 5,
         "defaults": {"datadir": "data"},
@@ -642,3 +650,44 @@ def test_function_kind_errors(entry, expected):
         Hiera(cfg)
 
     assert expected in str(exc.value)
+
+
+def test_lookup_key_registered_as_data_hash_builds_and_only_errors_on_lookup(
+    make_tree,
+):
+    # A kind mismatch (here: a data_hash-only function named as the entry's
+    # data_hash key, which Puppet's own `data_hash_function_provider.rb`
+    # still happily resolves and later arity-rejects) is never a
+    # construction-time error: Puppet raises it only when the function is
+    # actually invoked for a location that exists -- so a level like
+    # this, backed by a location that does not exist, must not refuse the
+    # whole Hiera instance, and one backed by a location that does exist
+    # must still raise once looked up.
+    cfg = {
+        "defaults": {"datadir": "data"},
+        "hierarchy": [
+            {"name": "one", "path": "missing.yaml", "lookup_key": "yaml_data"},
+            {"name": "two", "path": "two.yaml"},
+        ],
+    }
+    root = make_tree(cfg, files={"data/two.yaml": "k: v\n"})
+
+    h = Hiera(str(root / "hiera.yaml"))
+    # The first level's location does not exist: Puppet degrades gracefully
+    # to the next level, never invoking (or kind-checking) the mismatched
+    # function at all.
+    assert h.lookup("k") == "v"
+
+    root2 = make_tree(
+        {
+            "defaults": {"datadir": "data"},
+            "hierarchy": [
+                {"name": "one", "path": "one.yaml", "lookup_key": "yaml_data"}
+            ],
+        },
+        files={"data/one.yaml": "k: v\n"},
+        root="exists",
+    )
+    h2 = Hiera(str(root2 / "hiera.yaml"))
+    with pytest.raises(ConfigError, match="'yaml_data' expects 2 arguments, got 3"):
+        h2.lookup("k")

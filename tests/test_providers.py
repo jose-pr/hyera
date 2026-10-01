@@ -863,12 +863,32 @@ def test_data_hash_module_layer_prune_is_applied(tmp_path, make_tree, backends, 
     ids=["dh-as-lk", "lk-as-dh", "lk-as-dd", "dd-as-lk", "none"],
 )
 def test_kind_mismatch_uses_puppet_text(make_tree, backends, entry, expected):
+    # Lazy: the mismatch is only ever raised once the function is actually
+    # invoked for a location that exists, not at construction.
     root = make_tree(
         {"hierarchy": [dict({"name": "s", "path": "a.yaml"}, **entry)]},
         files={"data/a.yaml": "x"},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(ConfigError, match=re.escape(expected)):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("x")
+
+
+def test_kind_mismatch_is_not_raised_for_a_missing_location(make_tree, backends):
+    # A kind-mismatched level whose own location does not exist must not
+    # refuse the whole Hiera instance -- Puppet degrades gracefully and
+    # still resolves every key a correctly-configured level can answer.
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "bad", "path": "missing.yaml", "lookup_key": "test_data_hash"},
+                {"name": "good", "path": "a.yaml"},
+            ]
+        },
+        files={"data/a.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "v"
 
 
 @pytest.mark.parametrize(

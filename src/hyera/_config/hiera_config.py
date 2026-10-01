@@ -1590,43 +1590,6 @@ def _build_hierarchies(base, backends, source: "_ConfigSource", *, scope=None):
     return backend_levels, default_levels
 
 
-def _kind_mismatch_text(backend_cls, func_name: str, kind: str) -> str:
-    """Puppet's function-arity/parameter-type text when a hierarchy level
-    names a function that does not implement the kind it is used as
-    (``lookup_key_function_provider.rb``/``data_dig_function_provider.rb``/
-    ``data_hash_function_provider.rb``'s own dispatch by arity): the same
-    text Puppet raises on every lookup, reported here once at level build.
-    Only called when ``not backend_cls.implements(kind)``.
-    """
-    has_dh = backend_cls.implements("data_hash")
-    has_lk = backend_cls.implements("lookup_key")
-    has_dd = backend_cls.implements("data_dig")
-    if not (has_dh or has_lk or has_dd):
-        return "'{}' implements none of data_hash, lookup_key or data_dig".format(
-            func_name
-        )
-    if kind == "data_hash":
-        return "'{}' expects 3 arguments, got 2".format(func_name)
-    if has_dh:
-        return "'{}' expects 2 arguments, got 3".format(func_name)
-    # Only "data_dig" and "lookup_key" are left for `kind` (Puppet has no
-    # fourth function kind), has_dh is now known false, and at least one
-    # of has_lk/has_dh/has_dd was true (the first check above already
-    # returned otherwise) -- so exactly one of has_lk/has_dd is true,
-    # matching whichever of the two kind values `kind` is not (the
-    # precondition above rules out backend_cls implementing `kind`
-    # itself). Neither branch's own "and has_lk"/"and has_dd" condition
-    # can ever be false when reached, so there is no remaining case for a
-    # trailing fallback to catch.
-    if kind == "data_dig":
-        return "'{}' parameter 'key' expects a String value, got Tuple".format(
-            func_name
-        )
-    return "'{}' parameter 'key_segments' expects an Array value, got String".format(
-        func_name
-    )
-
-
 def _build_level(
     conf: dict,
     kind: str,
@@ -1679,12 +1642,13 @@ def _build_level(
                 source,
                 "Unable to find '{}' function named '{}'".format(kind, function),
             ) from None
-        if not resolved_cls.implements(kind):
-            raise _config_error(
-                source,
-                _kind_mismatch_text(resolved_cls, function, kind),
-                line=_config_line(source.text, (area, index, kind), key=True),
-            )
+        # A function that does not implement `kind` is *not* rejected here:
+        # Puppet only raises for this (`_kind_mismatch_text`) when the
+        # function is actually invoked for a location that exists -- a
+        # kind-mismatched level whose location does not exist still lets
+        # every other level answer, matching Puppet rather than refusing
+        # the whole instance. The level is still built; the check happens
+        # per invocation in `_lookup.function_provider`.
         conf = dict(conf)
         conf[kind] = function
         backend = Backend.new(function, conf, kind="function")
