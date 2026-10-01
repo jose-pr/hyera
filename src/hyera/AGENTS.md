@@ -685,9 +685,13 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   values are Ruby-`eql?` — `1`, `1.0` and `True` are distinct wrapped
   values, but a list or dict payload compares/hashes by content (in any key
   order for a dict) despite being unhashable in plain Python.
+  `Sensitive[T]` (the Puppet *type*, as opposed to calling `Sensitive(x)`
+  for a value) is documented under "`hyera.types`" below.
 - **`value_type`/`convert_to` type expressions** — a Puppet type
   expression string (`"Integer"`, `"Array[String]"`,
-  `"Optional[Integer[0,10]]"`) parsed against a subset of Puppet's type
+  `"Optional[Integer[0,10]]"`), or (`value_type` only — `convert_to` always
+  comes from data, so stays string-only) the equivalent object from
+  `hyera.types`, below, parsed against a subset of Puppet's type
   system: full semantics for `Any`/`Data`/`Undef`/`Boolean`/`Integer`/
   `Float`/`Numeric`/`String`/`Enum`/`Pattern`/`Array`/`Hash`/`Tuple`/
   `Struct`/`Optional`/`NotUndef`/`Variant`/`Scalar`/`Collection`; named-only
