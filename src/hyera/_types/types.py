@@ -133,6 +133,18 @@ class Any:
     def __hash__(self):
         return hash((type(self), self._key()))
 
+    def __instancecheck__(self, value):
+        """Lets a type *object* stand in directly as ``isinstance()``'s
+        second argument (``isinstance(5, Integer[1, 3])``): defined on the
+        class body, so it is found via ``type(<this instance>).
+        __instancecheck__`` -- Python's normal dunder lookup for the
+        instance used as the ``isinstance`` class argument -- without
+        touching how ``isinstance(x, Integer)`` (the bare *class*) resolves,
+        which still goes through ``type(Integer).__instancecheck__`` (the
+        builtin ``type.__instancecheck__``, untouched). See
+        :mod:`hyera.types`."""
+        return self.instance(value)
+
 
 class Undef(Any):
     TYPE_NAME = "Undef"

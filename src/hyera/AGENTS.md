@@ -707,6 +707,52 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   through `copy`/`pickle`; it is never itself returned from a lookup (it
   only marks "no default was given"). The same object is `Scope.UNDEFINED`.
 
+## `hyera.types`
+
+Public Puppet type objects, one class per Puppet type name: `Any`, `Undef`,
+`NotUndef`, `Optional`, `Scalar`, `ScalarData`, `Numeric`, `Integer`,
+`Float`, `String`, `Boolean`, `Regexp`, `Pattern`, `Enum`, `Collection`,
+`Array`, `Hash`, `Tuple`, `Struct`, `Variant`, `Data`, `RichData`, plus
+`Sensitive` (the same object as `hyera.Sensitive`). Not re-exported from
+top-level `hyera` (`hyera.types.Integer`, not `hyera.Integer`) except
+`Sensitive`, already public there. Every name means one of two things so
+far, by how it is used (a third, calling one as Puppet's `new()`, is
+planned but not yet implemented — see "Not supported" below):
+
+- **Bare** (`Integer`) — the unparameterized type: `isinstance(5,
+  Integer)` is `True`.
+- **Subscripted** (`Integer[1, 10]`, `Optional[String]`, `Struct[{"a":
+  Integer}]`) — a parameterized type, built exactly as
+  `value_type`/`convert_to` text would parse the equivalent Puppet
+  expression (`Integer[1, 10] == <value_type string "Integer[1, 10]">`,
+  including `str()`/`repr()` and every error message). A nested argument is
+  itself a type (another of these classes, a type object, or a Puppet
+  type-expression `str`, e.g. `Array["Integer"]`) for `Array`/`Hash`/
+  `Tuple`/`Variant`'s element/key/value/branch positions; a literal
+  `str`/`bool`/`int`/`float`/`None` for a value-position argument
+  (`Integer`/`Float`/`String`/`Collection`'s size or range bounds,
+  `Boolean`'s fixed value, `Enum`'s members, `Pattern`'s regex sources
+  alongside a compiled `re.Pattern`, and `Optional`/`NotUndef`'s own
+  contained argument when it is a plain `str`, which stays a literal match
+  the way Puppet's own grammar treats a bareword/quoted string there).
+  `Struct[{...}]` takes exactly one `dict`; a key is a plain `str`
+  (required) or `Optional["k"]`/`NotUndef["k"]` (built from this same
+  module, used directly as the dict key) for an optional one — Puppet's own
+  struct-key grammar has no `NotUndef[...]` key form, so `NotUndef["k"]`
+  there is a synonym for the plain, required key `"k"`. A `Pattern`/
+  `Regexp` source containing a literal `/` has no escape that survives the
+  text round-trip these classes build on; pass the pre-built type object
+  instead (not reachable from this module) if that ever matters.
+
+Both forms answer `isinstance` the Puppet way (`isinstance(5, Integer[1,
+10])`, `isinstance(None, Optional[String])`) without subclassing a builtin
+(`bool`/`NoneType` cannot be subclassed, and a builtin subclass breaks
+`yaml.safe_dump`): every class here answers `isinstance` through its own
+type object's `instance()`, never through actual subclassing, and this
+module's own metaclass is never the type of a type object -- internal code
+keeps dispatching on the private classes in `hyera._types.types` directly,
+unaffected by anything here.
+
 ## Backends
 
 A self-registering registry: every format or provider
@@ -1274,6 +1320,9 @@ Not supported:
   error (see "Types" above).
 - Discovering `environmentpath`/`modulepath`/`codedir` from `puppet.conf`:
   they are explicit constructor and CLI arguments only.
+- Calling a `hyera.types` class (`Integer("42")`) as Puppet's `new()`; only
+  the bare and subscripted forms are implemented so far (see
+  "`hyera.types`" above).
 
 ## Gotchas
 
