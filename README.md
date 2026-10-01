@@ -773,13 +773,6 @@ for.
   "cannot load such file" error real Puppet gives without that plugin's
   gem installed -- this project never adds one, so there is no way to opt
   into GPG support here. (id: `eyaml-pkcs7-only`)
-- **A malformed PKCS7 private key reports hyera's own message, not
-  OpenSSL's.** Both hyera and Puppet check the configured private key
-  before ever looking at the stored ciphertext, so a bad key is always
-  reported as a key problem; Puppet's text is OpenSSL's own ("Neither PUB
-  key nor PRIV key" and similar), which the `cryptography` package does
-  not re-expose, so hyera reports "Could not read the private key: ..."
-  instead. There is no opt-in. (id: `eyaml-key-parse-error-text`)
 - **Navigating a dotted sub-key into an Integer keeps hyera's own error
   text.** Puppet crashes with a raw Ruby `NoMethodError` ("undefined method
   'include?' for an instance of Integer") instead of a designed message;

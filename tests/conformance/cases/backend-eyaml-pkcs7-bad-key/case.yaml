@@ -2,25 +2,10 @@ description: >-
   A malformed PKCS7 private key is loaded (and rejected) before the
   ciphertext is ever parsed: the configured key here is garbage, and the
   stored ciphertext is also garbage, but Puppet's own error names the key
-  problem ("Neither PUB key nor PRIV key", OpenSSL's own text), never
-  "Could not parse the PKCS7". hyera reports the same precedence (its own
-  key-loading error, never a PKCS7-parse error) but keeps its own message
-  text -- OpenSSL's internal error strings are not something the
-  `cryptography` package re-exposes, and matching them would mean
-  depending on byte-for-byte text from a library that does not promise it.
+  problem ("Neither PUB key nor PRIV key", the fixed text Ruby's OpenSSL
+  binding raises), never "Could not parse the PKCS7".
   Recorded with hiera-eyaml 5.0.1 present.
 requires: [cryptography]
 queries:
   - key: corrupt
     error_class: BackendError
-    deviation:
-      id: eyaml-key-parse-error-text
-      reason: >-
-        OpenSSL's own key-parse error text ("Neither PUB key nor PRIV
-        key") is not reproduced; hyera reports its own "Could not read
-        the private key: ..." instead, from the `cryptography` package's
-        own exception text. The precedence (checked before the ciphertext
-        is ever parsed) matches Puppet.
-      expect:
-        status: error
-        message: "Could not read the private key"

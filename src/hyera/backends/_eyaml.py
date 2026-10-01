@@ -303,18 +303,17 @@ def _load_private_key(key_pem: bytes):
     one call.
 
     :raises BackendError: ``key_pem`` is not a parseable, unencrypted
-        private key. The underlying `cryptography` exception text is kept
-        rather than matched to OpenSSL's own internal message (Ruby's
-        "Neither PUB key nor PRIV key" and similar): `cryptography` does
-        not re-expose OpenSSL's raw error strings, so no Python message
-        here will ever equal Ruby's byte for byte.
+        private key, with the fixed text Ruby's OpenSSL binding raises for
+        it (``OpenSSL::PKey::RSA.new``: "Neither PUB key nor PRIV key").
+        The `cryptography` exception is not chained or quoted, so no key
+        material can reach the message.
     """
     from cryptography.hazmat.primitives import serialization
 
     try:
         return serialization.load_pem_private_key(key_pem, password=None)
-    except Exception as e:
-        raise BackendError("Could not read the private key: {}".format(e)) from None
+    except Exception:
+        raise BackendError("Neither PUB key nor PRIV key") from None
 
 
 def _pkcs7_decrypt(der: bytes, private_key) -> bytes:

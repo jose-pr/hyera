@@ -369,13 +369,14 @@ def test_bad_key_is_reported_before_the_ciphertext_is_ever_parsed(tmp_path):
     # ever touches the ciphertext (pkcs7.rb's `decrypt`): a malformed key
     # and a malformed ciphertext together must report the key problem,
     # never "Could not parse the PKCS7" -- confirmed against the WSL
-    # hiera-eyaml 5.0.1 oracle (Puppet's own text there is OpenSSL's
-    # "Neither PUB key nor PRIV key", not reproduced here; see the
-    # backend-eyaml-pkcs7-bad-key conformance case for the precedent and
-    # why the literal OpenSSL text is not matched).
+    # hiera-eyaml 5.0.1 oracle, whose text ends "Error was Neither PUB key
+    # nor PRIV key" (Ruby's OpenSSL binding; see the
+    # backend-eyaml-pkcs7-bad-key conformance case).
     bad_key_path = tmp_path / "garbage.pem"
     bad_key_path.write_text("this is not a pem key at all\n", encoding="utf-8")
-    with pytest.raises(BackendError, match="Could not read the private key") as exc:
+    with pytest.raises(
+        BackendError, match="Error was Neither PUB key nor PRIV key$"
+    ) as exc:
         _decrypt("ENC[PKCS7,aGVsbG8=]", {"pkcs7_private_key": str(bad_key_path)})
     assert "Could not parse the PKCS7" not in str(exc.value)
 

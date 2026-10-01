@@ -1310,10 +1310,6 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `eyaml-pkcs7-only` — `eyaml_lookup_key` supports only the
   PKCS7 encryptor; other hiera-eyaml encryptors raise the same error
   Puppet gives without their plugin.
-- **deviation** `eyaml-key-parse-error-text` — a malformed PKCS7 private
-  key is checked (and rejected) before the ciphertext, like Puppet, but
-  with hyera's own message text ("Could not read the private key: ...")
-  rather than OpenSSL's, which `cryptography` does not re-expose.
 - **deviation** `integer-dotted-navigation-error-text` — navigating a
   dotted sub-key into an Integer keeps hyera's own "Data Provider type
   mismatch" text; Puppet crashes with a raw Ruby `NoMethodError` instead
