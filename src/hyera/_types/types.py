@@ -134,7 +134,9 @@ class Any:
         return self.name
 
     def __repr__(self) -> str:
-        return "<{}>".format(str(self))
+        """Puppet's own type text, the same as :meth:`__str__`
+        (``Integer[1, 3]``), so a type object reads back as what it means."""
+        return str(self)
 
     def _key(self):
         return ()

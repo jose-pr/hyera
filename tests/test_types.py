@@ -393,7 +393,7 @@ def test_any_type_base_defaults():
     assert any_t.normalize() is any_t
     assert any_t.simple_name == "Any"
     assert any_t.alias_expanded_str() == "Any"
-    assert repr(any_t) == "<Any>"
+    assert repr(any_t) == "Any"
     assert any_t._key() == ()
     assert hash(any_t) == hash(parse_type("Any"))
 

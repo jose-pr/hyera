@@ -179,6 +179,7 @@ def test_subscript_equals_parse_type(build, text):
 )
 def test_subscript_str_equals_parse_type_str(build, text):
     assert str(build()) == str(parse_type(text))
+    assert repr(build()) == str(parse_type(text))
 
 
 def test_never_parameterized_raises_puppets_own_text():
