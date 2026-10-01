@@ -142,7 +142,7 @@ def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
     assert not called
 
 
-# S7: `_yaml_loader` messages that quote the offending scalar/class name
+# S7: `_psych` messages that quote the offending scalar/class name
 # verbatim -- `invalid value for Float()/Integer(): "<data>"` and `Tried to
 # load unspecified class: <data>` -- reproduced against the fake-sops
 # `probe_leak.py` harness (93 payloads through all four formats; these 10
@@ -186,7 +186,7 @@ _S7_IDS = [
     ids=["undefined-alias", "duplicate-anchor"] + _S7_IDS,
 )
 def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
-    # These PyYAML/`_yaml_loader` error shapes quote the offending scalar
+    # These PyYAML/`_psych` error shapes quote the offending scalar
     # or class name verbatim in ``context``/``problem`` (an undefined alias
     # name, a duplicate anchor name, an invalid Float()/Integer() scalar,
     # or a `!ruby/object`/`!ruby/hash` tag's class text, S7) -- exactly the

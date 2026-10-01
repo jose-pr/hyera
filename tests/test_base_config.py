@@ -62,9 +62,9 @@ def test_utf8_bom_config_parses(tmp_path):
     # goes through (`context.rb:53`) -- not the BOM-*stripping* file read
     # `Puppet::Util::Yaml.safe_load_file` uses elsewhere. A block-style
     # multi-line mapping right after a BOM (swapped for a space by
-    # `_yaml_loader.safe_load`, matching Psych) only keeps its *first* key,
+    # `_psych.safe_load`, matching Psych) only keeps its *first* key,
     # a genuine Puppet quirk covered separately
-    # (`test_yaml_loader.py::test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key`);
+    # (`test_psych.py::test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key`);
     # a flow-style mapping has no such line-indentation problem.
     datadir = tmp_path / "données"
     datadir.mkdir()

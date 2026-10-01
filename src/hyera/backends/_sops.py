@@ -178,7 +178,7 @@ def _sops_format(path_str: str):
     return None
 
 
-#: S7: fixed prefixes of the two ``_yaml_loader`` messages that quote the
+#: S7: fixed prefixes of the two ``_psych`` messages that quote the
 #: offending scalar verbatim (``invalid value for Float()/Integer():
 #: "<data>"``). Matched as a plain prefix, never against the tail: the
 #: quoted scalar can itself embed a literal newline (a ``!!float |\n
@@ -190,12 +190,12 @@ _SOPS_YAML_QUOTED_PREFIXES = (
 )
 
 #: The third leaking shape's fixed prefix, ``Tried to load unspecified
-#: class: <name>`` (``_yaml_loader._disallowed``); ``<name>`` is
+#: class: <name>`` (``_psych._disallowed``); ``<name>`` is
 #: attacker-controlled text for every ``!ruby/...`` tag except the fixed
 #: names below.
 _SOPS_YAML_CLASS_PREFIX = "Tried to load unspecified class: "
 
-#: Names ``_yaml_loader`` itself raises unconditionally for a known YAML
+#: Names ``_psych`` itself raises unconditionally for a known YAML
 #: shape (an implicit timestamp/date, `!!set`, a bare/nameless
 #: ``!ruby/object``) -- never text lifted from the decrypted document, so
 #: these stay visible. Everything else after "unspecified class: " comes

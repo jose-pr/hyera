@@ -761,7 +761,7 @@ class Runtime(Any):
     is meaningful here: it is the inferred type of a
     :class:`hyera.backends.RubySymbol` (never imported directly -- matched
     by class name/module to avoid a dependency on ``backends``). The class
-    is *defined* in ``_yaml_loader`` and re-exported through ``backends``;
+    is *defined* in ``_psych`` and re-exported through ``backends``;
     ``__module__`` names the former, not the latter."""
 
     TYPE_NAME = "Runtime"
@@ -776,7 +776,7 @@ class Runtime(Any):
             self.runtime == "ruby"
             and self.runtime_name == "Symbol"
             and cls.__name__ == "RubySymbol"
-            and cls.__module__ == "hyera.backends._yaml_loader"
+            and cls.__module__ == "hyera.backends._psych"
         )
 
     def _key(self):
@@ -968,7 +968,7 @@ def infer(value):
     if isinstance(value, dict):
         return _infer_hash(value)
     cls = type(value)
-    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera.backends._yaml_loader":
+    if cls.__name__ == "RubySymbol" and cls.__module__ == "hyera.backends._psych":
         return Runtime("ruby", "Symbol")
     raise TypeError("no Puppet type for {!r}".format(value))
 

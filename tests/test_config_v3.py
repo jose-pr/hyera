@@ -35,7 +35,7 @@ from hyera._config.hiera_config import (
     _validate_v4,
 )
 from hyera._lookup.invocation import Invocation
-from hyera.backends._yaml_loader import RubySymbol
+from hyera.backends._psych import RubySymbol
 
 
 @pytest.mark.parametrize(

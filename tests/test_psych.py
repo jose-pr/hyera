@@ -1,4 +1,4 @@
-"""``_yaml_loader``: Psych's scalar rules, BOM handling, and structure, as
+"""``_psych``: Psych's scalar rules, BOM handling, and structure, as
 measured against real Ruby 4.0.7 / Psych 5.3.1 (see the plan's oracle probe
 table). Parametrized over both loader backends where the C/pure distinction
 matters (only the tab-after-colon row differs)."""
@@ -10,7 +10,7 @@ import yaml
 
 from hyera.backends import BackendError, YAMLBackend
 from hyera.exceptions import ConfigError
-from hyera.backends._yaml_loader import (
+from hyera.backends._psych import (
     RubySymbol,
     _C_LOADER,
     _PURE_LOADER,

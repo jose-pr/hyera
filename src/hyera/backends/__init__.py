@@ -20,7 +20,7 @@ from ..exceptions import BackendError, ConfigError
 from .._lookup.function_provider import LookupContext
 from .._scope.scope import Strict
 from .._enums import _StrEnum, _plain
-from ._yaml_loader import RubySymbol
+from ._psych import RubySymbol
 
 _LOGGER = logging.getLogger(__name__)
 

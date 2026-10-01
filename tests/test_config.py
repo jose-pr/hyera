@@ -411,7 +411,7 @@ def test_duplicate_names_dict_config_has_no_first_line():
 
 def test_multi_document_config_error_has_no_line(tmp_path):
     # Puppet's own `safe_load` (`YAML.safe_load`, ported here as
-    # backends._yaml_loader.safe_load) reads only the first YAML document
+    # backends._psych.safe_load) reads only the first YAML document
     # in a file and ignores whatever a later `---` document contains, so
     # this configuration parses and builds just like a single-document one
     # would. But the line-lookup helper (_config_line) re-parses the raw

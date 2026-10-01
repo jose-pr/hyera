@@ -148,7 +148,7 @@ def test_render_values():
     assert _to_puppet_str([Sensitive("x")]) == "[#<Sensitive [value redacted]>]"
     # Both functions' own otherwise-unmodeled-type fallback (a RubySymbol,
     # or any other object neither renders specially): plain str().
-    from hyera.backends._yaml_loader import RubySymbol
+    from hyera.backends._psych import RubySymbol
 
     assert _to_puppet_str(RubySymbol("x")) == ":x"
     assert _ruby_inspect(RubySymbol("x")) == ":x"

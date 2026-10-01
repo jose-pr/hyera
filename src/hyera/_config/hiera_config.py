@@ -19,7 +19,7 @@ from ..backends import Backend, YAMLBackend, has_hocon
 from ..exceptions import BackendError, ConfigError
 from .location_resolver import resolve_locations
 from .._scope.scope import Scope
-from ..backends._yaml_loader import RubySymbol, symkeys_to_string
+from ..backends._psych import RubySymbol, symkeys_to_string
 from .._enums import _StrEnum, _plain
 
 _LOGGER = logging.getLogger(__name__)
@@ -1509,7 +1509,7 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     # `<BOM>---\nversion: 5\n...` config (`config-hiera-yaml-bom`):
     # Puppet errors identically to a data file with the same content, so
     # this is *not* stripped here -- `YAMLBackend.loads` (via
-    # `_yaml_loader.safe_load`'s BOM-swap) handles it the same way.
+    # `_psych.safe_load`'s BOM-swap) handles it the same way.
     try:
         base = YAMLBackend().loads(text)
     except BackendError as e:

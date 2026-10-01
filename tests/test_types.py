@@ -365,12 +365,12 @@ def test_aliases_and_references():
     assert "hiera does not support the Puppet type 'Iterable'" == str(exc_info.value)
 
     # infer_set of a RubySymbol-named object renders Runtime[ruby, 'Symbol'].
-    # The real class is *defined* in _yaml_loader and re-exported through
+    # The real class is *defined* in _psych and re-exported through
     # backends -- matched by (name, __module__) against the former.
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera.backends._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._psych"
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
 
 
@@ -436,7 +436,7 @@ def test_type_key_equality_and_hash():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera.backends._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._psych"
     rt_a, rt_b = infer(RubySymbol()), infer(RubySymbol())
     assert rt_a == rt_b
     assert hash(rt_a) == hash(rt_b)
@@ -618,7 +618,7 @@ def test_infer_edge_cases():
     class RubySymbol:
         pass
 
-    RubySymbol.__module__ = "hyera.backends._yaml_loader"
+    RubySymbol.__module__ = "hyera.backends._psych"
     rt = infer(RubySymbol())
     assert rt.instance(RubySymbol()) is True
     assert rt.instance("x") is False

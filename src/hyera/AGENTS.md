@@ -946,7 +946,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `BackendError("Unable to parse (<path>): <problem>", path=...)` — never
   the decrypted plaintext; a `UnicodeDecodeError` is reported as `invalid
   UTF-8 at byte offset <n>` (never the stock codec message's offending
-  byte value). Three `_yaml_loader` error messages that would otherwise
+  byte value). Three `_psych` error messages that would otherwise
   quote the offending scalar or an attacker-suppliable class name verbatim
   have that part replaced with `<redacted>` on the sops decrypt path only
   (plain `yaml_data` keeps Puppet's full text).

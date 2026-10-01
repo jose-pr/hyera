@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import typing as _ty
 
-from ..backends import _yaml_loader as _yaml_loader
+from ..backends import _psych as _psych
 from ..backends._json import _reject_json_constant
 from ..exceptions import BackendError
 
@@ -39,7 +39,7 @@ def _reject_symbols(value, label) -> None:
     (key or value) -- ``Puppet::Util::Yaml.safe_load`` (unlike the
     data-file/hiera.yaml loader) permits no classes at all, Symbol
     included."""
-    if isinstance(value, _yaml_loader.RubySymbol):
+    if isinstance(value, _psych.RubySymbol):
         raise BackendError(
             "({}): Tried to load unspecified class: Symbol".format(label), path=label
         )
@@ -74,7 +74,7 @@ def _parse_yaml_facts(raw: bytes, label: str):
     except UnicodeDecodeError as e:
         raise BackendError("({}): {}".format(label, e), path=label) from e
     try:
-        parsed = _yaml_loader.safe_load(text)
+        parsed = _psych.safe_load(text)
     except BackendError as e:
         raise BackendError("({}): {}".format(label, e), path=label) from e
     _reject_symbols(parsed, label)

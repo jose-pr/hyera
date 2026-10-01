@@ -57,7 +57,7 @@ src/hyera/
     ├── _hocon.py                           # HOCONBackend, has_hocon (the private pyhocon parser copy)
     ├── _sops.py                             # SopsBackend, DotenvBackend
     ├── _eyaml.py                             # EyamlBackend: token scanning, PKCS7 key loading, a bounds-checked PKCS7 decrypt
-    └── _yaml_loader.py                        # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
+    └── _psych.py                        # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
 
 tests/
 ├── conftest.py              # make_tree: a valid Hiera 5 tree on disk, LF/UTF-8, per test

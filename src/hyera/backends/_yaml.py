@@ -10,7 +10,7 @@ import yaml
 
 from ..exceptions import BackendError
 from . import Backend, _Names
-from ._yaml_loader import safe_load, symkeys_to_string
+from ._psych import safe_load, symkeys_to_string
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ __all__ = ["YAMLBackend"]
 
 class YAMLBackend(Backend):
     """YAML (``.yaml``/``.yml``) data via Puppet's own Psych-compatible
-    rules (:mod:`hyera.backends._yaml_loader`): numbers/booleans/dates/symbols
+    rules (:mod:`hyera.backends._psych`): numbers/booleans/dates/symbols
     parse Ruby's way, and a non-Hash top-level document warns (or raises
     under ``strict="error"``) and reads as empty."""
 
@@ -28,14 +28,14 @@ class YAMLBackend(Backend):
 
     def loads(self, text: str) -> _ty.Any:
         """Parse YAML the way Puppet's ``yaml_data`` does (Ruby Psych
-        semantics via :mod:`hyera.backends._yaml_loader`), not PyYAML's own
+        semantics via :mod:`hyera.backends._psych`), not PyYAML's own
         Python-flavored resolver.
 
         :param text: the YAML text to parse.
         :returns: the parsed value.
         """
         # Psych's rules (types, BOM, one-document, symbol keys/values),
-        # ported in ``_yaml_loader``: numbers/booleans/dates/symbols per
+        # ported in ``_psych``: numbers/booleans/dates/symbols per
         # Ruby's ScalarScanner, not PyYAML's own Python-flavored resolver.
         return safe_load(text)
 
