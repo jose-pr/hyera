@@ -715,9 +715,8 @@ Public Puppet type objects, one class per Puppet type name: `Any`, `Undef`,
 `Array`, `Hash`, `Tuple`, `Struct`, `Variant`, `Data`, `RichData`, plus
 `Sensitive` (the same object as `hyera.Sensitive`). Not re-exported from
 top-level `hyera` (`hyera.types.Integer`, not `hyera.Integer`) except
-`Sensitive`, already public there. Every name means one of two things so
-far, by how it is used (a third, calling one as Puppet's `new()`, is
-planned but not yet implemented — see "Not supported" below):
+`Sensitive`, already public there. Every name means one of three things,
+by how it is used:
 
 - **Bare** (`Integer`) — the unparameterized type: `isinstance(5,
   Integer)` is `True`.
@@ -728,30 +727,58 @@ planned but not yet implemented — see "Not supported" below):
   including `str()`/`repr()` and every error message). A nested argument is
   itself a type (another of these classes, a type object, or a Puppet
   type-expression `str`, e.g. `Array["Integer"]`) for `Array`/`Hash`/
-  `Tuple`/`Variant`'s element/key/value/branch positions; a literal
-  `str`/`bool`/`int`/`float`/`None` for a value-position argument
-  (`Integer`/`Float`/`String`/`Collection`'s size or range bounds,
-  `Boolean`'s fixed value, `Enum`'s members, `Pattern`'s regex sources
-  alongside a compiled `re.Pattern`, and `Optional`/`NotUndef`'s own
-  contained argument when it is a plain `str`, which stays a literal match
-  the way Puppet's own grammar treats a bareword/quoted string there).
-  `Struct[{...}]` takes exactly one `dict`; a key is a plain `str`
-  (required) or `Optional["k"]`/`NotUndef["k"]` (built from this same
+  `Tuple`/`Variant`/`Sensitive`'s element/key/value/branch/contained
+  positions; a literal `str`/`bool`/`int`/`float`/`None` for a
+  value-position argument (`Integer`/`Float`/`String`/`Collection`'s size
+  or range bounds, `Boolean`'s fixed value, `Enum`'s members, `Pattern`'s
+  regex sources alongside a compiled `re.Pattern`, and `Optional`/
+  `NotUndef`'s own contained argument when it is a plain `str`, which stays
+  a literal match the way Puppet's own grammar treats a bareword/quoted
+  string there). `Struct[{...}]` takes exactly one `dict`; a key is a plain
+  `str` (required) or `Optional["k"]`/`NotUndef["k"]` (built from this same
   module, used directly as the dict key) for an optional one — Puppet's own
   struct-key grammar has no `NotUndef[...]` key form, so `NotUndef["k"]`
   there is a synonym for the plain, required key `"k"`. A `Pattern`/
   `Regexp` source containing a literal `/` has no escape that survives the
   text round-trip these classes build on; pass the pre-built type object
   instead (not reachable from this module) if that ever matters.
+  `Sensitive[T]` (a type) is defined directly on `hyera.Sensitive` itself,
+  the same object as this module's own `Sensitive`.
+- **Called** (`Integer("42")`) — Puppet's `new()`, returning a plain value
+  (`int` for `Integer`, `str` for `String`, `list` for `Array`, `dict` for
+  `Hash`, ... — `Sensitive("x")` is the one exception, staying its existing
+  value wrapper, unaffected by anything here), never an instance of the
+  class itself; a type with no Puppet `new()` raises the same
+  `HieraLookupError` `convert_to` already does.
 
-Both forms answer `isinstance` the Puppet way (`isinstance(5, Integer[1,
-10])`, `isinstance(None, Optional[String])`) without subclassing a builtin
-(`bool`/`NoneType` cannot be subclassed, and a builtin subclass breaks
-`yaml.safe_dump`): every class here answers `isinstance` through its own
-type object's `instance()`, never through actual subclassing, and this
+Every bare or subscripted form answers `isinstance` the Puppet way
+(`isinstance(5, Integer[1, 10])`, `isinstance(None, Optional[String])`,
+`isinstance(Sensitive("x"), Sensitive[String])`) without subclassing a
+builtin (`bool`/`NoneType` cannot be subclassed, and a builtin subclass
+breaks `yaml.safe_dump`): every class here answers `isinstance` through its
+own type object's `instance()`, never through actual subclassing, and this
 module's own metaclass is never the type of a type object -- internal code
 keeps dispatching on the private classes in `hyera._types.types` directly,
-unaffected by anything here.
+unaffected by anything here. A type checker sees the exact builtin for a
+call result once the caller's own code narrows it (e.g. an `int`-annotated
+variable assigned from `Integer(x)`), but not from the call expression
+alone: no single return type can describe every class from the one shared
+metaclass `__call__`, so `reveal_type(Integer("42"))` on its own is `Any`.
+
+Two further pyright limitations, neither a `hyera` defect (both are
+typeshed/pyright modeling an existing Python mechanism for a narrower idiom
+than this module uses it for; `tests/typing/consumer_types.py`'s own
+docstring has the full detail): `isinstance(value, Integer[1, 10])` (a
+*subscripted* type as the second argument) type-checks as an error, because
+typeshed's `isinstance` overloads only accept an actual `type`/`UnionType`/
+tuple, never an arbitrary `__instancecheck__`-only object, even though it
+is correct and tested at runtime -- pass the **bare** class there instead
+whenever the static check matters. `reveal_type(Sensitive[String])` always
+reads `type[Sensitive]`, never the real `SensitiveType` object it returns
+at runtime, because pyright hard-codes `ClassName[args]` through
+`__class_getitem__` (`Sensitive`'s own mechanism, unlike every other name
+here's dedicated metaclass) to the `Generic`/`NamedTuple` idiom's
+`type[ClassName]`, regardless of the method's declared return type.
 
 ## Backends
 
@@ -1320,9 +1347,6 @@ Not supported:
   error (see "Types" above).
 - Discovering `environmentpath`/`modulepath`/`codedir` from `puppet.conf`:
   they are explicit constructor and CLI arguments only.
-- Calling a `hyera.types` class (`Integer("42")`) as Puppet's `new()`; only
-  the bare and subscripted forms are implemented so far (see
-  "`hyera.types`" above).
 
 ## Gotchas
 

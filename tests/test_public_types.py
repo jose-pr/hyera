@@ -11,9 +11,10 @@ import re
 
 import pytest
 
+from hyera import HieraLookupError, Sensitive
 from hyera import types
 from hyera._types import types as _priv
-from hyera._types.parser import parse_type
+from hyera._types.parser import as_type, parse_type
 
 # --------------------------------------------------------------- bare forms
 
@@ -254,3 +255,81 @@ def test_internal_isinstance_dispatch_on_private_classes_unaffected():
     optional_type = parse_type("Optional[String]")
     assert isinstance(optional_type, _priv.Optional)
     assert not isinstance(optional_type, _priv.Integer)
+
+
+# ------------------------------------------------------------------- calling
+
+CALL_CASES = [
+    (types.Integer, ("42",), 42),
+    (types.Integer, (5,), 5),
+    (types.Integer[1, 10], ("5",), 5),
+    (types.Integer, ("0x1F",), 31),
+    (types.Float, ("1.5",), 1.5),
+    (types.Numeric, ("5",), 5),
+    (types.Numeric, ("1.5",), 1.5),
+    (types.String, (42,), "42"),
+    (types.Boolean, ("true",), True),
+    (types.Boolean, ("no",), False),
+    (types.Array, ("ab",), ["a", "b"]),
+    (types.Array, (5,), [0, 1, 2, 3, 4]),
+    (types.Array, ("ab", True), ["ab"]),
+    (types.Hash, ([["a", 1], ["b", 2]],), {"a": 1, "b": 2}),
+]
+
+
+@pytest.mark.parametrize("cls, args, expected", CALL_CASES)
+def test_call_is_puppet_new(cls, args, expected):
+    result = cls(*args)
+    assert result == expected
+    assert type(result) is type(expected)
+
+
+def test_call_rejects_keywords():
+    with pytest.raises(TypeError, match="takes no keyword arguments"):
+        types.Integer(value="42")
+
+
+def test_call_requires_at_least_one_argument():
+    with pytest.raises(TypeError, match="missing required argument"):
+        types.Integer()
+
+
+def test_call_unsupported_type_raises_hieralookuperror():
+    with pytest.raises(HieraLookupError, match="does not support new"):
+        types.Regexp("^a")
+
+
+def test_call_already_instance_short_circuits():
+    # Puppet's new() is idempotent: an already-conforming value and no
+    # extra arguments is returned unchanged, not re-converted.
+    assert types.Integer(5) == 5
+    assert types.Integer[1, 10](5) == 5
+
+
+# ------------------------------------------------------------------ Sensitive
+
+
+def test_sensitive_is_the_same_object_as_hyera_sensitive():
+    assert types.Sensitive is Sensitive
+
+
+def test_sensitive_bare_type_via_as_type():
+    assert as_type(types.Sensitive) == parse_type("Sensitive")
+
+
+def test_sensitive_subscript_with_facade_class():
+    t = types.Sensitive[types.String]
+    assert t == parse_type("Sensitive[String]")
+    assert isinstance(Sensitive("x"), t)
+    assert not isinstance(Sensitive(5), t)
+
+
+def test_sensitive_subscript_with_type_expression_string():
+    assert types.Sensitive["Integer"] == parse_type("Sensitive[Integer]")
+
+
+def test_sensitive_call_stays_the_value_wrapper():
+    v = types.Sensitive("secret")
+    assert isinstance(v, types.Sensitive)
+    assert v.unwrap() == "secret"
+    assert str(v) == "Sensitive [value redacted]"

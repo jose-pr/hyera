@@ -252,7 +252,15 @@ class _TypeMeta(type):
 
     _puppet_name: str
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(
+        mcs,
+        name: str,
+        bases: _ty.Tuple[type, ...],
+        namespace: _ty.Dict[str, _ty.Any],
+        **kwargs: _ty.Any,
+    ) -> "_TypeMeta":
+        """Records the new class's own Puppet name (see ``_puppet_name``
+        below) in the same step ``type.__new__`` builds it."""
         # Every class in this module is named exactly after the Puppet type
         # it represents, so the Python class name doubles as `_puppet_name`
         # (the one exception, `hyera.Sensitive`, does not use this
@@ -266,25 +274,42 @@ class _TypeMeta(type):
         return _parse_type(cls._puppet_name)
 
     def __getitem__(cls, item: _ty.Any) -> _priv.Any:
+        """``ClassName[item]``: builds the parameterized type object --
+        see the module docstring's "Subscripted" paragraph."""
         args = item if isinstance(item, tuple) else (item,)
         builder = _ARG_TEXT_BUILDERS.get(cls._puppet_name.lower(), _args_text_mixed)
         text = "{}[{}]".format(cls._puppet_name, builder(args))
         return _parse_type(text)
 
     def __instancecheck__(cls, value: _ty.Any) -> bool:
+        """``isinstance(value, ClassName)``: Puppet's own instance check
+        for this class's unparameterized type."""
         return cls._default().instance(value)
 
     def __call__(cls, *args: _ty.Any, **kwargs: _ty.Any) -> _ty.Any:
-        # Puppet's new() is not wired up yet -- calling is not yet
-        # implemented (see "Not supported" in the shipped AGENTS.md header).
+        """Puppet's ``new()``: ``Integer("42") == 42``,
+        ``type(Integer("42")) is int`` -- the same as calling this class's
+        own default type object directly (``Integer._default()("42")``,
+        also what a subscripted type's own call does, e.g. ``Integer[1,
+        10]("42")``). Not expressible as a per-class return type from one
+        shared metaclass method -- pyright sees ``Any`` here; typed call
+        sites narrow it with an ordinary annotation or ``cast``."""
         if kwargs:
             raise TypeError("{}() takes no keyword arguments".format(cls._puppet_name))
-        raise TypeError("{}(...) is not callable yet".format(cls._puppet_name))
+        if not args:
+            raise TypeError(
+                "{}() missing required argument: value".format(cls._puppet_name)
+            )
+        return cls._default()(*args)
 
     def __str__(cls) -> str:
+        """Puppet's own rendering of this class's unparameterized type
+        (``str(Integer) == "Integer"``)."""
         return str(cls._default())
 
     def __repr__(cls) -> str:
+        """The ordinary Python class ``repr``, unaffected by Puppet's own
+        type formatting (see ``__str__`` for that)."""
         return "<class 'hyera.types.{}'>".format(cls._puppet_name)
 
 

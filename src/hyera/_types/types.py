@@ -95,45 +95,61 @@ class Any:
     #: Puppet class name, without the leading ``P``/trailing ``Type``.
     TYPE_NAME = "Any"
 
-    def instance(self, value):
+    def instance(self, value: _ty.Any) -> bool:
+        """Whether ``value`` is a Puppet instance of this type."""
         return True
 
-    def assignable(self, other):
+    def assignable(self, other: "Any") -> bool:
+        """Whether every instance of ``other`` is also an instance of this
+        type (Puppet's own type-assignability, used by ``generalize``)."""
         return isinstance(other, Any)
 
-    def normalize(self):
+    def normalize(self) -> "Any":
+        """This type, or an equivalent, simplified one (overridden by
+        :class:`TypeAlias`, the only type this subset ever normalizes)."""
         return self
 
-    def generalize(self):
+    def generalize(self) -> "Any":
+        """This type with any literal narrowing removed (e.g. a literal
+        ``String`` loses its ``.literal``), Puppet's own ``generalize``."""
         return self
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """This type's own Puppet name, with any parameters."""
         return self.TYPE_NAME
 
     @property
-    def simple_name(self):
+    def simple_name(self) -> str:
+        """This type's bare Puppet name, with no parameters."""
         return self.TYPE_NAME
 
-    def alias_expanded_str(self):
+    def alias_expanded_str(self) -> str:
+        """This type's own text, with every :class:`TypeAlias` it contains
+        expanded to its full body (overridden by :class:`TypeAlias` itself
+        and the few container types that can hold one)."""
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{}>".format(str(self))
 
     def _key(self):
         return ()
 
-    def __eq__(self, other):
-        return type(self) is type(other) and self._key() == other._key()
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, Any)
+            and type(self) is type(other)
+            and self._key() == other._key()
+        )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((type(self), self._key()))
 
-    def __instancecheck__(self, value):
+    def __instancecheck__(self, value: _ty.Any) -> bool:
         """Lets a type *object* stand in directly as ``isinstance()``'s
         second argument (``isinstance(5, Integer[1, 3])``): defined on the
         class body, so it is found via ``type(<this instance>).
@@ -144,6 +160,19 @@ class Any:
         builtin ``type.__instancecheck__``, untouched). See
         :mod:`hyera.types`."""
         return self.instance(value)
+
+    def __call__(self, *args: _ty.Any) -> _ty.Any:
+        """A type *object* called directly (``Integer[1, 10]("5")``) is
+        Puppet's ``new()`` against this exact type, asserting any
+        parameters (a range, a size) the same way `.new()` on the bare type
+        would. Importing :mod:`hyera._types.new_function` lazily avoids a
+        circular import (it imports this module to dispatch on these
+        classes). See :mod:`hyera.types`, whose facade classes delegate a
+        *bare* call (``Integer("5")``) to this same method on their own
+        default type object."""
+        from .new_function import new_instance
+
+        return new_instance(self, *args)
 
 
 class Undef(Any):
@@ -712,12 +741,18 @@ class Variant(Any):
 
 
 class SensitiveType(Any):
+    """Puppet's ``Sensitive`` type: an instance is a :class:`Sensitive`
+    value whose wrapped value matches the (optional) contained type."""
+
     TYPE_NAME = "Sensitive"
 
-    def __init__(self, contained=None):
+    def __init__(self, contained: "_ty.Optional[Any]" = None) -> None:
         self.contained = contained
 
-    def instance(self, value):
+    def instance(self, value: _ty.Any) -> bool:
+        """Whether ``value`` is a :class:`Sensitive` wrapping an instance
+        of this type's own contained type (any ``Sensitive`` at all, when
+        unparameterized)."""
         if not isinstance(value, Sensitive):
             return False
         if self.contained is None:
@@ -727,7 +762,7 @@ class SensitiveType(Any):
     def _key(self):
         return (_key_of(self.contained),)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return _render_container("Sensitive", self.contained)
 
 
@@ -1082,6 +1117,19 @@ class Sensitive:
 
     def __init__(self, value: _ty.Any) -> None:
         self._value = value
+
+    def __class_getitem__(cls, item: _ty.Any) -> "SensitiveType":
+        """``Sensitive[T]``: the Puppet *type* ``Sensitive[T]`` (see
+        :mod:`hyera.types`) -- a type object, never a value. Calling stays
+        the value wrapper (``Sensitive("x")``), unaffected by this.
+
+        :param item: a type object, a ``hyera.types`` class, or a Puppet
+            type-expression string, for the contained type.
+        :returns: the ``Sensitive[T]`` type object.
+        """
+        from .parser import as_type
+
+        return SensitiveType(as_type(item))
 
     def unwrap(self) -> _ty.Any:
         """The wrapped value, unredacted.

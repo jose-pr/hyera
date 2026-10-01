@@ -26,6 +26,7 @@ from .types import (
     SCALAR,
     SCALAR_DATA,
     UNDEF,
+    Any,
     Array,
     Boolean,
     Collection,
@@ -47,7 +48,7 @@ from .types import (
     _PNamedType,
 )
 
-__all__ = ["parse_type"]
+__all__ = ["parse_type", "as_type"]
 
 #: Names never accepted with parameters, whether or not they are otherwise
 #: parameterizable elsewhere (``type_parser.rb`` ``when 'any', 'data', ...``).
@@ -760,3 +761,47 @@ def parse_type(text):
         raise HieraLookupError(
             "The expression <{}> is not a valid type specification.".format(text)
         )
+
+
+def as_type(spec):
+    """Accept, anywhere a type is taken, a type object, a public
+    ``hyera.types`` class (bare or already subscripted), or a Puppet
+    type-expression string -- normalizing every form to the same private
+    type instance :func:`parse_type` itself builds.
+
+    ``None`` passes through unchanged (callers use it to mean "no
+    constraint"). A type object (already the result of :func:`parse_type`,
+    or of subscripting a ``hyera.types`` class) is returned as-is. A bare
+    ``hyera.types`` class (``Integer``, not ``Integer[1, 2]``) resolves to
+    its own unparameterized type, exactly as :func:`parse_type` would parse
+    its Puppet name; ``hyera.Sensitive`` (not built on the same metaclass as
+    every other ``hyera.types`` class, since it is also the public value
+    wrapper) resolves to a bare ``Sensitive`` type the same way.
+
+    :param spec: a type object, a ``hyera.types`` class, a Puppet
+        type-expression string, or ``None``.
+    :returns: the corresponding private type instance, or ``None``.
+    :raises TypeError: ``spec`` is none of the above.
+    :raises HieraLookupError: ``spec`` is a string that does not parse.
+    """
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        return parse_type(spec)
+    if isinstance(spec, Any):
+        return spec
+    # A bare `hyera.types` facade class (not yet subscripted), or
+    # `hyera.Sensitive` itself used in a type position: imported lazily --
+    # `hyera.types` imports this module to build every type object, so a
+    # module-level import here would be circular.
+    from .. import types as _public_types
+
+    if isinstance(spec, type) and isinstance(spec, _public_types._TypeMeta):
+        return spec._default()
+    if spec is _public_types.Sensitive:
+        return SensitiveType()
+    raise TypeError(
+        "must be a type object, a hyera.types class, or a str, not {}".format(
+            type(spec).__name__
+        )
+    )
