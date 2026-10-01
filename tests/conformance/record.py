@@ -101,7 +101,16 @@ def _command(runner: str, case_dir: Path, args: list):
     prefix = ["wsl.exe"]
     if distro:
         prefix += ["-d", distro]
-    return prefix + ["--cd", str(case_dir), "--", "puppet"] + args, None
+    # `-e <command> [args...]`, not `-- <command> [args...]`: wsl.exe's `--`
+    # form relays the trailing argv through a shell on the Linux side that
+    # strips a lone or wrapping single quote from an argument before the
+    # command ever sees it (double quotes survive either way) -- verified
+    # with `ruby -e 'puts ARGV.inspect' "'a.b'"`: `--` delivers `["a.b"]`
+    # (quotes gone), `-e` delivers `["'a.b'"]` (quotes intact, the TRUE
+    # argument). `-e` executes the same way `--` does otherwise (no
+    # argument reinterpretation of its own), so this is a straight
+    # substitution.
+    return prefix + ["--cd", str(case_dir), "-e", "puppet"] + args, None
 
 
 def _run(runner: str, case_dir: Path, args: list):
