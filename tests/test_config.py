@@ -240,6 +240,33 @@ _BASE_V5 = {
             },
             "entry 'ok' expects a Data value, got Hash",
         ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {"name": "", "path": "one.yaml", "data_hash": "yaml_data"}
+                ],
+            },
+            "entry 'name' expects a String[1] value, got String",
+        ),
+        (
+            {
+                **_BASE_V5,
+                "hierarchy": [
+                    {
+                        "name": "one",
+                        "path": "one.yaml",
+                        "data_hash": "yaml_data",
+                        # A dict config is never parsed through the YAML
+                        # loader, so an arbitrary Python object can reach
+                        # here directly -- outside the small set of types
+                        # _ruby_type_name/_is_data name explicitly.
+                        "options": {"ok": object()},
+                    }
+                ],
+            },
+            "entry 'ok' expects a Data value, got object",
+        ),
     ],
     ids=[
         "mapped-paths-2-tuple",
@@ -253,6 +280,8 @@ _BASE_V5 = {
         "options-not-a-hash",
         "options-bad-key",
         "options-value-not-data",
+        "empty-name",
+        "options-value-unrepresentable-type",
     ],
 )
 def test_malformed_config_raises_config_error(cfg, expected):
@@ -359,6 +388,154 @@ def test_duplicate_names_report_both_lines(tmp_path):
 
     assert "First defined at (line: 4)" in str(exc.value)
     assert exc.value.line == 8
+
+
+def test_duplicate_names_dict_config_has_no_first_line():
+    # Same duplicate-name message as above, but a dict-configured Hiera has
+    # no text to search for either entry's line.
+    cfg = {
+        **_BASE_V5,
+        "hierarchy": [
+            {"name": "same", "path": "a.yaml"},
+            {"name": "same", "path": "b.yaml"},
+        ],
+    }
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert "Hierarchy name 'same' defined more than once." in str(exc.value)
+    assert "First defined at" not in str(exc.value)
+    assert exc.value.line is None
+
+
+def test_multi_document_config_error_has_no_line(tmp_path):
+    # Puppet's own `safe_load` (`YAML.safe_load`, ported here as
+    # backends._yaml_loader.safe_load) reads only the first YAML document
+    # in a file and ignores whatever a later `---` document contains, so
+    # this configuration parses and builds just like a single-document one
+    # would. But the line-lookup helper (_config_line) re-parses the raw
+    # text with plain `yaml.compose`, which raises ComposerError on a
+    # multi-document stream -- so an error here still raises correctly,
+    # just without a line number.
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: yaml_data}\n"
+        b"hierarchy:\n"
+        b"  - {name: common, pathz: common.yaml}\n"
+        b"---\n"
+        b"[unterminated\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "unrecognized key 'pathz'" in str(exc.value)
+    assert exc.value.line is None
+    assert "(line:" not in str(exc.value)
+
+
+def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
+    # `hierarchy: false` fills in Puppet's own built-in default hierarchy
+    # (_fill_v5_defaults' ||= rule), which has no corresponding node in the
+    # actual YAML text at all -- a later error naming a position inside
+    # that synthesized entry (here, defaults' own data_hash naming a
+    # function that doesn't implement data_hash) can't find a line for it.
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: eyaml_lookup_key}\n"
+        b"hierarchy: false\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "'eyaml_lookup_key' expects 3 arguments, got 2" in str(exc.value)
+    assert exc.value.line is None
+
+
+def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
+    # Unlike the synthesized-default case above, `hierarchy` is written out
+    # here and the one entry is real -- it simply inherits its data_hash
+    # from `defaults` (ordinary, encouraged Puppet usage), so the entry's
+    # own YAML mapping has no "data_hash" key for _config_line to find when
+    # that inherited function turns out to be the wrong kind.
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: eyaml_lookup_key}\n"
+        b"hierarchy:\n"
+        b"  - {name: common, path: common.yaml}\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "'eyaml_lookup_key' expects 3 arguments, got 2" in str(exc.value)
+    assert exc.value.line is None
+
+
+def test_duplicate_top_level_hierarchy_key_last_one_wins(tmp_path):
+    # Psych/our own loader keep the *last* of two duplicate top-level
+    # mapping keys (`_flatten_mapping_keeping_dupes_last`), so `hierarchy`
+    # here is the second (two-entry) definition. But _config_line's own
+    # raw-node walk (over plain `yaml.compose`, which does not dedupe
+    # duplicate keys) finds the *first* matching "hierarchy" node instead
+    # -- a one-entry sequence -- so looking up index 1 inside it is an
+    # out-of-range index into a real, but wrong, sequence node.
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: yaml_data}\n"
+        b"hierarchy:\n"
+        b"  - {name: a, path: a.yaml}\n"
+        b"hierarchy:\n"
+        b"  - {name: common, path: common.yaml}\n"
+        b"  - {name: extra, pathz: extra.yaml}\n"
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "index 1 unrecognized key 'pathz'" in str(exc.value)
+    assert exc.value.line is None
+
+
+def test_duplicate_options_key_in_one_entry_last_one_wins(tmp_path):
+    # Same last-wins rule as above, but for a duplicate key *within* one
+    # entry's own mapping: the surviving `options` value is the dict (the
+    # bad pattern key is correctly found and reported), but the raw node
+    # walk picks the *first* "options" occurrence -- the discarded, non-dict
+    # scalar -- so there is no mapping there to look the bad key up in.
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(
+        b"version: 5\n"
+        b"defaults: {datadir: data, data_hash: yaml_data}\n"
+        b"hierarchy:\n"
+        b"  - name: common\n"
+        b"    path: common.yaml\n"
+        b"    options: not-a-dict\n"
+        b"    options:\n"
+        b'      "bad key!": 1\n'
+    )
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert "key of entry 'bad key!' expects a match for Pattern" in str(exc.value)
+    assert exc.value.line is None
+
+
+def test_invalid_utf8_config_raises(tmp_path):
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(b"version: 5\n# \xff\xfe invalid utf-8\n")
+
+    with pytest.raises(ConfigError) as exc:
+        Hiera(str(config))
+
+    assert str(exc.value.path).endswith("hiera.yaml")
 
 
 def test_hiera3_backend_replaced_by_data_hash():

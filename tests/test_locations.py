@@ -113,6 +113,18 @@ def test_hiera_level_new_no_location():
     assert lvl.locations == ()
 
 
+def test_hiera_level_paths_no_location_returns_empty(tmp_path):
+    # A location-less level (a lookup_key/data_dig function called once with
+    # no location at all, resolve_locations' own `key is None` branch)
+    # yields no candidate paths -- distinct from a location key that simply
+    # expands to zero candidates.
+    from hyera import HieraLevel
+    from hyera.backends import YAMLBackend
+
+    level = HieraLevel.new({"name": "lvl", "datadir": "data"}, YAMLBackend())
+    assert level.paths(tmp_path, Scope()) == []
+
+
 def test_hiera_level_paths_resolves_locations(tmp_path):
     # Through the public seam (hyera.HieraLevel, hyera.backends.YAMLBackend),
     # not the private _hiera_config/_StubBackend helper above: .paths()

@@ -401,6 +401,16 @@ def test_default_codedir():
     assert _default_codedir() == expected
 
 
+def test_default_codedir_posix(monkeypatch):
+    # The "nt" branch above is the only one a Windows CI run ever takes on
+    # its own -- force the non-Windows side deterministically rather than
+    # leaving it platform-gated.
+    import os
+
+    monkeypatch.setattr(os, "name", "posix")
+    assert _default_codedir() == Path("/etc/puppetlabs/code")
+
+
 def test_v3_merge_behavior_is_not_applied(make_tree, monkeypatch):
     root = make_tree(
         ":backends: [yaml]\n"
@@ -501,6 +511,51 @@ def test_v3_eyaml_maps_to_eyaml_lookup_key():
     assert spec["backend_cls"] is None
 
 
+def test_v3_eyaml_backend_options_reach_the_built_level(make_tree, monkeypatch):
+    # Unlike test_v3_eyaml_maps_to_eyaml_lookup_key above (which only checks
+    # the spec dict), this builds a real HieraLevel through _v3_levels --
+    # a non-empty per-backend options dict (everything but `datadir`) must
+    # actually be threaded onto the level's own conf, not just the spec.
+    pytest.importorskip("cryptography")
+    key_path = (
+        Path(__file__).resolve().parent
+        / "conformance"
+        / "cases"
+        / "backend-eyaml-pkcs7"
+        / "keys"
+        / "private_key.pkcs7.pem"
+    ).as_posix()
+    root = make_tree(
+        "backends: [eyaml]\n"
+        "hierarchy: [common]\n"
+        "eyaml:\n"
+        "  datadir: data\n"
+        "  pkcs7_private_key: {}\n".format(key_path),
+        files={
+            "data/common.eyaml": (
+                "plain: ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIB"
+                "HQIBADAFMAACAQAwDQYJKoZIhvcNAQEBBQAEggEAUxMeECBRt6S3CUuSBrPq"
+                "gJMeVmfTz32pZZDYxT8STIJH/fcJwH8dXBtJXO1+cORUStymhaSFRBon4s2C"
+                "U1ivZh/Y7FPGELpv0DgO7p6FbjrBj3KTGRBoLPwLvF7c7g1mKIX+wVfqY5J6"
+                "CeNPazoZ7OdymtpIOVtVk6iM+DNoFJiJ1ExiflNj/evx/7LL4p8DxEUn7SBx"
+                "4GzVe1Tbixh1HXPOucWZf2gS9Q6oF5AonmesYV81tK7ZVnMWq0L6ofDEw7rn"
+                "V4WwOg3jvbZqUVTfW7VmWCNH/WRc9H0q8ALF6iFyLcVzgGR9FzkY6pwuA09D"
+                "gIz9K4nALPOkMbDPwz4GADBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCW"
+                "vJ27L0KBIZxF4C0PAWFbgCC+x0smWw5EliuxtFyWGVFTSqtZZV/Ew3zhxy8I"
+                "3B1r0Q==]\n"
+            )
+        },
+        raw=True,
+    )
+    # A v3 level's relative `datadir` follows the process cwd *at
+    # construction*, never the hiera.yaml directory (see HieraLevel's own
+    # datadir_base docstring) -- chdir into root first, like every other
+    # v3 relative-datadir test in this file.
+    monkeypatch.chdir(root)
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"os": {"family": "RedHat"}}))
+    assert h.lookup("plain") == "s3cr3t RedHat"
+
+
 def test_hiera3_backend_resolves_registered_v3_backend(make_tree, monkeypatch):
     monkeypatch.setattr(Backend, "_REGISTRY", copy.deepcopy(Backend._REGISTRY))
 
@@ -539,6 +594,18 @@ def test_v3_duplicate_backend_reports_lines(make_tree):
     assert excinfo.value.line == 4
 
 
+def test_v3_duplicate_backend_dict_config_has_no_lines():
+    # A dict-configured Hiera (no file, so no text to search for a line)
+    # hits the same duplicate-backend message, but with neither a first
+    # nor a second line to report -- distinct from the file-backed case
+    # above, which finds both.
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera({"backends": ["yaml", "yaml"], "hierarchy": ["common"]})
+    assert "Backend 'yaml' is defined more than once." in str(excinfo.value)
+    assert "First defined at" not in str(excinfo.value)
+    assert excinfo.value.line is None
+
+
 def test_find_line_matching():
     text = "first\n" "b # comment cuts here\n" 'c = "keeps # inside quotes"\n' "last\n"
     # a '#' outside quotes starts a comment -- "cuts" is stripped away
@@ -549,6 +616,14 @@ def test_find_line_matching():
     assert _find_line_matching(text, r"^first$") == 1
     assert _find_line_matching(text, r"^first$", start_line=2) is None
     assert _find_line_matching(text, r"^last$", start_line=3) == 4
+
+
+def test_find_line_matching_single_quote():
+    # A '#' inside a *single*-quoted string is just as much not a comment
+    # as one inside a double-quoted string (test_find_line_matching above)
+    # -- the single-quote toggle has its own branch in the scanner.
+    text = "d = 'keeps # inside single quotes'\n"
+    assert _find_line_matching(text, r"inside") == 1
 
 
 # --- version 4 ---------------------------------------------------------
@@ -775,6 +850,23 @@ def test_v4_duplicate_name_reports_lines(make_tree):
         h.lookup("mymod::same")
     assert "First defined at (line: 3)" in str(excinfo.value)
     assert excinfo.value.line == 5
+
+
+def test_v4_duplicate_name_dict_config_has_no_lines():
+    # Same duplicate-name message as above, but a dict-configured Hiera has
+    # no text to search, so neither a first nor a second line is found.
+    cfg = {
+        "version": 4,
+        "hierarchy": [
+            {"name": "same", "backend": "yaml"},
+            {"name": "same", "backend": "json"},
+        ],
+    }
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(cfg)
+    assert "Hierarchy name 'same' defined more than once." in str(excinfo.value)
+    assert "First defined at" not in str(excinfo.value)
+    assert excinfo.value.line is None
 
 
 def test_v4_in_global_layer_valid_file_gives_layer_error(make_tree, caplog):
