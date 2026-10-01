@@ -813,11 +813,11 @@ This project follows [Semantic Versioning](https://semver.org/) and keeps a
 [`CHANGELOG.md`](https://github.com/jose-pr/hyera/blob/main/CHANGELOG.md).
 Pushing a tag matching `v*` runs `release.yml`: the test gate, then `build`
 (which checks the tag names the version actually built), then a strict
-docs build (`docs-gate`), then the GitHub release, then, for a final
-(non-pre-release) tag, publishing to PyPI through Trusted Publishing and
-dispatching `docs.yml` to redeploy the docs at that tag. A pre-release tag
-(`v1.0.0-rc.1`) creates only a GitHub pre-release and is never uploaded to
-PyPI.
+docs build (`docs-gate`), then the GitHub release, then publishing to PyPI
+through Trusted Publishing. A pre-release tag (`v1.0.0-rc.1`) is published
+as a PyPI pre-release, which `pip install hyera` skips unless you ask for it
+(`--pre` or an exact version pin); only a final tag also dispatches
+`docs.yml` to redeploy the docs at that tag.
 
 ## License
 

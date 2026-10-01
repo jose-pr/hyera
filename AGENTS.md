@@ -224,10 +224,12 @@ the docs site can be redeployed without cutting a release.
   macOS × the oldest and newest supported Python) → `build` (checks the
   tag names the version actually built) → `docs-gate` (strict docs build,
   no deploy) → `github-release` (flagged pre-release when the tag's PEP 440
-  form says so) → `publish-pypi` (final tags only, PyPI Trusted Publishing,
-  no stored token) and `docs-deploy` (final tags only, dispatches
-  `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`) stops after
-  `github-release`: no PyPI upload, no docs redeploy.
+  form says so) → `publish-pypi` (every tag, pre-releases included, PyPI
+  Trusted Publishing, no stored token) and `docs-deploy` (final tags only,
+  dispatches `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`,
+  `v0.0.0-a0`) is uploaded to PyPI as a pre-release, which `pip install
+  hyera` skips unless asked for (`--pre` or an exact pin); it does not
+  redeploy the docs.
 - **Owner-only prerequisites** (no claim is made here about their current
   state — check before assuming a release or a docs deploy will work):
   PyPI Trusted Publishing registered for the `hyera` project, this
