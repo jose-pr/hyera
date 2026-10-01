@@ -555,6 +555,22 @@ def test_hiera3_backend_replaced_by_data_hash():
     )
 
 
+def test_hiera3_backend_in_defaults_is_rejected():
+    # hiera3_backend is a per-entry-only key: valid in a hierarchy entry
+    # (test_hiera3_backend_replaced_by_data_hash above), but Puppet's own
+    # `defaults` struct type excludes it -- confirmed against a real
+    # Puppet 8.10 run, see the conformance case
+    # config-defaults-hiera3-backend-key.
+    cfg = {
+        "version": 5,
+        "defaults": {"datadir": "data", "hiera3_backend": "foo"},
+        "hierarchy": [{"name": "common", "path": "common.yaml"}],
+    }
+
+    with pytest.raises(ConfigError, match="unrecognized key 'hiera3_backend'"):
+        Hiera(cfg)
+
+
 def test_lookup_key_entry_does_not_inherit_data_hash(make_tree):
     # A `lookup_key` entry must never fall back to `defaults`' `data_hash`
     # and read its file as plain YAML -- with real eyaml data, that would

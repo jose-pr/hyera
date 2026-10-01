@@ -1,0 +1,4 @@
+version: 5
+defaults: {datadir: data, hiera3_backend: foo}
+hierarchy:
+  - {name: common, path: common.yaml}

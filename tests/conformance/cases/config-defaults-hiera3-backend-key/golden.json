@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "7f542dd315b965dc75ddd96639ab56fd029471da2c96f437b0b3f0f91cd424ff",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'defaults' unrecognized key 'hiera3_backend'"
+    }
+  }
+}

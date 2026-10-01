@@ -1,0 +1,9 @@
+description: >-
+  `defaults:` may only carry datadir/data_hash/lookup_key/data_dig/options;
+  `hiera3_backend` is a per-entry-only key (valid in a hierarchy entry, never
+  in defaults) and so is a Puppet config error there too.
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+    error_class: ConfigError
+    error_match: "unrecognized key 'hiera3_backend'"

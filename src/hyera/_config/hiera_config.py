@@ -1110,7 +1110,19 @@ def _check_top(data: dict, source: "_ConfigSource") -> None:
 
 
 def _validate_defaults_issues(defaults: dict, source: "_ConfigSource") -> None:
-    """``validate_defaults`` (``hiera_config.rb:802-816``)."""
+    """``validate_defaults`` (``hiera_config.rb:802-816``).
+
+    ``hiera3_backend`` is one of ``_FUNCTION_KEYS`` but not of
+    ``_DEFAULTS_KEYS``, so ``defaults`` can never actually carry it by the
+    time this runs -- ``_check_defaults_type`` already rejected it as an
+    unrecognized key. This mirrors Puppet's own ``validate_defaults``
+    exactly: its ``FUNCTION_KEYS`` list (and so this error's own message
+    text) names ``hiera3_backend`` too, even though Puppet's own
+    ``defaults`` struct type excludes it the same way (confirmed against
+    ``hiera_config.rb``'s ``@@CONFIG_TYPE`` and a real Puppet 8.10 run,
+    see ``config-defaults-hiera3-backend-key``) -- kept as written, rather
+    than narrowed, to stay a literal port.
+    """
     if sum(1 for k in _FUNCTION_KEYS if k in defaults) > 1:
         raise _config_error(
             source,
@@ -1504,6 +1516,17 @@ def _function_of(entry: dict, defaults: dict):
     Unreachable with a ``None`` result once :func:`_validate_v5` has run
     (it guarantees exactly one function key, on the entry or in
     ``defaults``); kept total rather than assuming that here too.
+
+    The ``defaults`` loop's own ``hiera3_backend`` case can never match:
+    ``defaults`` only ever reaches here after ``_check_defaults_type``
+    rejected any key outside ``_DEFAULTS_KEYS``, which excludes
+    ``hiera3_backend`` -- the same restriction Puppet's own ``defaults``
+    struct type places on it (``hiera_config.rb``'s ``@@CONFIG_TYPE``,
+    confirmed against a real Puppet 8.10 run in
+    ``config-defaults-hiera3-backend-key``). Puppet's own
+    ``function_kind = FUNCTION_KEYS.find { |key| defaults.include?(key) }``
+    has the identical shape, so this stays a literal port rather than a
+    narrower, hand-trimmed key list.
     """
     for key in _ALL_FUNCTION_KEYS:
         if key in entry:
