@@ -222,6 +222,19 @@ def _tokenize(string: str):
         try:
             return _parse_int_legacy(string)
         except ValueError:
+            # Each of _INTEGER_LEGACY_RE's four alternatives only ever
+            # admits the digit characters valid for the base it signals
+            # (0-1 for "0b", 0-7 for a bare leading "0", 0-9a-fA-F for
+            # "0x", 0-9 otherwise), and _parse_int_legacy picks that same
+            # base from that same prefix -- so once the regex has matched,
+            # stripping the "," / "_" separators it also allows can never
+            # leave `int(sign + body, base)` an invalid literal. Kept as a
+            # direct mirror of Ruby's own `rescue` around `Integer()`
+            # (matching the sibling Float conversion just above, which
+            # *is* reachable) rather than assumed dead: unlike that
+            # invariant, this one depends on every one of the four
+            # alternatives staying exactly aligned with its base's digit
+            # set, which a future edit here could silently break.
             raise BackendError('invalid value for Integer(): "{}"'.format(string))
     return string
 

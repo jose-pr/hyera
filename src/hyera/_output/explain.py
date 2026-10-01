@@ -748,6 +748,14 @@ class _DebugExplainer(Explainer):
         parts = [preamble, "\n"]
         self.dump_on(parts, "  ", "  ")
         message = "".join(parts)
+        # `message` always ends in "\n" here: `parts` starts with one right
+        # after `preamble`, and every `dump_on`/`_dump_texts` in this file
+        # either appends nothing or appends text of its own that already
+        # ends in a literal "\n" (so does the single-branch passthrough in
+        # `_Merge.dump_on`). The guard is still kept, unconditional-slice
+        # free, as a direct mirror of Ruby's own `chomp!` (a no-op when the
+        # string doesn't end in a newline) rather than relying on that
+        # invariant holding across every current and future node type.
         if message.endswith("\n"):
             message = message[:-1]
         _LOGGER.debug("%s", message)

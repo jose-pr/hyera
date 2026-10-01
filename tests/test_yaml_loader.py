@@ -14,6 +14,7 @@ from hyera.backends._yaml_loader import (
     RubySymbol,
     _C_LOADER,
     _PURE_LOADER,
+    _yaml_problem,
     safe_load,
     symkeys_to_string,
 )
@@ -468,6 +469,54 @@ def test_safe_load_disallowed_class_chain_free():
     e = excinfo.value
     assert e.__cause__ is None
     assert e.__context__ is None
+
+
+# ---------------------------------------------------------------------------
+# ``_yaml_problem``: hand-built error shapes real PyYAML parsing never
+# raises in its current code paths (every real ``MarkedYAMLError`` seen from
+# ``yaml.load_all`` carries a ``problem`` alongside any mark), but which the
+# function's own docstring commits to handling defensively for *any*
+# ``yaml.YAMLError`` -- not just the handful of shapes a single PyYAML
+# version's scanner/parser happens to raise today.
+# ---------------------------------------------------------------------------
+
+
+def _mark(line=4, column=7):
+    return yaml.error.Mark("<test>", 0, line, column, None, None)
+
+
+def test_yaml_problem_mark_without_text_skips_redaction():
+    # `problem`/`context` both unset (`text` is falsy) but a mark is still
+    # present: the redaction step is skipped and the position-only message
+    # strips its own leading space.
+    exc = yaml.error.MarkedYAMLError(
+        context=None, context_mark=None, problem=None, problem_mark=_mark()
+    )
+    assert _yaml_problem(exc) == "at line 5 column 8"
+
+
+def test_yaml_problem_text_without_mark():
+    # `problem` set, no mark at all on either side.
+    exc = yaml.error.MarkedYAMLError(
+        context=None, context_mark=None, problem="unexpected token", problem_mark=None
+    )
+    assert _yaml_problem(exc) == "unexpected token"
+
+
+def test_yaml_problem_marked_error_with_neither_text_nor_mark():
+    # Both empty: falls past both `if`s to the same class-name fallback as
+    # an unmatched `yaml.YAMLError` subtype.
+    exc = yaml.error.MarkedYAMLError(
+        context=None, context_mark=None, problem=None, problem_mark=None
+    )
+    assert _yaml_problem(exc) == "MarkedYAMLError"
+
+
+def test_yaml_problem_unhandled_yaml_error_falls_back_to_type_name():
+    # Neither a `MarkedYAMLError` nor a `ReaderError`: the function falls
+    # back to the exception's own class name rather than raising or
+    # returning nothing.
+    assert _yaml_problem(yaml.YAMLError("oops")) == "YAMLError"
 
 
 # ---------------------------------------------------------------------------

@@ -13,11 +13,14 @@ import collections
 import json
 from pathlib import Path
 
+import pytest
+
 from hyera._output.explain import (
     Explainer,
     _dump_value,
     _Location,
     _LocationRef,
+    _Node,
     _ProviderRef,
     _Top,
 )
@@ -396,3 +399,60 @@ def test_to_hash_key_order():
     root = _Top(None, "data", "k")
     root.branches.append(path_node)
     assert list(root.to_hash()) == ["branches", "key", "type"]
+
+
+def test_bare_node_text_and_dump_on():
+    """``_Node`` (``ExplainNode``) is the base every concrete tree node
+    overrides ``dump_on`` on top of -- no engine code path ever builds a
+    bare instance -- but it is still real, documented behavior (a second
+    ``text()`` call appends rather than resetting the queue), so exercise
+    it directly the same way this file already builds every other node by
+    hand."""
+    node = _Node()
+    node.text("first")
+    node.text("second")
+    parts = []
+    node.dump_on(parts, "  ", "")
+    assert "".join(parts) == "  first\n  second\n"
+
+
+def test_texts_reach_to_hash_on_a_tree_node():
+    """Unlike the root (``test_invalid_key_and_root_texts``), a queued
+    ``text()`` on an ordinary ``_TreeNode`` *does* reach ``to_hash()``."""
+    e = Explainer()
+    e.push("scope", "Global Scope")
+    e.accept_text("a note")
+    e.accept_not_found("x")
+    e.pop()
+
+    hash_ = e.to_hash()
+    assert hash_["texts"] == ["a note"]
+    assert e.explain() == 'Global Scope\n  No such key: "x"\n  a note\n'
+
+
+def test_module_node_without_event_is_silent():
+    """A ``_Module`` node only ever gets an event through
+    ``accept_module_not_found``/``accept_module_provider_not_found``
+    (both push, set the event, then pop in one go); pushed directly with
+    neither called, its ``if``/``elif`` (no ``else``) matches
+    ``ExplainModule#dump_on`` and renders nothing at all."""
+    e = Explainer()
+    e.push("module", "x")
+    e.pop()
+
+    assert e.explain() == ""
+    assert e.to_hash() == {"type": "module"}
+
+
+def test_push_rejects_unknown_kind():
+    e = Explainer()
+    with pytest.raises(ValueError, match="Unknown Explain type bogus"):
+        e.push("bogus", None)
+
+
+def test_pop_at_root_is_a_noop():
+    """``pop()`` with nothing pushed matches Puppet's ``Explainer#pop``,
+    a no-op when already at the root."""
+    e = Explainer()
+    e.pop()
+    assert e.current is e
