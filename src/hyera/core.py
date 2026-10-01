@@ -62,10 +62,11 @@ from ._lookup.navigation import (
 )
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
-from ._types.parser import parse_type
+from ._types.parser import as_type
 from .backends import Backend, default_backends
 from .exceptions import _escapes
 from ._lookup.merge_strategy import MergeSpec
+from .types import TypeSpec
 
 __all__ = ["Hiera"]
 
@@ -1943,7 +1944,7 @@ class Hiera:
     def lookup(
         self,
         name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
-        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        value_type: "_ty.Union[str, TypeSpec, _ty.Mapping[str, _ty.Any], None]" = None,
         merge: MergeSpec = None,
         default_value: _ty.Any = _MISSING,
         *,
@@ -1988,7 +1989,8 @@ class Hiera:
         :param name: the key, a tuple key path, or a list of keys/paths
             tried in order (the first one that is found, anywhere in the
             precedence order below, wins).
-        :param value_type: a Puppet type expression (``"Integer"``,
+        :param value_type: a type object, a ``hyera.types`` class, or a
+            Puppet type expression string (``"Integer"``,
             ``"Optional[String]"``); every candidate value (override, found,
             a default) is asserted against it, raising ``HieraLookupError``
             with Puppet's own subject text ("Found value has wrong type,
@@ -2079,7 +2081,7 @@ class Hiera:
     def dig(
         self,
         *keys: _ty.Any,
-        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        value_type: "_ty.Union[str, TypeSpec, None]" = None,
         merge: MergeSpec = None,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
@@ -2101,8 +2103,9 @@ class Hiera:
 
         :param keys: the root key, then each key/index to dig into the
             result -- used exactly as given, never dotted-string parsed.
-        :param value_type: a Puppet type expression asserted against the
-            final result.
+        :param value_type: a type object, a ``hyera.types`` class, or a
+            Puppet type expression string, asserted against the final
+            result.
         :param merge: the root lookup's merge strategy.
         :param default_values_hash: consulted for the root key only after
             the hierarchy itself missed it.
@@ -2126,7 +2129,7 @@ class Hiera:
         )
         result = _data_functions.dig(root, keys[1:])
         if value_type is not None:
-            assert_instance_of("Found value", parse_type(value_type), result)
+            assert_instance_of("Found value", as_type(value_type), result)
         return result
 
     def get(
@@ -2135,7 +2138,7 @@ class Hiera:
         default_value: _ty.Any = None,
         block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
         *,
-        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        value_type: "_ty.Union[str, TypeSpec, None]" = None,
         merge: MergeSpec = None,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
@@ -2167,8 +2170,9 @@ class Hiera:
         :param block: called with the navigation error when a later
             segment cannot be dug out; its return value is used instead of
             raising.
-        :param value_type: a Puppet type expression asserted against the
-            final result.
+        :param value_type: a type object, a ``hyera.types`` class, or a
+            Puppet type expression string, asserted against the final
+            result.
         :param merge: the root lookup's merge strategy.
         :param default_values_hash: consulted for the root key only after
             the hierarchy itself missed it.
@@ -2217,7 +2221,7 @@ class Hiera:
             root_value, segments[1:], default_value, block
         )
         if value_type is not None:
-            assert_instance_of(subject, parse_type(value_type), result)
+            assert_instance_of(subject, as_type(value_type), result)
         return result
 
     def getvar(
@@ -2253,7 +2257,7 @@ class Hiera:
     def explain(
         self,
         name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
-        value_type: "_ty.Union[str, _ty.Mapping[str, _ty.Any], None]" = None,
+        value_type: "_ty.Union[str, TypeSpec, _ty.Mapping[str, _ty.Any], None]" = None,
         merge: MergeSpec = None,
         default_value: _ty.Any = _MISSING,
         *,

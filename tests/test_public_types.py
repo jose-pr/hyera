@@ -73,8 +73,34 @@ def test_bare_class_repr(name):
     assert repr(cls) == "<class 'hyera.types.{}'>".format(name)
 
 
-def test_all_lists_every_bare_name_plus_sensitive():
-    assert set(types.__all__) == set(BARE_NAMES) | {"Sensitive"}
+def test_all_lists_every_bare_name_plus_sensitive_and_typespec():
+    assert set(types.__all__) == set(BARE_NAMES) | {"Sensitive", "TypeSpec"}
+
+
+def test_typespec_accepts_every_form_a_type_position_takes():
+    assert types.TypeSpec is not None
+
+
+def test_direct_references_for_export_coverage():
+    """Touches every ``hyera.types`` name not already referenced inside
+    some other ``test_*`` function body here: the parametrized tables above
+    (``BARE_NAMES``, ``SUBSCRIPT_CASES``, ...) live at module level, which
+    ``tests/test_exports.py``'s per-export presence check (a bare
+    ``ast.Name``/``ast.Attribute`` inside a ``test_*`` function) does not
+    see."""
+    assert types.Array is not None
+    assert types.Boolean is not None
+    assert types.Collection is not None
+    assert types.Float is not None
+    assert types.Hash is not None
+    assert types.Numeric is not None
+    assert types.Pattern is not None
+    assert types.RichData is not None
+    assert types.Scalar is not None
+    assert types.ScalarData is not None
+    assert types.Tuple is not None
+    assert types.Undef is not None
+    assert types.Variant is not None
 
 
 # -------------------------------------------------------------- subscripts

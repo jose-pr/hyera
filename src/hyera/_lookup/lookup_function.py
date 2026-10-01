@@ -11,7 +11,7 @@ import typing as _ty
 from .._output.explain import _debug_preamble
 from .invocation import _STRICT
 from .navigation import _MISSING
-from .._types.parser import parse_type
+from .._types.parser import as_type
 from .._types.mismatch import assert_instance_of
 from ..exceptions import HieraLookupError, KeyNotFoundError, _escapes
 
@@ -160,10 +160,10 @@ def parse_call(
 ) -> LookupCall:
     """Puppet's five ``lookup()`` call forms (``functions/lookup.rb:151-
     223``), normalized to one shape. Every call-shape problem raises
-    ``TypeError``, as Python itself reports a bad argument; everything
-    data/string-shaped (an unparsable ``value_type``) is left to
-    :func:`~hyera._types.parser.parse_type`, which raises
-    ``hyera.HieraLookupError``.
+    ``TypeError``, as Python itself reports a bad argument; ``value_type``
+    is accepted as a type object, a ``hyera.types`` class, or a Puppet
+    type-expression string (:func:`~hyera._types.parser.as_type`), and an
+    unparsable string is left to raise ``hyera.HieraLookupError``.
     """
     if isinstance(name, dict):
         # Form 4: {name => ..., <option> => ..., ...}. block is still its
@@ -197,13 +197,10 @@ def parse_call(
         override = opts.get("override")
 
     _validate_name(real_name)
-    if value_type is not None and not isinstance(value_type, str):
-        raise TypeError(
-            "lookup(): value_type must be a str, not {}".format(
-                type(value_type).__name__
-            )
-        )
-    parsed_type = parse_type(value_type) if value_type is not None else None
+    try:
+        parsed_type = as_type(value_type)
+    except TypeError as e:
+        raise TypeError("lookup(): value_type {}".format(e)) from None
     _validate_merge(merge)
     _validate_hash_option(override, "override")
     _validate_hash_option(default_values_hash, "default_values_hash")

@@ -780,6 +780,15 @@ at runtime, because pyright hard-codes `ClassName[args]` through
 here's dedicated metaclass) to the `Generic`/`NamedTuple` idiom's
 `type[ClassName]`, regardless of the method's declared return type.
 
+- **`TypeSpec`** — the type of a `value_type` argument's object form,
+  accepted everywhere a type is taken (`lookup`/`dig`/`get`/`explain`/
+  `__call__`/`__getitem__`, and a nested type argument in a subscript): a
+  type object, a bare `hyera.types` class, or (as always) a Puppet
+  type-expression `str`. `lookup`/`explain`'s own `value_type` parameter
+  additionally takes a `dict` there (form 5's options hash, unrelated to
+  the type itself); `dig`/`get` never do, since they have no options-hash
+  form.
+
 ## Backends
 
 A self-registering registry: every format or provider

@@ -122,6 +122,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CLI's own `--merge`/`--strict`/`--render-as` flags stay plain strings:
   duho's `Enum` CLI support resolves text by member *name* (`FIRST`,
   `ERROR`), not by value, which would break Puppet's lowercase flag values.
+- `hyera.types`: one public, isinstance-aware class per Puppet type
+  (`Any`, `Integer`, `Optional`, `Struct`, ...), not re-exported from
+  top-level `hyera` except `Sensitive` (the same object as
+  `hyera.Sensitive`). The bare class is the unparameterized type
+  (`isinstance(5, Integer)`); subscripting builds a parameterized type
+  object equal to parsing the same Puppet text, including `str()`/`repr()`
+  and every error message (`Integer[1, 10]`, `Optional[String]`,
+  `Struct[{"a": Integer}]`); calling one is Puppet's `new()`, returning a
+  plain value (`Integer("42") == 42`). `value_type` on
+  `lookup`/`dig`/`get`/`explain`/`__call__`/`__getitem__`, and a nested
+  type argument in a subscript, now also accept a type object or a bare
+  `hyera.types` class, with results identical to the equivalent string.
 
 ### Changed
 

@@ -80,7 +80,10 @@ def test_bad_call_shapes_raise_type_error(fn):
         h.lookup([5])
     with pytest.raises(TypeError, match="override must be a dict with str keys"):
         h.lookup("k", override={5: "x"})
-    with pytest.raises(TypeError, match="value_type must be a str, not int"):
+    with pytest.raises(
+        TypeError,
+        match="value_type must be a type object, a hyera.types class, or a str, not int",
+    ):
         h.lookup("k", value_type=5)
 
 
@@ -158,6 +161,49 @@ def test_value_type_subjects(fn):
         h.lookup("missing", "Integer", block=lambda n: "str_val")
     # Optional[String] accepts the found None.
     assert h.lookup("nilk", "Optional[String]") is None
+
+
+def test_value_type_accepts_type_objects(fn):
+    """``value_type`` takes a ``hyera.types`` object (bare class or
+    subscripted) anywhere it takes a Puppet type-expression string, with
+    identical results -- including the raised error text -- across every
+    entry point that has a ``value_type``."""
+    from hyera import types
+
+    h = fn
+    assert h.lookup("n", types.Integer) == h.lookup("n", "Integer") == 5
+    assert h.lookup("n", types.Integer[1, 10]) == 5
+    assert h("n", types.Integer) == 5
+    assert h["n", types.Integer] == 5
+    # dig()/get() assert the value_type against the *dug-out* result, so
+    # the fixture's "hsi" hash (digging into key "a") exercises them the
+    # same way the plain "n" key exercises lookup/()/[] above.
+    assert h.dig("hsi", "a", value_type=types.Integer) == 1
+    assert h.get("hsi.a", value_type=types.Integer) == 1
+    explained = h.explain("n", types.Integer)
+    assert explained.error is None
+
+    def _message(value_type):
+        with pytest.raises(HieraLookupError) as exc_info:
+            h.lookup("s", value_type)
+        return str(exc_info.value)
+
+    assert _message(types.Integer) == _message("Integer")
+    assert _message(types.Integer[1, 10]) == _message("Integer[1, 10]")
+
+    def _dig_message(value_type):
+        with pytest.raises(HieraLookupError) as exc_info:
+            h.dig("s", value_type=value_type)
+        return str(exc_info.value)
+
+    assert _dig_message(types.Integer) == _dig_message("Integer")
+
+    def _get_message(value_type):
+        with pytest.raises(HieraLookupError) as exc_info:
+            h.get("s", value_type=value_type)
+        return str(exc_info.value)
+
+    assert _get_message(types.Integer) == _get_message("Integer")
 
 
 def test_override_and_defaults_feed_value_interpolation(fn, make_tree):

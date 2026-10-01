@@ -113,6 +113,7 @@ shows.
 | Module | Purpose | Reference |
 | --- | --- | --- |
 | `hyera` | hyera: a Python implementation of Puppet Hiera data lookup. | https://jose-pr.github.io/hyera/api/hyera/ |
+| `hyera.types` | Public Puppet type objects (`Integer`, `Optional`, `Struct`, ...). | https://jose-pr.github.io/hyera/api/types/ |
 | `hyera.backends` | Data backends: a self-registering `Backend` registry. | https://jose-pr.github.io/hyera/api/backends/ |
 | `hyera.cli` | Command-line interface for hyera, built on duho. | https://jose-pr.github.io/hyera/api/cli/ |
 | `hyera` (command) / `python -m hyera` | Runs a lookup from the command line, mirroring `puppet lookup`'s own flags. | [#command-line](#command-line) |
@@ -337,6 +338,32 @@ print(h.explain("ntp::servers").text())
 their results, interpolations, the `lookup_options` search); `.to_hash()`
 is the same tree, keyed the way `--render-as json --explain` renders it.
 `explain_options=True` reports only how `lookup_options` was assembled.
+
+#### Type-checked lookups
+
+`value_type` (on `lookup`/`dig`/`get`/`explain`/`()`/`[]`) takes a Puppet
+type-expression string, or the equivalent object from `hyera.types` -- one
+isinstance-aware class per Puppet type, never a builtin subclass:
+
+```python
+from hyera import types
+
+h.lookup("ntp::servers", types.Array[types.String])  # same as "Array[String]"
+h.lookup("retries", types.Integer[1, 10])             # same as "Integer[1, 10]"
+
+isinstance(5, types.Integer)          # True
+isinstance(5, types.Integer[1, 10])   # True
+isinstance(11, types.Integer[1, 10])  # False
+
+types.Integer("42")   # 42 (an int) -- Puppet's new(), same as convert_to
+types.Array("ab")      # ["a", "b"]
+```
+
+A bare class (`types.Integer`) is the unparameterized type; subscripting
+(`types.Integer[1, 10]`) builds a parameterized one, equal to parsing the
+same Puppet text; calling either is Puppet's `new()`. `hyera.types` is not
+re-exported from top-level `hyera` except `Sensitive`, already public there
+as the redacting wrapper (`types.Sensitive` is the same object).
 
 ### Merging and `lookup_options`
 

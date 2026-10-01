@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 import hyera
+from hyera import types as hyera_types
 
 _TESTS_DIR = Path(__file__).resolve().parent
 _THIS_FILE = Path(__file__).resolve()
@@ -87,6 +88,45 @@ def test_export_has_direct_test(export_name):
 )
 def test_member_has_direct_test(qualified):
     _, member_name = qualified.split(".", 1)
+    assert member_name in _REFERENCED, (
+        "hyera.{} is never referenced (as a bare name or an attribute) "
+        "inside a test_* function".format(qualified)
+    )
+
+
+def _type_member_ids():
+    """The same per-member presence check as :func:`_member_ids`, over
+    :data:`hyera.types`'s own ``__all__`` instead of top-level ``hyera``'s
+    (a separate public module, not re-exported there -- see
+    ``src/hyera/AGENTS.md``'s "hyera.types" section)."""
+    out = []
+    for export_name in sorted(hyera_types.__all__):
+        obj = getattr(hyera_types, export_name)
+        if not isinstance(obj, type):
+            continue
+        for member_name, value in sorted(vars(obj).items()):
+            if _is_public_member(member_name, value):
+                out.append("types.{}.{}".format(export_name, member_name))
+    return out
+
+
+@pytest.mark.parametrize(
+    "export_name",
+    sorted(hyera_types.__all__),
+    ids=lambda n: "types-export:{}".format(n),
+)
+def test_type_export_has_direct_test(export_name):
+    assert export_name in _REFERENCED, (
+        "hyera.types.{} is never referenced (as a bare name or an "
+        "attribute) inside a test_* function".format(export_name)
+    )
+
+
+@pytest.mark.parametrize(
+    "qualified", _type_member_ids(), ids=lambda n: "types-member:{}".format(n)
+)
+def test_type_member_has_direct_test(qualified):
+    _, _, member_name = qualified.split(".", 2)
     assert member_name in _REFERENCED, (
         "hyera.{} is never referenced (as a bare name or an attribute) "
         "inside a test_* function".format(qualified)

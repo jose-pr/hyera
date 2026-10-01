@@ -30,6 +30,7 @@ nav:
   - Home: index.md
   - API Reference:
       - hyera: api/hyera.md
+      - hyera.types: api/types.md
       - hyera.backends: api/backends.md
       - hyera.cli: api/cli.md
   - Changelog: changelog.md
