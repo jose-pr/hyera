@@ -1314,6 +1314,10 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   key is checked (and rejected) before the ciphertext, like Puppet, but
   with hyera's own message text ("Could not read the private key: ...")
   rather than OpenSSL's, which `cryptography` does not re-expose.
+- **deviation** `integer-dotted-navigation-error-text` — navigating a
+  dotted sub-key into an Integer keeps hyera's own "Data Provider type
+  mismatch" text; Puppet crashes with a raw Ruby `NoMethodError` instead
+  of a designed message.
 - **deviation** `knockout-prefix-not-python-regex` — a `knockout_prefix`
   that Python's `re` module cannot compile raises an error; Ruby accepts
   it with a warning ("regular expression has redundant nested repeat

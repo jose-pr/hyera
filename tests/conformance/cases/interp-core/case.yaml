@@ -63,5 +63,16 @@ queries:
   error_match: "Data Provider type mismatch: Got Array when a hash-like object was expected"
 - key: nilv.x
 - key: int.x
-
   error_class: HieraLookupError
+  deviation:
+    id: integer-dotted-navigation-error-text
+    reason: >-
+      Navigating a dotted segment into an Integer crashes real Puppet with
+      a raw Ruby NoMethodError ("undefined method 'include?' for an
+      instance of Integer"), an interpreter accident rather than a
+      designed message; hyera keeps its own "Data Provider type mismatch"
+      text (the same shape `plain.x`/`arr.x` above already use for a
+      String/Array) instead of reproducing the crash.
+    expect:
+      status: error
+      message: "Data Provider type mismatch: Got Integer when a hash-like object was expected"

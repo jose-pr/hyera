@@ -780,6 +780,13 @@ for.
   key nor PRIV key" and similar), which the `cryptography` package does
   not re-expose, so hyera reports "Could not read the private key: ..."
   instead. There is no opt-in. (id: `eyaml-key-parse-error-text`)
+- **Navigating a dotted sub-key into an Integer keeps hyera's own error
+  text.** Puppet crashes with a raw Ruby `NoMethodError` ("undefined method
+  'include?' for an instance of Integer") instead of a designed message;
+  hyera raises `HieraLookupError` ("Data Provider type mismatch: Got
+  Integer when a hash-like object was expected ..."), the same shape it
+  already uses for a String or Array in this position. There is no
+  opt-in. (id: `integer-dotted-navigation-error-text`)
 - **A deep-merge `knockout_prefix` that Python's `re` module cannot compile
   raises `MergeError`.** Ruby accepts a prefix like `**` (with a warning
   about a redundant nested repeat operator) and uses it as a regex; choose
