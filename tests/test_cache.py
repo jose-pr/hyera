@@ -656,6 +656,44 @@ def test_deleted_file_reads_as_absent(make_tree):
         h.lookup("k")
 
 
+def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree):
+    # _load_file's own absent-after-cached branch: a path successfully
+    # read and cached once, then found gone by a *later* call's fresh
+    # probe, reads as absent rather than an error -- distinct from
+    # test_deleted_file_reads_as_absent above, where the file is already
+    # gone by the time the *hierarchy* itself is next resolved (so this
+    # method's own cache is never even consulted for a location nothing
+    # upstream still thinks exists). Reaching this exact ordering through
+    # a real two-lookup sequence would need defeating several layers of
+    # scope-interpolation-stable caching above this method that have
+    # nothing to do with the file-content cache being tested here, so
+    # _load_file is called directly instead -- the same way
+    # test_data_hash_load_file_missing_is_not_found above substitutes a
+    # fake implementation of this same method to test what a `_MISSING`
+    # return does one layer up.
+    from hyera._lookup.navigation import _MISSING
+
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
+        files={"data/a.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    path = root / "data" / "a.yaml"
+    backend = YAMLBackend()
+
+    first = h._load_file(path, backend, {})
+    assert first == {"k": "v"}
+    cache_key = (path, backend.strict, "{}")
+    assert cache_key in h._file_cache
+    assert path in h._loaded_paths
+
+    os.remove(str(path))
+    second = h._load_file(path, backend, {})
+    assert second is _MISSING
+    assert cache_key not in h._file_cache
+    assert path not in h._loaded_paths
+
+
 def test_new_file_at_literal_location_is_seen(make_tree):
     root = make_tree(
         {"hierarchy": [{"name": "node", "path": "nodes/%{trusted.certname}.yaml"}]},

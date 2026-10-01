@@ -1279,7 +1279,12 @@ class Hiera:
                 state = self._environment(scope.environment)
                 provider = self._usable(state.provider, invocation)
                 inv = invocation
-            elif layer == "module":
+            else:
+                # `layer` is always one of `_LAYERS` (the only caller,
+                # `strategy.lookup(_LAYERS, at_layer, invocation)` below,
+                # never passes anything else); "global" and "environment"
+                # are already handled above, so reaching here always means
+                # "module" -- never a fourth, unhandled name to check for.
                 if module_name is None:
                     return _MISSING
                 state = self._environment(scope.environment)
@@ -1292,9 +1297,6 @@ class Hiera:
                     return _MISSING
                 provider = self._usable(raw, invocation)
                 inv = invocation
-            # `layer` is always one of `_LAYERS` (the only caller,
-            # `strategy.lookup(_LAYERS, at_layer, invocation)` below, never
-            # passes anything else), so every name is handled above.
             if provider is None:
                 return _MISSING
             mod = provider.module_name if provider.place == "Module" else None

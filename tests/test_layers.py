@@ -436,6 +436,37 @@ def test_environment_lookup_options_apply_to_unqualified_keys(tmp_path, make_tre
     assert h.lookup("k") == ["g", "e"]
 
 
+def test_environment_lookup_options_discarded_by_explicit_module_null(
+    tmp_path, make_tree
+):
+    # The environment declares lookup_options for a module-qualified key;
+    # the module's own data has an EXPLICIT `lookup_options: ~` (distinct
+    # from no lookup_options key at all, which leaves the environment's
+    # own options untouched -- see test_lookup_options_layer_precedence's
+    # "nothing at all" case) -- Puppet's own if/elsif with no else
+    # discards the environment's options outright rather than keeping
+    # them, so the lookup falls back to the default first-match merge
+    # instead of the environment's "unique".
+    base = make_tree(
+        {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
+        files={"data/g.yaml": "mymod::a: [g]\n"},
+    )
+    envs = tmp_path / "envs"
+    _write(envs / "production" / "hiera.yaml", _LEVEL)
+    _write(
+        envs / "production" / "data" / "c.yaml",
+        "lookup_options:\n  mymod::a: {merge: unique}\nmymod::a: [e]\n",
+    )
+    _write(envs / "production" / "modules" / "mymod" / "hiera.yaml", _LEVEL)
+    _write(
+        envs / "production" / "modules" / "mymod" / "data" / "c.yaml",
+        "lookup_options: ~\nmymod::a: [m]\n",
+    )
+
+    h = Hiera(str(base / "hiera.yaml"), environmentpath=[envs])
+    assert h.lookup("mymod::a") == ["g"]
+
+
 def test_default_hierarchy_rejected_outside_module_layer_dict():
     with pytest.raises(ConfigError) as exc_info:
         Hiera(
@@ -509,6 +540,27 @@ def test_module_default_hierarchy_ignores_caller_merge(tmp_path, make_tree):
     # with no lookup_options of its own, it defaults to first-match, so
     # only d1's (higher-priority) value is returned.
     assert h.lookup("m::k", merge="deep") == {"a": 1}
+    # A dotted sub-key digs into the same default-hierarchy result.
+    assert h.lookup("m::k.a") == 1
+
+
+def test_default_hierarchy_miss_is_not_found(tmp_path, make_tree):
+    # Neither the module's main hierarchy nor its default_hierarchy has
+    # the key at all -- a miss reported from the default_hierarchy walk
+    # itself, not from the main one.
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(
+        modules / "m" / "hiera.yaml",
+        "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
+        "default_hierarchy:\n  - {name: d, path: d.yaml}\n",
+    )
+    _write(modules / "m" / "data" / "c.yaml", "m::other: x\n")
+    _write(modules / "m" / "data" / "d.yaml", "m::also_other: y\n")
+
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("m::k")
 
 
 def test_default_hierarchy_lookup_options_must_be_qualified(tmp_path, make_tree):

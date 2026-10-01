@@ -309,6 +309,12 @@ def test_backend_exception_wrapped_with_path(make_tree, monkeypatch):
     assert excinfo.value.path is not None
 
 
+def test_empty_backends_list_raises_config_error(make_tree):
+    root = make_tree({"hierarchy": [{"name": "one", "path": "one.yaml"}]})
+    with pytest.raises(ConfigError, match="No backends could be loaded"):
+        Hiera(str(root / "hiera.yaml"), backends=[])
+
+
 def test_data_file_errors_surface_on_lookup(make_tree):
     # Puppet reads data only inside a lookup (`hiera_config.rb:127` builds
     # the config without touching data; `data_hash_function_provider.rb`
