@@ -432,14 +432,17 @@ def test_hocon_non_object_root_raises():
 
 def test_hocon_private_parser_copy_leaves_shared_module_alone():
     pytest.importorskip("pyhocon")
-    import datetime
-
     import pyhocon
 
+    # pyhocon's own duration type depends on its environment (a
+    # relativedelta when python-dateutil is importable, a timedelta
+    # otherwise), so compare against the shared module's own answer before
+    # hyera parsed anything rather than naming either type.
+    before = pyhocon.ConfigFactory.parse_string("d = 10s")["d"]
     HOCONBackend().loads("d = 10s")
-    assert isinstance(
-        pyhocon.ConfigFactory.parse_string("d = 10s")["d"], datetime.timedelta
-    )
+    after = pyhocon.ConfigFactory.parse_string("d = 10s")["d"]
+    assert not isinstance(before, str)
+    assert type(after) is type(before) and after == before
 
 
 def test_hocon_missing_dependency_names_extra(monkeypatch):
