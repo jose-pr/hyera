@@ -129,7 +129,7 @@ def _run_sops(path, input_type: str, output_type: str = None) -> bytes:
             check=False,
         )
     except subprocess.TimeoutExpired:
-        # Recorded, not re-raised, inside the except (R4b): a
+        # Recorded, not re-raised, inside the except: a
         # TimeoutExpired carries the subprocess's partial stdout (possibly
         # partially-decrypted plaintext) as an attribute, and raising
         # *inside* an active except block sets it as `__context__` even
@@ -178,7 +178,7 @@ def _sops_format(path_str: str):
     return None
 
 
-#: S7: fixed prefixes of the two ``_psych`` messages that quote the
+#: Fixed prefixes of the two ``_psych`` messages that quote the
 #: offending scalar verbatim (``invalid value for Float()/Integer():
 #: "<data>"``). Matched as a plain prefix, never against the tail: the
 #: quoted scalar can itself embed a literal newline (a ``!!float |\n

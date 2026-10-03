@@ -174,7 +174,7 @@ def facts_from_facter(*, timeout: int = 30) -> _ty.Dict[str, _ty.Any]:
         )
     except subprocess.TimeoutExpired:
         # Recorded, not re-raised, inside the except: matches the sops
-        # runner's own hardening (R4b) -- raising outside the handler keeps
+        # runner's own hardening -- raising outside the handler keeps
         # __context__ genuinely None rather than holding the partial output.
         timed_out = True
     except OSError as e:
