@@ -3,7 +3,7 @@ description: >
   (unknown interpolation method, an embedded alias, a top-level dig
   type mismatch) versus the two that escape the report instead (a real
   type mismatch reached through a sub-lookup, and a recursive lookup) --
-  probed directly against Puppet 8.10, no known review finding.
+  probed directly against Puppet 8.10.
 queries:
   - key: unknown_fn
     explain: data

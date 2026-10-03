@@ -1,7 +1,7 @@
 description: >
   A non-hash lookup_options value ends the --explain report with
   "value of lookup_options must be a hash" instead of raising -- probed
-  directly against Puppet 8.10, no known review finding.
+  directly against Puppet 8.10.
 queries:
   - key: k
     explain: data
