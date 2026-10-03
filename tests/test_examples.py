@@ -1,6 +1,5 @@
 """Run the ``examples/`` scripts for real and pin their output against the
-Puppet oracle (see this file's own Verification section in the plan for the
-``puppet lookup`` re-check)."""
+Puppet oracle (re-checked directly against a real ``puppet lookup``)."""
 
 import json
 import runpy

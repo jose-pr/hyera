@@ -1,6 +1,6 @@
 """``_psych``: Psych's scalar rules, BOM handling, and structure, as
-measured against real Ruby 4.0.7 / Psych 5.3.1 (see the plan's oracle probe
-table). Parametrized over both loader backends where the C/pure distinction
+measured against real Ruby 4.0.7 / Psych 5.3.1 via a dedicated oracle probe.
+Parametrized over both loader backends where the C/pure distinction
 matters (only the tab-after-colon row differs)."""
 
 import math

@@ -455,7 +455,7 @@ def test_include_form_raises_when_refused(
     assert hits == []
 
 
-# -- R5 adversarial forms (independent security review, round 2): 17 inputs
+# -- Adversarial forms found by a later hardening pass: 17 inputs
 # where the text scanner missed a directive pyhocon's own grammar honours
 # caselessly, across a triple-quoted string, a comment, or a substitution.
 # All 17 stay a regression suite for the opt-in guard (still raise, exactly

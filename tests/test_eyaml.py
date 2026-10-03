@@ -792,10 +792,10 @@ def test_decrypted_value_cached_per_key(public_key, tmp_path, monkeypatch):
     assert calls == ["k"]
 
 
-# --- security review fixes --------------------------------------------------
-# X1: `.*ENC\[.*?\]` was cubic under Python's backtracking `re` for a value
-# that is mostly unterminated `ENC[` prefixes; `_has_encrypted_token` is the
-# reviewer's linear line-at-a-time replacement.
+# --- hardening against adversarial input -------------------------------------
+# `.*ENC\[.*?\]` was cubic under Python's backtracking `re` for a value
+# that is mostly unterminated `ENC[` prefixes; `_has_encrypted_token` is a
+# linear line-at-a-time replacement.
 
 
 def test_no_token_present_returns_unchanged_fast():
@@ -819,7 +819,7 @@ def test_has_encrypted_token_matches_original_regex_on_random_strings():
         )
 
 
-# --- R4: the OID reader built an unbounded Python int per sub-identifier,
+# --- The OID reader built an unbounded Python int per sub-identifier,
 # quadratic in the OID's byte length; `_oid` now caps content length.
 
 
@@ -836,7 +836,7 @@ def _oid_bytes_raw(content: bytes) -> bytes:
     return _tlv(0x06, content)
 
 
-# --- R1a: a non-string `pkcs7_private_key` must never be opened as a file
+# --- A non-string `pkcs7_private_key` must never be opened as a file
 # descriptor (`os.path.exists`/`open` both accept an int fd).
 
 
@@ -864,7 +864,7 @@ def test_non_string_key_path_bool_rejected(public_key):
         decrypt_string(tok, {"pkcs7_private_key": True}, "k", "p")
 
 
-# --- R1b: an OSError opening/reading the key file (a directory, a
+# --- An OSError opening/reading the key file (a directory, a
 # permission error) must be wrapped, never left raw.
 
 
@@ -875,7 +875,7 @@ def test_key_path_directory_is_wrapped(tmp_path, public_key):
         decrypt_string(tok, {"pkcs7_private_key": str(tmp_path)}, "k", "p")
 
 
-# --- R2: `_decode64` must tolerate non-alphabet characters the way Ruby's
+# --- `_decode64` must tolerate non-alphabet characters the way Ruby's
 # `Base64.decode64` does, instead of letting `binascii.Error` escape raw.
 
 
@@ -905,7 +905,7 @@ def test_b64_env_var_garbage_is_wrapped_not_raw_binascii_error(
         )
 
 
-# --- R3: no decrypted plaintext or private-key PEM reachable via
+# --- No decrypted plaintext or private-key PEM reachable via
 # `exc.__context__`'s traceback frame locals, even though `raise ... from
 # None` alone does not clear `__context__`.
 

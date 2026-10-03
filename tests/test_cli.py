@@ -493,7 +493,7 @@ def test_explicit_merge_first_overrides_lookup_options(mergefirst_root, capsys):
 def test_mcp_stdio_serves_lookup(hiera_root):
     # HYERA_MCP=stdio runs the CLI as an MCP server exposing one tool. Both
     # the tool name and the initialize response's serverInfo.name come from
-    # duho's root tool-name resolution (Lookup._parsername_ -- see R7a),
+    # duho's root tool-name resolution (Lookup._parsername_),
     # which is "hyera", not the command class's own name "Lookup".
     messages = [
         {
