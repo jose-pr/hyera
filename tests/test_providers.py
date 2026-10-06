@@ -155,7 +155,10 @@ def test_lookup_key_missing_location_not_called(make_tree, backends, calls, scri
     assert calls[0][2]["path"].endswith("b.yaml")
 
 
-def test_lookup_key_cached_per_key_and_location(make_tree, backends, calls, script):
+@pytest.mark.parametrize("revalidate, expected_calls", [(True, 2), (False, 1)])
+def test_lookup_key_result_lifetime_follows_revalidate(
+    make_tree, backends, calls, script, revalidate, expected_calls
+):
     root = make_tree(
         {
             "hierarchy": [
@@ -165,10 +168,10 @@ def test_lookup_key_cached_per_key_and_location(make_tree, backends, calls, scri
         files={"data/a.yaml": "x"},
     )
     script["lookup_key"] = lambda key, options, context: "v"
-    h = Hiera(str(root / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"), revalidate=revalidate)
     assert h.lookup("k") == "v"
     assert h.lookup("k") == "v"
-    assert len(calls) == 1
+    assert len(calls) == expected_calls
 
 
 def test_lookup_key_not_found_is_not_cached(make_tree, backends, calls, script):
@@ -215,16 +218,19 @@ def test_data_dig_gets_segments_and_result_is_undug(make_tree, backends, calls, 
     assert calls[0][1] == ("a", "b", 0)
 
 
-def test_data_dig_cached_per_full_key(make_tree, backends, calls, script):
+@pytest.mark.parametrize("revalidate, expected_calls", [(True, 2), (False, 1)])
+def test_data_dig_result_lifetime_follows_revalidate(
+    make_tree, backends, calls, script, revalidate, expected_calls
+):
     root = make_tree(
         {"hierarchy": [{"name": "s", "data_dig": "test_data_dig", "path": "a.yaml"}]},
         files={"data/a.yaml": "x"},
     )
     script["data_dig"] = lambda key_segments, options, context: "leaf"
-    h = Hiera(str(root / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"), revalidate=revalidate)
     assert h.lookup("a.b") == "leaf"
     assert h.lookup("a.b") == "leaf"
-    assert len(calls) == 1
+    assert len(calls) == expected_calls
 
 
 def test_data_dig_missing_location_not_called(make_tree, backends, calls, script):

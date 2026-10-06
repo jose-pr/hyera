@@ -754,8 +754,8 @@ def test_enc_token_with_whitespace_only_body_is_malformed():
 
 
 def test_decrypted_value_cached_per_key(public_key, tmp_path, monkeypatch):
-    """Caching is ``EyamlBackend``'s job (per key, in the ``LookupContext``),
-    not ``decrypt_string``'s own -- exercise it through a real ``Hiera``
+    """The engine keeps a key's decrypted result while the file is
+    unchanged, not ``decrypt_string`` -- exercise it through a real ``Hiera``
     lookup and count actual decrypt calls via a wrapped ``decrypt_string``.
     """
     der = _envelope(b"cached-once", public_key)
