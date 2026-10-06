@@ -974,6 +974,20 @@ def test_unicode_escape_in_an_included_file_is_decoded(secret_dir):
     assert result == {"e": "é", "outer": 5}
 
 
+def test_parse_error_chain_holds_no_document_text():
+    secret = "planted-secret-value-7f3a"
+    with pytest.raises(BackendError) as info:
+        HOCONBackend().loads('k = "{}"\n}}\n'.format(secret))
+    seen = []
+    exc = info.value
+    while exc is not None and exc not in seen:
+        seen.append(exc)
+        assert secret not in repr(exc) + str(exc.args)
+        assert secret not in repr(vars(exc))
+        exc = exc.__cause__ or exc.__context__
+    assert len(seen) == 1
+
+
 # -- hyera neither imports nor patches pyhocon until a document is parsed --
 
 

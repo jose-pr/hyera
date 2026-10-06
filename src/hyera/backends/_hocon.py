@@ -856,15 +856,20 @@ class HOCONBackend(Backend):
             text = _refuse_hocon_includes(text)
             guarded = frozenset({"file include", "URL include", "package include"})
         token = _HOCON_INCLUDE_GUARD.set(guarded)
+        failure = None
         try:
             mod = _hocon_parser()
             parsed = mod.ConfigFactory.parse_string(text)
         except BackendError:
             raise
         except Exception as e:
-            raise BackendError(_one_line(str(e))) from None
+            failure = _one_line(str(e))
         finally:
             _HOCON_INCLUDE_GUARD.reset(token)
+        if failure is not None:
+            # Raised outside the handler: pyhocon's exception carries the
+            # whole document and must not stay reachable from this one.
+            raise BackendError(failure) from None
         if not isinstance(parsed, ConfigTree):
             raise BackendError(
                 "hocon_data: has type {} rather than object at file "
