@@ -33,6 +33,8 @@ import re as _re
 import typing as _ty
 
 from ._types import types as _priv
+from ._types.parser import as_type as _as_type
+from ._types.parser import build_access as _build_access
 from ._types.parser import parse_type as _parse_type
 
 __all__ = [
@@ -72,40 +74,26 @@ __all__ = [
 TypeSpec = _ty.Union[str, type, _priv.Any]
 
 
-# --------------------------------------------------------------- rendering
+# ------------------------------------------------------------- arguments
 #
-# `__getitem__` renders its arguments into the Puppet source text for the
-# equivalent type expression and hands it to `parse_type` -- the same
-# constructors, grammar and error text `parse_type` itself uses, so
-# `Integer[1, 2] == parse_type("Integer[1, 2]")` by construction. The
-# `str`/`bool`/`int`/`float`/`None` cases mirror `_types.types`'s own
-# `_puppet_quote`/`_num_str`/`_literal_str`; kept local to avoid reaching
-# into that module's private renderers for the one extra case (dispatching
-# on a nested type argument) they do not need to handle.
+# `__getitem__` turns its Python arguments into the parser's own argument
+# nodes (a type object stands for itself) and calls the same builders
+# `parse_type` uses, so `Integer[1, 2] == parse_type("Integer[1, 2]")` by
+# construction, with the same arity and error text.
 
 
-def _lit_str(s: str) -> str:
-    return "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'"
-
-
-def _lit_bool(b: bool) -> str:
-    return "true" if b else "false"
-
-
-def _lit_num(value: _ty.Any) -> str:
-    """A value-position literal: ``None`` -> Puppet's ``default``, else a
-    bool/int/float/str literal rendered the way Puppet's own type-expression
-    grammar spells it."""
+def _value_node(value: _ty.Any) -> tuple:
+    """A value-position argument: ``None`` is Puppet's ``default``."""
     if value is None:
-        return "default"
+        return ("default", None, 0, 0)
     if isinstance(value, bool):
-        return _lit_bool(value)
+        return ("bool", value, 0, 0)
     if isinstance(value, str):
-        return _lit_str(value)
-    if isinstance(value, float):
-        return _priv._num_str(value)
-    if isinstance(value, int):
-        return str(value)
+        return ("string", value, 0, 0)
+    if isinstance(value, (int, float)):
+        return ("number", value, isinstance(value, float), 0, 0)
+    if isinstance(value, _re.Pattern):
+        return ("regex", value.pattern, 0, 0)
     raise TypeError("unexpected literal argument: {!r}".format(value))
 
 
@@ -113,138 +101,127 @@ def _is_type_like(value: _ty.Any) -> bool:
     return isinstance(value, (str, _priv.Any, _TypeMeta))
 
 
-def _type_text(value: _ty.Any) -> str:
-    """A nested *type-position* argument (``Array``'s element type,
-    ``Hash``'s key/value types, ``Tuple``'s elements, ``Variant``'s
-    branches, ``Sensitive``'s contained type): a type object or a
-    ``hyera.types`` class renders as its own Puppet text; a ``str`` is
-    spliced in verbatim as type-expression source (``Array["Integer"]`` ==
-    ``Array[Integer]``), never quoted -- unlike a *value*-position string
-    (:func:`_lit_num`), which always is."""
-    if isinstance(value, str):
-        return value
-    if isinstance(value, (_priv.Any, _TypeMeta)):
-        return str(value)
-    raise TypeError(
-        "expected a type, a hyera.types class, or a type-expression str, "
-        "not {}".format(type(value).__name__)
-    )
-
-
-def _regex_text(value: _ty.Any) -> str:
-    if isinstance(value, _re.Pattern):
-        source = value.pattern
-    elif isinstance(value, str):
-        source = value
-    else:
+def _type_node(value: _ty.Any) -> tuple:
+    """A type-position argument: a type object, a ``hyera.types`` class or a
+    type-expression ``str`` (``Array["Integer"]`` is ``Array[Integer]``)."""
+    try:
+        return ("type", _as_type(value), 0, 0)
+    except TypeError:
         raise TypeError(
-            "expected a str or re.Pattern, not {}".format(type(value).__name__)
-        )
-    # A literal "/" has no escape that round-trips through `parse_type`
-    # (its own lexer stores a regex's raw, unescaped source) -- not
-    # expressible here, same as it is not expressible as `value_type` text
-    # without going through `parse_type` directly.
-    return "/{}/".format(source)
+            "expected a type, a hyera.types class, or a type-expression str, "
+            "not {}".format(type(value).__name__)
+        ) from None
 
 
-def _args_text_optional_like(args: tuple) -> str:
-    """``NotUndef``/``Optional``: each argument is a literal (a ``str``, as
-    Puppet's own grammar treats a bareword/quoted string here) or a nested
-    type -- never both at once in real Puppet, but every argument is
-    rendered so a wrong count still reaches :func:`parse_type`'s own arity
-    error."""
-    parts = []
+def _literal_or_type_node(value: _ty.Any) -> tuple:
+    """``Optional``/``NotUndef``'s argument: a ``str`` stays a literal."""
+    return _value_node(value) if isinstance(value, str) else _type_node(value)
+
+
+def _nodes_literal(args: tuple) -> list:
+    return [_value_node(a) for a in args]
+
+
+def _nodes_types(args: tuple) -> list:
+    return [_type_node(a) for a in args]
+
+
+def _nodes_regex(args: tuple) -> list:
+    nodes = []
     for a in args:
-        parts.append(_lit_str(a) if isinstance(a, str) else _type_text(a))
-    return ", ".join(parts)
+        if isinstance(a, (str, _re.Pattern)):
+            nodes.append(_value_node(a))
+        elif _is_type_like(a):
+            nodes.append(_type_node(a))
+        else:
+            raise TypeError(
+                "expected a str or re.Pattern, not {}".format(type(a).__name__)
+            )
+    return nodes
 
 
-def _args_text_literal(args: tuple) -> str:
-    return ", ".join(_lit_num(a) for a in args)
+def _nodes_optional_like(args: tuple) -> list:
+    return [_literal_or_type_node(a) for a in args]
 
 
-def _args_text_types(args: tuple) -> str:
-    return ", ".join(_type_text(a) for a in args)
-
-
-def _args_text_regex(args: tuple) -> str:
-    return ", ".join(_regex_text(a) for a in args)
-
-
-def _args_text_array(args: tuple) -> str:
+def _nodes_array(args: tuple) -> list:
     if args and _is_type_like(args[0]):
-        parts = [_type_text(args[0])] + [_lit_num(a) for a in args[1:]]
-    else:
-        parts = [_lit_num(a) for a in args]
-    return ", ".join(parts)
+        return [_type_node(args[0])] + _nodes_literal(args[1:])
+    return _nodes_literal(args)
 
 
-def _args_text_hash(args: tuple) -> str:
-    parts = [_type_text(a) if i < 2 else _lit_num(a) for i, a in enumerate(args)]
-    return ", ".join(parts)
+def _nodes_hash(args: tuple) -> list:
+    return [_type_node(a) if i < 2 else _value_node(a) for i, a in enumerate(args)]
 
 
-def _args_text_tuple(args: tuple) -> str:
+def _nodes_tuple(args: tuple) -> list:
     items = list(args)
     sizes: list = []
     while items and len(sizes) < 2 and type(items[-1]) is int:
         sizes.insert(0, items.pop())
-    parts = [_type_text(a) for a in items] + [_lit_num(a) for a in sizes]
-    return ", ".join(parts)
+    return _nodes_types(tuple(items)) + _nodes_literal(tuple(sizes))
 
 
-def _struct_key_text(key: _ty.Any) -> str:
+def _struct_key_node(key: _ty.Any) -> tuple:
     if isinstance(key, str):
-        return _lit_str(key)
-    if isinstance(key, _priv.Optional) and isinstance(key.contained, str):
-        return "Optional[{}]".format(_lit_str(key.contained))
-    if isinstance(key, _priv.NotUndef) and isinstance(key.contained, str):
-        return "NotUndef[{}]".format(_lit_str(key.contained))
+        return _value_node(key)
+    for kind, name in ((_priv.Optional, "Optional"), (_priv.NotUndef, "NotUndef")):
+        if isinstance(key, kind) and isinstance(key.contained, str):
+            return (
+                "access",
+                ("qref", name, 0, 0),
+                [_value_node(key.contained)],
+                0,
+                0,
+                "{}[{!r}]".format(name, key.contained),
+            )
     raise TypeError(
         "a Struct key must be a str, Optional[str] or NotUndef[str], "
         "not {!r}".format(key)
     )
 
 
-def _args_text_struct(args: tuple) -> str:
+def _nodes_struct(args: tuple) -> list:
     if len(args) == 1 and isinstance(args[0], dict):
-        pairs = [
-            "{} => {}".format(_struct_key_text(k), _type_text(v))
-            for k, v in args[0].items()
-        ]
-        return "{{{}}}".format(", ".join(pairs))
-    # Not a single dict: let `parse_type` raise its own "not a valid type
-    # specification" error for the malformed expression.
-    return ", ".join(_type_text(a) if _is_type_like(a) else _lit_num(a) for a in args)
+        pairs = [(_struct_key_node(k), _type_node(v)) for k, v in args[0].items()]
+        return [("hash", pairs, 0, 0)]
+    # Not a single dict: the builder reports "not a valid type specification".
+    return [_type_node(a) if _is_type_like(a) else _value_node(a) for a in args]
 
 
-def _args_text_mixed(args: tuple) -> str:
+def _nodes_mixed(args: tuple) -> list:
     """Names with no parameter grammar of their own (``Any``, ``Undef``,
-    ``Scalar``, ``Numeric``, the ``Data``/``RichData`` aliases, ...):
-    renders whatever was given so :func:`parse_type` raises its own "not a
-    parameterized type" error."""
-    return ", ".join(_type_text(a) if _is_type_like(a) else _lit_num(a) for a in args)
+    ``Scalar``, ``Numeric``, the ``Data``/``RichData`` aliases): the parser
+    raises its own "not a parameterized type" error."""
+    return [_type_node(a) if _is_type_like(a) else _value_node(a) for a in args]
 
 
-#: Puppet name (lowercased) -> the renderer for that name's subscript
-#: arguments, mirroring `hyera._types.parser._ACCESS_BUILDERS`'s own keys.
-_ARG_TEXT_BUILDERS: _ty.Dict[str, _ty.Callable[[tuple], str]] = {
-    "notundef": _args_text_optional_like,
-    "optional": _args_text_optional_like,
-    "integer": _args_text_literal,
-    "float": _args_text_literal,
-    "string": _args_text_literal,
-    "boolean": _args_text_literal,
-    "collection": _args_text_literal,
-    "enum": _args_text_literal,
-    "pattern": _args_text_regex,
-    "regexp": _args_text_regex,
-    "array": _args_text_array,
-    "hash": _args_text_hash,
-    "tuple": _args_text_tuple,
-    "struct": _args_text_struct,
-    "variant": _args_text_types,
+#: Puppet name (lowercased) -> the converter for that name's subscript
+#: arguments, mirroring the parser's own builders.
+_ARG_NODES: _ty.Dict[str, _ty.Callable[[tuple], list]] = {
+    "notundef": _nodes_optional_like,
+    "optional": _nodes_optional_like,
+    "integer": _nodes_literal,
+    "float": _nodes_literal,
+    "string": _nodes_literal,
+    "boolean": _nodes_literal,
+    "collection": _nodes_literal,
+    "enum": _nodes_literal,
+    "pattern": _nodes_regex,
+    "regexp": _nodes_regex,
+    "array": _nodes_array,
+    "hash": _nodes_hash,
+    "tuple": _nodes_tuple,
+    "struct": _nodes_struct,
+    "variant": _nodes_types,
+    "sensitive": _nodes_types,
 }
+
+
+def _args_source(name: str, args: tuple) -> str:
+    """The subscript as Puppet text, for an error message."""
+    parts = [str(a) if isinstance(a, (_priv.Any, _TypeMeta)) else repr(a) for a in args]
+    return "{}[{}]".format(name, ", ".join(parts))
 
 
 class _TypeMeta(type):
@@ -282,9 +259,9 @@ class _TypeMeta(type):
         """``ClassName[item]``: builds the parameterized type object --
         see the module docstring's "Subscripted" paragraph."""
         args = item if isinstance(item, tuple) else (item,)
-        builder = _ARG_TEXT_BUILDERS.get(cls._puppet_name.lower(), _args_text_mixed)
-        text = "{}[{}]".format(cls._puppet_name, builder(args))
-        return _parse_type(text)
+        name = cls._puppet_name
+        nodes = _ARG_NODES.get(name.lower(), _nodes_mixed)(args)
+        return _build_access(name, nodes, _args_source(name, args))
 
     def __instancecheck__(cls, value: _ty.Any) -> bool:
         """``isinstance(value, ClassName)``: Puppet's own instance check

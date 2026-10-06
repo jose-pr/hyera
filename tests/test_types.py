@@ -301,7 +301,7 @@ def test_parser_literals_and_collections():
     # Quoted-string escapes (double- and single-quoted), inside an Enum
     # argument list.
     enum_t = parse_type('Enum["a\\nb\\t\\r\\"\\\\c"]')
-    assert enum_t.values == ['a\nb\t\r"\\c']
+    assert enum_t.values == ('a\nb\t\r"\\c',)
     assert parse_type("Pattern['^a\\'b']").instance("a'bx") is True
 
     # Collection's single-bound form (a lower bound only, no upper).

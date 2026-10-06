@@ -392,10 +392,29 @@ def _render_size_args(from_, to_):
     return [_num_str(from_), _num_str(to_)]
 
 
-class Any:
+class _Sealing(type):
+    """Metaclass of the type model: an instance is read-only once its
+    constructor returns, so a shared (cached) type object cannot be changed
+    through any reference to it."""
+
+    def __call__(cls, *args: _ty.Any, **kwargs: _ty.Any) -> _ty.Any:
+        obj = super().__call__(*args, **kwargs)
+        object.__setattr__(obj, "_sealed", True)
+        return obj
+
+
+class Any(metaclass=_Sealing):
     """Base of the ported Puppet type model (``types.rb``)."""
 
-    __slots__ = ()
+    __slots__ = ("_sealed",)
+
+    def __setattr__(self, name: str, value: _ty.Any) -> None:
+        if getattr(self, "_sealed", False):
+            raise AttributeError("type objects are immutable")
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("type objects are immutable")
 
     #: Puppet class name, without the leading ``P``/trailing ``Type``.
     TYPE_NAME = "Any"
@@ -447,11 +466,9 @@ class Any:
         return ()
 
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, Any)
-            and type(self) is type(other)
-            and self._key() == other._key()
-        )
+        if not isinstance(other, Any):
+            return NotImplemented
+        return type(self) is type(other) and self._key() == other._key()
 
     def __hash__(self) -> int:
         return hash((type(self), self._key()))
@@ -483,6 +500,7 @@ class Any:
 
 
 class Undef(Any):
+    __slots__ = ()
     TYPE_NAME = "Undef"
 
     def instance(self, value):
@@ -493,6 +511,7 @@ class Undef(Any):
 
 
 class NotUndef(Any):
+    __slots__ = ("contained",)
     TYPE_NAME = "NotUndef"
 
     def __init__(self, contained=None):
@@ -520,6 +539,7 @@ class NotUndef(Any):
 
 
 class Optional(Any):
+    __slots__ = ("contained",)
     TYPE_NAME = "Optional"
 
     def __init__(self, contained=None):
@@ -551,6 +571,7 @@ def _is_nan(value):
 
 
 class Scalar(Any):
+    __slots__ = ()
     TYPE_NAME = "Scalar"
 
     def instance(self, value):
@@ -558,6 +579,7 @@ class Scalar(Any):
 
 
 class ScalarData(Scalar):
+    __slots__ = ()
     TYPE_NAME = "ScalarData"
 
     def instance(self, value):
@@ -565,6 +587,7 @@ class ScalarData(Scalar):
 
 
 class Numeric(Any):
+    __slots__ = ()
     TYPE_NAME = "Numeric"
 
     def instance(self, value):
@@ -574,6 +597,7 @@ class Numeric(Any):
 
 
 class Integer(Any):
+    __slots__ = ("from_", "to")
     TYPE_NAME = "Integer"
 
     def __init__(self, from_=None, to=None):
@@ -615,6 +639,7 @@ class Integer(Any):
 
 
 class Float(Any):
+    __slots__ = ("from_", "to")
     TYPE_NAME = "Float"
 
     def __init__(self, from_=None, to=None):
@@ -656,6 +681,7 @@ class Float(Any):
 
 
 class String(Any):
+    __slots__ = ("size_from", "size_to", "literal")
     TYPE_NAME = "String"
 
     def __init__(self, size_from=None, size_to=None, literal=None):
@@ -719,6 +745,7 @@ class String(Any):
 
 
 class Boolean(Any):
+    __slots__ = ("value",)
     TYPE_NAME = "Boolean"
 
     def __init__(self, value=None):
@@ -750,6 +777,7 @@ class Boolean(Any):
 
 
 class Regexp(Any):
+    __slots__ = ("source",)
     TYPE_NAME = "Regexp"
 
     def __init__(self, source=None):
@@ -772,11 +800,12 @@ class Regexp(Any):
 
 
 class Pattern(Any):
+    __slots__ = ("sources", "_compiled")
     TYPE_NAME = "Pattern"
 
     def __init__(self, sources):
-        self.sources = list(dict.fromkeys(sources))
-        self._compiled = [_ruby_regex(s) for s in self.sources]
+        self.sources = tuple(dict.fromkeys(sources))
+        self._compiled = tuple(_ruby_regex(s) for s in self.sources)
 
     def instance(self, value):
         if not isinstance(value, str):
@@ -798,10 +827,11 @@ _ASCII_FOLD = {c: c + 32 for c in range(ord("A"), ord("Z") + 1)}
 
 
 class Enum(Any):
+    __slots__ = ("values", "case_insensitive")
     TYPE_NAME = "Enum"
 
     def __init__(self, values, case_insensitive=False):
-        self.values = list(dict.fromkeys(values))
+        self.values = tuple(dict.fromkeys(values))
         self.case_insensitive = bool(case_insensitive)
 
     def instance(self, value):
@@ -827,6 +857,7 @@ class Enum(Any):
 
 
 class Collection(Any):
+    __slots__ = ("size_from", "size_to")
     TYPE_NAME = "Collection"
 
     def __init__(self, size_from=None, size_to=None):
@@ -857,6 +888,7 @@ class Collection(Any):
 
 
 class Array(Any):
+    __slots__ = ("element_type", "size_from", "size_to")
     TYPE_NAME = "Array"
 
     def __init__(self, element_type=None, size_from=None, size_to=None):
@@ -898,6 +930,7 @@ class Array(Any):
 
 
 class Hash(Any):
+    __slots__ = ("key_type", "value_type", "size_from", "size_to")
     TYPE_NAME = "Hash"
 
     def __init__(self, key_type=None, value_type=None, size_from=None, size_to=None):
@@ -953,10 +986,11 @@ class Hash(Any):
 
 
 class Tuple(Any):
+    __slots__ = ("types", "size_from", "size_to")
     TYPE_NAME = "Tuple"
 
     def __init__(self, types, size_from=None, size_to=None):
-        self.types = list(types)
+        self.types = tuple(types)
         self.size_from = size_from
         self.size_to = size_to
 
@@ -1007,9 +1041,12 @@ class StructElement:
     __slots__ = ("key", "optional", "value_type")
 
     def __init__(self, key, optional, value_type):
-        self.key = key
-        self.optional = optional
-        self.value_type = value_type
+        object.__setattr__(self, "key", key)
+        object.__setattr__(self, "optional", optional)
+        object.__setattr__(self, "value_type", value_type)
+
+    def __setattr__(self, name, value):
+        raise AttributeError("struct elements are immutable")
 
     def render_key(self):
         value_optional = _type_instance(self.value_type, None)
@@ -1020,10 +1057,11 @@ class StructElement:
 
 
 class Struct(Any):
+    __slots__ = ("elements",)
     TYPE_NAME = "Struct"
 
     def __init__(self, elements):
-        self.elements = list(elements)
+        self.elements = tuple(elements)
 
     def instance(self, value):
         if not isinstance(value, dict):
@@ -1053,10 +1091,11 @@ class Struct(Any):
 
 
 class Variant(Any):
+    __slots__ = ("types",)
     TYPE_NAME = "Variant"
 
     def __init__(self, types):
-        self.types = list(types)
+        self.types = tuple(types)
 
     def instance(self, value):
         return any(_type_instance(t, value) for t in self.types)
@@ -1080,10 +1119,18 @@ class SensitiveType(Any):
     """Puppet's ``Sensitive`` type: an instance is a :class:`Sensitive`
     value whose wrapped value matches the (optional) contained type."""
 
+    __slots__ = ("contained",)
     TYPE_NAME = "Sensitive"
+    contained: "_ty.Optional[Any]"
 
     def __init__(self, contained: "_ty.Optional[Any]" = None) -> None:
-        self.contained = contained
+        # Puppet keeps only the generalized contained type (a range or size
+        # is dropped), and ``Sensitive[Any]`` is plain ``Sensitive``.
+        general: "_ty.Optional[Any]" = None
+        if contained is not None:
+            candidate: _ty.Any = generalize(contained)
+            general = None if type(candidate) is Any else candidate
+        self.contained = general
 
     def instance(self, value: _ty.Any) -> bool:
         """Whether ``value`` is a :class:`Sensitive` wrapping an instance
@@ -1106,6 +1153,7 @@ class TypeReference(Any):
     """An unresolved type name (unknown to the static loader), Puppet's
     ``TypeReference``. Never an instance of anything."""
 
+    __slots__ = ("text",)
     TYPE_NAME = "TypeReference"
 
     def __init__(self, text):
@@ -1147,6 +1195,7 @@ class Runtime(Any):
     is *defined* in ``_psych`` and re-exported through ``backends``;
     ``__module__`` names the former, not the latter."""
 
+    __slots__ = ("runtime", "runtime_name")
     TYPE_NAME = "Runtime"
 
     def __init__(self, runtime, name):
@@ -1176,6 +1225,7 @@ class TypeAlias(Any):
     body (``Data`` -> ``...Array[Data]``) terminates: resolution reuses this
     same cached instance rather than re-parsing."""
 
+    __slots__ = ("alias_name", "_body_text", "_resolved")
     TYPE_NAME = "TypeAlias"
 
     def __init__(self, name, body_text):
@@ -1188,7 +1238,8 @@ class TypeAlias(Any):
         if self._resolved is None:
             from .parser import parse_type as _parse
 
-            self._resolved = _parse(self._body_text)
+            # The one memo a sealed type object keeps.
+            object.__setattr__(self, "_resolved", _parse(self._body_text))
         return self._resolved
 
     def instance(self, value):
@@ -1289,22 +1340,16 @@ REGEXP = Regexp()
 def _render_container(name, contained, show_literal=False):
     """Optional/NotUndef/Sensitive's own formatter (``type_formatter.rb``
     ``string_POptionalType``/``string_PNotUndefType``/``string_PSensitiveType``):
-    any contained type renders by its bare ``.name`` only, never with its
-    own parameters (confirmed against the ``Sensitive[Integer]`` oracle
-    golden -- these three wrapper types are the ones ``short_name`` also
-    keeps one bare parameter level for). ``show_literal`` is Optional/
-    NotUndef's own extra special case (``string_POptionalType``/
-    ``string_PNotUndefType`` only, NOT Sensitive): a literal ``String``
-    child prints its quoted literal value directly instead of recursing
-    into the child's own (bare) renderer -- confirmed against the
-    ``Optional['integer']`` oracle golden."""
-    if contained is None or (isinstance(contained, Any) and type(contained) is Any):
+    the contained type renders in full. ``show_literal`` is Optional/
+    NotUndef's own special case (not Sensitive's): a literal ``String``
+    child prints its quoted value."""
+    if contained is None or (name == "NotUndef" and type(contained) is Any):
         return name
     if show_literal and isinstance(contained, String) and contained.literal is not None:
         return "{}[{}]".format(name, _puppet_quote(contained.literal))
     if isinstance(contained, str):
         return "{}[{}]".format(name, _puppet_quote(contained))
-    return "{}[{}]".format(name, contained.name)
+    return "{}[{}]".format(name, contained)
 
 
 def _key_of(t):

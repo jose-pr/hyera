@@ -182,6 +182,102 @@ def test_subscript_str_equals_parse_type_str(build, text):
     assert repr(build()) == str(parse_type(text))
 
 
+NESTED_CASES = [
+    (
+        lambda: types.Optional[types.Integer[1, 3]],
+        "Optional[Integer[1, 3]]",
+    ),
+    (
+        lambda: types.NotUndef[types.String[1, 3]],
+        "NotUndef[String[1, 3]]",
+    ),
+    (
+        lambda: types.Optional[types.Optional[types.String]],
+        "Optional[Optional[String]]",
+    ),
+    (
+        lambda: types.Sensitive[types.Sensitive[types.Integer]],
+        "Sensitive[Sensitive[Integer]]",
+    ),
+    (
+        lambda: types.Array[types.Optional[types.Integer[1, 3]]],
+        "Array[Optional[Integer[1, 3]]]",
+    ),
+    (
+        lambda: types.Hash[types.String, types.Optional[types.Enum["a", "b"]]],
+        "Hash[String, Optional[Enum['a', 'b']]]",
+    ),
+    (
+        lambda: types.Tuple[types.Optional[types.Array[types.String]], 1, 2],
+        "Tuple[Optional[Array[String]], 1, 2]",
+    ),
+    (
+        lambda: types.Struct[{"a": types.Optional[types.Integer[0]]}],
+        "Struct[{'a' => Optional[Integer[0]]}]",
+    ),
+    (
+        lambda: types.Optional[types.Array["String[1]"]],
+        "Optional[Array[String[1]]]",
+    ),
+    (lambda: types.Optional[types.Any], "Optional[Any]"),
+]
+
+
+@pytest.mark.parametrize(
+    "build, text", NESTED_CASES, ids=[text for _, text in NESTED_CASES]
+)
+def test_nested_arguments_keep_their_parameters(build, text):
+    built = build()
+    assert str(built) == text
+    assert built == parse_type(text)
+
+
+def test_nested_arguments_decide_instance_checks():
+    assert not isinstance(5, types.Optional[types.Integer[1, 3]])
+    assert isinstance(2, types.Optional[types.Integer[1, 3]])
+    assert not isinstance([5], types.Array[types.Optional[types.Integer[1, 3]]])
+    assert not isinstance(["abcdef"], types.Array[types.NotUndef[types.String[1, 3]]])
+    assert isinstance(
+        {"k": "a"}, types.Hash[types.String, types.Optional[types.Enum["a", "b"]]]
+    )
+    assert not isinstance(
+        {"k": "c"}, types.Hash[types.String, types.Optional[types.Enum["a", "b"]]]
+    )
+
+
+def test_nested_value_type_is_enforced_by_lookup():
+    with pytest.raises(HieraLookupError):
+        _lookup_default(types.Array[types.Optional[types.Integer[1, 3]]], [5])
+
+
+def _lookup_default(value_type, default):
+    from hyera import Hiera
+
+    return Hiera({"version": 5, "hierarchy": []}).lookup("k", value_type, None, default)
+
+
+def test_type_objects_are_immutable():
+    t = types.Integer[10, 20]
+    with pytest.raises(AttributeError):
+        t.to = 10**9
+    with pytest.raises(AttributeError):
+        del t.to
+    assert str(types.Integer[10, 20]) == "Integer[10, 20]"
+    assert not isinstance(5000, types.Integer[10, 20])
+    for build in (types.Array[types.Integer], types.Struct[{"a": types.String}]):
+        with pytest.raises(AttributeError):
+            build.size_from = 1
+
+
+def test_type_objects_compare_only_with_types():
+    t = types.Integer[1, 3]
+    assert t.__eq__(5) is NotImplemented
+    assert t != 5
+    assert not t == "Integer[1, 3]"
+    assert t == types.Integer[1, 3]
+    assert hash(t) == hash(types.Integer[1, 3])
+
+
 def test_never_parameterized_raises_puppets_own_text():
     from hyera import HieraLookupError
 

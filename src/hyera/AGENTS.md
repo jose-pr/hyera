@@ -761,7 +761,15 @@ by how it is used:
   text round-trip these classes build on; pass the pre-built type object
   instead (not reachable from this module) if that ever matters.
   `Sensitive[T]` (a type) is defined directly on `hyera.Sensitive` itself,
-  the same object as this module's own `Sensitive`.
+  the same object as this module's own `Sensitive`; like Puppet's, it keeps
+  only `T`'s generalized type (`Sensitive[Integer[1, 3]]` is
+  `Sensitive[Integer]`). Subscripting builds through the same builders as the
+  text form, so a nested argument keeps every parameter
+  (`Optional[Integer[1, 3]]` renders and matches as written). A type object
+  is immutable: assigning to one of its attributes raises
+  `AttributeError`, so a cached or shared object cannot be altered through
+  any reference; it compares equal to other type objects of the same value
+  and unequal to anything else.
 - **Called** (`Integer("42")`) — Puppet's `new()`, returning a plain value
   (`int` for `Integer`, `str` for `String`, `list` for `Array`, `dict` for
   `Hash`, ... — `Sensitive("x")` is the one exception, staying its existing

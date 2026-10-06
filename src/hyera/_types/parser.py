@@ -13,6 +13,7 @@ regex literals, and unary minus.
 
 import functools
 import re
+import typing as _ty
 
 from ..exceptions import HieraLookupError
 from .types import (
@@ -51,7 +52,7 @@ from .types import (
     _type_instance,
 )
 
-__all__ = ["parse_type", "as_type"]
+__all__ = ["parse_type", "as_type", "build_access"]
 
 #: Names never accepted with parameters, whether or not they are otherwise
 #: parameterizable elsewhere (``type_parser.rb`` ``when 'any', 'data', ...``).
@@ -401,6 +402,8 @@ def _unescape_sq(body):
 def _interp_type(node):
     """Interpret ``node`` as a type expression (recursive)."""
     kind = node[0]
+    if kind == "type":
+        return node[1]
     if kind == "qref":
         return _interp_qref(node)
     if kind == "access":
@@ -489,7 +492,7 @@ def _size_range(nodes):
 
 
 def _is_type_node(node):
-    return node[0] in ("qref", "access")
+    return node[0] in ("qref", "access", "type")
 
 
 def _unless_any(t):
@@ -813,6 +816,26 @@ def parse_type(text):
         raise HieraLookupError(
             "The expression <{}> is not a valid type specification.".format(text)
         )
+
+
+def build_access(name: str, args: "_ty.Sequence[_ty.Any]", source: str) -> Any:
+    """The type ``Name[args]`` built from argument nodes, as
+    :func:`parse_type` builds it from text: the nodes are the parser's own
+    tuples, plus ``("type", <type object>, 0, 0)`` for an argument that is
+    already a type. ``source`` is the text shown in a "not a valid type
+    specification" error.
+
+    :raises HieraLookupError: the arguments do not make a valid type.
+    """
+    if not args:
+        raise HieraLookupError("Syntax error at ']'")
+    node = ("access", ("qref", name, 0, 0), list(args), 0, 0, source)
+    try:
+        return _interp_access(node)
+    except _NotAValidTypeSpec:
+        raise HieraLookupError(
+            "The expression <{}> is not a valid type specification.".format(source)
+        ) from None
 
 
 def as_type(spec):
