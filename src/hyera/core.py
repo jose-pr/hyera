@@ -36,7 +36,8 @@ from ._output.explain import (
     _debug_preamble,
     _provider_ref,
 )
-from ._config.hiera_config import HieraLevel, _default_codedir
+from ._config.config_v3 import _default_codedir
+from ._config.hiera_config import HieraLevel
 from ._lookup.function_provider import _EnvironmentContext
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation

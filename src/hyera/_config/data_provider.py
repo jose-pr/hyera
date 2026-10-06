@@ -24,14 +24,12 @@ from pathlib_next import Path
 
 from .hiera_config import (
     _build_hierarchies,
-    _fill_v3_defaults,
     _fill_v5_defaults,
     _read_base_config,
-    _read_v3,
-    _validate_v3,
     _warn_deprecated,
 )
 from .config_source import _config_error, _config_version
+from .config_v3 import _fill_v3_defaults, _read_v3, _validate_v3
 from .config_v4 import _read_v4
 from .config_v5 import _validate_v5
 from .._lookup.navigation import LOOKUP_OPTIONS
