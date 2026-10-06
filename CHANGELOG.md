@@ -80,6 +80,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `LookupContext.module_name` is the module's name for a hook named in a
+  module's `hiera.yaml`; it was always `None`.
 - A command-line option value of exactly `--` (the knockout prefix `--`) is
   kept as the value on every supported Python, in the `--opt=--` spelling
   and in an MCP tool call, for every free-text option; the MCP server

@@ -143,10 +143,6 @@ DOC_ONLY = {
         "the recording host and CI both run case-sensitive filesystems, so "
         "no fixture can match a segment by case folding"
     ),
-    "lookup-context-module-name": (
-        "a golden holds a lookup's value; the harness has no hook that "
-        "reports the context's module name"
-    ),
 }
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by

@@ -506,7 +506,9 @@ class _FunctionProvider:
         key = location.location if location is not None else None
         fc = self._contexts.get(key)
         if fc is None:
-            fc = _FunctionContext(self._environment_context, self._environment_name)
+            fc = _FunctionContext(
+                self._environment_context, self._environment_name, self._module_name
+            )
             self._contexts[key] = fc
         return fc
 

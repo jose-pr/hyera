@@ -23,7 +23,7 @@ reference and the changelog.
 
 ## Features
 
-- **Hiera 5 configuration** -- full `hiera.yaml` version 5 schema validation.
+- **Hiera 5 configuration** -- full `hiera.yaml` version 5 schema validation:
   a config Puppet rejects fails here too.
 - **Hiera 1-4 configs, too** -- a versionless or `version: 3` `hiera.yaml`
   (Hiera 1, 2 and 3's own dialect) and `version: 4` module/environment
@@ -948,25 +948,24 @@ cannot record a golden for.
 - **Some inputs that crash Puppet 8.10 work in hyera.** `puppet lookup
   --type Data k` (or any type alias) fails in Puppet and returns the value
   here; an Integer key in `lookup_options` or in module data fails every
-  Puppet lookup and is ignored by hyera; `Float.new("0")` crashes Puppet and
-  returns `0.0` here. (id: `puppet-crashes-hyera-answers`)
+  Puppet lookup that reads it and is ignored by hyera; `Float.new("0")`
+  crashes Puppet and returns `0.0` here. (id: `puppet-crashes-hyera-answers`)
 - **`--environment` takes the name literally.** `--environment production/`
   is accepted by Puppet and names no environment in hyera, which reports the
   missing environment. (id: `environment-trailing-slash`)
 - **Three Ruby `Dir.glob` behaviours are not matched.** A brace group
-  directly after `**` is matched per directory entry in sorted order by
-  Ruby, where hyera expands it first and keeps the written order; Ruby keeps
-  a doubled `/` in a result (`a//f.yaml`), and hyera collapses it; a brace
-  that expands to an empty pattern (`{,a}`) also returns the base directory
-  in Ruby, and hyera returns only the other alternatives. (id: `dir-glob-ruby-quirks`)
+  directly after `**/` (`**/{b,a}.yaml`) is matched per directory in sorted
+  order by Ruby, where hyera expands it first and keeps the written order,
+  so the files of such a `glob` level can be searched in a different order;
+  Ruby keeps a doubled `/` in a result (`a//f.yaml`), and hyera collapses
+  it; a brace that expands to an empty pattern (`{,a}`) also returns the
+  base directory in Ruby, which Puppet then discards as a directory.
+  (id: `dir-glob-ruby-quirks`)
 - **On a case-insensitive filesystem, a literal glob segment matched by case
   folding is returned in the pattern's spelling**, where Ruby returns the
   on-disk spelling (`Dir.glob('Sub/c.yaml')` finds `sub/c.yaml` on APFS).
   Values are unaffected; `--explain` and `sources()` show the pattern's
   spelling. (id: `glob-case-folded-spelling`)
-- **`LookupContext.module_name` is always `None`.** Puppet fills it with the
-  module whose data the hook is reading; a hook that needs it must derive it
-  from the key. (id: `lookup-context-module-name`)
 
 ## Development
 

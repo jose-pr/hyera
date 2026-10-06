@@ -664,6 +664,27 @@ def test_lookup_context_names_and_explain_noop(make_tree, backends, script):
     assert seen["module"] is None
 
 
+def test_lookup_context_module_name_in_a_module_layer(
+    tmp_path, make_tree, backends, script
+):
+    base = make_tree(
+        {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
+        files={"data/g.yaml": "g: 1\n"},
+    )
+    modules = tmp_path / "modules"
+    for name in ("m", "other"):
+        config = modules / name / "hiera.yaml"
+        config.parent.mkdir(parents=True)
+        config.write_text(
+            "version: 5\nhierarchy:\n  - {name: c, lookup_key: test_lookup_key}\n",
+            encoding="utf-8",
+        )
+    script["lookup_key"] = lambda key, options, context: context.module_name
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    assert h.lookup("m::k") == "m"
+    assert h.lookup("other::k") == "other"
+
+
 def test_not_found_escapes_except_exception(make_tree, backends, script):
     root = make_tree(
         {

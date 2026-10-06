@@ -942,8 +942,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
     Reading a file through it is what lets the engine keep the call's
     result across lookups.
   - `.environment_name` (the scope's `environment`, `"production"` when
-    unset) / `.module_name` (always `None`; see
-    `lookup-context-module-name` under "Differences from Puppet").
+    unset) / `.module_name` (the module whose `hiera.yaml` names the
+    hook; `None` in the global and environment layers).
 - **`default_backends()`** — the distinct classes registered in the
   `function` namespace, in definition order: `[YAMLBackend, JSONBackend,
   HOCONBackend, SopsBackend, EyamlBackend]`. `Hiera(backends=...)` takes
@@ -1472,16 +1472,15 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `environment-trailing-slash` — `--environment
   production/` is accepted by Puppet and rejected by hyera as an unknown
   environment.
-- **difference** `dir-glob-ruby-quirks` — A brace group directly after `**`
-  is matched per directory entry in sorted order by Ruby (hyera expands it
-  first, in written order); Ruby keeps a doubled `/` in a result; a brace
+- **difference** `dir-glob-ruby-quirks` — A brace group directly after
+  `**/` is matched per directory in sorted order by Ruby (hyera expands it
+  first, in written order, so such a `glob` level's files can be searched
+  in a different order); Ruby keeps a doubled `/` in a result; a brace
   that expands to an empty pattern also returns the base directory in
-  Ruby.
+  Ruby, which Puppet discards.
 - **difference** `glob-case-folded-spelling` — On a case-insensitive
   filesystem a literal glob segment matched by case folding is returned in
   the pattern's spelling; Ruby returns the on-disk spelling.
-- **difference** `lookup-context-module-name` — `LookupContext.module_name`
-  is always `None`; Puppet fills in the module whose data the hook reads.
 
 Not supported:
 
