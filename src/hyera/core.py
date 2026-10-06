@@ -16,7 +16,6 @@ from ._lookup import data_functions as _data_functions
 from ._lookup.cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from ._config.data_provider import (
     _EnvironmentState,
-    _IgnoredConfig,
     _Provider,
     find_environment,
     load_layer_provider,
@@ -44,7 +43,11 @@ from ._config.hiera_config import (
     _read_v4,
     _validate_v5,
 )
-from ._lookup.function_provider import PROVIDER_CLASSES, _EnvironmentContext
+from ._lookup.function_provider import (
+    PROVIDER_CLASSES,
+    _EnvironmentContext,
+    _validate_data_hash,
+)
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._config.location_resolver import glob as _dir_glob
@@ -54,7 +57,6 @@ from ._lookup.lookup_adapter import (
     compile_patterns,
     convert_result,
     extract_lookup_options_for_key,
-    validate_data_value,
     validate_lookup_options,
 )
 from ._lookup.lookup_function import (
@@ -64,7 +66,7 @@ from ._lookup.lookup_function import (
     parse_call,
     recursion_bound,
 )
-from ._lookup.merge_strategy import MergeStrategy
+from ._lookup.merge_strategy import MergeSpec, MergeStrategy
 from ._lookup.navigation import (
     _MISSING,
     join_key,
@@ -74,10 +76,16 @@ from ._lookup.navigation import (
 )
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
-from ._types.parser import as_type
 from .backends import Backend, default_backends
-from .exceptions import _escapes
-from ._lookup.merge_strategy import MergeSpec
+from .exceptions import (
+    BackendError,
+    ConfigError,
+    HieraError,
+    HieraLookupError,
+    KeyNotFoundError,
+    _escapes,
+    _one_line,
+)
 from .types import TypeSpec
 
 __all__ = ["Hiera"]
@@ -206,6 +214,12 @@ class _GlobEntry(_ty.NamedTuple):
     dirs: tuple
 
 
+def _probe_for(invocation, path):
+    """The probe of ``path`` through ``invocation``'s per-lookup memo, or a
+    one-off probe when there is no invocation."""
+    return invocation._memo_probe(path) if invocation is not None else _probe(path)
+
+
 def _dir_state(probe) -> _ty.Optional[tuple]:
     """What a glob listing depends on in one directory: its
     ``(st_ino, st_mtime_ns)``, or ``None`` when it is not a directory (an
@@ -235,41 +249,6 @@ _VIEW_OWN_STATE = ("_providers",)
 #: The intern table is pruned to the paths live entries hold once it grows
 #: past this many entries (or twice the live count, if larger).
 _PATHS_FLOOR = 1024
-
-
-def _puppet_type_label(value) -> str:
-    """The Puppet type name ``data_provider.rb``'s Hash check would report
-    for a non-Hash ``data_hash`` result (measured against Puppet 8.10.0,
-    ``--strict warning``, on JSON's seven possible top-level shapes; the
-    same labels apply to any backend's non-dict result)."""
-    if isinstance(value, bool):  # bool before int: bool is an int subclass.
-        return "Boolean"
-    if value is None:
-        return "Undef"
-    if isinstance(value, str):
-        return "String"
-    if isinstance(value, int):
-        return "Integer"
-    if isinstance(value, float):
-        return "Float"
-    if isinstance(value, list):
-        return "Tuple" if value else "Array"
-    return type(value).__name__
-
-
-def _validate_data_hash(data, name, path) -> None:
-    """Puppet's Hash check on a ``data_hash`` result
-    (``data_hash_function_provider.rb:56-76`` + ``data_provider.rb:76-91``),
-    applied here so every backend -- third-party ones included -- gets it."""
-    if isinstance(data, dict):
-        return
-    raise BackendError(
-        "Value returned from data_hash function '{}', when using location "
-        "'{}', has wrong type, expects a Hash value, got {}".format(
-            name, path, _puppet_type_label(data)
-        ),
-        path=str(path),
-    )
 
 
 def _provider_ref(provider) -> _ProviderRef:
@@ -771,9 +750,7 @@ class Hiera:
             entry = self._file_cache.get(cache_key)
 
         if self._revalidate:
-            probe = (
-                invocation._memo_probe(path) if invocation is not None else _probe(path)
-            )
+            probe = _probe_for(invocation, path)
             if probe.kind == "absent":
                 if entry is not None:
                     # A path that was cached (successfully read before) and
@@ -1006,7 +983,7 @@ class Hiera:
         left for :meth:`_load_file` to rediscover with a second, redundant
         probe.
         """
-        probe = invocation._memo_probe(path) if invocation is not None else _probe(path)
+        probe = _probe_for(invocation, path)
         if probe.kind == "dir":
             raise BackendError(
                 "Unable to read ({}): Is a directory".format(path), path=path
@@ -1085,10 +1062,7 @@ class Hiera:
             if not self._revalidate:
                 return cached.matches
             if all(
-                _dir_state(
-                    invocation._memo_probe(d) if invocation is not None else _probe(d)
-                )
-                == state
+                _dir_state(_probe_for(invocation, d)) == state
                 for d, state in cached.dirs
             ):
                 return cached.matches
@@ -1096,12 +1070,10 @@ class Hiera:
         dirs = []
 
         def on_scandir(d):
-            probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
-            dirs.append((d, _dir_state(probe)))
+            dirs.append((d, _dir_state(_probe_for(invocation, d))))
 
         def probe_isdir(d):
-            probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
-            return probe.kind == "dir"
+            return _probe_for(invocation, d).kind == "dir"
 
         raw = _dir_glob(
             root,
@@ -1117,10 +1089,7 @@ class Hiera:
             # raises for it, when something actually tries to read it, not
             # this listing step.
             if self._revalidate:
-                probe = (
-                    invocation._memo_probe(m) if invocation is not None else _probe(m)
-                )
-                is_dir = probe.kind == "dir"
+                is_dir = _probe_for(invocation, m).kind == "dir"
             else:
                 is_dir = os.path.isdir(m)
             if not is_dir:
@@ -1452,14 +1421,6 @@ class Hiera:
             raise _escapes(e)
 
     @staticmethod
-    def _explain_layer_cache(invocation):
-        """The ``cache`` override :meth:`_layer_options_cached` and friends
-        take, from ``invocation``'s own :class:`_ExplainOptionsMemo` --
-        ``None`` for an ordinary lookup (use the instance's real cache)."""
-        memo = invocation._lo_cache
-        return memo.layer_cache if memo is not None else None
-
-    @staticmethod
     def _memoized_options(invocation, tag, module_name, gather):
         """Run ``gather()`` (a zero-argument callable that both performs
         and explain-records one ``lookup_options`` search) once per
@@ -1551,9 +1512,7 @@ class Hiera:
 
         def gather_main():
             with invocation.recording("meta", LOOKUP_OPTIONS):
-                return self._retrieve_lookup_options(
-                    module_name, invocation, self._explain_layer_cache(invocation)
-                )
+                return self._retrieve_lookup_options(module_name, invocation)
 
         compiled_options = self._memoized_options(
             invocation, "main", module_name, gather_main
@@ -1741,9 +1700,7 @@ class Hiera:
                     paths.append(path)
         return tuple(paths)
 
-    def _layer_options_cached(
-        self, hierarchy, base_path, tag, module_name, invocation, cache=None
-    ):
+    def _layer_options_cached(self, hierarchy, base_path, tag, module_name, invocation):
         """The raw ``lookup_options`` value gathered from one layer's own
         hierarchy alone (a HASH-strategy gather over its locations/levels,
         never across layers) -- cached the same referenced-variable way as
@@ -1788,14 +1745,14 @@ class Hiera:
         never sees it; the marker comes off in ``finally``, so a gather that
         raises does not wedge a later lookup.
 
-        ``cache``, when given (``Hiera.explain()``'s own per-call, never-
-        stores bypass -- Design decision: explain always re-walks, never
-        reusing the instance's real ``_lookup_options_cache``), replaces
-        ``self._lookup_options_cache`` outright; the gather's own explain
-        hooks come from ``invocation.explainer`` alone, threaded onto the
-        fresh ``gather_invocation`` below.
+        Under ``Hiera.explain()`` (``invocation._lo_cache`` set) that call's
+        own memo replaces ``self._lookup_options_cache`` outright: explain
+        always re-walks and never reuses the instance's real cache. The
+        gather's own explain hooks come from ``invocation.explainer`` alone,
+        threaded onto the fresh ``gather_invocation`` below.
         """
-        real_cache = self._lookup_options_cache if cache is None else cache
+        memo = invocation._lo_cache
+        real_cache = self._lookup_options_cache if memo is None else memo.layer_cache
         scope = invocation.scope
         entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
         materialized = self._materialize(entry, invocation)
@@ -1804,11 +1761,7 @@ class Hiera:
             versions = tuple(
                 (
                     loc.location,
-                    (
-                        invocation._memo_probe(loc.location)
-                        if invocation is not None
-                        else _probe(loc.location)
-                    ).sig,
+                    _probe_for(invocation, loc.location).sig,
                 )
                 for locations in materialized
                 if locations is not None
@@ -1867,7 +1820,7 @@ class Hiera:
             real_cache.put(put_key, result)
         return result
 
-    def _global_lookup_options(self, invocation, cache=None):
+    def _global_lookup_options(self, invocation):
         """The global layer's own validated ``lookup_options``, or ``None``.
 
         Passes ``invocation`` straight through, never a ``.derive()`` of it:
@@ -1884,23 +1837,22 @@ class Hiera:
                 "main",
                 None,
                 invocation,
-                cache,
             )
         return validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
 
-    def _environment_lookup_options(self, state, invocation, cache=None):
+    def _environment_lookup_options(self, state, invocation):
         """The global and environment layers' ``lookup_options`` HASH-merged
         (global wins), or ``None`` (``lookup_adapter.rb:375-380``). See
         :meth:`_global_lookup_options` for why ``invocation`` is passed
         through unchanged rather than derived.
         """
-        g = self._global_lookup_options(invocation, cache)
+        g = self._global_lookup_options(invocation)
         provider = self._usable(state.provider, invocation)
         e = None
         if provider is not None:
             with invocation.recording("data_provider", _provider_ref(provider)):
                 raw = self._layer_options_cached(
-                    provider.hierarchy, provider.root, "main", None, invocation, cache
+                    provider.hierarchy, provider.root, "main", None, invocation
                 )
             e = validate_lookup_options(None if raw is _LO_ABSENT else raw, None)
         if g is None:
@@ -1909,7 +1861,7 @@ class Hiera:
             return g
         return MergeStrategy.strategy("hash").merge(g, e)
 
-    def _retrieve_lookup_options(self, module_name, invocation, cache=None):
+    def _retrieve_lookup_options(self, module_name, invocation):
         """The compiled ``lookup_options`` mapping for ``module_name`` (or
         just the global/environment options, when ``module_name`` is
         ``None``), a port of ``lookup_adapter.rb:346-372``.
@@ -1941,14 +1893,15 @@ class Hiera:
         would silently ignore a changed ``lookup_options`` value for as
         long as the same scope object keeps being used.
 
-        ``cache``, when given, is ``Hiera.explain()``'s own bypass (see
-        :meth:`_layer_options_cached`): both the ``_compiled_options_cache``
+        Under ``Hiera.explain()`` (``invocation._lo_cache`` set; see
+        :meth:`_layer_options_cached`) both the ``_compiled_options_cache``
         read and its write are skipped outright, so a call under explain
         always re-walks and re-explains every layer, even right after an
         ordinary lookup already cached everything.
         """
         scope = invocation.scope
-        if not self._revalidate and cache is None:
+        explaining = invocation._lo_cache is not None
+        if not self._revalidate and not explaining:
             cached = self._compiled_options_cache.get(module_name)
             if cached is not None and cached[0] is scope:
                 return cached[1]
@@ -1959,7 +1912,7 @@ class Hiera:
             invocation,
             "environment",
             None,
-            lambda: self._environment_lookup_options(state, invocation, cache),
+            lambda: self._environment_lookup_options(state, invocation),
         )
         if module_name is not None:
             raw_provider = self._module_provider(state, module_name)
@@ -1977,7 +1930,6 @@ class Hiera:
                         "main",
                         module_name,
                         invocation,
-                        cache,
                     )
                 if raw is not _LO_ABSENT:
                     m = validate_lookup_options(raw, module_name)
@@ -1994,7 +1946,7 @@ class Hiera:
         # that layer's options: it answers this lookup only.
         if (
             not self._revalidate
-            and cache is None
+            and not explaining
             and invocation._state.hits == guard_hits
         ):
             self._compiled_options_cache[module_name] = (scope, compiled)
@@ -2015,7 +1967,7 @@ class Hiera:
 
         return MergeStrategy.strategy("hash").lookup(names, found, invocation)
 
-    def _module_default_lookup_options(self, provider, invocation, cache=None):
+    def _module_default_lookup_options(self, provider, invocation):
         """The compiled ``lookup_options`` mapping gathered from
         ``provider``'s own ``default_hierarchy`` data only -- never merged
         with the global/environment/module options
@@ -2030,7 +1982,6 @@ class Hiera:
                 "default",
                 provider.module_name,
                 invocation,
-                cache,
             )
         opts = validate_lookup_options(
             None if raw is _LO_ABSENT else raw, provider.module_name
@@ -2065,9 +2016,7 @@ class Hiera:
 
             def gather_default():
                 with invocation.recording("scope", 'Searching for "lookup_options"'):
-                    return self._module_default_lookup_options(
-                        provider, invocation, self._explain_layer_cache(invocation)
-                    )
+                    return self._module_default_lookup_options(provider, invocation)
 
             compiled = self._memoized_options(
                 invocation, "default", module_name, gather_default
@@ -2529,15 +2478,3 @@ class Hiera:
             invocation.report_text(lambda: str(e))
             error = e
         return ExplainResult(explainer, error)
-
-
-# Import after defining Hiera to avoid circular import
-from .exceptions import (  # noqa: E402
-    BackendError,
-    ConfigError,
-    HieraError,
-    HieraLookupError,
-    InterpolationError,
-    KeyNotFoundError,
-    _one_line,
-)

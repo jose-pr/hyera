@@ -123,7 +123,11 @@ class _NotFound(BaseException):
 
 
 def _puppet_type_label(value) -> str:
-    if isinstance(value, bool):
+    """The Puppet type name ``data_provider.rb``'s Hash check would report
+    for a non-Hash ``data_hash`` result (measured against Puppet 8.10.0,
+    ``--strict warning``, on JSON's seven possible top-level shapes; the
+    same labels apply to any backend's non-dict result)."""
+    if isinstance(value, bool):  # bool before int: bool is an int subclass.
         return "Boolean"
     if value is None:
         return "Undef"
@@ -139,6 +143,10 @@ def _puppet_type_label(value) -> str:
 
 
 def _validate_data_hash(data, name, location) -> None:
+    """Puppet's Hash check on a ``data_hash`` result
+    (``data_hash_function_provider.rb:56-76`` + ``data_provider.rb:76-91``),
+    applied here so every backend -- third-party ones included -- gets it.
+    ``location`` is ``None`` for a location-less entry."""
     if isinstance(data, dict):
         return
     if location is None:

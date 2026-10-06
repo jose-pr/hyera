@@ -846,10 +846,8 @@ def test_data_hash_non_dict_return_is_backend_error(make_tree, backends, script)
 
 
 def test_data_hash_path_based_type_label_fallback(make_tree, backends, script):
-    # core.py's own _puppet_type_label (distinct from
-    # _function_provider.py's copy, used for the location-less/uri case)
-    # falls back to the plain Python type name for a value that is not any
-    # of Puppet's own JSON-ish shapes.
+    # The path-based non-dict check falls back to the plain Python type
+    # name for a value that is not any of Puppet's own JSON-ish shapes.
     root = make_tree(
         {"hierarchy": [{"name": "s", "data_hash": "test_data_hash", "path": "a.yaml"}]},
         files={"data/a.yaml": "x"},
@@ -863,10 +861,8 @@ def test_data_hash_path_based_type_label_fallback(make_tree, backends, script):
 def test_data_hash_no_location_non_dict_return_is_backend_error(
     make_tree, backends, calls, script
 ):
-    # _function_provider.py's own _validate_data_hash/_puppet_type_label
-    # (distinct from core.py's copy, which the path-based test above goes
-    # through via _load_file): a location-less data_hash entry calls the
-    # backend directly and validates/caches the raw result itself.
+    # A location-less data_hash entry calls the backend directly and
+    # validates/caches the raw result itself (no path to name in the error).
     root = make_tree(
         {"hierarchy": [{"name": "s", "data_hash": "test_data_hash"}]},
     )
