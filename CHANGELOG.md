@@ -16,6 +16,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `defaults`) selects the stricter include mode; the bare `hocon_includes`
   key the README described was never valid hiera.yaml.
 
+### Changed
+
+- YAML and JSON documents nested more than 500 levels deep (data files,
+  `--facts` files, `--scope` values) raise `BackendError` ("nested too
+  deeply"); a deeply nested YAML document used to end the interpreter on
+  Python 3.9 and raise `RecursionError` elsewhere.
+- A YAML mapping whose keys collide only in Python (`1`, `1.0`, `true`)
+  raises `BackendError` instead of silently dropping an entry.
+- A YAML `<<` merge key follows Psych: entries merge in document order, so a
+  merge replaces an earlier explicit key; a quoted or aliased `<<` merges;
+  a value that is not a mapping or a list of mappings leaves a literal
+  `<<` key instead of rejecting the file.
+- A YAML anchor name defined more than once is valid: an alias refers to the
+  latest definition before it.
+- YAML parse errors keep their fixed punctuation (`',' or ']'`); only
+  quoted source tokens are redacted.
+
 ### Fixed
 
 - `hyera.backends.SOPS_TIMEOUT = n` changes the `sops` timeout; it was
@@ -67,6 +84,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   providers (an `IndexError`, or the wrong layer's data).
 - `Hiera.getvar()` returns a copy of the scope's value, and the path intern
   table no longer grows with every distinct candidate path.
+- Every YAML and JSON loader, `load_facts` and `--scope` return data or
+  raise `BackendError`: explicitly tagged nodes are built by their kind
+  (`!!map [a]`, `!!seq {a: 1}`, `!!omap x`), sexagesimal numbers with
+  underscores (`1__0:30`) read as Ruby does, and a `Pattern[...]` type
+  whose regex Python cannot compile is "not a valid type specification".
+- Integers over 4300 digits load from YAML and JSON, and a key segment of
+  that length is a miss, on Python 3.11 and later as on 3.9.
+- Errors from facts files and `hiera.yaml` no longer keep the file's text on
+  a chained exception.
 
 ## [0.0.0] - 2026-10-01
 
