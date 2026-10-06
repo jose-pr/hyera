@@ -9,6 +9,7 @@ commit, removing the ``AdapterUnsupported`` branches it makes expressible.
 import contextlib
 import io
 import json
+import logging
 import os
 
 from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive, load_facts
@@ -102,10 +103,59 @@ def as_puppet_json(value):
     return json.loads(json.dumps(value, default=default, allow_nan=False))
 
 
-def canonical(value, ordered=False) -> str:
+def is_ordered(query: dict) -> bool:
+    """Key order is part of a value unless the query opts out with ``ordered: false``."""
+    return query.get("ordered", True)
+
+
+def canonical(value, ordered=True) -> str:
     return json.dumps(
         value, sort_keys=not ordered, ensure_ascii=False, separators=(",", ":")
     )
+
+
+def comparable_warning(message: str, case_dir) -> str:
+    """A warning as both sides compare it: paths normalized, trailing ``;`` and
+    ``.`` dropped (Puppet ends some warnings with ``;`` and the node-parameter
+    collision warning with no full stop)."""
+    text = _golden.normalize_message(message, case_dir).replace("\\", "/")
+    return text.rstrip(";. ")
+
+
+class _WarningCapture(logging.Handler):
+    def __init__(self):
+        super().__init__(logging.WARNING)
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())
+
+
+@contextlib.contextmanager
+def _captured_warnings():
+    handler = _WarningCapture()
+    logger = logging.getLogger("hyera")
+    previous = (logger.level, logger.propagate)
+    logger.addHandler(handler)
+    logger.setLevel(logging.WARNING)
+    logger.propagate = False
+    try:
+        yield handler.messages
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(previous[0])
+        logger.propagate = previous[1]
+
+
+def missing_warnings(golden_result: dict, actual: dict, case_dir) -> list:
+    """Warnings Puppet recorded that the run did not log. Warnings only hyera
+    logs are not asserted."""
+    got = {comparable_warning(m, case_dir) for m in actual.get("warnings", [])}
+    return [
+        w
+        for w in golden_result.get("warnings", [])
+        if comparable_warning(w, case_dir) not in got
+    ]
 
 
 def expected(query: dict, golden_result: dict) -> dict:
@@ -179,6 +229,14 @@ def _lookup_kwargs(query: dict) -> dict:
 
 
 def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
+    """:func:`_run_api` plus the warnings hyera logged while resolving."""
+    with _captured_warnings() as messages:
+        result = _run_api(case_dir, case, query, golden)
+    result["warnings"] = list(messages)
+    return result
+
+
+def _run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one query through :class:`hyera.Hiera`, projected like Puppet.
 
     A config-schema divergence (most of the ``config`` area) raises during

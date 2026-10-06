@@ -30,6 +30,8 @@ from pathlib import Path
 from _golden import (
     CASES,
     DEFAULT_PUPPET_ARGS,
+    FORMAT,
+    GEMS,
     NODE,
     ORACLE,
     aio_inspect,
@@ -90,9 +92,9 @@ def _iso_args(root: str) -> list:
     ]
 
 
-def _command(runner: str, case_dir: Path, args: list):
+def _command(runner: str, case_dir: Path, args: list, program: str = "puppet"):
     if runner == "local":
-        return ["puppet"] + args, case_dir
+        return [program] + args, case_dir
     kind, _, distro = runner.partition(":")
     if kind != "wsl":
         raise SystemExit(
@@ -110,14 +112,28 @@ def _command(runner: str, case_dir: Path, args: list):
     # argument). `-e` executes the same way `--` does otherwise (no
     # argument reinterpretation of its own), so this is a straight
     # substitution.
-    return prefix + ["--cd", str(case_dir), "-e", "puppet"] + args, None
+    return prefix + ["--cd", str(case_dir), "-e", program] + args, None
 
 
-def _run(runner: str, case_dir: Path, args: list):
-    cmd, cwd = _command(runner, case_dir, args)
+def _run(runner: str, case_dir: Path, args: list, program: str = "puppet"):
+    cmd, cwd = _command(runner, case_dir, args, program)
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=120)
     dec = lambda b: _ANSI.sub("", b.decode("utf-8", "replace"))  # noqa: E731
     return p.returncode, dec(p.stdout), dec(p.stderr)
+
+
+def _error_text(lines: list, case_dir: Path, root: str) -> str:
+    """Every line of a Puppet error: from the first ``Error:`` line to the end,
+    ``Warning:`` lines and blanks dropped, each normalized."""
+    start = next((i for i, l in enumerate(lines) if l.startswith("Error:")), None)
+    if start is None:
+        return ""
+    kept = [
+        normalize_message(l, case_dir, root)
+        for l in lines[start:]
+        if l.strip() and not l.startswith("Warning:")
+    ]
+    return "\n".join(kept)
 
 
 def _leak_scan(obj, root: str, identities: "tuple") -> list:
@@ -165,7 +181,7 @@ def record_query(
         ]
     )
     rc, out, err = _run(runner, case_dir, base + ["--render-as", "json"] + tail)
-    result = {"argv": tail}
+    result = {"argv": tail, "exit_status": rc}
     warnings = [
         normalize_message(l, case_dir, root)
         for l in err.splitlines()
@@ -182,9 +198,9 @@ def record_query(
         errors = [l for l in err.splitlines() if l.startswith("Error:")]
         if rc != 0 or errors or not out.strip():
             result["status"] = "error"
-            result["message"] = normalize_message(
-                errors[0] if errors else (out.strip() or err.strip()), case_dir, root
-            )
+            result["message"] = _error_text(
+                err.splitlines(), case_dir, root
+            ) or normalize_message(out.strip() or err.strip(), case_dir, root)
         else:
             _, s_out, s_err = _run(runner, case_dir, base + ["--render-as", "s"] + tail)
             result["status"] = "explained"
@@ -207,7 +223,7 @@ def record_query(
         errors = [l for l in err.splitlines() if l.startswith("Error:")]
         if errors:
             result["status"] = "error"
-            result["message"] = normalize_message(errors[0], case_dir, root)
+            result["message"] = _error_text(err.splitlines(), case_dir, root)
         else:
             # Exit 1 with no output is ambiguous: a genuine miss AND a
             # swallowed LookupError (unknown interpolation method, an
@@ -228,10 +244,9 @@ def record_query(
                 result["status"] = "not_found"
             else:
                 result["status"] = "error"
-                errors2 = [l for l in err2_lines if l.startswith("Error:")]
-                result["message"] = normalize_message(
-                    errors2[-1] if errors2 else last, case_dir, root
-                )
+                result["message"] = _error_text(
+                    err2_lines, case_dir, root
+                ) or normalize_message(last, case_dir, root)
 
     if query.get("hash_inspect") and result.get("status") == "found":
         normalized = aio_inspect(result["value"])
@@ -273,9 +288,11 @@ def record_case(
             )
         )
     return {
-        "format": 1,
+        "format": FORMAT,
         "puppet_version": versions["puppet"],
         "ruby_version": versions["ruby"],
+        "platform": versions["platform"],
+        "gems": versions["gems"],
         "node": NODE,
         "inputs_sha256": input_digest(case_dir),
         "results": dict(zip(ids, results)),
@@ -301,17 +318,35 @@ def _versions(runner: str, root: str):
         + _iso_args(root)
         + ["--render-as", "json"]
         + list(_IDENTITY_FACTS)
-        + ["ruby.version"],
+        + ["ruby.version", "ruby.platform"],
     )
     ruby_version = "unknown"
+    platform = "unknown"
     identities = ()
     try:
         facts = json.loads(facts_out)
         ruby_version = facts.get("ruby.version", ruby_version)
+        platform = facts.get("ruby.platform", platform)
         identities = tuple(str(facts[f]) for f in _IDENTITY_FACTS if facts.get(f))
     except ValueError:
         pass
-    return {"puppet": puppet_version, "ruby": ruby_version}, identities
+    return {
+        "puppet": puppet_version,
+        "ruby": ruby_version,
+        "platform": platform,
+        "gems": _gem_versions(runner),
+    }, identities
+
+
+def _gem_versions(runner: str) -> dict:
+    """The installed version of each gem whose behaviour a backend ports."""
+    _, out, _ = _run(runner, CASES, ["list", "--local"] + list(GEMS), program="gem")
+    found = {}
+    for line in out.splitlines():
+        m = re.match(r"^(\S+) \((?:default: )?([^,)]+)", line)
+        if m and m.group(1) in GEMS:
+            found[m.group(1)] = m.group(2)
+    return dict(sorted(found.items()))
 
 
 def list_markers() -> int:

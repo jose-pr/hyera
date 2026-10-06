@@ -4,6 +4,12 @@ Needs no Puppet: every expectation comes from ``cases/<case>/golden.json``,
 written by ``record.py``. A query marked ``divergence:`` in ``case.yaml``
 is a known, explained difference and runs as a strict xfail, so fixing it
 turns the run red until the marker is removed (XPASS(strict) fails).
+
+What is asserted: a found value and an explain tree are compared with their
+key order; an error is asserted by its status only (``error_match`` and
+``error_class`` are extra checks a query may add, not a claim that messages
+match); every warning Puppet recorded must also be logged. A case that needs
+an optional extra skips only itself when the extra is missing.
 """
 
 import difflib
@@ -16,12 +22,21 @@ import hyera
 from _golden import (
     RUNTIME_PREDICATES,
     case_dirs,
+    lint_case,
     load_case,
+    missing_requirements,
     query_id,
     read_golden,
-    lint_case,
 )
-from _ours import AdapterUnsupported, canonical, expected, run_api, run_explain
+from _ours import (
+    AdapterUnsupported,
+    canonical,
+    expected,
+    is_ordered,
+    missing_warnings,
+    run_api,
+    run_explain,
+)
 
 
 def _divergence_marks(query):
@@ -67,10 +82,11 @@ def test_case_is_current(case_dir):
 def _api_params():
     for case_dir in case_dirs():
         case = load_case(case_dir)
-        for req in case.get("requires") or []:
-            pytest.importorskip(req)
+        missing = missing_requirements(case)
         for query in case["queries"]:
             marks = _divergence_marks(query)
+            if missing:
+                marks.append(pytest.mark.skip(reason="needs " + ", ".join(missing)))
             yield pytest.param(
                 case_dir,
                 case,
@@ -92,14 +108,11 @@ def test_api_matches_puppet(case_dir, case, query):
         pytest.fail("adapter does not support this query yet: {}".format(e))
 
     assert actual["status"] == want["status"], (actual, want)
+    ordered = is_ordered(query)
     if want["status"] == "found":
-        assert canonical(actual["value"], query.get("ordered")) == canonical(
-            want["value"], query.get("ordered")
-        )
+        assert canonical(actual["value"], ordered) == canonical(want["value"], ordered)
     elif want["status"] == "explained":
-        assert canonical(actual["tree"], query.get("ordered")) == canonical(
-            want["tree"], query.get("ordered")
-        )
+        assert canonical(actual["tree"], ordered) == canonical(want["tree"], ordered)
         if actual["text"] != want["text"]:
             diff = "\n".join(
                 difflib.unified_diff(
@@ -120,3 +133,6 @@ def test_api_matches_puppet(case_dir, case, query):
         error_class = query.get("error_class")
         if error_class:
             assert actual.get("exc_class") == getattr(hyera, error_class).__name__
+    if not query.get("deviation") and not query.get("explain"):
+        lost = missing_warnings(golden_result, actual, case_dir)
+        assert not lost, "Puppet warned, hyera did not: {}".format(lost)

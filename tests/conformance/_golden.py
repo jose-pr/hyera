@@ -6,6 +6,7 @@ Never import ``hyera`` from this module -- that seam is ``_ours.py`` only.
 """
 
 import hashlib
+import importlib
 import json
 import re
 from pathlib import Path
@@ -25,8 +26,15 @@ DEFAULT_PUPPET_ARGS = ("--strict", "warning")
 ORACLE = {"puppet": "8.10.0", "ruby": "4.0.7"}
 #: What Puppet renders for a Sensitive value under ``--render-as json``.
 SENSITIVE_JSON = "Sensitive [value redacted]"
-#: The golden.json schema version this module reads/writes.
-FORMAT = 1
+#: The golden.json schema version this module writes. Format 2 adds each
+#: result's ``exit_status``, the recording ``platform`` and the ``gems``
+#: versions, and records an error's every line.
+FORMAT = 2
+#: Schema versions a replay still reads; a golden stays in its format until
+#: it is re-recorded.
+SUPPORTED_FORMATS = (1, 2)
+#: Gems whose behaviour a backend ports; their recorded versions go in a golden.
+GEMS = ("deep_merge", "hiera-eyaml", "hocon", "json", "psych")
 
 #: Allowed top-level keys in a case.yaml.
 CASE_FIELDS = ("description", "origin", "puppet_args", "requires", "queries")
@@ -83,6 +91,17 @@ _LEAK_PATTERNS = (
 def case_dirs():
     """Every case directory under ``cases/``, sorted by name."""
     return sorted(p for p in CASES.iterdir() if p.is_dir())
+
+
+def missing_requirements(case: dict) -> "list[str]":
+    """The modules a case ``requires`` that cannot be imported here."""
+    missing = []
+    for name in case.get("requires") or []:
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            missing.append(name)
+    return missing
 
 
 def load_case(case_dir: Path) -> dict:
@@ -350,6 +369,19 @@ def hash_inspect_problems(qid, result) -> "list[str]":
     return []
 
 
+def _format2_problems(golden: dict) -> "list[str]":
+    problems = []
+    if not isinstance(golden.get("platform"), str):
+        problems.append("format 2 golden has no platform")
+    gems = golden.get("gems")
+    if not (isinstance(gems, dict) and set(gems) <= set(GEMS)):
+        problems.append("format 2 golden has a malformed gems table")
+    for qid, res in golden.get("results", {}).items():
+        if not isinstance(res.get("exit_status"), int):
+            problems.append("query {}: format 2 result has no exit_status".format(qid))
+    return problems
+
+
 def lint_case(case_dir: Path) -> "list[str]":
     """Every reason `case_dir` is not a valid, current, safe-to-ship case.
 
@@ -384,6 +416,14 @@ def lint_case(case_dir: Path) -> "list[str]":
                 problems.append(
                     "query {}: puppet_args entries must be strings".format(query_id(q))
                 )
+        if "ordered" in q and not isinstance(q["ordered"], bool):
+            problems.append("query {}: ordered must be a boolean".format(query_id(q)))
+        if q.get("ordered") is False and not q.get("note"):
+            problems.append(
+                "query {}: ordered: false needs a note giving the reason".format(
+                    query_id(q)
+                )
+            )
         if "divergence" in q and not _is_marker_valid(q["divergence"]):
             problems.append("query {}: malformed divergence marker".format(query_id(q)))
         if "deviation" in q:
@@ -436,6 +476,10 @@ def lint_case(case_dir: Path) -> "list[str]":
         return problems
 
     golden = read_golden(case_dir)
+    if golden.get("format") not in SUPPORTED_FORMATS:
+        problems.append("unsupported golden format {!r}".format(golden.get("format")))
+    if golden.get("format") == 2:
+        problems.extend(_format2_problems(golden))
     if (
         golden.get("puppet_version") != ORACLE["puppet"]
         or golden.get("ruby_version") != ORACLE["ruby"]

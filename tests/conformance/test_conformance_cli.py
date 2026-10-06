@@ -12,8 +12,15 @@ import pytest
 pytest.importorskip("duho")
 
 import _golden
-from _golden import case_dirs, load_case, query_id, read_golden
-from _ours import CLI_CHANNEL_DIVERGENCE, canonical, expected, run_cli, run_cli_explain
+from _golden import case_dirs, load_case, missing_requirements, query_id, read_golden
+from _ours import (
+    CLI_CHANNEL_DIVERGENCE,
+    canonical,
+    expected,
+    is_ordered,
+    run_cli,
+    run_cli_explain,
+)
 
 
 def test_cli_server_version_matches_oracle():
@@ -25,10 +32,11 @@ def test_cli_server_version_matches_oracle():
 def _cli_params():
     for case_dir in case_dirs():
         case = load_case(case_dir)
-        for req in case.get("requires") or []:
-            pytest.importorskip(req)
+        missing = missing_requirements(case)
         for query in case["queries"]:
             marks = []
+            if missing:
+                marks.append(pytest.mark.skip(reason="needs " + ", ".join(missing)))
             if CLI_CHANNEL_DIVERGENCE:
                 marks.append(
                     pytest.mark.xfail(strict=True, reason=CLI_CHANNEL_DIVERGENCE)
@@ -52,14 +60,11 @@ def test_cli_matches_puppet(case_dir, case, query):
     actual = runner(case_dir, case, query, golden)
 
     assert actual["status"] == want["status"], (actual, want)
+    ordered = is_ordered(query)
     if want["status"] == "found":
-        assert canonical(actual["value"], query.get("ordered")) == canonical(
-            want["value"], query.get("ordered")
-        )
+        assert canonical(actual["value"], ordered) == canonical(want["value"], ordered)
     elif want["status"] == "explained":
-        assert canonical(actual["tree"], query.get("ordered")) == canonical(
-            want["tree"], query.get("ordered")
-        )
+        assert canonical(actual["tree"], ordered) == canonical(want["tree"], ordered)
         if actual["text"] != want["text"]:
             diff = "\n".join(
                 difflib.unified_diff(
