@@ -318,12 +318,32 @@ def _render(obj, drop_first=False):
     return str(sig)
 
 
+def _header_fences():
+    """The header's fenced code blocks, each as its list of stripped
+    non-blank lines. A fence may open on a list-item line."""
+    blocks = []
+    current = None
+    for line in _header_text().split("\n"):
+        if re.match(r"^\s*(- )?```", line):
+            if current is None:
+                current = []
+            else:
+                blocks.append(current)
+                current = None
+        elif current is not None and line.strip():
+            current.append(line.strip())
+    assert current is None, "unclosed code fence"
+    return blocks
+
+
 def test_header_documents_every_export():
     """The shipped header (``src/hyera/AGENTS.md``) documents every
-    exported name's exact signature (or, for a non-callable export, its
-    bare name), every exported class's own public members, and every
-    registered backend name -- so a consuming agent can skip the source."""
+    exported name's exact signature in a fenced code block (or, for a
+    non-callable export, its bare name), every exported class's own public
+    members, and every registered backend name -- so a consuming agent can
+    skip the source."""
     header = _header_text()
+    fenced = "\n".join(line for block in _header_fences() for line in block)
     offenders = []
 
     for module in _public_modules():
@@ -332,7 +352,7 @@ def test_header_documents_every_export():
             if inspect.isclass(obj):
                 if "__init__" in vars(obj):
                     rendered = name + _render(obj)
-                    if rendered not in header:
+                    if rendered not in fenced:
                         offenders.append(
                             "class {}: missing {!r}".format(name, rendered)
                         )
@@ -340,7 +360,7 @@ def test_header_documents_every_export():
                     offenders.append("class {}: missing `{}`".format(name, name))
             elif inspect.isfunction(obj):
                 rendered = name + _render(obj)
-                if rendered not in header:
+                if rendered not in fenced:
                     offenders.append("function {}: missing {!r}".format(name, rendered))
             elif "`{}`".format(name) not in header:
                 offenders.append("{}: missing `{}`".format(name, name))
@@ -370,7 +390,8 @@ def test_header_documents_every_export():
                     )
                 else:
                     continue
-                if needle not in header:
+                haystack = header if isinstance(member, property) else fenced
+                if needle not in haystack:
                     offenders.append(
                         "{}.{}: missing {!r}".format(name, member_name, needle)
                     )
@@ -386,6 +407,59 @@ def test_header_documents_every_export():
                 )
 
     assert not offenders, "\n".join(offenders)
+
+
+def _signature_of(spec):
+    """``(expected_line, skip)`` for a header signature ``Name(args)`` or
+    ``Class.member(args)``: the line the real object renders to, resolved
+    against the public modules. ``skip`` is True for ``hyera.cli`` names
+    when the CLI extra is not installed."""
+    path = spec.split("(", 1)[0].split(".")
+    root = path[0]
+    obj = None
+    for module in _public_modules():
+        if hasattr(module, root):
+            obj = getattr(module, root)
+            break
+    if obj is None:
+        return None, importlib.util.find_spec("duho") is None
+    if len(path) == 1:
+        return root + _render(obj), False
+    assert len(path) == 2, spec
+    raw = inspect.getattr_static(obj, path[1])
+    if isinstance(raw, (staticmethod, classmethod)):
+        return spec.split("(", 1)[0] + _render(getattr(obj, path[1])), False
+    return spec.split("(", 1)[0] + _render(raw, drop_first=True), False
+
+
+def test_header_signatures_equal_the_code():
+    """Every signature in a fenced block of the header is the signature
+    the object has, so the header cannot drift from the code."""
+    blocks = _header_fences()
+    assert len(blocks) > 40
+    offenders = []
+    for block in blocks:
+        for line in block:
+            expected, skip = _signature_of(line)
+            if skip:
+                continue
+            if expected != line:
+                offenders.append("{!r} != {!r}".format(line, expected))
+    assert not offenders, "\n".join(offenders)
+
+
+def test_header_tail_sections_are_the_standard_four_in_order():
+    """The header closes with ``Exceptions``, ``Command line``,
+    ``Environment variables`` and ``Gotchas``, in that order, after the
+    body and the project's own "Differences from Puppet" section."""
+    headings = re.findall(r"^## (.+)$", _header_text(), re.MULTILINE)
+    assert headings[-4:] == [
+        "Exceptions",
+        "Command line",
+        "Environment variables",
+        "Gotchas",
+    ]
+    assert headings[-5] == "Differences from Puppet"
 
 
 def test_header_lists_every_marker():
@@ -440,8 +514,8 @@ def test_header_lists_every_marker():
 
 def test_header_lists_env_vars():
     """Every literal environment-variable name ``hyera``'s own source reads
-    (``os.environ``/``os.getenv``) appears in the header's "Environment"
-    section."""
+    (``os.environ``/``os.getenv``) appears in the header's "Environment
+    variables" section."""
     pattern = re.compile(
         r"""(?:environ(?:\.get)?\(|environ\[|getenv\()\s*["']([A-Z][A-Z0-9_]*)["']"""
     )
@@ -451,8 +525,8 @@ def test_header_lists_env_vars():
         names |= set(pattern.findall(path.read_text(encoding="utf-8")))
 
     header = _header_text()
-    env_start = header.index("## Environment")
-    env_end = header.index("## Differences from Puppet")
+    env_start = header.index("## Environment variables")
+    env_end = header.index("## Gotchas")
     env_section = header[env_start:env_end]
 
     missing = [n for n in names if n not in env_section]
