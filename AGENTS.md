@@ -1,14 +1,17 @@
 # hyera
 
 A small, dependency-light Python implementation of [Puppet
-Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
+Hiera](https://help.puppet.com/core/8/Content/PuppetCore/hiera_intro.htm) hierarchical data
 lookup — a `src/hyera` packaged library plus an optional `hyera` CLI, built on
 the `duho`/`pathlib_next` stack. The distribution, the import package and the
 console script are all `hyera` (`pip install hyera`, `import hyera`, `hyera`
 or `python -m hyera`).
 
-The goal is to resolve Hiera data exactly the way Puppet 8's own `lookup`
-does. Every deliberate difference is listed in
+The goal is the same lookup outcome and value as Puppet 8's own `lookup`
+(the reference is Puppet 8.10.0 as measured): a lookup finds, misses or fails
+where Puppet's does and returns the same value. Error message text, the
+command's output text and its exit statuses (`1` miss, `2` error) are hyera's
+own. Every deliberate difference is listed in
 [`README.md#differences-from-puppet`](README.md#differences-from-puppet); the
 per-feature fidelity table is
 [`README.md#hiera-coverage`](README.md#hiera-coverage).
@@ -18,12 +21,24 @@ per-feature fidelity table is
 ```
 src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
+├── types.py                 # hyera.types: the public Puppet type objects (Integer, Optional, Struct, ...)
+├── _enums.py                  # the base of the public string enums (Merge, Strict, FunctionKind, BackendKind, RenderAs)
+├── _digits.py                   # decimal integer parsing/formatting independent of Python's 4300-digit limit
+├── _subprocess.py                 # the one place sops and facter run: timeout, process-tree kill, closed stdin
 ├── __main__.py             # python -m hyera: the same entry point as the console script
 ├── py.typed                 # PEP 561 marker: the package ships inline types
 ├── AGENTS.md                 # the shipped API header -- every export, signature and gotcha
 ├── core.py                    # Hiera: entry point and lookup engine (data_hash_function_provider.rb, data_provider.rb)
 ├── exceptions.py                # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
-├── cli.py                         # duho-based hyera console script (Lookup command, main())
+├── cli/                           # the hyera console script on duho: hyera.cli exports main and Lookup
+│   ├── __init__.py                  # Lookup (the duho command) and main()
+│   ├── __main__.py                   # python -m hyera.cli
+│   ├── _args.py                       # the duho.Arg annotation of every Lookup field and its agent help
+│   ├── _argv.py                        # argument-vector preparation: values that look like options
+│   ├── _options.py                      # merge-option validation in Puppet's order
+│   ├── _run.py                           # one lookup: build the Hiera, resolve, render
+│   ├── _scope.py                          # scope, facts and path-list handling
+│   └── _stdout.py                          # writing the result to stdout
 ├── _config/                        # base hiera.yaml, hierarchy/location resolution, layer discovery
 │   ├── hiera_config.py               # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
 │   ├── location_resolver.py           # hierarchy level path resolution: interpolation rules, mapped_paths, glob (location_resolver.rb, hiera_config.rb)
@@ -65,12 +80,16 @@ src/hyera/
 tests/
 ├── conftest.py              # make_tree: a valid Hiera 5 tree on disk, LF/UTF-8, per test
 ├── test_*.py                 # unit tests, one module per engine area (backends, config, merge, interpolation, CLI, ...)
+├── data/                       # tables recorded from Ruby (Dir.glob, Pathname#+), replayed by test_dir_glob.py and test_locations.py
+├── typing/                      # consumer_types.py: type-checked with pyright, never executed
 └── conformance/
     ├── _golden.py             # golden schema/digest/lint (no hyera import)
     ├── _ours.py                 # the only module that calls into hyera's API/CLI
     ├── record.py                 # recorder (dev-only, needs real Puppet)
     ├── test_conformance.py        # replay: the API/library channel
     ├── test_conformance_cli.py     # replay: the CLI channel
+    ├── test_golden_lint.py          # the golden linter's rules
+    ├── test_record.py                # the recorder's own logic (needs no Puppet)
     └── cases/<area>-<topic>/        # a hand-written case.yaml + a generated golden.json per case
 
 benchmarks/
@@ -88,11 +107,11 @@ examples/
 docs/
 ├── index.md            # the hand-written landing page (its examples are tested, see Develop)
 ├── changelog.md          # snippet-embeds CHANGELOG.md
-└── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.backends, hyera.cli)
+└── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.types, hyera.backends, hyera.cli)
 
 .github/workflows/
-├── test.yml            # on-demand test matrix, types, floors, format, docs, console-script
-├── release.yml           # v* tag: test -> build -> docs-gate -> github-release -> publish-pypi / docs-deploy
+├── test.yml            # on-demand test matrix, types, floors, coverage, format, docs, console-script, benchmark
+├── release.yml           # v* tag: test + floors -> build -> wheel-smoke + docs-gate -> github-release -> publish-pypi / docs-deploy
 └── docs.yml                 # every GitHub Pages deploy
 
 mkdocs.yml                   # docs site config (MkDocs + Material + mkdocstrings)
@@ -104,8 +123,9 @@ LICENSE, NOTICE, LICENSES/            # MIT for original code; NOTICE credits ev
 ```
 
 `hyera._*` modules are private engine internals mirroring Puppet's own file
-split; import public names from `hyera` itself, never from a submodule
-directly. `src/hyera/AGENTS.md` is the shipped API header (see
+split; import public names from `hyera` itself, or from the public modules
+`hyera.types`, `hyera.backends` and `hyera.cli`, never from a `hyera._*`
+module. `src/hyera/AGENTS.md` is the shipped API header (see
 [Packaging](#packaging) below) — every export with its exact signature,
 arguments and gotchas, so a consuming agent skips the source.
 
@@ -139,11 +159,12 @@ Backends register under one or more Hiera `data_hash`/`lookup_key`/
 `sub_lookup.rb`) is what makes an `"a.b.0.c"`-style dotted key or `%{...}`
 reference navigate that data uniformly, rather than a container method.
 
-The CLI (`src/hyera/cli.py`) is a thin `duho.Cli` wrapper around
-`Hiera.lookup`, mirroring `puppet lookup`'s own flags (see
+The CLI (`src/hyera/cli/`) is a thin `duho.Cli` wrapper around
+`Hiera.lookup` that takes `puppet lookup`'s flags (see
 [`README.md`](README.md#command-line)), designed for unattended use: no
 interactive prompts, deterministic output through the `_output/render.py` registry,
-and exit codes `0` (found), `1` (key missing) and `2` (any other error).
+and its own exit codes: `0` (found), `1` (key missing) and `2` (any other
+error), `130` on an interrupt.
 `HYERA_MCP=stdio hyera` serves the same command as an MCP tool over stdio.
 
 ## Develop
@@ -153,11 +174,12 @@ and exit codes `0` (found), `1` (key missing) and `2` (any other error).
   green).
 - Editable install: `<py> -m pip install -e ".[dev,docs]"`. `dev` composes
   every extra that has tests depending on it (`cli`, `hocon`, `eyaml`) plus
-  `build`/`pytest`/`twine`/`pyright[nodejs]` and, on Python 3.10+, `black`
+  `build`/`pytest`/`twine`/`coverage`/`pyright[nodejs]` and, on Python 3.10+, `black`
   (pinned to major 26); `docs` adds the MkDocs toolchain (Python 3.10+ only
   — install it on the 3.14 venv, not the 3.9 floor).
 - Tests: `<py> -m pytest -q -rs` (pytest config in `pyproject.toml` puts
-  `src/` on the path).
+  `src/` on the path). `tests/test_readme.py` runs the README's `pycon`,
+  `console` and `sh` blocks, so a command that stops working turns it red.
 - Coverage: `<py> -m coverage run --branch --source=src/hyera -m pytest -q
   -rs`, then `<py> -m coverage report --show-missing`. CI reports branch
   coverage on every run (the `coverage` job, Python 3.14 only) without
@@ -218,6 +240,9 @@ the docs site can be redeployed without cutting a release.
   break never fails the run), `docs` (the same strict `mkdocs build` the
   release gates on), and `console-script` (build the wheel, install it into
   a clean venv, run the installed script — Ubuntu, Windows and macOS). A
+  `benchmark` job (Python 3.9 and 3.14, both revalidate modes, results kept
+  as artifacts, never a gate) runs only on a dispatch with `benchmark` set
+  or a `ci-bench-*` tag. A
   `ci-*` tag is throwaway: give it a unique name, push it, poll the run,
   then delete it locally and on the remote.
 - **`docs.yml`**: push to `main` touching `docs/`, `mkdocs.yml`, `src/` or
@@ -235,7 +260,7 @@ the docs site can be redeployed without cutting a release.
   so) → `publish-pypi` (every tag, pre-releases included, PyPI
   Trusted Publishing, no stored token) and `docs-deploy` (final tags only,
   dispatches `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`,
-  `v0.0.0-a0`) is uploaded to PyPI as a pre-release, which `pip install
+  `v0.0.0a0`) is uploaded to PyPI as a pre-release, which `pip install
   hyera` skips unless asked for (`--pre` or an exact pin); it does not
   redeploy the docs.
 - **Owner-only prerequisites** (no claim is made here about their current

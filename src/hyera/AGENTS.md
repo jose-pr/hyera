@@ -11,8 +11,9 @@ Install as `hyera` (`pip install hyera`); extras: `pip install "hyera[cli]"`
 `pyhocon`), `pip install "hyera[eyaml]"` (`EyamlBackend`, `cryptography`).
 The `dev`/`docs` extras are contributor-only tooling extras, not needed
 to use the library. Import as `import hyera`; import every public name from
-`hyera` itself, never from a submodule directly — `hyera._*` modules are
-private engine internals with no stability contract. The console script is
+`hyera` itself, or from the public modules `hyera.types`, `hyera.backends`
+and `hyera.cli` — `hyera._*` modules are private engine internals with no
+stability contract. The console script is
 `hyera` (`[project.scripts]`); `python -m hyera` runs the same entry point.
 `hyera.__version__` (a plain `__version__` string) is the package version. Fully typed (`py.typed`;
 `pyright --verifytypes hyera` scores 100%). Every lookup-shaped call
