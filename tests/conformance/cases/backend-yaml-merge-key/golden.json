@@ -1,0 +1,142 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d199f85cc4b3d25019a76a3848e7cca28f441713cc309efb50b71d23749a7653",
+  "results": {
+    "merge_after_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "merge_after_key"
+      ],
+      "status": "found",
+      "value": {
+        "port": 80,
+        "tls": false
+      }
+    },
+    "merge_before_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "merge_before_key"
+      ],
+      "status": "found",
+      "value": {
+        "port": 8443,
+        "tls": false
+      }
+    },
+    "merge_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "merge_list"
+      ],
+      "status": "found",
+      "value": {
+        "port": 80,
+        "name": "other",
+        "tls": false
+      }
+    },
+    "merge_twice": {
+      "argv": [
+        "--strict",
+        "warning",
+        "merge_twice"
+      ],
+      "status": "found",
+      "value": {
+        "port": 9000,
+        "tls": false,
+        "name": "other"
+      }
+    },
+    "quoted_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "quoted_key"
+      ],
+      "status": "found",
+      "value": {
+        "port": 80,
+        "tls": false
+      }
+    },
+    "str_tagged_key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "str_tagged_key"
+      ],
+      "status": "found",
+      "value": {
+        "<<": {
+          "port": 80,
+          "tls": false
+        }
+      }
+    },
+    "null_value": {
+      "argv": [
+        "--strict",
+        "warning",
+        "null_value"
+      ],
+      "status": "found",
+      "value": {
+        "<<": null,
+        "a": 1
+      }
+    },
+    "scalar_value": {
+      "argv": [
+        "--strict",
+        "warning",
+        "scalar_value"
+      ],
+      "status": "found",
+      "value": {
+        "<<": 5,
+        "a": 1
+      }
+    },
+    "list_with_scalar": {
+      "argv": [
+        "--strict",
+        "warning",
+        "list_with_scalar"
+      ],
+      "status": "found",
+      "value": {
+        "<<": [
+          {
+            "port": 80,
+            "tls": false
+          },
+          5
+        ],
+        "a": 1
+      }
+    },
+    "alias_to_list": {
+      "argv": [
+        "--strict",
+        "warning",
+        "alias_to_list"
+      ],
+      "status": "found",
+      "value": {
+        "<<": [
+          1,
+          2
+        ],
+        "a": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+scalars:
+  a: &d 1
+  b: &d 2
+  c: *d
+  d: &d 3
+  e: *d
+maps:
+  one: &m {x: 1}
+  two: &m {x: 2}
+  use: *m
