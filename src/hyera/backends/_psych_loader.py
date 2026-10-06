@@ -1,6 +1,6 @@
-# Ported from Psych lib/psych/visitors/to_ruby.rb (https://github.com/ruby/psych), MIT, and Puppet 8
-# lib/puppet/util/yaml.rb (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Psych lib/psych/visitors/to_ruby.rb (https://github.com/ruby/psych), MIT,
+# and Puppet 8 lib/puppet/util/yaml.rb (https://github.com/puppetlabs/puppet),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Ports Psych ``safe_load`` as ``Puppet::Util::Yaml`` uses it, on top of
 PyYAML (``CSafeLoader`` when libyaml is available, else the pure-Python
 ``SafeLoader``).
@@ -245,9 +245,9 @@ def _make_loader_class(base, *mixins):
         pass
 
     _Loader.add_constructor(_PLAIN_TAG, _construct_plain)
-    # PyYAML's SafeLoader registers Python-flavored constructors for these core tags; overriding them makes an
-    # explicit `!!int`/`!!bool`/etc tag use the same Ruby-flavored `_tokenize` as an implicit plain scalar
-    # (the `None` catch-all only sees unregistered tags).
+    # SafeLoader registers Python-flavored constructors for these core tags; overriding
+    # them makes an explicit `!!int`/`!!bool` tag use the same Ruby-flavored `_tokenize`
+    # as an implicit plain scalar (the `None` catch-all sees only unregistered tags).
     for tag in (
         "tag:yaml.org,2002:null",
         "tag:yaml.org,2002:bool",
@@ -278,8 +278,9 @@ def _make_loader_class(base, *mixins):
         "tag:yaml.org,2002:map",
     ):
         _Loader.add_constructor(prefix, _construct_by_kind)
-    # Registration order matters (PyYAML tries multi-constructor prefixes in insertion order, first match wins):
-    # "!ruby/string" must precede the broad "!ruby/", or `!ruby/string[:X]` would hit the disallowed-class handler.
+    # Registration order matters (PyYAML tries multi-constructor prefixes in insertion
+    # order, first match wins): "!ruby/string" must precede the broad "!ruby/", or
+    # `!ruby/string[:X]` would hit the disallowed-class handler.
     _Loader.add_multi_constructor("!ruby/string", _construct_str_multi)
     _Loader.add_multi_constructor("!ruby/", _construct_ruby_disallowed)
     _Loader.add_multi_constructor(None, _construct_unknown)
@@ -309,8 +310,9 @@ _PURE_LOADER = _make_loader_class(yaml.SafeLoader, _RedefinableAnchors)
 _LOADER = _C_LOADER or _PURE_LOADER
 
 
-#: A quoted token in a PyYAML problem text. Alias, tag-handle and escape-character names quote source text
-#: verbatim and are redacted; the parser's structural tokens (``','``, ``']'``, ``'<block end>'``) are kept.
+# : A quoted token in a PyYAML problem text. Alias, tag-handle and escape-character
+# names quote source text : verbatim and are redacted; the parser's structural tokens
+# (``','``, ``']'``, ``'<block end>'``) are kept.
 _YAML_QUOTED_TOKEN_RE = re.compile(r"'([^']*)'")
 _YAML_FIXED_TOKEN_RE = re.compile(r"[,\]\[{}:?-]|<[a-z ]+>")
 

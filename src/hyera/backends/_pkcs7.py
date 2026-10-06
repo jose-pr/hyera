@@ -97,9 +97,9 @@ def _children(buf: bytes, depth: int):
     return out
 
 
-#: Every OID this decrypt path recognizes (``_ENVELOPED_DATA_OID``/``_RSA_ENCRYPTION_OID``/the three
-#: ``_AES_CBC_OIDS``) encodes in well under 16 bytes; 32 leaves headroom for an unrecognized algorithm OID.
-#: Unbounded, building ``parts`` is quadratic in the OID's byte length (a 100 KB content took 0.68s).
+#: Every OID this decrypt path recognizes (``_ENVELOPED_DATA_OID``,
+#: ``_RSA_ENCRYPTION_OID``, ``_AES_CBC_OIDS``) fits in 16 bytes; 32 leaves headroom.
+#: Unbounded, building ``parts`` is quadratic in the OID's length (100 KB took 0.68s).
 _MAX_OID_BYTES = 32
 
 
@@ -171,8 +171,8 @@ def _pkcs7_decrypt(der: bytes, private_key) -> bytes:
             idx = 1  # env_children[0] is CMSVersion.
             rinfos_tag, rinfos_value, _ = env_children[idx]
             if rinfos_tag == 0xA0:  # optional [0] originatorInfo
-                # No bounds check: the `len(env_children) < 3` guard above guarantees 3 elements and `idx` only reaches
-                # 2 in this branch.
+                # No bounds check: the `len(env_children) < 3` guard above guarantees 3
+                # elements and `idx` only reaches 2 in this branch.
                 idx += 1
                 rinfos_tag, rinfos_value, _ = env_children[idx]
             if rinfos_tag != 0x31:  # SET OF RecipientInfo
@@ -234,9 +234,9 @@ def _pkcs7_decrypt(der: bytes, private_key) -> bytes:
         except _DerError as e:
             raise BackendError("Could not parse the PKCS7: {}".format(e)) from None
         except (IndexError, ValueError) as e:
-            # Defense in depth, not currently reachable: every subscript above is preceded by a length/emptiness check
-            # that raises `_DerError` first, and the readers bounds-check `i`. Kept so a future unguarded index still
-            # surfaces as this `BackendError`, not a raw `IndexError`/`ValueError`.
+            # Defense in depth, unreachable as written: every subscript above follows a
+            # length check raising `_DerError`, and the readers bounds-check `i`. A
+            # future unguarded index becomes this `BackendError`, not an `IndexError`.
             raise BackendError("Could not parse the PKCS7: {}".format(e)) from None
 
         try:
@@ -258,7 +258,8 @@ def _pkcs7_decrypt(der: bytes, private_key) -> bytes:
             raise BackendError("bad decrypt") from None
         return plaintext
     finally:
-        # Scrub this call's locals that ever held decrypted bytes, on every exit path (see the docstring above for
-        # why `from None` alone does not). `private_key` is the caller's, reused across tokens, and never touched.
+        # Scrub this call's locals that ever held decrypted bytes, on every exit path
+        # (see the docstring above for why `from None` alone does not). `private_key` is
+        # the caller's, reused across tokens, and never touched.
         key = None
         padded = b""

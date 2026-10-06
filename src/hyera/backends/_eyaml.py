@@ -1,6 +1,7 @@
 # Ported from hiera-eyaml lib/hiera/backend/eyaml/parser/{encrypted_tokens,parser}.rb
-# (https://github.com/voxpupuli/hiera-eyaml), MIT, and from Puppet 8 lib/puppet/functions/eyaml_lookup_key.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# (https://github.com/voxpupuli/hiera-eyaml), MIT, and from Puppet 8
+# lib/puppet/functions/eyaml_lookup_key.rb (https://github.com/puppetlabs/puppet),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """``eyaml_lookup_key`` support: token scanning and PKCS7 key loading.
 
 The token grammar follows hiera-eyaml's
@@ -32,16 +33,17 @@ _STRIPPED_RE = re.compile(r"ENC\[([A-Za-z0-9_]+,)?([a-zA-Z0-9+/=]+?)\]")
 
 _WHITESPACE_RE = re.compile(r"\s")
 
-#: Ruby's ``Base64.decode64`` (``unpack1('m')``) silently drops any byte outside the base64 alphabet
-#: instead of raising; the resulting bytes still have to pass ``load_pem_private_key``.
+# : Ruby's ``Base64.decode64`` (``unpack1('m')``) silently drops any byte outside the
+# base64 alphabet : instead of raising; the resulting bytes still have to pass
+# ``load_pem_private_key``.
 _B64_ALPHABET = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 )
 
 
-#: hiera-eyaml decides whether a value needs decrypting with ``/.*ENC\[.*?\]/``: linear under Ruby, but under
-#: Python's backtracking ``re`` a run of unmatched ``ENC[`` prefixes is cubic (over 300s past ~2500 repeats).
-#: This is the same presence test, a line at a time with no regex (equivalent on 200k random strings).
+#: hiera-eyaml tests ``/.*ENC\[.*?\]/``: linear under Ruby, but cubic under Python's
+#: backtracking ``re`` on a run of unmatched ``ENC[`` (over 300s past ~2500). This is
+#: the same test, line by line with no regex (equal on 200k random strings).
 
 
 def _has_encrypted_token(data: str) -> bool:
@@ -92,8 +94,9 @@ def _decode64(text: str) -> bytes:
     return base64.b64decode(text)
 
 
-#: Ruby class names for the ``TypeError`` text a non-``String`` argument gets from ``File.exist?``/
-#: ``File.read`` (``"no implicit conversion of <Class> into String"``), for the YAML scalar shapes an option can hold.
+# : Ruby class names for the ``TypeError`` text a non-``String`` argument gets from
+# ``File.exist?``/ : ``File.read`` (``"no implicit conversion of <Class> into
+# String"``), for the YAML scalar shapes an option can hold.
 _RUBY_CLASS_NAMES = {
     bool: None,  # handled specially: True/False -> TrueClass/FalseClass
     int: "Integer",
@@ -144,9 +147,9 @@ def _private_key_pem(options: dict) -> bytes:
     path = options.get("pkcs7_private_key")
     if path:
         if not isinstance(path, (str, os.PathLike)):
-            # `os.path.exists`/`open` accept an int as an open file descriptor (and `open` coerces True/False to fd 1/0);
-            # reading and closing a host fd the data author never named is never acceptable. Puppet's `File.exist?(3)`
-            # raises this TypeError text before touching a descriptor.
+            # `os.path.exists`/`open` accept an int as a file descriptor (`open` coerces
+            # True/False to fd 1/0); reading and closing a host fd the data author never
+            # named is unacceptable. Puppet's `File.exist?(3)` raises this TypeError.
             raise BackendError(
                 "no implicit conversion of {} into String".format(
                     _ruby_class_name(path)
@@ -231,8 +234,9 @@ def decrypt_string(data: str, options: dict, key, path) -> str:
     if not _has_encrypted_token(data):
         return data
 
-    #: The parsed private key, loaded at most once per call and reused across every token in `data`: a list so the
-    #: nested closures can read and populate it. Not cached past this call, as the key can change between calls.
+    # : The parsed private key, loaded at most once per call and reused across every
+    # token in `data`: a list so the : nested closures can read and populate it. Not
+    # cached past this call, as the key can change between calls.
     _key_box: "_ty.List[_ty.Any]" = []
 
     def get_private_key():

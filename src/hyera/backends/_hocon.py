@@ -24,9 +24,9 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["HOCONBackend", "has_hocon"]
 
 
-#: Set only during a `HOCONBackend.loads` call to the labels (see `_guarded_hocon_classmethod`) that must raise
-#: instead of running: "file include" only when `hocon_includes` is False, "URL include"/"package include" always.
-#: Empty outside `loads()`; context-local, so other threads and other pyhocon callers are unaffected.
+#: Labels (see `_guarded_hocon_classmethod`) that must raise instead of running during
+#: `HOCONBackend.loads`: "file include" only when `hocon_includes` is False, "URL
+#: include" and "package include" always. Context-local.
 _HOCON_INCLUDE_GUARD: "contextvars.ContextVar[frozenset]" = contextvars.ContextVar(
     "_hocon_include_guard", default=frozenset()
 )
@@ -87,8 +87,9 @@ def _install_hocon_include_guard(module) -> None:
         (ConfigParser, "resolve_package_path", "package include"),
     ):
         current = cls.__dict__.get(attr)
-        # Ordinarily a `classmethod` object; anything else (a test's monkeypatch installed ahead of this call) is
-        # wrapped as-is, so installation never crashes on already-patched state.
+        # Ordinarily a `classmethod` object; anything else (a test's monkeypatch
+        # installed ahead of this call) is wrapped as-is, so installation never crashes
+        # on already-patched state.
         original = current.__func__ if hasattr(current, "__func__") else current
         setattr(cls, attr, _guarded_hocon_classmethod(original, label))
 
@@ -309,8 +310,9 @@ class HOCONBackend(Backend):
         hocon_includes: _ty.Optional[bool] = None,
     ) -> None:
         super().__init__(conf, strict=strict)
-        # No `Hiera(backend_options=...)` plumbing exists, so the opt-in reads from the level's own `conf`
-        # (its hiera.yaml hierarchy-entry/`defaults` mapping) when not passed directly.
+        # No `Hiera(backend_options=...)` plumbing exists, so the opt-in reads from the
+        # level's own `conf` (its hiera.yaml hierarchy-entry/`defaults` mapping) when
+        # not passed directly.
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
         self.hocon_includes: bool = bool(hocon_includes)
@@ -375,8 +377,9 @@ class HOCONBackend(Backend):
             ) from None
         if self.hocon_includes:
             text = _allow_hocon_includes(text)
-            # `file(...)` is deliberately NOT guarded here: running it for real matches Puppet. `url`/`package`
-            # stay backstopped, as Puppet's hocon_data cannot resolve those either.
+            # `file(...)` is deliberately NOT guarded here: running it for real matches
+            # Puppet. `url`/`package` stay backstopped, as Puppet's hocon_data cannot
+            # resolve those either.
             guarded = frozenset({"URL include", "package include"})
         else:
             text = _refuse_hocon_includes(text)

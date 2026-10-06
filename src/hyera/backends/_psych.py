@@ -1,6 +1,6 @@
-# Ported from Psych lib/psych/scalar_scanner.rb (https://github.com/ruby/psych), MIT, and Puppet 8
-# lib/puppet/pops/lookup/hiera_config.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
-# Modified by jose-pr. See NOTICE.
+# Ported from Psych lib/psych/scalar_scanner.rb (https://github.com/ruby/psych), MIT,
+# and Puppet 8 lib/puppet/pops/lookup/hiera_config.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """Ruby values as Psych reads them: ``RubySymbol``, ``symkeys_to_string`` and
 ``ScalarScanner#tokenize``.
 
@@ -101,9 +101,9 @@ def _symkeys_to_string(obj, memo):
 # Psych::ScalarScanner#tokenize
 # ---------------------------------------------------------------------------
 
-# Ruby's TIME/FLOAT/INTEGER_LEGACY regexes, translated 1:1 (`^`/`$` are line anchors -> re.M; `[[:alpha:]]`
-# -> `[^\W\d_]`; the FLOAT source's `/x` whitespace is already absent). `strict_integer: false` (Puppet's
-# `safe_load` default) selects INTEGER_LEGACY (comma-tolerant).
+# Ruby's TIME/FLOAT/INTEGER_LEGACY regexes, translated 1:1 (`^`/`$` are line anchors ->
+# re.M; `[[:alpha:]]` -> `[^\W\d_]`; FLOAT's `/x` whitespace is already absent).
+# `strict_integer: false` (Puppet's default) selects the comma-tolerant INTEGER_LEGACY.
 _TIME_RE = re.compile(
     r"^-?\d{4}-\d{1,2}-\d{1,2}(?:[Tt]|\s+)\d{1,2}:\d\d:\d\d(?:\.\d*)?"
     r"(?:\s*(?:Z|[-+]\d{1,2}:?(?:\d\d)?))?$",
@@ -243,8 +243,8 @@ def _tokenize(string: str):
         try:
             return _parse_int_legacy(string)
         except ValueError:
-            # Each _INTEGER_LEGACY_RE alternative admits only the digits valid for the base it signals and _parse_int_legacy
-            # picks that base from the same prefix, so after a match `int(sign + body, base)` cannot fail. Kept as a mirror
-            # of Ruby's `rescue` around `Integer()`: it depends on every alternative staying aligned with its base.
+            # Each _INTEGER_LEGACY_RE alternative admits only its base's digits and
+            # _parse_int_legacy takes the base from the same prefix, so `int(sign +
+            # body, base)` cannot fail while they agree. Ruby's `Integer()` rescue.
             raise BackendError('invalid value for Integer(): "{}"'.format(string))
     return string
