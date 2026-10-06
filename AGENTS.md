@@ -28,7 +28,7 @@ src/hyera/
 ├── __main__.py             # python -m hyera: the same entry point as the console script
 ├── py.typed                 # PEP 561 marker: the package ships inline types
 ├── AGENTS.md                 # the shipped API header -- every export, signature and gotcha
-├── core.py                    # Hiera: entry point and lookup engine (data_hash_function_provider.rb, data_provider.rb)
+├── core.py                    # Hiera: the public class -- construction, cache control, lookup, dig/get/getvar, explain, sources (data_provider.rb, functions/{lookup,dig,get,getvar}.rb)
 ├── exceptions.py                # HieraError -> ConfigError, BackendError, HieraLookupError (InterpolationError, MergeError, KeyNotFoundError)
 ├── cli/                           # the hyera console script on duho: hyera.cli exports main and Lookup
 │   ├── __init__.py                  # Lookup (the duho command) and main()
@@ -64,6 +64,7 @@ src/hyera/
 │   ├── invocation.py         # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
 │   ├── merge_strategy.py     # Merge and the merge strategies (merge_strategy.rb)
 │   ├── deep_merge.py         # the deep_merge gem's deep_merge! and the Ruby value helpers the strategies share (deep_merge core.rb)
+│   ├── layer_walk.py         # the lookup walk, bound as Hiera's private methods: levels, the global/environment/module layers, lookup_options, merge, sub-key (lookup_adapter.rb)
 │   ├── lookup_adapter.py     # lookup_options matching + convert_result (lookup_adapter.rb)
 │   ├── lookup_function.py    # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
 │   └── data_functions.py     # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
@@ -171,7 +172,7 @@ way Puppet's provider stack does: locations within a level, levels within
 the hierarchy, then the global/environment/module layer stack
 (`_config/data_provider.py`) — reducing at each layer with a `MergeStrategy`
 (first-match by default), fully resolving interpolation and hiera function
-calls in the found root value *before* it is merged (`core.py` resolves each
+calls in the found root value *before* it is merged (`_lookup/layer_walk.py` resolves each
 level in turn, then merges — it never accumulates raw values across levels
 and resolves them afterward), then digging any dotted sub-key out of the
 merged result exactly once.
