@@ -48,6 +48,7 @@ The files ported from Puppet are:
     src/hyera/_types/compound_types.py (from puppet/pops/types/types.rb, pops/loader/static_loader.rb)
     src/hyera/_types/literal_format.py (from puppet/pops/types/string_converter.rb)
     src/hyera/_types/inference.py (from puppet/pops/types/type_calculator.rb)
+    src/hyera/_types/type_syntax.py (from puppet/pops/types/type_parser.rb)
     src/hyera/_types/parser.py (from puppet/pops/types/type_parser.rb)
     src/hyera/_types/mismatch.py (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)
     src/hyera/_types/string_converter.py (from puppet/pops/types/string_converter.rb)

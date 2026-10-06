@@ -24,7 +24,8 @@ from hyera._types.mismatch import (
     _size_text,
     assert_instance_of,
 )
-from hyera._types.parser import _Parser, parse_type
+from hyera._types.parser import parse_type
+from hyera._types.type_syntax import _Parser
 from hyera._types.types import (
     Any,
     Enum,
@@ -1228,11 +1229,11 @@ def test_concurrent_parses_never_share_source_text(monkeypatch):
     parses a different text to completion; A must still report its own text."""
     import threading
 
-    from hyera._types import parser as parser_module
+    from hyera._types import type_syntax as syntax_module
 
     a_text, b_text = "Aaaaaaaaa1[1]", "Bbbbbbbbbbbbbbbb2[2]"
     a_built, b_done = threading.Event(), threading.Event()
-    original = parser_module._Parser.parse_primary
+    original = syntax_module._Parser.parse_primary
     depth = threading.local()
 
     def parse_primary(self):
@@ -1245,7 +1246,7 @@ def test_concurrent_parses_never_share_source_text(monkeypatch):
                 a_built.set()
                 b_done.wait(5)
 
-    monkeypatch.setattr(parser_module._Parser, "parse_primary", parse_primary)
+    monkeypatch.setattr(syntax_module._Parser, "parse_primary", parse_primary)
     results = {}
 
     def parse_a():
