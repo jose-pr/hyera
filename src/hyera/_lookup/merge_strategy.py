@@ -13,11 +13,10 @@ Ports Puppet's ``pops/merge_strategy.rb`` and the deep_merge gem's
 import collections.abc
 import contextlib
 import functools
-import json
 import re
 import typing as _ty
 
-from .interpolation import unshare
+from .interpolation import _ruby_inspect, unshare
 from .navigation import _MISSING
 from ..exceptions import MergeError
 from .._enums import _StrEnum, _plain
@@ -157,27 +156,6 @@ def _puppet_type_name(value):
             return "Struct"
         return "Hash"
     return type(value).__name__
-
-
-def _ruby_inspect(value):
-    """Ruby ``inspect``, AIO/Ruby-3.2 ``Hash#=>`` rendering (matches production Puppet)."""
-    if value is None:
-        return "nil"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if isinstance(value, str):
-        return json.dumps(value)
-    if isinstance(value, list):
-        return "[" + ", ".join(_ruby_inspect(item) for item in value) + "]"
-    if isinstance(value, dict):
-        pairs = ", ".join(
-            "{}=>{}".format(_ruby_inspect(k), _ruby_inspect(v))
-            for k, v in value.items()
-        )
-        return "{" + pairs + "}"
-    return repr(value)
 
 
 def _ruby_to_s(value):
@@ -488,16 +466,6 @@ def _ruby_dup(value):
         return dict(value)
     if isinstance(value, list):
         return list(value)
-    return value
-
-
-def _deep_clone(value):
-    """merge_strategy.rb:379-390 -- recursively clone dicts/lists; share
-    everything else (scalars are immutable, so sharing them is safe)."""
-    if isinstance(value, dict):
-        return {k: _deep_clone(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_deep_clone(item) for item in value]
     return value
 
 
@@ -852,7 +820,7 @@ class DeepMergeStrategy(MergeStrategy):
         """
         merge_options = {k: v for k, v in self.options.items() if k != "strategy"}
         merge_options.setdefault("preserve_unmergeables", False)
-        return deep_merge(e1, _deep_clone(e2) if clone else e2, merge_options)
+        return deep_merge(e1, unshare(e2) if clone else e2, merge_options)
 
     def _merge_owned(self, e1, e2):
         return self.checked_merge(e1, e2, clone=False)

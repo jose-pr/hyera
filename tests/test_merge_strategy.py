@@ -12,6 +12,7 @@ import pytest
 
 from hyera import Hiera, HieraError, MergeError
 from hyera._lookup import merge_strategy
+from hyera._lookup.interpolation import unshare
 from hyera._lookup.merge_strategy import (
     _MISSING,
     DeepMergeStrategy,
@@ -20,7 +21,6 @@ from hyera._lookup.merge_strategy import (
     HashMergeStrategy,
     MergeStrategy,
     UniqueMergeStrategy,
-    _deep_clone,
     _eql_key,
     _ruby_delete,
     _ruby_delete_if,
@@ -177,6 +177,16 @@ def test_unpack_arrays_with_a_non_array_dest():
         {"strategy": "unconstrained_deep", "unpack_arrays": ","}
     )
     assert strategy.merge({"l": ["a,b"]}, {"l": "x"}) == {"l": ["a", "b"]}
+
+
+def test_unpack_arrays_renders_a_hash_element_the_way_ruby_inspects_it():
+    # unpack_arrays joins the array with to_s, so a Hash element becomes its
+    # Ruby inspect text: non-ASCII characters stay as they are.
+    strategy = MergeStrategy.strategy(
+        {"strategy": "unconstrained_deep", "unpack_arrays": ","}
+    )
+    merged = strategy.merge({"l": [{"k": "é"}]}, {"l": ["c"]})
+    assert merged == {"l": ["c", '{"k"=>"é"}']}
 
 
 def test_subclass_without_key_is_not_registered():
@@ -336,8 +346,8 @@ def test_knockout_semantics():
     assert result == {"l": ["--a", "c", "a"]}
 
     # Three levels, folded highest to lowest the way the base reduce does.
-    memo = deep_merge(["--a"], _deep_clone(["b"]), options)
-    memo = deep_merge(memo, _deep_clone(["a", "c"]), options)
+    memo = deep_merge(["--a"], unshare(["b"]), options)
+    memo = deep_merge(memo, unshare(["a", "c"]), options)
     assert memo == ["a", "c", "b"]
 
     # A key only present in the higher level: the dup of the containing
@@ -756,14 +766,17 @@ def test_deep_lookup_merge_does_not_clone_values_it_already_owns(
         },
         files={"data/a.yaml": "k: {x: [1]}\n", "data/b.yaml": "k: {x: [2]}\n"},
     )
-    calls = []
-    original = merge_strategy._deep_clone
-    monkeypatch.setattr(
-        merge_strategy, "_deep_clone", lambda v: calls.append(v) or original(v)
-    )
+    clones = []
+    original = DeepMergeStrategy.checked_merge
+
+    def spy(self, e1, e2, *, clone=True):
+        clones.append(clone)
+        return original(self, e1, e2, clone=clone)
+
+    monkeypatch.setattr(DeepMergeStrategy, "checked_merge", spy)
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("k", merge="deep") == {"x": [2, 1]}
-    assert calls == []
+    assert clones and not any(clones)
 
 
 def test_sort_merged_arrays_orders_ints_and_strings_and_rejects_mixes():
