@@ -11,7 +11,8 @@ import pytest
 
 from hyera import BackendError, ConfigError, Hiera, InterpolationError, Scope
 from hyera._config.hiera_config import HieraLevel
-from hyera._config.location_resolver import _no_lookup, _pathname_plus
+from hyera._config.location_resolver import _no_lookup
+from hyera._config.pathname import _pathname_plus
 from hyera._lookup.providers import _no_option_lookup
 
 # --- _pathname_plus (Ruby Pathname#+) ---------------------------------
