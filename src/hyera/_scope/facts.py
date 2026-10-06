@@ -15,6 +15,7 @@ import typing as _ty
 
 from ..backends import _psych as _psych
 from ..backends._json import _reject_json_constant
+from .._subprocess import run as _run
 from ..exceptions import BackendError
 
 #: The four trusted-identity facts Puppet requires all-or-nothing
@@ -150,49 +151,22 @@ def facts_from_facter(*, timeout: int = 30) -> _ty.Dict[str, _ty.Any]:
     ``clientcert``/``clientversion``/``clientnoop`` -- those come from
     Puppet's agent, not facter; add ``clientcert`` yourself if
     ``trusted.certname`` should be set. Raises :class:`~hyera.BackendError`
-    for a missing binary, a timeout, a non-zero exit (stderr captured), or
-    output that is not a JSON object.
+    for a missing binary, a non-zero exit (the last 2,000 characters of
+    stderr), or output that is not a JSON object; a timeout raises
+    :class:`~hyera.BackendTimeoutError` after killing facter and its
+    children. A ``facter`` that ``PATH`` resolves relative to the current
+    directory is refused.
 
     :param timeout: seconds to wait for ``facter`` before giving up.
     :returns: the parsed facts, unsanitized.
-    :raises BackendError: ``facter`` is missing, times out, exits non-zero,
-        or its output is not a JSON object.
+    :raises BackendTimeoutError: ``facter`` did not finish in ``timeout``.
+    :raises BackendError: ``facter`` is missing, refused, exits non-zero, or
+        its output is not a JSON object.
     """
-    exe = shutil.which("facter")
-    if exe is None:
-        raise BackendError("facter executable not found on PATH")
-
-    timed_out = False
-    try:
-        proc = subprocess.run(
-            [exe, "-j"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired:
-        # Recorded, not re-raised, inside the except: matches the sops
-        # runner's own hardening -- raising outside the handler keeps
-        # __context__ genuinely None rather than holding the partial output.
-        timed_out = True
-    except OSError as e:
-        raise BackendError("Failed to run facter: {}".format(e)) from e
-
-    if timed_out:
-        raise BackendError("facter timed out after {}s".format(timeout)) from None
-
-    if proc.returncode != 0:
-        detail = proc.stderr.decode("utf-8", "replace").strip()
-        raise BackendError(
-            "facter failed (exit {}): {}".format(
-                proc.returncode, detail or "<no stderr>"
-            )
-        )
+    stdout = _run("facter", ["-j"], timeout=timeout)
 
     try:
-        text = proc.stdout.decode("utf-8")
+        text = stdout.decode("utf-8")
     except UnicodeDecodeError as e:
         raise BackendError("facter output is not valid UTF-8: {}".format(e)) from e
     try:

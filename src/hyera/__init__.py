@@ -15,6 +15,7 @@ from .backends import (
 from ._output import render as _render  # noqa: F401 (registers s/json/yaml renderers)
 from ._output.render import RenderAs
 from .exceptions import (
+    BackendTimeoutError,
     ConfigError,
     HieraError,
     HieraLookupError,
@@ -57,6 +58,7 @@ __all__ = [
     "HieraError",
     "ConfigError",
     "BackendError",
+    "BackendTimeoutError",
     "HieraLookupError",
     "InterpolationError",
     "MergeError",

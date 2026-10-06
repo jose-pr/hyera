@@ -510,8 +510,12 @@ extension is a clear error, since `sops` would read that file as binary.
 It is hardened so an automated lookup never hangs, dies opaquely, or
 leaks a decrypted secret:
 
-- a finite subprocess timeout (`hyera.backends.SOPS_TIMEOUT`, default 30 s),
-- captured stderr surfaced in a `BackendError`,
+- a finite subprocess timeout (`hyera.backends.SOPS_TIMEOUT`, default 30 s;
+  `SopsBackend(timeout=...)` overrides it for one backend); on expiry `sops` and its child processes are killed and a
+  `BackendTimeoutError` (a `BackendError` and a `TimeoutError`) is raised,
+- `sops` runs with its standard input closed, so it can never consume the
+  caller's own input,
+- the last 2,000 characters of its stderr surfaced in a `BackendError`,
 - a clear error when the `sops` binary is not on `PATH`,
 - the data file is passed to `sops` as an absolute path after a literal
   `--`, so a level or scope value that starts with `-` can never be read as

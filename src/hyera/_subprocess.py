@@ -1,0 +1,165 @@
+"""The one place hyera runs an external program (``sops``, ``facter``)."""
+
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import typing as _ty
+
+from .exceptions import BackendError, BackendTimeoutError
+
+#: Characters of the child's standard error kept in an error message.
+_STDERR_TAIL = 2000
+
+#: Seconds to wait for the pipes to drain after the process group is killed.
+_REAP_TIMEOUT = 5
+
+_WINDOWS = sys.platform == "win32"
+
+
+def _refuse_batch(program: str, exe: str) -> None:
+    """Raise if *exe* is a ``.bat``/``.cmd`` shim, in any letter case."""
+    if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
+        raise BackendError(
+            "refusing to run {} batch shim {}: cmd.exe re-parses its own "
+            "argument line, which is unsafe for a data-derived path".format(
+                program, exe
+            )
+        )
+
+
+def _resolve(program: str, refuse_batch: bool) -> str:
+    """The absolute path of *program* on ``PATH``, or a :class:`BackendError`."""
+    exe = shutil.which(program)
+    if exe is None:
+        raise BackendError("{} executable not found on PATH".format(program))
+    # Checked before the relative test: a Windows-style path is never
+    # absolute on POSIX, and the batch refusal must hold whatever it looks
+    # like.
+    if refuse_batch:
+        _refuse_batch(program, exe)
+    if not (os.path.isabs(exe) or exe.startswith(("/", "\\"))):
+        # shutil.which on Windows with Python 3.9 to 3.11 still searches the
+        # current directory and can return a path relative to it, even with
+        # NoDefaultCurrentDirectoryInExePath set. A leading separator
+        # without a drive is rooted, not cwd-relative, and is accepted.
+        raise BackendError(
+            "refusing to run {} resolved to a relative path {!r} (from the "
+            "current directory or a relative PATH entry); put an absolute "
+            "{} on PATH instead".format(program, exe, program)
+        )
+    exe = os.path.abspath(exe)
+    # abspath normalizes forms such as ``sops.bat.`` into ``.bat``.
+    if refuse_batch:
+        _refuse_batch(program, exe)
+    return exe
+
+
+def _kill_tree(proc: "subprocess.Popen[bytes]") -> None:
+    """Kill *proc* and every process it started."""
+    if _WINDOWS:
+        taskkill = os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe"
+        )
+        try:
+            subprocess.run(
+                [taskkill, "/F", "/T", "/PID", str(proc.pid)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=_REAP_TIMEOUT,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    else:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
+def run(
+    program: str,
+    args: _ty.Sequence[str],
+    *,
+    timeout: float,
+    refuse_batch: bool = False,
+    context: str = "",
+) -> bytes:
+    """Run *program* with *args* and return its standard output.
+
+    *program* is resolved once with :func:`shutil.which` and run by its
+    absolute path, never through a shell. Its standard input is the null
+    device and it runs in its own process group, which is killed on timeout.
+    A relative resolution is refused; a ``.bat``/``.cmd`` shim too when
+    *refuse_batch* is set. Standard output is never part of an error.
+
+    :param program: the bare name to look up on ``PATH``.
+    :param args: the arguments after the program.
+    :param timeout: seconds to wait before killing the process group.
+    :param refuse_batch: refuse a batch-file shim.
+    :param context: a phrase appended to every message (``decrypting <path>``).
+    :returns: the program's standard output.
+    :raises BackendTimeoutError: the program did not finish in time.
+    :raises BackendError: the program is missing, refused, cannot start, or
+        exits non-zero (its last 2,000 characters of standard error are quoted).
+    """
+    suffix = " " + context if context else ""
+    try:
+        exe = _resolve(program, refuse_batch)
+    except BackendError as e:
+        if context:
+            e.args = ("{} while{}".format(e.args[0], suffix),)
+        raise
+
+    kwargs: _ty.Dict[str, _ty.Any] = {}
+    if _WINDOWS:
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    try:
+        proc = subprocess.Popen(
+            [exe, *args],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            **kwargs,
+        )
+    except OSError as e:
+        raise BackendError("Failed to run {}{}: {}".format(program, suffix, e)) from e
+
+    # Recorded and raised after the handler: a TimeoutExpired carries the
+    # child's partial stdout, and raising inside the handler would keep it
+    # reachable through __context__.
+    timed_out = False
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    if timed_out:
+        _kill_tree(proc)
+        try:
+            proc.communicate(timeout=_REAP_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            pass
+        for pipe in (proc.stdout, proc.stderr):
+            if pipe is not None:
+                pipe.close()
+        raise BackendTimeoutError(
+            "{} timed out after {}s{}".format(program, timeout, suffix)
+        ) from None
+
+    if proc.returncode != 0:
+        detail = stderr.decode("utf-8", "replace").strip()[-_STDERR_TAIL:]
+        raise BackendError(
+            "{} failed (exit {}){}: {}".format(
+                program, proc.returncode, suffix, detail or "<no stderr>"
+            )
+        )
+    return stdout

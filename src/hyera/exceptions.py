@@ -6,6 +6,7 @@ __all__ = [
     "HieraError",
     "ConfigError",
     "BackendError",
+    "BackendTimeoutError",
     "HieraLookupError",
     "InterpolationError",
     "MergeError",
@@ -58,6 +59,12 @@ class ConfigError(HieraError):
 
 class BackendError(HieraError):
     """A data file could not be read or parsed. ``.path`` names it."""
+
+
+class BackendTimeoutError(BackendError, TimeoutError):
+    """An external program a backend or fact source runs (``sops``,
+    ``facter``) did not finish within its time limit and was killed along
+    with its child processes."""
 
 
 class HieraLookupError(HieraError):

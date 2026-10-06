@@ -1,38 +1,36 @@
 """``SopsBackend`` argv safety and plaintext-free parse errors.
 
-``tests/test_backends.py`` keeps the pre-existing failure-path tests
-(missing binary, non-zero exit, timeout); this file covers the success
-path, argv shape, batch-shim refusal, and that a decrypted file which
+Tests that run the real subprocess path put a fake ``sops`` first on
+``PATH`` (``fake_program``; skipped on Windows, where a fake ``sops`` is a
+batch shim hyera refuses). The remaining tests replace the runner
+(``_install_recorder``) to check argv shape and that a decrypted file which
 fails to parse never leaks its plaintext into an error, a log record, or
 the CLI's output.
 """
 
+import json
 import logging
 import os
-import subprocess
+import sys
+import time
 
 import pytest
 
-from hyera import ConfigError, Hiera, Scope
-from hyera.backends import SOPS_TIMEOUT, Backend, BackendError, RubySymbol, SopsBackend
+import hyera.backends
+from hyera import BackendTimeoutError, ConfigError, Hiera, Scope
+from hyera.backends import Backend, BackendError, RubySymbol, SopsBackend
 
 
-def _install_recorder(
-    monkeypatch, tmp_path, stdout=b"k: v\n", stderr=b"sops: noise", returncode=0
-):
-    """Patch ``shutil.which``/``subprocess.run`` and record every call."""
+def _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n"):
+    """Replace the subprocess runner and record every call as ``(argv, kwargs)``."""
     calls = []
-    which_path = str(tmp_path / "bin" / "sops.exe")
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _name: which_path)
 
-    def _run(args, **kwargs):
-        calls.append((args, kwargs))
-        return subprocess.CompletedProcess(
-            args, returncode, stdout=stdout, stderr=stderr
-        )
+    def _run(program, args, **kwargs):
+        calls.append(([program, *args], kwargs))
+        return stdout
 
-    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _run)
-    return calls, which_path
+    monkeypatch.setattr("hyera.backends._sops._run", _run)
+    return calls, "sops"
 
 
 def test_data_hash_sops_is_sops_data(monkeypatch, tmp_path, make_tree):
@@ -60,22 +58,22 @@ def test_sops_success_argv_and_value(monkeypatch, tmp_path):
     assert len(calls) == 1
     args, kwargs = calls[0]
     assert args == [
-        os.path.abspath(which_path),
+        which_path,
         "--input-type=yaml",
         "--output-type=yaml",
         "-d",
         "--",
         os.path.abspath(str(secret)),
     ]
-    assert kwargs["timeout"] == SOPS_TIMEOUT
-    assert not kwargs.get("shell")
+    assert kwargs["timeout"] == hyera.backends.SOPS_TIMEOUT
+    assert kwargs["refuse_batch"] is True
     assert result == {"k": "v"}
 
 
 def test_sops_end_to_end_lookup(monkeypatch, tmp_path, make_tree):
     _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n")
-    # Content is irrelevant -- sops runs on the path, and subprocess.run is
-    # mocked -- but the level's file must exist for it to be considered.
+    # Content is irrelevant -- sops runs on the path, and the runner is
+    # replaced -- but the level's file must exist for it to be considered.
     root = make_tree(
         {
             "defaults": {"data_hash": "sops_data"},
@@ -110,36 +108,214 @@ def test_sops_dash_leading_filename_is_data(monkeypatch, tmp_path, make_tree):
     assert os.path.isabs(last)
 
 
-def test_sops_refuses_relative_which_result(monkeypatch, tmp_path):
-    # Python 3.9's shutil.which searches the cwd first and can return a
-    # relative path even with NoDefaultCurrentDirectoryInExePath set; running
-    # whatever that resolves to would be the same implicit-cwd exposure the
-    # absolute-path hardening elsewhere in this module is meant to close.
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: ".\\sops.EXE")
-    called = []
-    monkeypatch.setattr(
-        "hyera.backends._sops.subprocess.run", lambda *a, **k: called.append((a, k))
+def _write_sops_tree(make_tree, **entry):
+    return make_tree(
+        {
+            "defaults": {"data_hash": "sops_data"},
+            "hierarchy": [{"name": "s", "path": "secret.yaml", **entry}],
+        },
+        files={"data/secret.yaml": b""},
     )
 
+
+def test_sops_runs_a_real_program_and_passes_the_argv(fake_program, tmp_path):
+    log = tmp_path / "argv.json"
+    fake_program(
+        "sops",
+        "import json, sys\njson.dump(sys.argv[1:], open({!r}, 'w'))\n".format(str(log))
+        + 'sys.stdout.write("k: v\\n")\n',
+    )
+    secret = tmp_path / "-rf.yaml"
+    assert SopsBackend({}).data_hash(secret, {}) == {"k": "v"}
+    with open(log) as fh:
+        logged = json.load(fh)
+    assert logged == [
+        "--input-type=yaml",
+        "--output-type=yaml",
+        "-d",
+        "--",
+        os.path.abspath(str(secret)),
+    ]
+
+
+def test_sops_missing_binary(tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(BackendError, match="sops executable not found") as excinfo:
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert excinfo.value.path == str(tmp_path / "secret.yaml")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shebang")
+def test_sops_start_failure_wraps_oserror(tmp_path, monkeypatch):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    program = bindir / "sops"
+    program.write_bytes(b"#!/nonexistent/interpreter\n")
+    program.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bindir))
+    with pytest.raises(BackendError, match="Failed to run sops"):
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+
+
+def test_sops_nonzero_exit_keeps_a_bounded_stderr_tail_and_no_stdout(
+    fake_program, tmp_path
+):
+    fake_program(
+        "sops",
+        """
+        import sys
+        sys.stdout.write("secret: HUNTER2SECRETVALUE")
+        sys.stderr.write("E" * 200000 + "decryption failed: no key")
+        sys.exit(128)
+        """,
+    )
+    with pytest.raises(BackendError, match="sops failed \\(exit 128\\)") as excinfo:
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    message = str(excinfo.value)
+    assert message.endswith("decryption failed: no key")
+    assert "HUNTER2" not in message
+    assert len(message) < 2200
+
+
+def test_sops_failure_reaches_the_caller_with_its_own_text(fake_program, make_tree):
+    fake_program("sops", "import sys\nsys.stderr.write('no key')\nsys.exit(1)\n")
+    root = _write_sops_tree(make_tree)
+    with pytest.raises(BackendError) as excinfo:
+        Hiera(str(root / "hiera.yaml")).lookup("k")
+    assert str(excinfo.value).startswith("sops failed (exit 1)")
+    assert not str(excinfo.value).startswith("Unable to parse")
+    assert excinfo.value.path.endswith("secret.yaml")
+
+
+def test_sops_missing_binary_is_not_labelled_unable_to_parse(
+    make_tree, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.chdir(tmp_path)
+    root = _write_sops_tree(make_tree)
+    with pytest.raises(BackendError) as excinfo:
+        Hiera(str(root / "hiera.yaml")).lookup("k")
+    assert str(excinfo.value).startswith("sops executable not found")
+
+
+def _hang_with_grandchild(marker):
+    return (
+        "import subprocess, sys, time\n"
+        "code = 'import pathlib, sys, time; time.sleep(2); "
+        'pathlib.Path(sys.argv[1]).write_text("x")\'\n'
+        "subprocess.Popen([sys.executable, '-c', code, {!r}])\n"
+        "sys.stdout.write('partial: HUNTER2SECRETVALUE')\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(60)\n"
+    ).format(str(marker))
+
+
+def test_sops_timeout_kills_the_whole_process_group(fake_program, tmp_path):
+    marker = tmp_path / "grandchild-survived"
+    fake_program("sops", _hang_with_grandchild(marker))
+    started = time.monotonic()
+    with pytest.raises(BackendTimeoutError, match="sops timed out after 0.5s") as e:
+        SopsBackend({}, timeout=0.5).data_hash(tmp_path / "secret.yaml", {})
+    assert time.monotonic() - started < 10
+    assert isinstance(e.value, TimeoutError) and isinstance(e.value, BackendError)
+    assert e.value.__cause__ is None and e.value.__context__ is None
+    assert "HUNTER2" not in str(e.value)
+    time.sleep(3)
+    assert not marker.exists(), "the grandchild outlived the timeout"
+
+
+def test_assigning_the_package_timeout_takes_effect(
+    fake_program, tmp_path, monkeypatch
+):
+    fake_program("sops", "import time\ntime.sleep(60)\n")
+    monkeypatch.setattr(hyera.backends, "SOPS_TIMEOUT", 0.5)
+    started = time.monotonic()
+    with pytest.raises(BackendTimeoutError, match="after 0.5s"):
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert time.monotonic() - started < 10
+
+
+@pytest.mark.parametrize("bad", [0, -1, "5", True])
+def test_sops_timeout_must_be_a_positive_number(bad):
+    with pytest.raises(ConfigError, match="timeout"):
+        SopsBackend({}, timeout=bad)
+
+
+def test_sops_invalid_utf8_from_a_real_program(fake_program, tmp_path):
+    fake_program(
+        "sops", "import sys\nsys.stdout.buffer.write(b'k: \\xff HUNTER2\\n')\n"
+    )
+    with pytest.raises(BackendError, match="invalid UTF-8 at byte offset 3") as e:
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert "HUNTER2" not in str(e.value)
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="redirecting file descriptor 0 does not change the Windows standard handle",
+)
+def test_sops_stdin_is_the_null_device(fake_program, tmp_path):
+    fake_program(
+        "sops",
+        "import sys\nsys.stdout.write('stdin: ' + repr(sys.stdin.buffer.read().decode()) + chr(10))\n",
+    )
+    read_end, write_end = os.pipe()
+    os.write(write_end, b"caller-input")
+    os.close(write_end)
+    saved = os.dup(0)
+    os.dup2(read_end, 0)
+    try:
+        data = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    finally:
+        os.dup2(saved, 0)
+        os.close(saved)
+        os.close(read_end)
+    assert data == {"stdin": ""}
+
+
+def test_sops_refuses_a_relative_path_entry(fake_program, tmp_path, monkeypatch):
+    marker = tmp_path / "ran"
+    fake_program(
+        "sops",
+        "import pathlib\npathlib.Path({!r}).write_text('x')\n".format(str(marker)),
+        directory=tmp_path / "rel",
+        on_path=False,
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", "rel")
     with pytest.raises(BackendError, match="relative"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert not marker.exists()
 
-    assert not called
 
-
-def test_sops_refuses_batch_shim(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "hyera.backends._sops.shutil.which", lambda _n: r"C:\tools\sops.CMD"
+@pytest.mark.skipif(sys.platform != "win32", reason="batch shims are a Windows form")
+def test_sops_refuses_a_batch_shim(tmp_path, monkeypatch):
+    marker = tmp_path / "ran"
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    (bindir / "sops.bat").write_bytes(
+        '@echo off\r\necho x> "{}"\r\n'.format(marker).encode()
     )
-    called = []
-    monkeypatch.setattr(
-        "hyera.backends._sops.subprocess.run", lambda *a, **k: called.append((a, k))
-    )
-
+    monkeypatch.setenv("PATH", str(bindir))
     with pytest.raises(BackendError, match="batch"):
         SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert not marker.exists()
 
-    assert not called
+
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows searches the current directory"
+)
+def test_sops_never_runs_a_batch_file_from_the_current_directory(tmp_path, monkeypatch):
+    marker = tmp_path / "ran"
+    (tmp_path / "sops.bat").write_bytes(
+        '@echo off\r\necho x> "{}"\r\n'.format(marker).encode()
+    )
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(BackendError):
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    assert not marker.exists()
 
 
 # `_psych` messages that quote the offending scalar/class name
@@ -247,31 +423,6 @@ def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
         exc = exc.__cause__ or exc.__context__
     assert not any("HUNTER2" in s for s in seen)
     assert not any("HUNTER2" in r.getMessage() for r in caplog.records)
-
-
-def test_sops_timeout_chain_free(monkeypatch, tmp_path):
-    # A TimeoutExpired carries the subprocess's partial stdout as an
-    # attribute; chaining "from e" -- or raising while it is still the
-    # exception being handled, even under "from None" -- keeps that
-    # reachable via __cause__.stdout/__context__.stdout even though the
-    # BackendError's own message never echoes it.
-    def _timeout(args, **kwargs):
-        raise subprocess.TimeoutExpired(
-            cmd=args, timeout=SOPS_TIMEOUT, output=b"partial-HUNTER2", stderr=b""
-        )
-
-    monkeypatch.setattr(
-        "hyera.backends._sops.shutil.which",
-        lambda _n: str(tmp_path / "bin" / "sops.exe"),
-    )
-    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _timeout)
-
-    with pytest.raises(BackendError) as excinfo:
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
-
-    assert excinfo.value.__cause__ is None
-    assert excinfo.value.__context__ is None
-    assert excinfo.value.__suppress_context__ is True
 
 
 def test_sops_parse_error_has_no_plaintext(monkeypatch, tmp_path):
@@ -613,3 +764,13 @@ def test_sops_format_pattern_overrides_extension_inference(monkeypatch, tmp_path
     args, _kwargs = calls[-1]
     assert "--input-type=ini" in args
     assert "--output-type=json" in args
+
+
+def test_sops_timeout_resolution_order(monkeypatch, tmp_path):
+    # The constructor keyword, else the package attribute read at call time.
+    calls, _program = _install_recorder(monkeypatch, tmp_path)
+    secret = tmp_path / "secret.yaml"
+    monkeypatch.setattr(hyera.backends, "SOPS_TIMEOUT", 7)
+    SopsBackend({}).data_hash(secret, {})
+    SopsBackend({}, timeout=3).data_hash(secret, {})
+    assert [kwargs["timeout"] for _argv, kwargs in calls] == [7, 3]

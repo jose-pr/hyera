@@ -3,7 +3,6 @@
 import copy
 import io
 import json
-import subprocess
 import sys
 
 import pytest
@@ -14,7 +13,6 @@ from hyera.backends import (
     Backend,
     HOCONBackend,
     JSONBackend,
-    SopsBackend,
     YAMLBackend,
     has_hocon,
 )
@@ -76,52 +74,6 @@ def test_non_puppet_data_hash_names_are_rejected(make_tree, name):
     )
     with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
         Hiera(str(root / "hiera.yaml"))
-
-
-def test_sops_missing_binary(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: None)
-    backend = SopsBackend({})
-    with pytest.raises(BackendError, match="sops executable not found"):
-        backend.data_hash(tmp_path / "secret.yaml", {})
-
-
-def test_sops_start_failure_wraps_oserror(monkeypatch, tmp_path):
-    # The executable was found by shutil.which but could not actually be
-    # started (permission denied, not actually executable, ...):
-    # subprocess.run itself raises OSError, distinct from a non-zero exit
-    # or a timeout.
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
-
-    def _raise(*a, **k):
-        raise OSError("boom")
-
-    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _raise)
-    with pytest.raises(BackendError, match="boom"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
-
-
-def test_sops_nonzero_exit_surfaces_stderr(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
-
-    class _Proc:
-        returncode = 1
-        stdout = b""
-        stderr = b"decryption failed: no key"
-
-    monkeypatch.setattr("hyera.backends._sops.subprocess.run", lambda *a, **k: _Proc())
-    with pytest.raises(BackendError, match="decryption failed: no key"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
-
-
-def test_sops_timeout(monkeypatch, tmp_path):
-    monkeypatch.setattr("hyera.backends._sops.shutil.which", lambda _n: "/usr/bin/sops")
-
-    def _raise(*a, **k):
-        raise subprocess.TimeoutExpired(cmd="sops", timeout=30)
-
-    monkeypatch.setattr("hyera.backends._sops.subprocess.run", _raise)
-    with pytest.raises(BackendError, match="timed out"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
 
 
 def test_hocon_backend(make_tree):

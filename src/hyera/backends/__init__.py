@@ -39,7 +39,13 @@ __all__ = [
     "LookupContext",
     "has_hocon",
     "default_backends",
+    "SOPS_TIMEOUT",
 ]
+
+#: Seconds :class:`SopsBackend` waits for ``sops`` before killing it. Read
+#: at each call, so assigning ``hyera.backends.SOPS_TIMEOUT`` takes effect;
+#: ``SopsBackend(timeout=...)`` overrides it for one backend.
+SOPS_TIMEOUT = 30
 
 #: Plain strings, not :class:`Strict` members: interpolated into the
 #: ``ValueError`` below, whose text must stay exactly what it was before
@@ -546,7 +552,7 @@ class Backend:
 from ._yaml import YAMLBackend
 from ._json import JSONBackend
 from ._hocon import HOCONBackend, has_hocon
-from ._sops import DotenvBackend, SopsBackend, SOPS_TIMEOUT
+from ._sops import DotenvBackend, SopsBackend
 from ._eyaml import EyamlBackend
 
 

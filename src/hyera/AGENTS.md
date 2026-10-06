@@ -652,12 +652,14 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   output as a `dict`. Does **not** add `clientcert`/`clientversion`/
   `clientnoop` — those come from Puppet's agent, not facter; pass
   `clientcert` yourself (e.g. via `Scope(variables={"clientcert": ...})`)
-  if `$trusted.certname` should be set. Hardened like `SopsBackend`'s own
-  subprocess call: `timeout` (default 30s) bounds it; a missing `facter`
-  binary, a timeout, a non-zero exit (stderr captured), or output that
-  isn't a JSON object all raise `BackendError` — a timeout is recorded
-  inside its `except` and raised after, so `__context__` never carries
-  the (possibly partial) output, matching the sops runner's own hardening.
+  if `$trusted.certname` should be set. Runs through the same private
+  runner as `SopsBackend`: `timeout` (default 30s) bounds it, and on expiry
+  facter and its child processes are killed and `BackendTimeoutError` is
+  raised; its stdin is the null device. A missing `facter` binary, a
+  `facter` that `PATH` resolves relative to the current directory, a
+  non-zero exit (the last 2,000 characters of stderr), or output that isn't
+  a JSON object raise `BackendError` (a `.bat` facter at an absolute path
+  is allowed). `__context__` never carries the (possibly partial) output.
 
 ## Types
 
@@ -1006,7 +1008,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   so an undiscovered gap in the text scanner still cannot read a file or
   reach the network; this backstop wraps both the shared `pyhocon.config_parser`
   module and hyera's own private copy.
-- **`SopsBackend(conf=None, *, strict=None, format=None)`** — `NAMES = {"function": ("sops_data", "sops", NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`.
+- **`SopsBackend(conf=None, *, strict=None, format=None, timeout=None)`** — `NAMES = {"function": ("sops_data", "sops", NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`.
   Not a `YAMLBackend` subclass; `format` is set by the `NamePattern`
   capture, else inferred.
   `.data_hash(path, options)` infers the format from the file's extension
@@ -1014,10 +1016,15 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `.yaml`/`.yml` → yaml, `.json` → json, `.env` → dotenv, `.ini` → ini,
   anything else → `ConfigError` (sops would read it as binary, which is
   not a data hash). It shells out to `sops -d` (hardened for unattended
-  use: `SOPS_TIMEOUT`, module-level, default `30` seconds, bounds the
-  subprocess; a missing `sops` binary or non-zero exit raises
-  `BackendError` with captured stderr rather than hanging or raising a raw
-  `OSError`; a `sops.bat`/`sops.cmd` shim is refused), then parses the
+  use: `timeout` seconds bound the subprocess, which runs with stdin on
+  the null device in its own process group, killed whole on expiry with
+  `BackendTimeoutError`; `timeout` is the constructor keyword, else
+  `hyera.backends.SOPS_TIMEOUT` (default `30`) read at each call (a
+  hierarchy entry cannot carry it: `hiera.yaml` rejects unknown keys); a
+  missing `sops` binary or non-zero exit raises `BackendError` with the
+  last 2,000 characters of stderr rather than hanging or raising a raw
+  `OSError`; the error carries `.path`, so a lookup reports it as is; a
+  `sops.bat`/`sops.cmd` shim is refused), then parses the
   decrypted bytes with a `format`-namespace backend (`Backend.new(<out>,
   kind="format")`) — YAML keeps `yaml_data`'s non-Hash rule; JSON/dotenv
   get the engine's generic Hash check instead.
@@ -1098,7 +1105,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
-  the sops timeout. See "Environment" below for the fixed-name variables.
+  the default sops timeout; it is in `hyera.backends.__all__`. See "Environment" below for the fixed-name variables.
 
 ## Errors
 
@@ -1119,6 +1126,10 @@ is a `Backend` subclass, found by name rather than passed around directly.
   <problem> at line L column C`, one line. Raised from the first lookup
   whose scope reaches the bad file (never from `Hiera(...)` itself — see
   "Lookup" above).
+- **`BackendTimeoutError`** — a `BackendError` that is also a builtin
+  `TimeoutError`: `sops` or `facter` did not finish within its time limit
+  and was killed with its child processes. Message: `<program> timed out
+  after <n>s`.
 - **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
   a key, including a `convert_to` whose type cannot be parsed or whose
   conversion/result-type assertion fails (see "Types" above and the

@@ -8,20 +8,15 @@ handling specific to the ``sops`` CLI's own behaviour).
 
 import os
 import re
-import shutil
-import subprocess
 import typing as _ty
 
 from pathlib_next import Path
 
 from ..exceptions import BackendError, ConfigError
+from .._subprocess import run as _run
 from . import Backend, NamePattern, _Names
 
-#: How long (seconds) to wait for the ``sops`` subprocess before giving up.
-#: Kept finite so an unattended lookup never hangs forever on a wedged sops.
-SOPS_TIMEOUT = 30
-
-__all__ = ["DotenvBackend", "SopsBackend", "SOPS_TIMEOUT"]
+__all__ = ["DotenvBackend", "SopsBackend"]
 
 
 class DotenvBackend(Backend):
@@ -52,25 +47,15 @@ class DotenvBackend(Backend):
         return result
 
 
-def _refuse_batch_shim(exe: str) -> None:
-    """Raise if *exe* is a ``.bat``/``.cmd`` shim, in any letter case."""
-    if os.path.splitext(exe)[1].lower() in (".bat", ".cmd"):
-        raise BackendError(
-            "refusing to run sops batch shim {}: cmd.exe re-parses its own "
-            "argument line, which is unsafe for a data-derived path".format(exe)
-        )
-
-
-def _run_sops(path, input_type: str, output_type: str = None) -> bytes:
+def _run_sops(
+    path, input_type: str, output_type: _ty.Optional[str] = None, timeout=None
+) -> bytes:
     """Run ``sops -d`` on ``path`` and return its decrypted stdout.
 
-    Hardened for unattended use: the resolved executable is run by its
-    absolute path (never a bare name re-resolved by the child), a batch
-    shim (``.bat``/``.cmd``) is refused outright (``cmd.exe`` re-parses its
-    own argument line, which a data path containing shell metacharacters
-    could abuse), and the data path is always passed absolute and after a
-    literal ``--`` so a path/scope value starting with ``-`` can never be
-    read as a sops option.
+    The data path is always passed absolute and after a literal ``--`` so a
+    path or scope value starting with ``-`` can never be read as a sops
+    option. ``timeout`` defaults to ``hyera.backends.SOPS_TIMEOUT``, read at
+    call time.
 
     ``output_type`` defaults to ``input_type`` (the rule for
     yaml/json/dotenv, keeping YAML on the Psych-compatible loader).
@@ -80,82 +65,28 @@ def _run_sops(path, input_type: str, output_type: str = None) -> bytes:
     """
     if output_type is None:
         output_type = input_type
-    exe = shutil.which("sops")
-    if exe is None:
-        raise BackendError(
-            "sops executable not found on PATH; cannot decrypt {}".format(path)
-        )
-    # The batch-shim refusal runs before the relative-path check (it holds
-    # whatever the path looks like, and a Windows-style path is never
-    # absolute on POSIX) and again after abspath, which normalizes forms
-    # such as ``sops.bat.`` into ``.bat``.
-    _refuse_batch_shim(exe)
-    if not (os.path.isabs(exe) or exe.startswith(("/", "\\"))):
-        # Python's ``shutil.which`` does not consistently honour the
-        # Windows implicit-current-directory opt-out (NoDefaultCurrentDirectoryInExePath):
-        # on 3.9 it can still return a path relative to the cwd (or a
-        # relative PATH entry) even when the caller has opted out of that
-        # behavior. Running whatever that happens to resolve to would be
-        # exactly the implicit-cwd exposure the absolute-path handling here
-        # is meant to close, so refuse it outright instead of silently
-        # trusting a relative result. A path that is merely drive-less but
-        # still rooted (``/usr/bin/sops``, e.g. a POSIX-style test double)
-        # is not this exposure -- Windows resolves it against the current
-        # drive's root, never against an attacker-influenced cwd -- so only
-        # a path with no leading separator at all (genuinely relative) is
-        # refused here.
-        raise BackendError(
-            "refusing to run sops resolved to a relative path {!r} (from "
-            "the current directory or a relative PATH entry); put an "
-            "absolute sops on PATH instead".format(exe)
-        )
-    exe = os.path.abspath(exe)
-    _refuse_batch_shim(exe)
+    if timeout is None:
+        from . import SOPS_TIMEOUT
+
+        timeout = SOPS_TIMEOUT
     abs_path = os.path.abspath(os.fspath(path))
-    timed_out = False
     try:
-        proc = subprocess.run(
+        return _run(
+            "sops",
             [
-                exe,
                 "--input-type={}".format(input_type),
                 "--output-type={}".format(output_type),
                 "-d",
                 "--",
                 abs_path,
             ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=SOPS_TIMEOUT,
-            check=False,
+            timeout=timeout,
+            refuse_batch=True,
+            context="decrypting {}".format(path),
         )
-    except subprocess.TimeoutExpired:
-        # Recorded, not re-raised, inside the except: a
-        # TimeoutExpired carries the subprocess's partial stdout (possibly
-        # partially-decrypted plaintext) as an attribute, and raising
-        # *inside* an active except block sets it as `__context__` even
-        # under `from None` -- `from None` only sets
-        # `__suppress_context__`, so the attribute stays reachable via
-        # `__context__.stdout`/`.output` on the raised BackendError. The
-        # BackendError is raised below instead, once this except block has
-        # finished and Python has cleared the handled exception, so
-        # `__context__` is genuinely `None`, not just suppressed.
-        timed_out = True
-    except OSError as e:
-        raise BackendError("Failed to run sops on {}: {}".format(path, e)) from e
-
-    if timed_out:
-        raise BackendError(
-            "sops timed out after {}s decrypting {}".format(SOPS_TIMEOUT, path)
-        ) from None
-
-    if proc.returncode != 0:
-        detail = proc.stderr.decode("utf-8", "replace").strip()
-        raise BackendError(
-            "sops failed (exit {}) decrypting {}: {}".format(
-                proc.returncode, path, detail or "<no stderr>"
-            )
-        )
-    return proc.stdout
+    except BackendError as e:
+        e.path = str(path)
+        raise
 
 
 #: sops's own ``FormatForPath`` rule (``cmd/sops/formats/formats.go``,
@@ -226,9 +157,11 @@ class SopsBackend(Backend):
     """Decrypted on the fly via the ``sops`` CLI (``sops_data``; the
     one kept non-Puppet deviation).
 
-    Hardened for unattended use: the subprocess has a finite timeout, its
-    stderr is captured and surfaced, a missing ``sops`` binary raises a
-    clear :class:`BackendError` instead of an opaque ``FileNotFoundError``,
+    Hardened for unattended use: the subprocess has a finite timeout and
+    its whole process group is killed when it expires (a
+    :class:`BackendTimeoutError`), its stdin is the null device, its
+    stderr is captured and surfaced (the last 2,000 characters), a missing
+    ``sops`` binary raises a clear :class:`BackendError`,
     and a decrypted file that fails to parse reports only the problem and
     its line/column -- never the decrypted plaintext.
 
@@ -242,6 +175,9 @@ class SopsBackend(Backend):
     :param strict: overrides the call-time default.
     :param format: forces the decrypted plaintext's format
         (``yaml``/``json``/``ini``/``dotenv``) regardless of extension.
+    :param timeout: seconds to wait for ``sops``; ``None`` reads
+        ``hyera.backends.SOPS_TIMEOUT`` at each call.
+    :raises ConfigError: ``timeout`` is not a positive number.
     """
 
     NAMES: _ty.ClassVar[_Names] = {
@@ -261,9 +197,20 @@ class SopsBackend(Backend):
         *,
         strict: _ty.Optional[str] = None,
         format: _ty.Optional[str] = None,
+        timeout: _ty.Optional[float] = None,
     ) -> None:
         super().__init__(conf, strict=strict)
         self._format = format
+        if timeout is not None and (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not timeout > 0
+        ):
+            raise ConfigError(
+                "sops timeout must be a positive number of seconds, not "
+                "{!r}".format(timeout)
+            )
+        self._timeout = timeout
 
     def data_hash(
         self, path: "Path", options: _ty.Mapping[str, _ty.Any]
@@ -300,7 +247,7 @@ class SopsBackend(Backend):
         # JSONBackend; yaml/json/dotenv keep output-type equal to
         # input-type.
         parse_fmt = "json" if fmt == "ini" else fmt
-        raw = _run_sops(path, fmt, output_type=parse_fmt)
+        raw = _run_sops(path, fmt, output_type=parse_fmt, timeout=self._timeout)
         format_backend = Backend.new(parse_fmt, kind="format", strict=self.strict)
         problem = None
         text = None

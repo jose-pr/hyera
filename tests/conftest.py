@@ -1,6 +1,8 @@
 """Shared fixtures: build a valid Hiera 5 tree on disk, LF/UTF-8 always."""
 
 import copy
+import os
+import sys
 import textwrap
 
 import pytest
@@ -118,3 +120,42 @@ def hiera_root(make_tree):
                 """,
         },
     )
+
+
+@pytest.fixture
+def fake_program(tmp_path, monkeypatch):
+    """Factory fixture: write a fake external program and put it first on ``PATH``.
+
+    ``body`` is Python source run by the test's own interpreter. On POSIX
+    the fake is an executable script with a shebang; on Windows it is a
+    ``<name>.bat`` that runs ``<name>_impl.py``. A batch shim is refused for
+    ``sops`` by design, so a fake ``sops`` skips there. ``directory`` is
+    where to write it (default: a fresh ``bin`` under ``tmp_path``);
+    ``on_path=False`` leaves ``PATH`` alone. Returns the fake's path.
+    """
+
+    def _make(name, body, *, directory=None, on_path=True):
+        if sys.platform == "win32" and name == "sops":
+            pytest.skip("a fake sops is a .bat on Windows, which hyera refuses")
+        bindir = directory if directory is not None else tmp_path / "bin"
+        bindir.mkdir(parents=True, exist_ok=True)
+        source = textwrap.dedent(body)
+        if sys.platform == "win32":
+            (bindir / (name + "_impl.py")).write_bytes(source.encode("utf-8"))
+            program = bindir / (name + ".bat")
+            program.write_bytes(
+                '@"{}" "%~dp0{}_impl.py" %*\r\n'.format(sys.executable, name).encode()
+            )
+        else:
+            program = bindir / name
+            program.write_bytes(
+                "#!{}\n{}".format(sys.executable, source).encode("utf-8")
+            )
+            program.chmod(0o755)
+        if on_path:
+            monkeypatch.setenv(
+                "PATH", str(bindir) + os.pathsep + os.environ.get("PATH", "")
+            )
+        return program
+
+    return _make
