@@ -45,8 +45,9 @@ __all__ = ["main"]
 
 _LOGGER = _logging.getLogger(__name__)
 
-#: Printed (to stderr) when the cli extra (duho) is not installed. Double-quoted, since a single-quoted
-#: extras install fails in cmd.exe (the quotes are literal); double quotes work in cmd.exe, PowerShell and POSIX shells.
+# : Printed (to stderr) when the cli extra (duho) is not installed. Double-quoted, since
+# a single-quoted : extras install fails in cmd.exe (the quotes are literal); double
+# quotes work in cmd.exe, PowerShell and POSIX shells.
 _NO_CLI_EXTRA_HINT = (
     "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )
