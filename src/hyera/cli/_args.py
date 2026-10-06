@@ -29,11 +29,7 @@ _EnvironmentPathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--environmentp
 _ModulepathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--modulepath"])]
 _BasemodulepathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--basemodulepath"])]
 _CodedirArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--codedir"])]
-_StrictArg = duho.Arg[
-    _ty.Optional[str],
-    duho.Choice("off", "warning", "error"),
-    duho.NS(flags=["--strict"]),
-]
+_StrictArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--strict"])]
 _RenderAsArg = duho.Arg[
     _ty.Optional[str], duho.NS(flags=["--render-as"], metavar="FORMAT")
 ]

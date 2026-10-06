@@ -53,19 +53,26 @@ def _puppet_argv(argv):
     i, n = 0, len(argv)
     while i < n:
         token = argv[i]
-        if token in _VALUE_OPTIONS and i + 1 < n:
+        name, eq, value = token.partition("=")
+        if eq and name in _VALUE_OPTIONS and value == "--":
+            out.append("{}={}".format(name, _DOUBLE_DASH_PLACEHOLDER))
+        elif token in _VALUE_OPTIONS and i + 1 < n:
             value = argv[i + 1]
             if value == "--":
                 value = _DOUBLE_DASH_PLACEHOLDER
             out.append("{}={}".format(token, value))
             i += 2
             continue
-        out.append(token)
+        else:
+            out.append(token)
         i += 1
     return out
 
 
 def _unplaceholder(value):
-    """Translate _DOUBLE_DASH_PLACEHOLDER back to "--"; any
-    other value (None included) passes through unchanged."""
+    """Translate _DOUBLE_DASH_PLACEHOLDER back to "--" in a string or in
+    each item of a list; any other value (None included) passes through
+    unchanged."""
+    if isinstance(value, list):
+        return [_unplaceholder(item) for item in value]
     return "--" if value == _DOUBLE_DASH_PLACEHOLDER else value

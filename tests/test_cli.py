@@ -17,6 +17,8 @@ duho = pytest.importorskip("duho")
 import hyera  # noqa: E402
 from hyera.cli import main  # noqa: E402
 
+_SRC = os.path.dirname(os.path.dirname(os.path.abspath(hyera.__file__)))
+
 
 def _error_records(caplog):
     return [
@@ -1129,6 +1131,67 @@ def test_deep_merge_flags(case, flags, expected, flags_root, capsys):
     assert capsys.readouterr().out.strip() == expected
 
 
+@pytest.mark.parametrize(
+    "spelling",
+    [["--knock-out-prefix", "--"], ["--knock-out-prefix=--"]],
+    ids=["two-token", "equals"],
+)
+def test_knock_out_prefix_double_dash_in_either_spelling(spelling, flags_root, capsys):
+    rc = main(
+        _flags_argv(
+            flags_root, "--merge", "deep", *spelling, "--render-as", "json", "h"
+        )
+    )
+    assert rc == 0
+    assert (
+        capsys.readouterr().out.strip()
+        == '{"items":["a","c","d"],"rows":[{"y":2},{"x":1}]}'
+    )
+
+
+@pytest.mark.parametrize(
+    "spelling", [["--default", "--"], ["--default=--"]], ids=["two-token", "equals"]
+)
+def test_default_double_dash_in_either_spelling(spelling, flags_root, capsys):
+    rc = main(_flags_argv(flags_root, *spelling, "--render-as", "s", "nokey"))
+    assert rc == 0
+    assert capsys.readouterr().out == "--\n"
+
+
+@pytest.mark.parametrize(
+    "spelling",
+    [["--scope", "--"], ["--scope=--"], ["--strict", "--"], ["--strict=--"]],
+)
+def test_double_dash_value_is_reported_as_given(spelling, flags_root, caplog, capfd):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, *spelling, "h"))
+    captured = capfd.readouterr()
+    assert rc == 2
+    assert "hyera-literal" not in caplog.text + captured.err + captured.out
+    assert "--" in (caplog.text + captured.err)
+
+
+def test_knock_out_prefix_double_dash_equals_form_in_a_subprocess(flags_root):
+    argv = _flags_argv(
+        flags_root,
+        "--merge",
+        "deep",
+        "--knock-out-prefix=--",
+        "--render-as",
+        "json",
+        "h",
+    )
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera"] + argv,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env={**os.environ, "PYTHONPATH": _SRC},
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == '{"items":["a","c","d"],"rows":[{"y":2},{"x":1}]}'
+
+
 def test_first_found_of_several_keys(flags_root, capsys):
     rc = main(_flags_argv(flags_root, "nope", "str", "int0", "--render-as", "s"))
     assert rc == 0
@@ -1499,6 +1562,25 @@ def test_empty_facts_file_exit_2(flags_root, caplog):
         _error_records(caplog)[-1].getMessage()
         == "No facts available for target node: web01.example.com"
     )
+
+
+@pytest.mark.parametrize("target", ["nosuch.yaml", "."])
+def test_unreadable_facts_path_exits_2_with_one_line(target, flags_root, caplog, capfd):
+    with caplog.at_level(logging.ERROR):
+        rc = main(
+            [
+                "--hiera_config",
+                str(flags_root / "hiera.yaml"),
+                "--facts",
+                str(flags_root / target),
+                "str",
+            ]
+        )
+    captured = capfd.readouterr()
+    assert rc == 2
+    assert "Traceback" not in captured.err
+    assert len(_error_records(caplog)) == 1
+    assert "\n" not in _error_records(caplog)[0].getMessage()
 
 
 def test_facts_file_error_exit_2(flags_root, caplog):

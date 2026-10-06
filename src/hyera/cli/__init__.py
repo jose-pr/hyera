@@ -183,6 +183,7 @@ if duho is not None:
             codedir = _unplaceholder(self.codedir)
             strict = _unplaceholder(self.strict)
             render_as = _unplaceholder(self.render_as)
+            scope_items = _unplaceholder(self.scope)
 
             try:
                 merge_options = _merge_options(
@@ -210,7 +211,7 @@ if duho is not None:
 
             try:
                 scope = _build_scope(
-                    _parse_scope(self.scope), facts_path, node, environment, strict
+                    _parse_scope(scope_items), facts_path, node, environment, strict
                 )
             except (_UsageError, BackendError, TypeError, ValueError) as e:
                 return self._fail(str(e))
