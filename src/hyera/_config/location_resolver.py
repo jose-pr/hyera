@@ -526,13 +526,18 @@ class _DotEntry:
     name = "."
 
 
+class _LiteralEntry:
+    """A literal segment the operating system says exists although no listing
+    entry has exactly that name (a case-insensitive filesystem), spelled as
+    the pattern spells it. Never descended into by ``**``: its real entry is."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 def _segment_matches(kind, value, name: str) -> bool:
     if kind == "literal":
-        # A literal is an existence check through the OS, so it follows the
-        # filesystem's case rule; only wildcards are always case-sensitive.
-        return name == value or (
-            _WINDOWS and os.path.normcase(name) == os.path.normcase(value)
-        )
+        return name == value
     if kind == "magic":
         return value(name)
     return False
@@ -614,6 +619,28 @@ def _glob_one(
             and any(segments[i][0] == "magic" and segments[i][1](".") for i in pending)
         ):
             entries.append(_DotEntry())
+        # A literal segment is an existence check through the OS, so it
+        # follows the case rule of the filesystem holding the tree; only
+        # wildcards are always case-sensitive. A listing that lacks the exact
+        # spelling is asked about that one child.
+        names = {e.name for e in entries}
+        wanted = {}
+        for i in pending:
+            kind, value = segments[i]
+            if kind == "recursive":
+                i, kind, value = i + 1, *segments[i + 1]
+            if kind == "literal" and value not in names:
+                wanted[value] = i + 1 == n
+        for lit, final in wanted.items():
+            child = os.path.join(path, lit)
+            if final:
+                found = os.path.lexists(child)
+            elif probe_isdir is not None:
+                found = probe_isdir(child)
+            else:
+                found = os.path.isdir(child)
+            if found:
+                entries.append(_LiteralEntry(lit))
         entries.sort(key=lambda e: os.fsencode(e.name))
         for entry in entries:
             nxt = set()
@@ -622,6 +649,7 @@ def _glob_one(
                 if kind == "recursive":
                     if (
                         not entry.name.startswith(".")
+                        and not isinstance(entry, _LiteralEntry)
                         and _entry_is_dir(entry)
                         and not _is_link(entry)
                     ):

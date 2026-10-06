@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import subprocess
+import tempfile
 import threading
 
 import pytest
@@ -428,13 +429,36 @@ def test_deep_tree_is_walked_without_recursion(tmp_path, monkeypatch):
     assert match.replace("\\", "/") == "/virtual" + "/d" * depth + "/x.yaml"
 
 
-def test_literal_after_recursive_segment_follows_the_filesystem_case(tmp_path):
+def _folds_case(directory) -> bool:
+    """Whether the filesystem holding ``directory`` answers ``A`` for ``a``."""
+    with tempfile.TemporaryDirectory(dir=str(directory.parent)) as probe:
+        _write(pathlib.Path(probe), "case-probe-a")
+        return os.path.lexists(os.path.join(probe, "CASE-PROBE-A"))
+
+
+@pytest.mark.parametrize(
+    "pattern, spelled",
+    [
+        ("**/C.yaml", "sub/C.yaml"),
+        ("*/C.yaml", "sub/C.yaml"),
+        ("Sub/c.yaml", "Sub/c.yaml"),
+        ("**/Sub/c.yaml", "Sub/c.yaml"),
+    ],
+)
+def test_literal_segment_follows_the_filesystem_case_in_every_position(
+    tmp_path, pattern, spelled
+):
     _write(tmp_path, "sub/c.yaml")
-    matches = glob(str(tmp_path), "**/C.yaml")
-    if os.path.exists(str(tmp_path / "SUB" / "C.YAML")):
-        assert _rel(tmp_path, matches) == ["sub/c.yaml"]
-    else:
-        assert matches == []
+    matches = _rel(tmp_path, glob(str(tmp_path), pattern))
+    # The literal is spelled as the pattern spells it, whichever branch of the
+    # walk decided it.
+    assert matches == ([spelled] if _folds_case(tmp_path) else [])
+
+
+def test_wildcards_stay_case_sensitive_on_any_filesystem(tmp_path):
+    _write(tmp_path, "sub/c.yaml")
+    assert glob(str(tmp_path), "**/C.*") == []
+    assert glob(str(tmp_path), "S*/c.yaml") == []
 
 
 # --- the recorded Ruby Dir.glob table ----------------------------------
@@ -457,10 +481,9 @@ def ruby_tree(tmp_path_factory):
     return root
 
 
-# Rows whose answer depends on the operating system, not on the matcher: a
-# literal segment is an existence check, so a case-folding filesystem finds
-# "Sub/c.yaml", and Windows resolves "x/.", "x/..", "..." and a bare "\\" itself.
-_OS_DEPENDENT = {
+# Rows whose answer is the filesystem's, not the matcher's: a literal segment is
+# an existence check, so a case-folding filesystem finds "Sub/c.yaml".
+_CASE_ROWS = {
     "A.yaml",
     "Sub/c.yaml",
     "Sub/*.yaml",
@@ -468,13 +491,10 @@ _OS_DEPENDENT = {
     "**/Sub/c.yaml",
     "**/C.yaml",
     "**/D.txt",
-    "*/.",
-    "*/..",
-    ".*/.",
-    ".*/..",
-    "...",
-    "\\\\",
 }
+# "x/." and "x/.." under a file, "..." and a bare backslash are resolved by the
+# path syntax of the operating system (Windows) before any listing is read.
+_SYNTAX_ROWS = {"*/.", "*/..", ".*/.", ".*/..", "...", "\\\\"}
 
 
 @pytest.mark.parametrize(
@@ -482,8 +502,12 @@ _OS_DEPENDENT = {
     [pytest.param(p, e, id=p) for p, e in _TABLE["rows"]],
 )
 def test_glob_matches_the_recorded_ruby_listing(ruby_tree, pattern, expected):
-    if os.name == "nt" and pattern in _OS_DEPENDENT:
-        pytest.skip("answered by the Windows filesystem, not by the matcher")
+    if pattern in _CASE_ROWS and _folds_case(ruby_tree):
+        pytest.skip("the filesystem folds case, so a literal segment matches")
+    if pattern in _SYNTAX_ROWS and (
+        os.sep == "\\" or os.path.lexists(str(ruby_tree / "plain" / "."))
+    ):
+        pytest.skip("this platform's path syntax resolves the literal itself")
     got = [
         m[len(str(ruby_tree)) + 1 :].replace(os.sep, "/")
         for m in glob(str(ruby_tree), pattern)

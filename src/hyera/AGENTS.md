@@ -508,7 +508,9 @@ since Hiera data is dynamic.
   bare `*`/`?`/`[...]`; `**/` never descends through a symlink or a
   Windows junction, and a trailing `**` is plain `*`; `\` escapes a
   metacharacter in the pattern text; each directory's entries sort in
-  byte order and every wildcard is case-sensitive, on every OS; a missing
+  byte order and every wildcard is case-sensitive, on every OS, while a literal
+  segment is an existence check that follows the filesystem's case rule (spelled as
+  the pattern spells it); a missing
   or unreadable directory contributes nothing; `datadir`'s own glob
   metacharacters are live for a glob level (a literal directory for a
   `path`/`paths`/mapped one).
