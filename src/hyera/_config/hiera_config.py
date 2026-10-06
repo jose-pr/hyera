@@ -1,6 +1,7 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/{hiera_config,context,location_resolver}.rb,
-# pops/issues.rb, pops/types/type_mismatch_describer.rb, util/run_mode.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{hiera_config,context,
+# location_resolver}.rb, pops/issues.rb, pops/types/type_mismatch_describer.rb,
+# util/run_mode.rb (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by
+# jose-pr. See NOTICE.
 """Hiera configuration: loading base config, building hierarchies and levels.
 
 Ports Puppet's ``pops/lookup/hiera_config.rb``, with the messages and
@@ -37,9 +38,9 @@ DEFAULT_CONFIG_HASH = {
     "hierarchy": [{"name": "Common", "path": "common.yaml"}],
 }
 
-#: Puppet's Hiera 3 default configuration (``hiera_config.rb:433-437``): fills missing or
-#: ``false`` top-level v3 keys, and is read as v3 when a hiera.yaml parses to no hash
-#: (``hiera_config.rb:139-144``). Every use deep-copies it.
+# : Puppet's Hiera 3 default configuration (``hiera_config.rb:433-437``): fills missing
+# or : ``false`` top-level v3 keys, and is read as v3 when a hiera.yaml parses to no
+# hash : (``hiera_config.rb:139-144``). Every use deep-copies it.
 V3_DEFAULT_CONFIG_HASH = {
     "backends": ["yaml"],
     "hierarchy": ["nodes/%{::trusted.certname}", "common"],
@@ -126,21 +127,21 @@ class HieraLevel(_ty.NamedTuple):
     #: The entry's own ``options``, else ``defaults``'s (never merged),
     #: exactly as declared -- interpolated per lookup, per scope, not here.
     options: "_ty.Optional[_ty.Dict[str, _ty.Any]]" = None
-    #: A version 3/``hiera3_backend`` extension, appended to each declared ``path``/``paths``
-    #: location (after interpolation) unless already present (``location_resolver.rb:59-61``).
-    #: ``None`` for a v4/v5 level, whose extension is applied while reading the config.
+    #: A version 3/``hiera3_backend`` level's extension, appended to each
+    #: ``path``/``paths`` location after interpolation unless present
+    #: (``location_resolver.rb:59-61``). ``None`` for v4/v5 (applied at config read).
     extension: "_ty.Optional[str]" = None
-    #: The root a version 3 level's ``datadir`` resolves against: the process cwd at
-    #: construction, never the hiera.yaml directory. ``None`` for a v4/v5 level, which uses
-    #: the caller's ``base_path``.
+    # : The root a version 3 level's ``datadir`` resolves against: the process cwd at :
+    # construction, never the hiera.yaml directory. ``None`` for a v4/v5 level, which
+    # uses : the caller's ``base_path``.
     datadir_base: "_ty.Optional[Path]" = None
-    #: ``True`` for a version 4 level only: ``datadir`` is joined onto the config root
-    #: literally, with no interpolation (``hiera_config.rb:525``, unlike v5's ``:664-665``),
-    #: so a literal ``%`` survives.
+    # : ``True`` for a version 4 level only: ``datadir`` is joined onto the config root
+    # : literally, with no interpolation (``hiera_config.rb:525``, unlike v5's
+    # ``:664-665``), : so a literal ``%`` survives.
     datadir_literal: bool = False
-    #: ``True`` unless this is a version 3 or 4 level: only a version 5 hierarchy resolves an
-    #: undefined variable in a location to ``''`` under ``strict: error``
-    #: (``avoid_hiera_interpolation_errors``); the older readers fail the lookup.
+    # : ``True`` unless this is a version 3 or 4 level: only a version 5 hierarchy
+    # resolves an : undefined variable in a location to ``''`` under ``strict: error`` :
+    # (``avoid_hiera_interpolation_errors``); the older readers fail the lookup.
     lenient_locations: bool = True
 
     def __hash__(self) -> int:
@@ -218,7 +219,8 @@ class HieraLevel(_ty.NamedTuple):
 
 
 def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":
-    """Load the base configuration (``HieraConfig.create``, ``hiera_config.rb:127-168``).
+    """Load the base configuration (``HieraConfig.create``,
+    ``hiera_config.rb:127-168``).
 
     Returns ``(source, base)``: ``base`` is a dict this call owns outright
     (a deep copy of a dict/default config, or a freshly parsed file) --
@@ -232,8 +234,8 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     :data:`V3_DEFAULT_CONFIG_HASH` (``hiera_config.rb:139-144``), which
     :func:`_config_version` then reads as version 3 -- read in full by
     :func:`_read_v3` at the global layer, or left, like any other version-3
-    layer config, for :func:`~hyera._config.data_provider.usable_provider` to ignore or raise
-    about outside it.
+    layer config, for :func:`~hyera._config.data_provider.usable_provider` to
+    ignore or raise about outside it.
     """
     if base_config is None:
         # Puppet's missing-file default (`hiera_config.rb:147-149`): no file
@@ -248,7 +250,8 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
         return _ConfigSource("<dict>", None, None, root), copy.deepcopy(base_config)
 
     # Read once, holding no open handle, so the caller's path or stream stays free to be
-    # replaced or pickled. Decoded as strict UTF-8, as Puppet reads every data file (``context.rb:53``).
+    # replaced or pickled. Decoded as strict UTF-8, as Puppet reads every data file
+    # (``context.rb:53``).
     if hasattr(base_config, "read"):
         name = getattr(base_config, "name", None)
         label = str(name) if name else "<stream>"
@@ -289,9 +292,9 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     if problem is not None:
         raise ConfigError("({}): {}".format(label, problem), path=path)
     source = _ConfigSource(label, path, text, root)
-    # Puppet parses hiera.yaml's raw content with `Util::Yaml.safe_load`, not the BOM-stripping
-    # `safe_load_file`, so a leading BOM reaches the parser as in a data file (`context.rb:53`)
-    # and errors the same way; it is not stripped here (`YAMLBackend.loads` swaps it for a space).
+    # Puppet parses hiera.yaml with `Util::Yaml.safe_load`, not the BOM-stripping
+    # `safe_load_file`: a leading BOM reaches the parser and errors as in a data file
+    # (`context.rb:53`; `YAMLBackend.loads` swaps it for a space).
     try:
         base = YAMLBackend().loads(text)
     except BackendError as e:

@@ -1,6 +1,7 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/{lookup_adapter,data_provider,module_data_provider,
-# environment_data_provider,lookup_key}.rb, lib/puppet.rb, node/environment.rb, module.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{lookup_adapter,data_provider,
+# module_data_provider,environment_data_provider,lookup_key}.rb, lib/puppet.rb,
+# node/environment.rb, module.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Layer discovery and per-layer config loading: the global, environment and
 module data providers behind Puppet's lookup provider stack
 (``lookup_adapter.rb``'s ``PROVIDER_STACK``), built on the single-config
@@ -262,7 +263,8 @@ def environment_for(hiera, name):
     environment ``name`` (``puppet.rb:213-233``): discovered on first
     use, then reused by every later lookup and by every
     :meth:`~hyera.Hiera.scoped` view (``hiera._environments`` is shared, since
-    :meth:`Hiera._view <hyera.core.Hiera._view>` copies ``__dict__`` without deep-copying it).
+    :meth:`Hiera._view <hyera.core.Hiera._view>` copies ``__dict__`` without
+    deep-copying it).
 
     With no ``environmentpath`` configured, every name resolves with no
     environment root and no error (a documented difference from Puppet,
@@ -378,8 +380,8 @@ def load_global_layer(base_config, base_path, backends, scope, codedir):
     ``hiera.yaml``.
     """
     backends = list(backends)
-    # Captured before reading the config: a relative version 3 datadir follows the cwd at
-    # construction (``location_resolver.rb:56-66``), never a later lookup's cwd.
+    # Captured before reading the config: a relative version 3 datadir follows the cwd
+    # at construction (``location_resolver.rb:56-66``), never a later lookup's cwd.
     cwd = Path(os.getcwd())
 
     source, base = _read_base_config(base_config, base_path)
@@ -389,14 +391,16 @@ def load_global_layer(base_config, base_path, backends, scope, codedir):
         raise ConfigError("No backends could be loaded")
 
     if version == 3:
-        # Global-layer version 3 (or versionless) config: validated in full against the v3
-        # schema. Outside the global layer it is ignored or raised about by :func:`usable_provider`.
+        # Global-layer version 3 (or versionless) config: validated in full against the
+        # v3 schema. Outside the global layer it is ignored or raised about by
+        # :func:`usable_provider`.
         hierarchy, default_hierarchy = _read_v3(
             base, source, scope, backends, codedir, cwd
         )
     elif version == 4:
-        # Puppet validates a version 4 config's schema before checking that the layer allows
-        # version 4, so a schema-invalid file at the global layer raises its schema error.
+        # Puppet validates a version 4 config's schema before checking that the layer
+        # allows version 4, so a schema-invalid file at the global layer raises its
+        # schema error.
         _read_v4(base, source, scope, backends)
         raise ConfigError(
             "hiera.yaml version 4 cannot be used in the global layer",

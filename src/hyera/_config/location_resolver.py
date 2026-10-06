@@ -1,6 +1,7 @@
 # Ported from Puppet 8 lib/puppet/pops/lookup/location_resolver.rb and hiera_config.rb
-# (https://github.com/puppetlabs/puppet, Apache-2.0) and Ruby uri/lib/uri/rfc3986_parser.rb
-# (https://github.com/ruby/uri, BSD-2-Clause). Modified by jose-pr. See NOTICE.
+# (https://github.com/puppetlabs/puppet, Apache-2.0) and Ruby
+# uri/lib/uri/rfc3986_parser.rb (https://github.com/ruby/uri, BSD-2-Clause). Modified by
+# jose-pr. See NOTICE.
 """Location resolution: expanding hierarchy levels into candidate source paths.
 
 Resolves a :class:`~hyera._config.hiera_config.HieraLevel`'s ``path``/``paths``/
@@ -219,8 +220,8 @@ def _expand_globs(config_root, datadir, declared, invocation):
 
 
 # --- Ruby URI() acceptance and normalization (uri/rfc3986_parser.rb) -------
-# A port of Ruby's RFC 3986 grammar to Python `re`: `\h` -> `[0-9A-Fa-f]`, `\g<name>` calls
-# inlined, possessive quantifiers made greedy (same language), only the groups read below named.
+# Ruby's RFC 3986 grammar in `re`: `\h` -> `[0-9A-Fa-f]`, `\g<name>` inlined, possessive
+# quantifiers made greedy (same language); only the groups read below are named.
 _HEXDIG = "[0-9A-Fa-f]"
 _PCT = "%" + _HEXDIG + _HEXDIG
 _USERINFO = "(?:" + _PCT + "|[!$&-.0-9:;=A-Z_a-z~])*"

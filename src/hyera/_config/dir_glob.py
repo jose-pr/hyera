@@ -432,9 +432,9 @@ def _glob_one(
             and any(segments[i][0] == "magic" and segments[i][1](".") for i in pending)
         ):
             entries.append(_DotEntry())
-        # A literal segment is an existence check through the OS and follows the filesystem's
-        # case rule; only wildcards are always case-sensitive. A listing that lacks the exact
-        # spelling is asked about that one child.
+        # A literal segment is an existence check through the OS and follows the
+        # filesystem's case rule; only wildcards are always case-sensitive. A listing
+        # that lacks the exact spelling is asked about that one child.
         names = {e.name for e in entries}
         wanted = {}
         for i in pending:

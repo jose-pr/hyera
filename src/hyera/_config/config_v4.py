@@ -180,9 +180,9 @@ def _v4_levels(data: dict, source: "_ConfigSource", backends, scope) -> "list":
             locations = list(entry["paths"])
         else:
             locations = [entry.get("path") or name]
-        # v4's datadir is joined onto the config root literally, never interpolated
-        # (`hiera_config.rb:525`, unlike v5's `:664-665`): `datadir_literal` makes the resolver
-        # skip it, so a literal '%' survives (`%{literal('%')}` is itself a disallowed method call).
+        # v4's datadir is joined onto the config root literally (`hiera_config.rb:525`,
+        # unlike v5's `:664-665`): `datadir_literal` skips interpolation so a literal
+        # '%' survives (`%{literal('%')}` is a disallowed call).
         datadir = entry.get("datadir", config_datadir)
 
         conf = {"name": name, "paths": locations, "datadir": datadir}

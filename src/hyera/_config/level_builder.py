@@ -182,9 +182,9 @@ def _build_level(
             function, conf, kind="v3", strict=getattr(scope, "strict", None)
         )
     elif kind in ("data_hash", "lookup_key", "data_dig"):
-        # Puppet resolves the function only when it calls it for an existing location, so a
-        # level naming an unknown function is built anyway and raises on its first such call
-        # (see `_lookup.function_provider`); every other level keeps answering.
+        # Puppet resolves the function only when it calls it for an existing location,
+        # so a level naming an unknown function is built anyway and raises on its first
+        # such call (see `_lookup.function_provider`); other levels keep answering.
         function = _function_name(function)
         resolved_cls = Backend.find(function, kind="function")
         if resolved_cls is None or resolved_cls not in backends:
@@ -245,9 +245,9 @@ def _build_levels(
             conf["options"] = options
 
         if kind == "hiera3_backend":
-            # Global-only (_validate_v5 rejects it elsewhere): replaces a v5 data_hash function with
-            # a registered v3-namespace backend, with the same "append unless already present"
-            # extension a v3 entry gets (hiera_config.rb:692-714, hiera/backend.rb:57-58).
+            # Global-only (_validate_v5 rejects it elsewhere): replaces a v5 data_hash
+            # function with a registered v3 backend, with the v3 entry's "append unless
+            # present" extension (hiera_config.rb:692-714, hiera/backend.rb:57-58).
             line = _config_line(source.text, (area, i, "hiera3_backend"), key=True)
             backend_cls = _v3_backend_class(func_name, source, line)
             levels.append(

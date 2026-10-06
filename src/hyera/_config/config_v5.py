@@ -252,8 +252,8 @@ def _check_defaults_type(value, where: "_ty.Tuple", source) -> None:
                 _msg(where, "unrecognized key '{}'".format(k)),
                 line=_config_line(source.text, where + (k,), key=True),
             )
-    # Every key here is in _DEFAULTS_KEYS (checked above) and the branches below cover it
-    # exactly (hiera3_backend never reaches here: see _function_of).
+    # Every key here is in _DEFAULTS_KEYS (checked above) and the branches below cover
+    # it exactly (hiera3_backend never reaches here: see _function_of).
     for key, v in value.items():
         if key == "datadir":
             _check_string(v, where + ("datadir",), source, nonempty=True)
@@ -292,8 +292,8 @@ def _validate_defaults_issues(defaults: dict, source: "_ConfigSource") -> None:
     exactly: its ``FUNCTION_KEYS`` list (and so this error's own message
     text) names ``hiera3_backend`` too, even though Puppet's own
     ``defaults`` struct type excludes it the same way (``hiera_config.rb``'s
-    ``@@CONFIG_TYPE``; conformance case ``config-defaults-hiera3-backend-key``) -- kept as written, rather
-    than narrowed, to stay a literal port.
+    ``@@CONFIG_TYPE``; conformance case ``config-defaults-hiera3-backend-key``)
+    -- kept as written, rather than narrowed, to stay a literal port.
     """
     if sum(1 for k in _FUNCTION_KEYS if k in defaults) > 1:
         raise _config_error(
