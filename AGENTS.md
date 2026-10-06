@@ -32,6 +32,8 @@ src/hyera/
 │   ├── function_provider.py           # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
 │   ├── cache.py                        # scope-keyed caching: Puppet's scope-interpolation stability check
 │   ├── locations.py                     # _LocationStore: resolved locations, glob listings and parsed data files, shared by an instance and its views
+│   ├── providers.py                      # per-level function providers: build, refresh while revalidating, and the sources() walk
+│   ├── lookup_options.py                  # gather and compose lookup_options across the global, environment and module layers; the default_hierarchy lookup
 │   ├── navigation.py                    # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
 │   ├── interpolation.py                  # the %{...} engine: resolving functions and variable references (interpolation.rb)
 │   ├── invocation.py                      # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)

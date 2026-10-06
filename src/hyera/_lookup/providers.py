@@ -150,3 +150,46 @@ def pruned_module_data(hiera, module_name, data, function_name, path):
     pruned = prune_module_data(data, module_name, function_name, path)
     hiera._pruned_cache[key] = (data, pruned)
     return pruned
+
+
+def files_for(hiera, hierarchy, base_path, scope, tag, invocation=None):
+    """The ordered list of existing, successfully loaded ``data_hash``
+    file paths ``hierarchy`` visits for ``scope`` -- what ``sources()``
+    shows.
+
+    Only a ``data_hash`` level's *path* locations are ever loaded here
+    (through :meth:`~hyera._lookup.locations._LocationStore.load_file`, so they land in its file cache exactly
+    as a real lookup would find them): a ``lookup_key``/``data_dig``
+    function is never called without a real key, and a ``uri`` location
+    is never fetched or stat'ed -- ``sources()`` keeps its documented
+    meaning, "the files a lookup may read".
+
+    Re-derived on every call, never cached as its own flattened list:
+    the expensive part -- resolving/materializing locations, and
+    reading each file -- is already cached the referenced-variable/
+    ``(path, strict, options)`` way (:meth:`~hyera._lookup.locations._LocationStore.location_entry_for`/
+    :meth:`~hyera._lookup.locations._LocationStore.load_file`), both shared across every view of this
+    instance, so re-walking an already-cached level/location list here
+    costs no repeated filesystem access beyond what ``revalidate=True``
+    itself asks for.
+    """
+    paths = []
+    for index, level in enumerate(hierarchy):
+        if level.kind != "data_hash":
+            continue
+        provider = provider_for(
+            hiera, tag, base_path, index, hierarchy, scope, invocation
+        )
+        locations = provider.locations
+        if locations is None:
+            continue
+        for loc in locations:
+            if loc.is_uri or not loc.exist:
+                continue
+            path = loc.location
+            hiera._store.load_file(
+                path, level.backend, provider.options_for(loc), invocation
+            )
+            if path in hiera._store._loaded_paths:
+                paths.append(path)
+    return tuple(paths)

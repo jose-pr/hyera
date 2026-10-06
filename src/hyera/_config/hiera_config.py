@@ -139,8 +139,8 @@ def _config_version(data: dict, source: "_ConfigSource") -> int:
     per-layer, at each use for 3, and once at global-layer load for 4 --
     probed: a schema-invalid ``version: 4`` file at the global layer
     raises its schema error, never "cannot be used in the global layer").
-    The layer rule itself lives in the caller: :meth:`~hyera.core.
-    Hiera._load_config` raises the version 4 in the global layer error
+    The layer rule itself lives in the caller: :func:`~hyera._config.data_provider.
+    load_global_layer` raises the version 4 in the global layer error
     right after :func:`_read_v4` succeeds; :func:`~hyera._config.data_provider.usable_provider`
     applies the version 3 outside the global layer rule at each use.
     """

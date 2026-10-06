@@ -4,7 +4,11 @@ and the per-``explain()`` memo that keeps a name-list lookup from searching
 a layer twice."""
 
 from .invocation import Invocation
-from .lookup_adapter import compile_patterns, validate_lookup_options
+from .lookup_adapter import (
+    compile_patterns,
+    extract_lookup_options_for_key,
+    validate_lookup_options,
+)
 from .merge_strategy import MergeStrategy
 from .navigation import LOOKUP_OPTIONS, _MISSING
 from .._config.data_provider import (
@@ -35,7 +39,7 @@ class _ExplainOptionsMemo:
     mapping per module name (``lookup_adapter.rb:236-247``), which is what
     makes a name-list lookup search the global+environment layer, and each
     module, at most once -- so :meth:`Hiera._search_and_merge`/
-    :meth:`Hiera._lookup_default_in_module` only push a ``meta``/nested
+    :func:`lookup_default_in_module` only push a ``meta``/nested
     ``lookup_options`` scope node the first time a given ``(tag,
     module_name)`` combination is actually searched during this call.
     """
@@ -361,3 +365,55 @@ def memoized_options(invocation, tag, module_name, gather):
     result = gather()
     memo.compiled[key] = result
     return result
+
+
+def lookup_default_in_module(hiera, key, root, segments, module_name, invocation):
+    """Puppet's ``lookup_default_in_module``
+    (``module_data_provider.rb:26-40``, ``lookup_adapter.rb:180-217``):
+    a module's own ``default_hierarchy``, consulted only after the main
+    stack (and its dig) misses.
+
+    :data:`~hyera._lookup.navigation._MISSING` when ``module_name`` is
+    ``None`` (an unqualified key never reaches a module's default
+    hierarchy either), the module has no usable provider, or its
+    ``default_hierarchy`` is empty. The merge strategy comes only from
+    the default hierarchy's own ``lookup_options``
+    (:func:`module_default_lookup_options`) -- never the caller's
+    ``merge=`` or the main hierarchy's options, which
+    :meth:`Hiera._search_and_merge <hyera.core.Hiera._search_and_merge>` still applies its ``convert_to`` from,
+    regardless of which walk actually found the value.
+    """
+    if module_name is None:
+        return _MISSING
+    state = environment_for(hiera, invocation.scope.environment)
+    provider = usable_provider(
+        hiera, module_provider_for(hiera, state, module_name), invocation
+    )
+    if provider is None or not provider.default_hierarchy:
+        return _MISSING
+    with invocation.recording(
+        "scope", 'Searching default_hierarchy of module "{}"'.format(module_name)
+    ):
+
+        def gather_default():
+            with invocation.recording("scope", 'Searching for "lookup_options"'):
+                return module_default_lookup_options(hiera, provider, invocation)
+
+        compiled = memoized_options(invocation, "default", module_name, gather_default)
+        entry = extract_lookup_options_for_key(root, compiled) or {}
+        strategy = MergeStrategy.strategy(entry.get("merge"))
+        with invocation.recording("scope", 'Searching for "{}"'.format(key)):
+            with invocation.recording("data_provider", _provider_ref(provider)):
+                with invocation.check(key):
+                    result = hiera._lookup_levels(
+                        root,
+                        provider.default_hierarchy,
+                        provider.root,
+                        "default",
+                        invocation.scope,
+                        invocation,
+                        strategy,
+                        segments,
+                        module_name=module_name,
+                    )
+            return result

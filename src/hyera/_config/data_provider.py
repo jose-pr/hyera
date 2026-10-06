@@ -23,13 +23,14 @@ from .hiera_config import (
     _fill_v3_defaults,
     _fill_v5_defaults,
     _read_base_config,
+    _read_v3,
     _read_v4,
     _validate_v3,
     _validate_v5,
     _warn_deprecated,
 )
 from .._lookup.navigation import LOOKUP_OPTIONS
-from ..exceptions import ConfigError
+from ..exceptions import ConfigError, HieraError, _one_line
 
 _LOGGER = logging.getLogger(__name__)
 #: The engine's own logger, shared with ``hyera.core``.
@@ -364,3 +365,75 @@ def global_only_for(hiera, scope) -> bool:
         return False
     provider = environment_for(hiera, scope.environment).provider
     return not (isinstance(provider, _Provider) and provider.version == 5)
+
+
+def load_global_layer(base_config, base_path, backends, scope, codedir):
+    """Load and validate the base configuration, returning ``(backends,
+    base, hierarchy, default_hierarchy, provider)``: the backend allow-list
+    as a list, the parsed config, its two hierarchies, and the global layer
+    wrapped for the provider-aware stack walk.
+
+    Raises :class:`ConfigError` for a missing, unreadable or invalid
+    ``hiera.yaml``.
+    """
+    backends = list(backends)
+    # Captured before reading the config: a relative version 3 datadir
+    # follows the process cwd AT CONSTRUCTION (Puppet's own
+    # ``Pathname(datadir)`` behavior, ``location_resolver.rb:56-66``),
+    # never the cwd of a later lookup.
+    cwd = Path(os.getcwd())
+
+    source, base = _read_base_config(base_config, base_path)
+    version = _config_version(base, source)
+
+    if not backends:
+        raise ConfigError("No backends could be loaded")
+
+    if version == 3:
+        # Global-layer version 3 (or versionless) config: read and
+        # validated in full against Puppet's own v3 schema. A version-3
+        # config outside the global layer is never read this way -- it
+        # is ignored (with a warning) or raised about by
+        # :func:`usable_provider` instead.
+        hierarchy, default_hierarchy = _read_v3(
+            base, source, scope, backends, codedir, cwd
+        )
+    elif version == 4:
+        # Puppet validates a version 4 config's own schema (building
+        # its provider list) before ever checking whether version 4 is
+        # allowed in this layer -- probed: a schema-invalid version 4
+        # file at the global layer raises its schema error, never this
+        # one. Only a config that validates reaches the layer check.
+        _read_v4(base, source, scope, backends)
+        raise ConfigError(
+            "hiera.yaml version 4 cannot be used in the global layer",
+            path=source.path,
+        )
+    else:
+        _fill_v5_defaults(base)
+        _validate_v5(base, source)
+        try:
+            hierarchy, default_hierarchy = _build_hierarchies(
+                base, backends, source, scope=scope
+            )
+        except HieraError as e:  # keep the class and text, add the file
+            e.path = e.path or source.path
+            raise
+        except Exception as e:
+            raise ConfigError(
+                "The Lookup Configuration at '{}' is invalid: {}: {}".format(
+                    source.label, type(e).__name__, _one_line(e)
+                ),
+                path=source.path,
+            ) from e
+
+    provider = _Provider(
+        "Global",
+        None,
+        source.root,
+        source,
+        hierarchy,
+        default_hierarchy,
+        version,
+    )
+    return backends, base, hierarchy, default_hierarchy, provider

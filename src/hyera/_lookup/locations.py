@@ -226,7 +226,7 @@ class _LocationStore:
         function's own options check (``Backend._require_path_only``) --
         ``options`` is Puppet ``Data``, so it always serializes.
         ``self._loaded_paths`` separately tracks which plain paths were ever
-        read successfully, for :meth:`Hiera._files_for <hyera.core.Hiera._files_for>`'s "was this location
+        read successfully, for :func:`~hyera._lookup.providers.files_for`'s "was this location
         loaded" check, independent of which ``strict``/``options`` variant
         did the loading. This is the only place a location is actually
         read: a hierarchy build only resolves and records locations now, so
@@ -302,7 +302,7 @@ class _LocationStore:
         Shared by every view derived from this instance (unlike
         ``self._providers``, see :meth:`Hiera._view <hyera.core.Hiera._view>`): ``base_path`` -- the owning
         layer's own root -- disambiguates a layer's hierarchy from any
-        other's the same way :meth:`Hiera._provider_for <hyera.core.Hiera._provider_for>`'s own cache key already
+        other's the same way :func:`~hyera._lookup.providers.provider_for`'s own cache key already
         does, so two providers never collide even under the same ``tag``.
 
         This only resolves locations, and probes each non-glob, non-uri one

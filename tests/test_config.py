@@ -296,12 +296,12 @@ def test_unexpected_exception_during_build_wrapped_as_config_error(monkeypatch):
     # than a HieraError (which keeps its own class/text) is wrapped into a
     # ConfigError naming the real exception's class and message, rather
     # than escaping raw.
-    import hyera.core as core
+    from hyera._config import data_provider
 
     def boom(*a, **k):
         raise ValueError("boom")
 
-    monkeypatch.setattr(core, "_build_hierarchies", boom)
+    monkeypatch.setattr(data_provider, "_build_hierarchies", boom)
     with pytest.raises(ConfigError, match="is invalid: ValueError: boom"):
         Hiera(_BASE_V5)
 

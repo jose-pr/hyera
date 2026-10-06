@@ -14,9 +14,9 @@ from pathlib_next import Path
 from ._lookup import data_functions as _data_functions
 from ._lookup.cache import _ScopeKeyedCache
 from ._config.data_provider import (
-    _Provider,
     environment_for,
     global_only_for,
+    load_global_layer,
     module_name_of,
     module_provider_for,
     split_path_setting,
@@ -31,30 +31,20 @@ from ._output.explain import (
     _debug_preamble,
     _provider_ref,
 )
-from ._config.hiera_config import (
-    HieraLevel,
-    _build_hierarchies,
-    _config_version,
-    _default_codedir,
-    _fill_v5_defaults,
-    _read_base_config,
-    _read_v3,
-    _read_v4,
-    _validate_v5,
-)
+from ._config.hiera_config import HieraLevel, _default_codedir
 from ._lookup.function_provider import _EnvironmentContext
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._lookup.locations import _LocationStore
-from ._lookup.providers import provider_for
+from ._lookup.providers import files_for, provider_for
 from ._lookup.lookup_adapter import (
     convert_result,
     extract_lookup_options_for_key,
 )
 from ._lookup.lookup_options import (
     _ExplainOptionsMemo,
+    lookup_default_in_module,
     memoized_options,
-    module_default_lookup_options,
     retrieve_lookup_options,
 )
 from ._lookup.lookup_function import (
@@ -76,15 +66,7 @@ from ._lookup.navigation import (
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
 from .backends import Backend, default_backends
-from .exceptions import (
-    BackendError,
-    ConfigError,
-    HieraError,
-    HieraLookupError,
-    KeyNotFoundError,
-    _escapes,
-    _one_line,
-)
+from .exceptions import BackendError, HieraLookupError, KeyNotFoundError, _escapes
 from .types import TypeSpec
 
 __all__ = ["Hiera"]
@@ -271,9 +253,24 @@ class Hiera:
         self._default_hierarchy: "list[HieraLevel]" = []
         self._init_caches()
 
-        self._load_config(
-            default_backends() if backends is None else backends, base_path
+        (
+            self._backends,
+            self._base,
+            self._hierarchy,
+            self._default_hierarchy,
+            self._global,
+        ) = load_global_layer(
+            self.base_config,
+            base_path,
+            default_backends() if backends is None else backends,
+            self.scope,
+            self._codedir,
         )
+        self._base_path: Path = self._global.root
+        # Puppet fails every lookup on a broken environment config; loading
+        # the construction scope's own environment now gives the same
+        # failure at construction instead.
+        environment_for(self, self.scope.environment)
 
     def _init_caches(self) -> None:
         """(Re)create every cache and the lock they share -- called from
@@ -403,86 +400,6 @@ class Hiera:
                 return interpolate(text, inv)
         finally:
             _STRICT.reset(strict_token)
-
-    def _load_config(self, backends, base_path=None):
-        """Load and validate the base configuration, building hierarchy state.
-
-        Raises :class:`ConfigError` for a missing, unreadable or invalid
-        ``hiera.yaml``.
-        """
-        #: Allow-list of backend classes a hierarchy level's ``data_hash``
-        #: may resolve to (the Backend registry, looked up by name in
-        #: ``_hiera_config._build_levels``).
-        self._backends: "list[type]" = list(backends)
-
-        # Captured before reading the config: a relative version 3 datadir
-        # follows the process cwd AT CONSTRUCTION (Puppet's own
-        # ``Pathname(datadir)`` behavior, ``location_resolver.rb:56-66``),
-        # never the cwd of a later lookup.
-        cwd = Path(os.getcwd())
-
-        source, base = _read_base_config(self.base_config, base_path)
-        self._base: _ty.Dict[str, _ty.Any] = base
-        self._base_path: Path = source.root
-        version = _config_version(self._base, source)
-
-        if not self._backends:
-            raise ConfigError("No backends could be loaded")
-
-        if version == 3:
-            # Global-layer version 3 (or versionless) config: read and
-            # validated in full against Puppet's own v3 schema. A version-3
-            # config outside the global layer is never read this way -- it
-            # is ignored (with a warning) or raised about by
-            # :func:`~hyera._config.data_provider.usable_provider` instead.
-            self._hierarchy, self._default_hierarchy = _read_v3(
-                self._base, source, self.scope, self._backends, self._codedir, cwd
-            )
-        elif version == 4:
-            # Puppet validates a version 4 config's own schema (building
-            # its provider list) before ever checking whether version 4 is
-            # allowed in this layer -- probed: a schema-invalid version 4
-            # file at the global layer raises its schema error, never this
-            # one. Only a config that validates reaches the layer check.
-            _read_v4(self._base, source, self.scope, self._backends)
-            raise ConfigError(
-                "hiera.yaml version 4 cannot be used in the global layer",
-                path=source.path,
-            )
-        else:
-            _fill_v5_defaults(self._base)
-            _validate_v5(self._base, source)
-            try:
-                self._hierarchy, self._default_hierarchy = _build_hierarchies(
-                    self._base, self._backends, source, scope=self.scope
-                )
-            except HieraError as e:  # keep the class and text, add the file
-                e.path = e.path or source.path
-                raise
-            except Exception as e:
-                raise ConfigError(
-                    "The Lookup Configuration at '{}' is invalid: {}: {}".format(
-                        source.label, type(e).__name__, _one_line(e)
-                    ),
-                    path=source.path,
-                ) from e
-
-        #: The global layer, wrapped for the provider-aware stack walk
-        #: (:meth:`_lookup_layers`) -- the same ``self._hierarchy``/
-        #: ``self._base_path``/``self._default_hierarchy`` objects, not a copy.
-        self._global = _Provider(
-            "Global",
-            None,
-            self._base_path,
-            source,
-            self._hierarchy,
-            self._default_hierarchy,
-            version,
-        )
-        # Puppet fails every lookup on a broken environment config; loading
-        # the construction scope's own environment now gives the same
-        # failure at construction instead.
-        environment_for(self, self.scope.environment)
 
     def _lookup_levels(
         self,
@@ -699,7 +616,7 @@ class Hiera:
         layer -- except a ``data_dig`` provider, which is handed them
         directly; see :meth:`_lookup_levels`). On a miss -- including a hit
         whose *dig* misses -- and only for a qualified key whose own module
-        has a ``default_hierarchy``, :meth:`_lookup_default_in_module` is
+        has a ``default_hierarchy``, :func:`~hyera._lookup.lookup_options.lookup_default_in_module` is
         consulted the same way (``lookup_adapter.rb:73-79``). A final miss
         returns :data:`~hyera._lookup.navigation._MISSING`; a found value has
         ``convert_to`` applied, if the options set one -- from the main
@@ -763,8 +680,8 @@ class Hiera:
             if value is _MISSING and not invocation.global_only:
                 # A global_only lookup never reaches a module's own
                 # default_hierarchy (`lookup_adapter.rb:76`).
-                value = self._lookup_default_in_module(
-                    text_key, root, segments, module_name, invocation
+                value = lookup_default_in_module(
+                    self, text_key, root, segments, module_name, invocation
                 )
                 if value is not _MISSING and segments:
                     value = sub_lookup(text_key, segments, value, invocation)
@@ -880,104 +797,9 @@ class Hiera:
         return self._sources(self.scope)
 
     def _sources(self, scope, invocation=None):
-        return self._files_for(
-            self._hierarchy, self._base_path, scope, "main", invocation
+        return files_for(
+            self, self._hierarchy, self._base_path, scope, "main", invocation
         )
-
-    def _files_for(self, hierarchy, base_path, scope, tag, invocation=None):
-        """The ordered list of existing, successfully loaded ``data_hash``
-        file paths ``hierarchy`` visits for ``scope`` -- what ``sources()``
-        shows.
-
-        Only a ``data_hash`` level's *path* locations are ever loaded here
-        (through :meth:`_LocationStore.load_file`, so they land in its file cache exactly
-        as a real lookup would find them): a ``lookup_key``/``data_dig``
-        function is never called without a real key, and a ``uri`` location
-        is never fetched or stat'ed -- ``sources()`` keeps its documented
-        meaning, "the files a lookup may read".
-
-        Re-derived on every call, never cached as its own flattened list:
-        the expensive part -- resolving/materializing locations, and
-        reading each file -- is already cached the referenced-variable/
-        ``(path, strict, options)`` way (:meth:`_LocationStore.location_entry_for`/
-        :meth:`_LocationStore.load_file`), both shared across every view of this
-        instance, so re-walking an already-cached level/location list here
-        costs no repeated filesystem access beyond what ``revalidate=True``
-        itself asks for.
-        """
-        paths = []
-        for index, level in enumerate(hierarchy):
-            if level.kind != "data_hash":
-                continue
-            provider = provider_for(
-                self, tag, base_path, index, hierarchy, scope, invocation
-            )
-            locations = provider.locations
-            if locations is None:
-                continue
-            for loc in locations:
-                if loc.is_uri or not loc.exist:
-                    continue
-                path = loc.location
-                self._store.load_file(
-                    path, level.backend, provider.options_for(loc), invocation
-                )
-                if path in self._store._loaded_paths:
-                    paths.append(path)
-        return tuple(paths)
-
-    def _lookup_default_in_module(self, key, root, segments, module_name, invocation):
-        """Puppet's ``lookup_default_in_module``
-        (``module_data_provider.rb:26-40``, ``lookup_adapter.rb:180-217``):
-        a module's own ``default_hierarchy``, consulted only after the main
-        stack (and its dig) misses.
-
-        :data:`~hyera._lookup.navigation._MISSING` when ``module_name`` is
-        ``None`` (an unqualified key never reaches a module's default
-        hierarchy either), the module has no usable provider, or its
-        ``default_hierarchy`` is empty. The merge strategy comes only from
-        the default hierarchy's own ``lookup_options``
-        (:func:`~hyera._lookup.lookup_adapter.module_default_lookup_options`) -- never the caller's
-        ``merge=`` or the main hierarchy's options, which
-        :meth:`_search_and_merge` still applies its ``convert_to`` from,
-        regardless of which walk actually found the value.
-        """
-        if module_name is None:
-            return _MISSING
-        state = environment_for(self, invocation.scope.environment)
-        provider = usable_provider(
-            self, module_provider_for(self, state, module_name), invocation
-        )
-        if provider is None or not provider.default_hierarchy:
-            return _MISSING
-        with invocation.recording(
-            "scope", 'Searching default_hierarchy of module "{}"'.format(module_name)
-        ):
-
-            def gather_default():
-                with invocation.recording("scope", 'Searching for "lookup_options"'):
-                    return module_default_lookup_options(self, provider, invocation)
-
-            compiled = memoized_options(
-                invocation, "default", module_name, gather_default
-            )
-            entry = extract_lookup_options_for_key(root, compiled) or {}
-            strategy = MergeStrategy.strategy(entry.get("merge"))
-            with invocation.recording("scope", 'Searching for "{}"'.format(key)):
-                with invocation.recording("data_provider", _provider_ref(provider)):
-                    with invocation.check(key):
-                        result = self._lookup_levels(
-                            root,
-                            provider.default_hierarchy,
-                            provider.root,
-                            "default",
-                            invocation.scope,
-                            invocation,
-                            strategy,
-                            segments,
-                            module_name=module_name,
-                        )
-                return result
 
     def lookup(
         self,
