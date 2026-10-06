@@ -1,4 +1,5 @@
-"""``hiera.yaml`` version 4: schema errors, defaults, paths, backends and use in the global layer."""
+"""``hiera.yaml`` version 4: schema errors, defaults, paths, backends and use in
+the global layer."""
 
 import logging
 
@@ -153,10 +154,9 @@ def test_v4_paths_and_extension(make_tree):
 
 
 def test_v4_hocon_backend_default_extension_and_dispatch(make_tree):
-    # backend: hocon is a data_hash/hocon_data level, and its default
-    # extension is ".conf" (distinct from yaml/json's "." + name rule) --
-    # proven by the lookup finding the value in c.conf, written with the
-    # quoted "mymod::k" key a HOCON file needs for a module-prefixed name.
+    # backend: hocon is a data_hash/hocon_data level with default extension ".conf"
+    # (not yaml/json's "." + name rule); the lookup finds the value in c.conf, written
+    # with the quoted "mymod::k" key a HOCON file needs for a module-prefixed name.
     pytest.importorskip("pyhocon")
     root = make_tree(
         {"hierarchy": []},

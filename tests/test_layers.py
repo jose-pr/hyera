@@ -1,11 +1,8 @@
 """Global/environment/module layer discovery and per-layer config rules.
 
-Covers the parts of Puppet's ``lookup_adapter.rb``/``environment_data_
-provider.rb``/``module_data_provider.rb`` this adds to the engine: the three
-layer-discovery keywords, environment/module directory discovery, per-layer
-config versions, and ``hiera3_backend``'s global-only rule. Cross-layer
-``lookup_options`` and ``default_hierarchy`` semantics have their own tests,
-added alongside those features.
+Covers the layer-discovery keywords, environment/module directory discovery,
+per-layer config versions and ``hiera3_backend``'s global-only rule. Cross-layer
+``lookup_options`` and ``default_hierarchy`` have their own tests.
 """
 
 import copy
@@ -82,10 +79,9 @@ def test_first_environmentpath_entry_wins(tmp_path, make_tree):
 
 
 def test_environmentpath_entry_whose_match_is_a_file_is_skipped(tmp_path, make_tree):
-    # A directory LISTING is matched (the name appears at all), never
-    # (entry / name).is_dir() alone -- a *file* named exactly "target" in
-    # the first entry must not stop the search; the second entry's real
-    # "target" directory is still found.
+    # A directory listing is matched by name, never `(entry / name).is_dir()` alone: a
+    # file named "target" in the first entry must not stop the search; the second
+    # entry's "target" directory is still found.
     base = _global(make_tree)
     envs1 = tmp_path / "envs1"
     envs2 = tmp_path / "envs2"
@@ -103,9 +99,8 @@ def test_environmentpath_entry_whose_match_is_a_file_is_skipped(tmp_path, make_t
 
 
 def test_modulepath_entry_with_a_file_and_a_real_module(tmp_path, make_tree):
-    # module_dirs walks every name in one entry's directory listing; a
-    # file matching the module-name pattern must not stop it from also
-    # finding a real module directory listed alongside it.
+    # module_dirs walks every name in an entry's listing: a file matching the
+    # module-name pattern must not hide a real module directory beside it.
     base = _global(make_tree)
     modules = tmp_path / "modules"
     modules.mkdir(parents=True)
@@ -185,11 +180,9 @@ def test_module_directory_name_matched_exactly(tmp_path, make_tree):
 
 
 def test_known_module_with_no_data_provider(tmp_path, make_tree):
-    # A module directory that exists (known to modulepath) but has no
-    # hiera.yaml of its own and no default data file: a known module with
-    # no usable provider at all -- report_module_provider_not_found fires
-    # (both for the lookup_options gather and the real key), never a
-    # crash.
+    # A module directory known to modulepath with no hiera.yaml and no default data
+    # file has no usable provider: report_module_provider_not_found fires (for the
+    # lookup_options gather and the real key), never a crash.
     base = _global(make_tree)
     modules = tmp_path / "modules"
     (modules / "m").mkdir(parents=True)
@@ -441,14 +434,11 @@ def test_environment_lookup_options_apply_to_unqualified_keys(tmp_path, make_tre
 def test_environment_lookup_options_discarded_by_explicit_module_null(
     tmp_path, make_tree
 ):
-    # The environment declares lookup_options for a module-qualified key;
-    # the module's own data has an EXPLICIT `lookup_options: ~` (distinct
-    # from no lookup_options key at all, which leaves the environment's
-    # own options untouched -- see test_lookup_options_layer_precedence's
-    # "nothing at all" case) -- Puppet's own if/elsif with no else
-    # discards the environment's options outright rather than keeping
-    # them, so the lookup falls back to the default first-match merge
-    # instead of the environment's "unique".
+    # The environment declares lookup_options for a module-qualified key; the module's
+    # data has an explicit `lookup_options: ~`. Unlike an absent key (the environment's
+    # options stay, see test_lookup_options_layer_precedence), Puppet's if/elsif with
+    # no else discards the environment's options, so the lookup uses the default
+    # first-match merge, not the environment's "unique".
     base = make_tree(
         {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
         files={"data/g.yaml": "mymod::a: [g]\n"},
@@ -788,10 +778,9 @@ def test_modulepath_rejects_a_non_path_entry(make_tree):
 def test_nonexistent_modulepath_and_environmentpath_entries_are_skipped(
     tmp_path, make_tree
 ):
-    # find_environment/module_dirs's own os.listdir OSError catch: an
-    # entry that plain doesn't exist at all (not merely empty, the case
-    # test_missing_production_environment_uses_basemodulepath already
-    # covers) is silently skipped, not a crash.
+    # find_environment/module_dirs catch an OSError from os.listdir: an entry that does
+    # not exist (not merely empty, see test_missing_production_environment_uses_
+    # basemodulepath) is skipped, not a crash.
     base = _global(make_tree)
     modules = tmp_path / "modules"
     _write(modules / "m" / "hiera.yaml", _LEVEL)

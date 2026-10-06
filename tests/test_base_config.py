@@ -55,17 +55,13 @@ def test_non_ascii_config_is_read_as_utf8(tmp_path):
 
 
 def test_utf8_bom_config_parses(tmp_path):
-    # Flow style, not `CONFIG_TEXT`'s block style: `puppet lookup` reads
-    # hiera.yaml via `HieraConfig.create` -> `cached_file_data` ->
-    # `Puppet::Util::Yaml.safe_load(content, ...)` directly on the file's
-    # content, the same "keep a literal BOM character" path a *data* file
-    # goes through (`context.rb:53`) -- not the BOM-*stripping* file read
-    # `Puppet::Util::Yaml.safe_load_file` uses elsewhere. A block-style
-    # multi-line mapping right after a BOM (swapped for a space by
-    # `_psych.safe_load`, matching Psych) only keeps its *first* key,
-    # a genuine Puppet quirk covered separately
-    # (`test_psych.py::test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key`);
-    # a flow-style mapping has no such line-indentation problem.
+    # Flow style, not `CONFIG_TEXT`'s block style: `puppet lookup` reads hiera.yaml
+    # with `Puppet::Util::Yaml.safe_load(content)`, which keeps a literal BOM (as for
+    # a data file, `context.rb:53`), not the BOM-stripping `safe_load_file`. A
+    # block-style mapping after a BOM (swapped for a space, as Psych does) keeps only
+    # its first key (test_psych.py:
+    # test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key); a
+    # flow-style mapping has no such indentation problem.
     datadir = tmp_path / "données"
     datadir.mkdir()
     (datadir / "common.yaml").write_bytes("k: accented\n".encode("utf-8"))

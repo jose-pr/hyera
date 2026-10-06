@@ -1,4 +1,5 @@
-"""``hiera.yaml`` version 3 backends: extensions, datadir, registered and unknown backends, duplicate reports."""
+"""``hiera.yaml`` version 3 backends: extensions, datadir, registered and unknown
+backends, duplicate reports."""
 
 import copy
 import io
@@ -154,10 +155,9 @@ def test_v3_unknown_backend_raises(make_tree, name):
 
 
 def test_v3_unknown_backend_via_file_like_source_has_line_but_no_path():
-    # _config_error's own "line but no path" branch (distinct from
-    # _type_error's, which v5 validation uses instead): a file-like source
-    # has readable text (so a line is still found via _find_line_matching)
-    # but no filesystem path of its own.
+    # _config_error's "line but no path" branch (v5 validation uses _type_error): a
+    # file-like source has readable text, so _find_line_matching finds a line, but no
+    # filesystem path.
     stream = io.StringIO("backends: unknown_v3_backend\nhierarchy:\n  - common\n")
     with pytest.raises(ConfigError) as exc:
         Hiera(stream)
@@ -218,10 +218,9 @@ def test_v3_eyaml_maps_to_eyaml_lookup_key():
 
 
 def test_v3_eyaml_backend_options_reach_the_built_level(make_tree, monkeypatch):
-    # Unlike test_v3_eyaml_maps_to_eyaml_lookup_key above (which only checks
-    # the spec dict), this builds a real HieraLevel through _v3_levels --
-    # a non-empty per-backend options dict (everything but `datadir`) must
-    # actually be threaded onto the level's own conf, not just the spec.
+    # Unlike test_v3_eyaml_maps_to_eyaml_lookup_key above (spec dict only), this builds
+    # a real HieraLevel through _v3_levels: per-backend options (all but `datadir`)
+    # must be threaded onto the level's conf.
     pytest.importorskip("cryptography")
     key_path = (
         Path(__file__).resolve().parent
@@ -253,10 +252,9 @@ def test_v3_eyaml_backend_options_reach_the_built_level(make_tree, monkeypatch):
         },
         raw=True,
     )
-    # A v3 level's relative `datadir` follows the process cwd *at
-    # construction*, never the hiera.yaml directory (see HieraLevel's own
-    # datadir_base docstring) -- chdir into root first, like every other
-    # v3 relative-datadir test in this file.
+    # A v3 level's relative `datadir` follows the process cwd at construction, never
+    # the hiera.yaml directory (see HieraLevel's datadir_base): chdir into root first,
+    # as the other v3 relative-datadir tests do.
     monkeypatch.chdir(root)
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"os": {"family": "RedHat"}}))
     assert h.lookup("plain") == "s3cr3t RedHat"
@@ -301,10 +299,9 @@ def test_v3_duplicate_backend_reports_lines(make_tree):
 
 
 def test_v3_duplicate_backend_dict_config_has_no_lines():
-    # A dict-configured Hiera (no file, so no text to search for a line)
-    # hits the same duplicate-backend message, but with neither a first
-    # nor a second line to report -- distinct from the file-backed case
-    # above, which finds both.
+    # A dict-configured Hiera (no text to search for a line) hits the same
+    # duplicate-backend message with neither a first nor a second line, unlike the
+    # file-backed case above.
     with pytest.raises(ConfigError) as excinfo:
         Hiera({"backends": ["yaml", "yaml"], "hierarchy": ["common"]})
     assert "Backend 'yaml' is defined more than once." in str(excinfo.value)

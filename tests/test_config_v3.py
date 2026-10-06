@@ -1,4 +1,5 @@
-"""``hiera.yaml`` version 3: schema errors, defaults, deprecation warnings and backend ordering."""
+"""``hiera.yaml`` version 3: schema errors, defaults, deprecation warnings and
+backend ordering."""
 
 import logging
 
@@ -241,10 +242,8 @@ def test_v3_deprecation_warning_silent_when_strict_off(make_tree, caplog):
     "text", ["", "- a\n- b\n", "~\n"], ids=["empty", "list", "null"]
 )
 def test_non_mapping_file_falls_back_to_v3_default(make_tree, caplog, tmp_path, text):
-    # V3_DEFAULT_CONFIG_HASH is itself schema-valid, so the fallback now
-    # resolves a real lookup through the default codedir-rooted datadir,
-    # instead of raising (the version 3 provider build did not exist yet
-    # when this fallback could only ever raise "not supported yet").
+    # V3_DEFAULT_CONFIG_HASH is schema-valid, so the fallback resolves a real lookup
+    # through the default codedir-rooted datadir instead of raising.
     root = make_tree(text, raw=True)
     codedir = tmp_path / "code"
     hieradata = codedir / "environments" / "production" / "hieradata"

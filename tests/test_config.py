@@ -1,9 +1,8 @@
 """``hiera.yaml`` reading: ``HieraConfig.create`` (``_hiera_config.py``).
 
 Copying and absolutizing the base config, Puppet's version dispatch, the
-empty/non-mapping-file fallback, Puppet's `defaults`/`hierarchy`/`datadir`
-fallbacks, and Puppet's version 5 schema validation. Per-level function
-kind selection is a later addition here, once that phase lands.
+empty/non-mapping-file fallback, the `defaults`/`hierarchy`/`datadir` fallbacks
+and version 5 schema validation.
 """
 
 import copy
@@ -46,9 +45,8 @@ def test_relative_config_path_survives_chdir(monkeypatch, tmp_path):
     h = Hiera("rel/hiera.yaml")
     assert h._base_path.is_absolute()
 
-    # A cwd that no longer has any relation to the config: `base_path` was
-    # made absolute at construction, so the lookup below must not re-derive
-    # anything from the current cwd.
+    # The cwd is unrelated to the config: `base_path` is absolute from construction, so
+    # the lookup below must not derive anything from the cwd.
     monkeypatch.chdir(tmp_path / "rel" / "data")
     assert h.lookup("k") == "common"
 
@@ -257,10 +255,8 @@ _BASE_V5 = {
                         "name": "one",
                         "path": "one.yaml",
                         "data_hash": "yaml_data",
-                        # A dict config is never parsed through the YAML
-                        # loader, so an arbitrary Python object can reach
-                        # here directly -- outside the small set of types
-                        # _ruby_type_name/_is_data name explicitly.
+                        # A dict config skips the YAML loader, so any Python object
+                        # can reach here, not only the types _is_data names.
                         "options": {"ok": object()},
                     }
                 ],
@@ -292,10 +288,8 @@ def test_malformed_config_raises_config_error(cfg, expected):
 
 
 def test_unexpected_exception_during_build_wrapped_as_config_error(monkeypatch):
-    # A defensive catch-all: any exception _build_hierarchies raises other
-    # than a HieraError (which keeps its own class/text) is wrapped into a
-    # ConfigError naming the real exception's class and message, rather
-    # than escaping raw.
+    # Any exception from _build_hierarchies other than a HieraError (which keeps its
+    # class/text) is wrapped in a ConfigError naming its class and message.
     from hyera._config import data_provider
 
     def boom(*a, **k):
@@ -335,10 +329,8 @@ def test_dict_config_error_has_no_line():
 
 
 def test_file_like_config_error_has_line_but_no_path():
-    # A file-like source (unlike a real path) has readable text -- so a
-    # line number is still found -- but no filesystem path of its own;
-    # _config_error's "line but no path" suffix is distinct from either of
-    # the two cases above.
+    # A file-like source has readable text, so a line is found, but no filesystem path:
+    # _config_error's "line but no path" suffix differs from the two cases above.
     stream = io.StringIO(
         "version: 5\n"
         "defaults: {datadir: data, data_hash: yaml_data}\n"
@@ -410,14 +402,11 @@ def test_duplicate_names_dict_config_has_no_first_line():
 
 
 def test_multi_document_config_error_has_no_line(tmp_path):
-    # Puppet's own `safe_load` (`YAML.safe_load`, ported here as
-    # backends._psych.safe_load) reads only the first YAML document
-    # in a file and ignores whatever a later `---` document contains, so
-    # this configuration parses and builds just like a single-document one
-    # would. But the line-lookup helper (_config_line) re-parses the raw
-    # text with plain `yaml.compose`, which raises ComposerError on a
-    # multi-document stream -- so an error here still raises correctly,
-    # just without a line number.
+    # Puppet's `YAML.safe_load` (ported as backends._psych.safe_load) reads only the
+    # first document and ignores a later `---` one, so this builds like a
+    # single-document file. _config_line re-parses with plain `yaml.compose`, which
+    # raises ComposerError on a multi-document stream, so an error still raises but
+    # without a line number.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -437,14 +426,11 @@ def test_multi_document_config_error_has_no_line(tmp_path):
 
 
 def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
-    # `hierarchy: false` fills in Puppet's own built-in default hierarchy
-    # (_fill_v5_defaults' ||= rule), which has no corresponding node in the
-    # actual YAML text at all. The kind-mismatch check itself (defaults'
-    # own data_hash naming a function that doesn't implement data_hash) is
-    # lazy -- raised only once the function is actually invoked for a
-    # location that exists -- so this needs a real data file and an
-    # actual lookup, not just construction; a lazy check never looks up a
-    # line at all, so it is unconditionally None, not merely "not found".
+    # `hierarchy: false` fills in Puppet's built-in default hierarchy
+    # (_fill_v5_defaults' ||= rule), which has no node in the YAML text. The
+    # kind-mismatch check (defaults' data_hash naming a function without data_hash) is
+    # lazy, raised only when invoked for an existing location, so this needs a real
+    # data file and a lookup; no line is ever looked up, so it is None.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -463,12 +449,10 @@ def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
 
 
 def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
-    # Unlike the synthesized-default case above, `hierarchy` is written out
-    # here and the one entry is real -- it simply inherits its data_hash
-    # from `defaults` (ordinary, encouraged Puppet usage). The kind-mismatch
-    # check is lazy (raised on invocation against an existing location, not
-    # at config build time), so this also needs a real data file and an
-    # actual lookup; a lazy check never looks up a line at all.
+    # Here `hierarchy` is written out and its one entry inherits data_hash from
+    # `defaults` (ordinary Puppet usage). The kind-mismatch check is lazy (raised on
+    # invocation against an existing location), so this needs a real data file and a
+    # lookup; no line is looked up.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -488,13 +472,10 @@ def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
 
 
 def test_duplicate_top_level_hierarchy_key_last_one_wins(tmp_path):
-    # Psych/our own loader keep the *last* of two duplicate top-level
-    # mapping keys (`_psych._revive_hash`), so `hierarchy`
-    # here is the second (two-entry) definition. But _config_line's own
-    # raw-node walk (over plain `yaml.compose`, which does not dedupe
-    # duplicate keys) finds the *first* matching "hierarchy" node instead
-    # -- a one-entry sequence -- so looking up index 1 inside it is an
-    # out-of-range index into a real, but wrong, sequence node.
+    # Psych and our loader keep the last of two duplicate top-level keys
+    # (`_psych._revive_hash`), so `hierarchy` is the two-entry definition. _config_line
+    # walks plain `yaml.compose` nodes, which keep both, and finds the first: a
+    # one-entry sequence, so index 1 is out of range there.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -514,11 +495,9 @@ def test_duplicate_top_level_hierarchy_key_last_one_wins(tmp_path):
 
 
 def test_duplicate_options_key_in_one_entry_last_one_wins(tmp_path):
-    # Same last-wins rule as above, but for a duplicate key *within* one
-    # entry's own mapping: the surviving `options` value is the dict (the
-    # bad pattern key is correctly found and reported), but the raw node
-    # walk picks the *first* "options" occurrence -- the discarded, non-dict
-    # scalar -- so there is no mapping there to look the bad key up in.
+    # Same last-wins rule for a duplicate key within one entry: the surviving `options`
+    # is the dict (the bad pattern key is reported), but the raw node walk picks the
+    # first `options`, a scalar with no mapping to search.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -566,11 +545,9 @@ def test_hiera3_backend_replaced_by_data_hash():
 
 
 def test_hiera3_backend_in_defaults_is_rejected():
-    # hiera3_backend is a per-entry-only key: valid in a hierarchy entry
-    # (test_hiera3_backend_replaced_by_data_hash above), but Puppet's own
-    # `defaults` struct type excludes it -- confirmed against a real
-    # Puppet 8.10 run, see the conformance case
-    # config-defaults-hiera3-backend-key.
+    # hiera3_backend is valid only per hierarchy entry
+    # (test_hiera3_backend_replaced_by_data_hash above); Puppet 8.10's `defaults` struct
+    # type excludes it (conformance case config-defaults-hiera3-backend-key).
     cfg = {
         "version": 5,
         "defaults": {"datadir": "data", "hiera3_backend": "foo"},
@@ -655,14 +632,11 @@ def test_function_kind_errors(entry, expected):
 def test_lookup_key_registered_as_data_hash_builds_and_only_errors_on_lookup(
     make_tree,
 ):
-    # A kind mismatch (here: a data_hash-only function named as the entry's
-    # data_hash key, which Puppet's own `data_hash_function_provider.rb`
-    # still happily resolves and later arity-rejects) is never a
-    # construction-time error: Puppet raises it only when the function is
-    # actually invoked for a location that exists -- so a level like
-    # this, backed by a location that does not exist, must not refuse the
-    # whole Hiera instance, and one backed by a location that does exist
-    # must still raise once looked up.
+    # A kind mismatch (a data_hash-only function named as the entry's data_hash key,
+    # which Puppet's data_hash_function_provider.rb resolves and later arity-rejects) is
+    # not a construction-time error: Puppet raises it only when the function is invoked
+    # for an existing location. A level with a missing location must not refuse the
+    # instance; one with an existing location must raise once looked up.
     cfg = {
         "defaults": {"datadir": "data"},
         "hierarchy": [

@@ -1,4 +1,5 @@
-"""Per-layer ``hiera.yaml`` version rules, global-only sub-lookups and strict-mode path errors."""
+"""Per-layer ``hiera.yaml`` version rules, global-only sub-lookups and strict-mode
+path errors."""
 
 import logging
 import re
