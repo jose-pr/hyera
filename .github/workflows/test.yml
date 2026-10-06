@@ -5,7 +5,8 @@ name: Test
 #   - workflow_dispatch (optionally against a specific ref), for manual runs.
 #   - push of a tag matching "ci-*" (throwaway tag, delete after) so a run can
 #     be triggered and polled via the API/CLI without dashboard access.
-# Not triggered by push/PR on branches by default.
+# Not triggered by push/PR on branches by default. The benchmark job runs only
+# on a dispatch with `benchmark` set, or on a "ci-bench-*" tag.
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +14,10 @@ on:
         description: "Git ref to test (branch, tag, or SHA)"
         required: false
         default: ""
+      benchmark:
+        description: "Also run the benchmark job (never a gate)"
+        type: boolean
+        default: false
   push:
     tags:
       - "ci-*"
@@ -249,3 +254,34 @@ jobs:
             echo "unexpected hiera script" >&2
             exit 1
           fi
+
+  # Release benchmarks: benchmarks/run.py on Ubuntu, both interpreter bounds,
+  # both revalidate modes, uploaded as one artifact per interpreter. Never a
+  # gate: nothing here compares or asserts, and no other job needs it.
+  benchmark:
+    name: Benchmark (py${{ matrix.python-version }})
+    if: ${{ inputs.benchmark || startsWith(github.ref, 'refs/tags/ci-bench-') }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package with the command-line extra
+        run: python -m pip install -e ".[cli]"
+      - name: Run the benchmarks
+        run: |
+          mkdir -p bench-results
+          python benchmarks/run.py --save --results-dir bench-results
+          python benchmarks/run.py --revalidate off --save --results-dir bench-results
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks-py${{ matrix.python-version }}
+          path: bench-results/*.json
+          if-no-files-found: error
