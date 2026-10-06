@@ -185,13 +185,20 @@ class _LocationEntry:
 class _GlobEntry(_ty.NamedTuple):
     """One cached glob listing: ``matches`` is the interned-string tuple of
     matched files (directories already dropped); ``dirs`` is the
-    ``((directory, (st_ino, st_mtime_ns)), ...)`` pairs the walk actually
-    called ``os.scandir`` on, used to decide whether the listing is still
-    fresh (``Hiera._glob_matches``, ``revalidate=True``) without re-walking
-    unless one of them changed."""
+    ``((directory, state), ...)`` pairs for every directory the walk
+    consulted (:func:`_dir_state`), used to decide whether the listing is
+    still fresh (``Hiera._glob_matches``, ``revalidate=True``) without
+    re-walking unless one of them changed."""
 
     matches: tuple
     dirs: tuple
+
+
+def _dir_state(probe) -> _ty.Optional[tuple]:
+    """What a glob listing depends on in one directory: its
+    ``(st_ino, st_mtime_ns)``, or ``None`` when it is not a directory (an
+    absent directory is consulted too -- creating it must invalidate)."""
+    return probe.sig[:2] if probe.kind == "dir" else None
 
 
 def _puppet_type_label(value) -> str:
@@ -395,8 +402,10 @@ class Hiera:
         #: Paths already warned about for an ignored version-3 layer config
         #: (:meth:`_usable`), so the warning fires once per config file.
         self._v3_warned_paths: set = set()
-        #: ``(module_name, path) -> pruned data``, apart from the unpruned
-        #: ``_file_cache`` a global/environment read of the same file uses.
+        #: ``(module_name, function_name, path) -> (parsed data, pruned
+        #: data)``, apart from the unpruned ``_file_cache`` a global/
+        #: environment read of the same file uses; valid while the parsed
+        #: data is the very object the pruned copy was made from.
         self._pruned_cache: dict = {}
         #: ``module_name -> (scope, compiled)``: the single most recent
         #: ``_retrieve_lookup_options`` result for that ``module_name``, an
@@ -994,10 +1003,11 @@ class Hiera:
         listing depends on directory contents alone).
 
         With ``revalidate=True``, a cached listing is reused only while
-        every directory the walk actually scanned still probes to the same
-        ``(st_ino, st_mtime_ns)`` pair it did when listed; otherwise (or on
-        a first call) the walker re-lists, recording exactly the
-        directories it scans this time via ``on_scandir``. A matched
+        every directory the walk consulted (listed, or tested a child of by
+        name, including one that was absent) still probes to the state it
+        had when listed (:func:`_dir_state`); otherwise (or on a first
+        call) the walker re-lists, recording the directories it consults
+        this time via ``on_scandir``. A matched
         directory is dropped the same memo-aware way a plain location's
         existence is checked, so a match already probed while listing is
         never probed again by :meth:`_load_file`. With ``revalidate=False``
@@ -1008,23 +1018,20 @@ class Hiera:
         if cached is not _MISSING:
             if not self._revalidate:
                 return cached.matches
-            fresh = True
-            for d, sig in cached.dirs:
-                probe = (
+            if all(
+                _dir_state(
                     invocation._memo_probe(d) if invocation is not None else _probe(d)
                 )
-                if probe.kind != "dir" or probe.sig[:2] != sig:
-                    fresh = False
-                    break
-            if fresh:
+                == state
+                for d, state in cached.dirs
+            ):
                 return cached.matches
 
         dirs = []
 
         def on_scandir(d):
             probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
-            if probe.kind == "dir":
-                dirs.append((d, probe.sig[:2]))
+            dirs.append((d, _dir_state(probe)))
 
         def probe_isdir(d):
             probe = invocation._memo_probe(d) if invocation is not None else _probe(d)
@@ -1155,11 +1162,16 @@ class Hiera:
         )
 
     def _pruned_module_data(self, data, module_name, function_name, path):
-        key = (module_name, path)
-        pruned = self._pruned_cache.get(key)
-        if pruned is None:
-            pruned = prune_module_data(data, module_name, function_name, path)
-            self._pruned_cache[key] = pruned
+        if path is None:
+            return prune_module_data(data, module_name, function_name, path)
+        key = (module_name, function_name, path)
+        cached = self._pruned_cache.get(key)
+        # The pruned hash is valid for the very parsed hash it came from: a
+        # re-read produces a new object.
+        if cached is not None and cached[0] is data:
+            return cached[1]
+        pruned = prune_module_data(data, module_name, function_name, path)
+        self._pruned_cache[key] = (data, pruned)
         return pruned
 
     def _lookup_levels(

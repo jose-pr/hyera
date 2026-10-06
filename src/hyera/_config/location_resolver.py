@@ -376,11 +376,10 @@ def _glob_one(
     ``/`` matches only directories, which Puppet rejects, so it is always
     ``[]``.
 
-    ``on_scandir``, when given, is called with a directory path immediately
-    before this walk actually calls ``os.scandir`` on it (never for the
-    literal-only fast path below, which never scans a directory at all) --
-    used to record which directories a listing actually depended on, for a
-    later freshness check.
+    ``on_scandir``, when given, is called with every directory path whose
+    entries the walk consults, whether it lists them or tests a literal
+    child by name, and whether or not the directory exists -- used to record
+    what a listing depended on, for a later freshness check.
 
     ``probe_isdir``, when given, replaces the plain ``os.path.isdir(child)``
     check an intermediate literal segment uses to decide whether to descend
@@ -405,6 +404,8 @@ def _glob_one(
         pending = [i for i in active if i < n]
         if not pending:
             return
+        if on_scandir is not None:
+            on_scandir(path)
         if all(segments[i][0] == "literal" for i in pending):
             by_literal = {}
             for i in pending:
@@ -425,8 +426,6 @@ def _glob_one(
                 if nxt:
                     walk(child, nxt)
             return
-        if on_scandir is not None:
-            on_scandir(path)
         try:
             entries = sorted(os.scandir(path), key=lambda e: os.fsencode(e.name))
         except OSError as e:

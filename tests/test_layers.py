@@ -8,6 +8,7 @@ config versions, and ``hiera3_backend``'s global-only rule. Cross-layer
 added alongside those features.
 """
 
+import copy
 import logging
 import os
 
@@ -599,6 +600,82 @@ def test_default_hierarchy_only_for_qualified_keys(tmp_path, make_tree):
     h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
     with pytest.raises(KeyNotFoundError):
         h.lookup("unq")
+
+
+def _module_tree(tmp_path, make_tree, files):
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(modules / "m" / "hiera.yaml", _LEVEL)
+    for rel, text in files.items():
+        _write(modules / "m" / "data" / rel, text)
+    return base, modules
+
+
+@pytest.mark.parametrize("revalidate", [True, False])
+def test_module_data_edit_is_seen_when_revalidating(tmp_path, make_tree, revalidate):
+    base, modules = _module_tree(tmp_path, make_tree, {"c.yaml": "m::k: v1\n"})
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules], revalidate=revalidate)
+    assert h.lookup("m::k") == "v1"
+
+    _write(modules / "m" / "data" / "c.yaml", "m::k: v2-longer\nm::new: added\n")
+    if revalidate:
+        assert h.lookup("m::k") == "v2-longer"
+        assert h.lookup("m::new") == "added"
+        assert h.scoped(variables={"x": 1}).lookup("m::k") == "v2-longer"
+    else:
+        assert h.lookup("m::k") == "v1"
+        h.clear_cache()
+        assert h.lookup("m::k") == "v2-longer"
+
+
+def test_module_data_pruning_is_redone_after_the_file_changes(tmp_path, make_tree):
+    base, modules = _module_tree(
+        tmp_path, make_tree, {"c.yaml": "m::k: v1\nother: x\n"}
+    )
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    assert h.lookup("m::k") == "v1"
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("other")
+
+    _write(modules / "m" / "data" / "c.yaml", "m::k: v1\nm::other: now-qualified\n")
+    assert h.lookup("m::other") == "now-qualified"
+
+
+def test_two_locationless_module_levels_serve_their_own_data(
+    tmp_path, make_tree, monkeypatch
+):
+    from hyera.backends import Backend, default_backends
+
+    # Subclassing registers the backend process-wide: keep it to this test.
+    monkeypatch.setattr(Backend, "_REGISTRY", copy.deepcopy(Backend._REGISTRY))
+
+    class FnA(Backend):
+        NAMES = {"function": ("layers_fn_a",)}
+
+        def data_hash(self, path, options):
+            return {"m::a": "from-A"}
+
+    class FnB(Backend):
+        NAMES = {"function": ("layers_fn_b",)}
+
+        def data_hash(self, path, options):
+            return {"m::b": "from-B"}
+
+    base = _global(make_tree)
+    modules = tmp_path / "modules"
+    _write(
+        modules / "m" / "hiera.yaml",
+        "version: 5\nhierarchy:\n"
+        "  - {name: A, data_hash: layers_fn_a}\n"
+        "  - {name: B, data_hash: layers_fn_b}\n",
+    )
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        backends=list(default_backends()) + [FnA, FnB],
+        basemodulepath=[modules],
+    )
+    assert h.lookup("m::a") == "from-A"
+    assert h.lookup("m::b") == "from-B"
 
 
 def test_modulepath_rejects_a_non_path_entry(make_tree):

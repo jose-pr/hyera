@@ -734,6 +734,90 @@ def test_new_glob_match_after_directory_change(make_tree, revalidate):
         assert h.lookup("only_new") == "x"
 
 
+def _create(base, rel, text):
+    """Write ``base/rel``, creating missing directories, then bump the mtime
+    of the one directory that gained an entry (the deepest that already
+    existed) -- the only mtime a real creation changes, made visible however
+    coarse the filesystem's timestamps are."""
+    target = base / rel
+    gained = target.parent
+    while not gained.is_dir():
+        gained = gained.parent
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(text.encode("utf-8"))
+    _bump_mtime(gained)
+
+
+@pytest.mark.parametrize(
+    "pattern, before, new_file",
+    [
+        ("conf.d/*.yaml", {"conf.d/zz.yaml": "other: 1\n"}, "conf.d/aa.yaml"),
+        ("conf.d/*.yaml", {}, "conf.d/aa.yaml"),
+        ("a/b/*.yaml", {"a/keep.txt": "x\n"}, "a/b/aa.yaml"),
+        ("nodes/*/over.yaml", {"nodes/n1/other.yaml": "o: 1\n"}, "nodes/n1/over.yaml"),
+        ("nodes/*/over.yaml", {"nodes/n1/other.yaml": "o: 1\n"}, "nodes/n2/over.yaml"),
+        ("conf.d/exact.yaml", {"conf.d/zz.yaml": "other: 1\n"}, "conf.d/exact.yaml"),
+        ("tree/**/*.yaml", {"tree/x/y/zz.yaml": "o: 1\n"}, "tree/x/y/aa.yaml"),
+        ("tree/**/*.yaml", {"tree/x/y/zz.yaml": "o: 1\n"}, "tree/x/new/aa.yaml"),
+        ("{one,two}/*.yaml", {"one/zz.yaml": "o: 1\n"}, "two/aa.yaml"),
+        ("*.yml", {}, "aa.yml"),
+    ],
+    ids=[
+        "dir-exists",
+        "dir-absent",
+        "literal-subdir-created",
+        "file-under-wildcard-dir",
+        "new-wildcard-dir",
+        "literal-file",
+        "recursive-file",
+        "recursive-dir",
+        "braces-dir-absent",
+        "datadir-absent",
+    ],
+)
+def test_glob_level_sees_a_file_that_starts_matching(
+    make_tree, pattern, before, new_file
+):
+    files = {"data/common.yaml": "k: common\n"}
+    files.update({"data/" + rel: text for rel, text in before.items()})
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "g", "glob": pattern},
+                {"name": "common", "path": "common.yaml"},
+            ]
+        },
+        files=files,
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "common"
+
+    _create(root / "data", new_file, "k: from-new-file\n")
+
+    assert h.lookup("k") == "from-new-file"
+    assert h.lookup("k") == Hiera(str(root / "hiera.yaml")).lookup("k")
+
+
+def test_glob_level_sees_a_vanished_literal_match(make_tree):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "g", "glob": "conf.d/exact.yaml"},
+                {"name": "common", "path": "common.yaml"},
+            ]
+        },
+        files={
+            "data/common.yaml": "k: common\n",
+            "data/conf.d/exact.yaml": "k: exact\n",
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "exact"
+    (root / "data" / "conf.d" / "exact.yaml").unlink()
+    _bump_mtime(root / "data" / "conf.d")
+    assert h.lookup("k") == "common"
+
+
 def test_changed_lookup_options_reapplied(make_tree):
     root = make_tree(
         {
