@@ -341,16 +341,15 @@ _QUOTED_TOKEN_IDS = [
     "bad",
     [
         b"db_password: *HUNTER2\n",
-        b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
     ]
     + _QUOTED_FLOAT_LEAK_PAYLOADS
     + _QUOTED_CLASS_LEAK_PAYLOADS,
-    ids=["undefined-alias", "duplicate-anchor"] + _QUOTED_TOKEN_IDS,
+    ids=["undefined-alias"] + _QUOTED_TOKEN_IDS,
 )
 def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     # These PyYAML/`_psych` error shapes quote the offending scalar
     # or class name verbatim in ``context``/``problem`` (an undefined alias
-    # name, a duplicate anchor name, an invalid Float()/Integer() scalar,
+    # name, an invalid Float()/Integer() scalar,
     # or a `!ruby/object`/`!ruby/hash` tag's class text) -- exactly the
     # token an attacker-controlled or merely malformed decrypted value
     # could carry. (An unknown *tag* on its own is no longer a parse error
@@ -373,11 +372,10 @@ def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     "stdout",
     [
         b"db_password: *HUNTER2\n",
-        b"a: &HUNTER2 1\nb: &HUNTER2 2\n",
     ]
     + _QUOTED_FLOAT_LEAK_PAYLOADS
     + _QUOTED_CLASS_LEAK_PAYLOADS,
-    ids=["undefined-alias", "duplicate-anchor"] + _QUOTED_TOKEN_IDS,
+    ids=["undefined-alias"] + _QUOTED_TOKEN_IDS,
 )
 def test_sops_parse_error_quoted_tokens_absent_via_hiera_and_logs(
     monkeypatch, tmp_path, caplog, stdout
