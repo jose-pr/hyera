@@ -58,12 +58,10 @@ def test_referenced_variable_change_rebuilds(make_tree, monkeypatch):
 
 
 def test_sub_lookup_becoming_unstable_falls_through_to_a_real_rebuild(make_tree):
-    # _read_ref's own sub_lookup-raises-HieraLookupError case (the
-    # location-cache replay's scope-stability check, not the "referenced
-    # variable simply changed value" case above): a later scoped view
-    # whose referenced variable is no longer walkable the same way as a
-    # cached ref combo's earlier scope is marked unstable, not mistaken for
-    # a match -- the real rebuild runs and raises Puppet's own error.
+    # _read_ref when sub_lookup raises HieraLookupError (the location-cache replay's
+    # scope-stability check): a later scoped view whose referenced variable is no
+    # longer walkable like a cached ref combo's earlier scope is unstable, not a
+    # match; the real rebuild runs and raises Puppet's own error.
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "x1/%{x.y}.yaml"}]},
         files={"data/x1/1.yaml": "k: v1\n"},
@@ -381,8 +379,7 @@ def test_freeze_unsupported_type_never_matches_itself():
     from hyera import Sensitive
     from hyera._lookup.cache import _freeze
 
-    # An object _freeze has no dedicated case for (anything besides
-    # bool/int/float/str/None/dict/list/tuple) freezes to a fresh sentinel
-    # every call, on purpose: a cache key built from it can never spuriously
-    # match a later one, so it simply never gets reused.
+    # An object _freeze has no case for (not bool/int/float/str/None/dict/list/tuple)
+    # freezes to a fresh sentinel every call, so a cache key built from it never
+    # matches a later one.
     assert _freeze(Sensitive("x")) != _freeze(Sensitive("x"))

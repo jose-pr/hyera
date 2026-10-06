@@ -97,10 +97,8 @@ def test_cached_file_data_missing_file_is_backend_error(
 def test_cached_file_data_directory_is_backend_error_like_missing_file(
     make_tree, backends, script, tmp_path
 ):
-    # The stat-based staleness check above already wraps its own OSError
-    # (a missing file); the open()/read() that follows it must wrap one the
-    # same way instead of letting it escape raw -- a directory sitting
-    # where a data file is expected is the easiest OSError to provoke here
+    # The open()/read() after the stat-based staleness check must wrap an OSError like
+    # the stat does; a directory where a data file is expected provokes one
     # (IsADirectoryError on open(), PermissionError on Windows).
     root = make_tree(
         {

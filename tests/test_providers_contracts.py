@@ -285,8 +285,8 @@ def test_function_provider_key_lookup_is_abstract():
 
 
 def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
-    # load_file returning _MISSING (a previously-cached file vanishing
-    # under revalidation) makes this location a miss, not an error.
+    # load_file returning _MISSING (a cached file vanishing under revalidation) makes
+    # this location a miss, not an error.
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
         files={"data/a.yaml": "k: v\n"},
@@ -302,10 +302,9 @@ def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
 
 
 def test_data_hash_module_layer_prune_is_applied(tmp_path, make_tree, backends, script):
-    # `_prune` is set only for a module-owned level (core.Hiera._build_
-    # provider); a location-less data_hash entry in a module's own
-    # hiera.yaml is the only way to reach the "no location, or a uri"
-    # branch's own prune call.
+    # `_prune` is set only for a module-owned level; a location-less data_hash entry in
+    # a module's hiera.yaml is the only way to reach the "no location, or a uri"
+    # branch's prune call.
     base = make_tree(
         {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
         files={"data/g.yaml": "g: 1\n"},

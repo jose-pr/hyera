@@ -89,20 +89,11 @@ def test_deleted_file_reads_as_absent(make_tree):
 
 
 def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree):
-    # load_file's own absent-after-cached branch: a path successfully
-    # read and cached once, then found gone by a *later* call's fresh
-    # probe, reads as absent rather than an error -- distinct from
-    # test_deleted_file_reads_as_absent above, where the file is already
-    # gone by the time the *hierarchy* itself is next resolved (so this
-    # method's own cache is never even consulted for a location nothing
-    # upstream still thinks exists). Reaching this exact ordering through
-    # a real two-lookup sequence would need defeating several layers of
-    # scope-interpolation-stable caching above this method that have
-    # nothing to do with the file-content cache being tested here, so
-    # load_file is called directly instead -- the same way
-    # test_data_hash_load_file_missing_is_not_found above substitutes a
-    # fake implementation of this same method to test what a `_MISSING`
-    # return does one layer up.
+    # load_file's absent-after-cached branch: a path read and cached once, then found
+    # gone by a later call's fresh probe, reads as absent, not an error. Unlike
+    # test_deleted_file_reads_as_absent above, the hierarchy still lists the location.
+    # A real two-lookup sequence cannot reach it through the scope-interpolation-stable
+    # caches above, so load_file is called directly.
     from hyera._lookup.navigation import _MISSING
 
     root = make_tree(
@@ -166,10 +157,9 @@ def test_new_glob_match_after_directory_change(make_tree, revalidate):
 
 
 def _create(base, rel, text):
-    """Write ``base/rel``, creating missing directories, then bump the mtime
-    of the one directory that gained an entry (the deepest that already
-    existed) -- the only mtime a real creation changes, made visible however
-    coarse the filesystem's timestamps are."""
+    """Write ``base/rel``, creating directories, then bump the mtime of the deepest
+    directory that already existed: the only one a real creation changes, made
+    visible on filesystems with coarse timestamps."""
     target = base / rel
     gained = target.parent
     while not gained.is_dir():
@@ -306,10 +296,9 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
     # Untracked warm-up: builds and caches everything before counting.
     assert h.lookup("k") == "node_a"
 
-    # Keyed by (function name, path): os.scandir and os.stat are different
-    # real syscalls even when they land on the same path (a glob's own
-    # directory listing vs. a plain location's existence probe), so they
-    # are counted separately -- "probed once" is a per-function claim.
+    # Keyed by (function name, path): os.scandir (a glob's directory listing) and
+    # os.stat (a location's existence probe) are different syscalls even on the same
+    # path, and "probed once" is a per-function claim.
     counts = collections.Counter()
 
     def _wrap(name, fn):
@@ -334,13 +323,10 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
                 stat_counts[p] += c
         return max(stat_counts.values(), default=0)
 
-    # Every candidate -- a plain (non-glob) location or the glob-walked
-    # directory itself -- is probed at most once per lookup, on every
-    # platform/interpreter tested: a location build and its own
-    # materialization share one memo, and `_glob_one`'s own intermediate
-    # literal-segment descent (the "mods" directory, ahead of its wildcard
-    # segment) goes through that same memo rather than a bare
-    # `os.path.isdir`, so it never re-asks the filesystem either.
+    # Every candidate (a plain location or the glob-walked directory) is probed at most
+    # once per lookup: a location build and its materialization share one memo, and
+    # `_glob_one`'s descent through the literal "mods" segment uses it too, not a bare
+    # `os.path.isdir`.
 
     assert h.lookup("k") == "node_a"
     if revalidate:
@@ -352,12 +338,10 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
     counts.clear()
     new_view = h.scoped(variables={"clientcert": "b"})
     assert new_view.lookup("k") == "node_b"
-    # A new clientcert rebuilds the whole location entry (referenced
-    # variables changed), but every candidate -- including the ones whose
-    # own value did not change -- is still probed at most once for this
-    # lookup (build and materialize share one memo), and the mods glob's
-    # own cache is untouched (its own key never depended on clientcert),
-    # so no scandir happens here either.
+    # A new clientcert rebuilds the location entry (referenced variables changed), yet
+    # every candidate is still probed at most once (build and materialize share one
+    # memo), and the mods glob's cache, whose key never depended on clientcert, is
+    # untouched: no scandir happens.
     assert max_stat_per_path() <= 1, counts
     assert scandir_count() == 0, counts
 
