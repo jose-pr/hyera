@@ -1,6 +1,5 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb,
-# lib/puppet/pops/types/type_mismatch_describer.rb, lib/puppet/util/run_mode.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
+# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb, pops/types/type_mismatch_describer.rb,
+# util/run_mode.rb (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
 # See NOTICE.
 """The deprecated Hiera 3 hiera.yaml dialect: defaults, validation and levels.
 
@@ -45,11 +44,9 @@ def _fill_v3_defaults(data: dict) -> None:
         data["deep_merge_options"] = {}
 
 
-#: ``HieraConfigV3``'s own struct keys (``hiera_config.rb:355-370``), in
-#: schema-declaration order -- the order :func:`_validate_v3` reports
-#: mismatches in. A backend's own config key (``:yaml:``, ``:eyaml:``, ...)
-#: is a *dynamic* addition to this set, one per distinct name in
-#: ``backends`` (``:397``), so it is not listed here.
+#: ``HieraConfigV3``'s own struct keys (``hiera_config.rb:355-370``), in schema-declaration
+#: order: the order :func:`_validate_v3` reports mismatches in. A backend's own config key
+#: (``:yaml:``, ...) is added per name in ``backends`` (``:397``), so it is not listed.
 _V3_TOP_KEYS = (
     "version",
     "backends",

@@ -71,10 +71,9 @@ def _ruby_type_name(value) -> str:
     if value is None:
         return "Undef"
     if isinstance(value, RubySymbol):
-        # A Ruby Symbol value survives `symkeys_to_string` (only dict *keys*
-        # are normalized) and has no Puppet type of its own -- Puppet's own
-        # TypeCalculator reports it as a bare `Runtime` (probe
-        # `v3symmb`: `:merge_behavior: :deeper`).
+        # A Ruby Symbol value survives `symkeys_to_string` (only dict keys are
+        # normalized) and has no Puppet type of its own: Puppet's TypeCalculator
+        # reports a bare `Runtime`.
         return "Runtime"
     if isinstance(value, str):
         return "String"

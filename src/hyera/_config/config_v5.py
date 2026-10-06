@@ -97,12 +97,8 @@ def _config_line(text, where: "_ty.Tuple", *, key: bool = False):
     found = _step(node, where[-1])
     if found is None:
         return None
-    # _step's own two return shapes are (None, a real sequence-item node)
-    # for an int step, or (a real key node, a real value node) for a
-    # found mapping entry -- never a tuple whose second element is None,
-    # and the first element is only None in the int-step case, exactly
-    # when `key and k_node is not None` would be false anyway. So `target`
-    # is never None here.
+    # `_step` returns (None, an item node) for an int step and (a key node, a value
+    # node) for a mapping entry, so `target` is never None here.
     k_node, v_node = found
     target = k_node if key and k_node is not None else v_node
     return target.start_mark.line + 1
@@ -208,12 +204,8 @@ def _check_entry(entry, where: "_ty.Tuple", source) -> None:
             _msg(where, "expects a value for key 'name'"),
             line=_config_line(source.text, where),
         )
-    # Every key reaching this loop is already a member of _ENTRY_KEYS (the
-    # "unrecognized key" check above already rejected anything else), and
-    # the branches below cover _ENTRY_KEYS exactly: "name"/"datadir"/
-    # "options" (3), "path"/"glob"/"uri"/"paths"/"globs"/"uris"/
-    # "mapped_paths" (all 7 of _LOCATION_KEYS), and _ALL_FUNCTION_KEYS as a
-    # whole. So this never falls through without matching one of them.
+    # Every key here is in _ENTRY_KEYS (checked above) and the branches below cover
+    # _ENTRY_KEYS exactly, so the loop never falls through unmatched.
     for key, value in entry.items():
         if key == "name":
             _check_string(value, where + ("name",), source, nonempty=True)
@@ -260,12 +252,8 @@ def _check_defaults_type(value, where: "_ty.Tuple", source) -> None:
                 _msg(where, "unrecognized key '{}'".format(k)),
                 line=_config_line(source.text, where + (k,), key=True),
             )
-    # Every key reaching this loop is already a member of _DEFAULTS_KEYS
-    # (the "unrecognized key" check above already rejected anything else):
-    # "datadir"/"options" are handled by name, and the three remaining
-    # members (data_hash/lookup_key/data_dig) are exactly the _FUNCTION_KEYS
-    # entries _DEFAULTS_KEYS actually allows (hiera3_backend never reaches
-    # here at all -- see _function_of). So this never falls through either.
+    # Every key here is in _DEFAULTS_KEYS (checked above) and the branches below cover it
+    # exactly (hiera3_backend never reaches here: see _function_of).
     for key, v in value.items():
         if key == "datadir":
             _check_string(v, where + ("datadir",), source, nonempty=True)
@@ -283,12 +271,8 @@ def _check_top(data: dict, source: "_ConfigSource") -> None:
                 _msg((), "unrecognized key '{}'".format(k)),
                 line=_config_line(source.text, (k,), key=True),
             )
-    # Every key reaching this loop is already a member of _TOP_KEYS (the
-    # "unrecognized key" check above already rejected anything else):
-    # "version" is skipped by name, and the other four members
-    # (defaults/hierarchy/plan_hierarchy/default_hierarchy) are exactly
-    # what the two branches below name. So this never falls through
-    # without matching one of them either.
+    # Every key here is in _TOP_KEYS (checked above) and the branches below cover it
+    # exactly, so the loop never falls through unmatched.
     for key, value in data.items():
         if key == "version":
             continue  # already validated by _config_version
@@ -307,9 +291,8 @@ def _validate_defaults_issues(defaults: dict, source: "_ConfigSource") -> None:
     unrecognized key. This mirrors Puppet's own ``validate_defaults``
     exactly: its ``FUNCTION_KEYS`` list (and so this error's own message
     text) names ``hiera3_backend`` too, even though Puppet's own
-    ``defaults`` struct type excludes it the same way (confirmed against
-    ``hiera_config.rb``'s ``@@CONFIG_TYPE`` and a real Puppet 8.10 run,
-    see ``config-defaults-hiera3-backend-key``) -- kept as written, rather
+    ``defaults`` struct type excludes it the same way (``hiera_config.rb``'s
+    ``@@CONFIG_TYPE``; conformance case ``config-defaults-hiera3-backend-key``) -- kept as written, rather
     than narrowed, to stay a literal port.
     """
     if sum(1 for k in _FUNCTION_KEYS if k in defaults) > 1:

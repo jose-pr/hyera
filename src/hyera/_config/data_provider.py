@@ -1,8 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb,
-# data_provider.rb, module_data_provider.rb, environment_data_provider.rb,
-# lookup_key.rb, lib/puppet.rb, node/environment.rb, module.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0.
-# Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{lookup_adapter,data_provider,module_data_provider,
+# environment_data_provider,lookup_key}.rb, lib/puppet.rb, node/environment.rb, module.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """Layer discovery and per-layer config loading: the global, environment and
 module data providers behind Puppet's lookup provider stack
 (``lookup_adapter.rb``'s ``PROVIDER_STACK``), built on the single-config
@@ -380,10 +378,8 @@ def load_global_layer(base_config, base_path, backends, scope, codedir):
     ``hiera.yaml``.
     """
     backends = list(backends)
-    # Captured before reading the config: a relative version 3 datadir
-    # follows the process cwd AT CONSTRUCTION (Puppet's own
-    # ``Pathname(datadir)`` behavior, ``location_resolver.rb:56-66``),
-    # never the cwd of a later lookup.
+    # Captured before reading the config: a relative version 3 datadir follows the cwd at
+    # construction (``location_resolver.rb:56-66``), never a later lookup's cwd.
     cwd = Path(os.getcwd())
 
     source, base = _read_base_config(base_config, base_path)
@@ -393,20 +389,14 @@ def load_global_layer(base_config, base_path, backends, scope, codedir):
         raise ConfigError("No backends could be loaded")
 
     if version == 3:
-        # Global-layer version 3 (or versionless) config: read and
-        # validated in full against Puppet's own v3 schema. A version-3
-        # config outside the global layer is never read this way -- it
-        # is ignored (with a warning) or raised about by
-        # :func:`usable_provider` instead.
+        # Global-layer version 3 (or versionless) config: validated in full against the v3
+        # schema. Outside the global layer it is ignored or raised about by :func:`usable_provider`.
         hierarchy, default_hierarchy = _read_v3(
             base, source, scope, backends, codedir, cwd
         )
     elif version == 4:
-        # Puppet validates a version 4 config's own schema (building
-        # its provider list) before ever checking whether version 4 is
-        # allowed in this layer -- probed: a schema-invalid version 4
-        # file at the global layer raises its schema error, never this
-        # one. Only a config that validates reaches the layer check.
+        # Puppet validates a version 4 config's schema before checking that the layer allows
+        # version 4, so a schema-invalid file at the global layer raises its schema error.
         _read_v4(base, source, scope, backends)
         raise ConfigError(
             "hiera.yaml version 4 cannot be used in the global layer",

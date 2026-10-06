@@ -1,8 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb, context.rb,
-# lib/puppet/pops/issues.rb, pops/types/type_mismatch_describer.rb,
-# lib/puppet/util/run_mode.rb, lib/puppet/pops/lookup/location_resolver.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{hiera_config,context,location_resolver}.rb,
+# pops/issues.rb, pops/types/type_mismatch_describer.rb, util/run_mode.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """Hiera configuration: loading base config, building hierarchies and levels.
 
 Ports Puppet's ``pops/lookup/hiera_config.rb``, with the messages and
@@ -39,12 +37,9 @@ DEFAULT_CONFIG_HASH = {
     "hierarchy": [{"name": "Common", "path": "common.yaml"}],
 }
 
-#: Puppet's Hiera 3 default configuration (``hiera_config.rb:433-437``,
-#: ``HieraConfigV3::DEFAULT_CONFIG_HASH``): used both as the ``||=`` fill for
-#: missing/``false`` top-level v3 keys (:func:`_fill_v3_defaults`) and, via
-#: :func:`_read_base_config`, when a hiera.yaml exists but does not parse to
-#: a YAML hash at all (Puppet falls back to this, then reads it as v3, at
-#: every layer -- ``hiera_config.rb:139-144``). Every use deep-copies this.
+#: Puppet's Hiera 3 default configuration (``hiera_config.rb:433-437``): fills missing or
+#: ``false`` top-level v3 keys, and is read as v3 when a hiera.yaml parses to no hash
+#: (``hiera_config.rb:139-144``). Every use deep-copies it.
 V3_DEFAULT_CONFIG_HASH = {
     "backends": ["yaml"],
     "hierarchy": ["nodes/%{::trusted.certname}", "common"],
@@ -131,29 +126,21 @@ class HieraLevel(_ty.NamedTuple):
     #: The entry's own ``options``, else ``defaults``'s (never merged),
     #: exactly as declared -- interpolated per lookup, per scope, not here.
     options: "_ty.Optional[_ty.Dict[str, _ty.Any]]" = None
-    #: A version 3/``hiera3_backend`` extension, appended to each declared
-    #: ``path``/``paths`` location (after interpolation) unless it already
-    #: ends with it (``location_resolver.rb:59-61``). ``None`` for a v4/v5
-    #: level (Puppet appends the extension for those during config reading,
-    #: not at lookup time -- see :func:`_v4_levels`/:func:`_build_levels`).
+    #: A version 3/``hiera3_backend`` extension, appended to each declared ``path``/``paths``
+    #: location (after interpolation) unless already present (``location_resolver.rb:59-61``).
+    #: ``None`` for a v4/v5 level, whose extension is applied while reading the config.
     extension: "_ty.Optional[str]" = None
-    #: The root a version 3 level's ``datadir`` resolves against -- the
-    #: process cwd *at construction*, never the hiera.yaml
-    #: directory. ``None`` for a v4/v5 level, which uses the caller's own
-    #: ``base_path``.
+    #: The root a version 3 level's ``datadir`` resolves against: the process cwd at
+    #: construction, never the hiera.yaml directory. ``None`` for a v4/v5 level, which uses
+    #: the caller's ``base_path``.
     datadir_base: "_ty.Optional[Path]" = None
-    #: ``True`` for a version 4 level only: ``datadir`` is joined onto the
-    #: config root literally, with no interpolation at all
-    #: (``hiera_config.rb:525``, unlike v5's ``:664-665``) -- not even the
-    #: strict, method-free substitution every other level's ``datadir``
-    #: gets, since that would still trip over a literal ``%`` the way a
-    #: plain string substitution attempt (``allow_methods=False`` rules out
-    #: escaping it with ``%{literal('%')}``) cannot avoid.
+    #: ``True`` for a version 4 level only: ``datadir`` is joined onto the config root
+    #: literally, with no interpolation (``hiera_config.rb:525``, unlike v5's ``:664-665``),
+    #: so a literal ``%`` survives.
     datadir_literal: bool = False
-    #: ``True`` unless this is a version 3 or 4 level: only a version 5
-    #: hierarchy resolves an undefined variable in a location to ``''`` under
-    #: ``strict: error`` (``hiera_config.rb``'s ``avoid_hiera_interpolation_
-    #: errors``), the older readers let it fail the lookup.
+    #: ``True`` unless this is a version 3 or 4 level: only a version 5 hierarchy resolves an
+    #: undefined variable in a location to ``''`` under ``strict: error``
+    #: (``avoid_hiera_interpolation_errors``); the older readers fail the lookup.
     lenient_locations: bool = True
 
     def __hash__(self) -> int:
@@ -260,11 +247,8 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
         root = Path(os.getcwd() if base_path is None else base_path).absolute()
         return _ConfigSource("<dict>", None, None, root), copy.deepcopy(base_config)
 
-    # Read once, hold no open handle: keeps the caller's path/stream free to
-    # be replaced or pickled across, and leaves a stream at the caller's
-    # mercy. Decoded as strict UTF-8 -- Puppet reads every data file this
-    # way (``context.rb:53``) and ``hiera_config.rb`` parses ``hiera.yaml``
-    # with the same ``safe_load`` data files use.
+    # Read once, holding no open handle, so the caller's path or stream stays free to be
+    # replaced or pickled. Decoded as strict UTF-8, as Puppet reads every data file (``context.rb:53``).
     if hasattr(base_config, "read"):
         name = getattr(base_config, "name", None)
         label = str(name) if name else "<stream>"
@@ -305,18 +289,9 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     if problem is not None:
         raise ConfigError("({}): {}".format(label, problem), path=path)
     source = _ConfigSource(label, path, text, root)
-    # `puppet lookup` reads hiera.yaml via `HieraConfig.create` ->
-    # `cached_file_data` -> `Puppet::Util::Yaml.safe_load(content, ...)`
-    # directly on the file's content -- *not* through
-    # `Puppet::Util::Yaml.safe_load_file`'s BOM-stripping
-    # `Puppet::FileSystem.read(path, encoding: "bom|utf-8")`. A leading
-    # BOM therefore reaches `YAML.safe_load` exactly as it does for a
-    # data file (`context.rb:53`), keeping a literal U+FEFF character;
-    # measured 2026-09-29 against real Puppet 8.10.0 on a
-    # `<BOM>---\nversion: 5\n...` config (`config-hiera-yaml-bom`):
-    # Puppet errors identically to a data file with the same content, so
-    # this is *not* stripped here -- `YAMLBackend.loads` (via
-    # `_psych.safe_load`'s BOM-swap) handles it the same way.
+    # Puppet parses hiera.yaml's raw content with `Util::Yaml.safe_load`, not the BOM-stripping
+    # `safe_load_file`, so a leading BOM reaches the parser as in a data file (`context.rb:53`)
+    # and errors the same way; it is not stripped here (`YAMLBackend.loads` swaps it for a space).
     try:
         base = YAMLBackend().loads(text)
     except BackendError as e:

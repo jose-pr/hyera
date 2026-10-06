@@ -368,7 +368,7 @@ def _glob_one(
 
     ``on_scandir``, when given, is called with every directory path whose
     entries the walk consults, whether it lists them or tests a literal
-    child by name, and whether or not the directory exists -- used to record
+    child by name, and whether or not the directory exists -- which records
     what a listing depended on, for a later freshness check.
 
     ``probe_isdir``, when given, replaces the plain ``os.path.isdir(child)``
@@ -432,9 +432,8 @@ def _glob_one(
             and any(segments[i][0] == "magic" and segments[i][1](".") for i in pending)
         ):
             entries.append(_DotEntry())
-        # A literal segment is an existence check through the OS, so it
-        # follows the case rule of the filesystem holding the tree; only
-        # wildcards are always case-sensitive. A listing that lacks the exact
+        # A literal segment is an existence check through the OS and follows the filesystem's
+        # case rule; only wildcards are always case-sensitive. A listing that lacks the exact
         # spelling is asked about that one child.
         names = {e.name for e in entries}
         wanted = {}

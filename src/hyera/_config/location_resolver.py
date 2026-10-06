@@ -1,9 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/location_resolver.rb, the
-# location half of hiera_config.rb (https://github.com/puppetlabs/puppet),
-# Apache-2.0. Modified by jose-pr. See NOTICE.
-# Ported from Ruby uri/lib/uri/rfc3986_parser.rb
-# (https://github.com/ruby/uri), BSD-2-Clause. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/location_resolver.rb and hiera_config.rb
+# (https://github.com/puppetlabs/puppet, Apache-2.0) and Ruby uri/lib/uri/rfc3986_parser.rb
+# (https://github.com/ruby/uri, BSD-2-Clause). Modified by jose-pr. See NOTICE.
 """Location resolution: expanding hierarchy levels into candidate source paths.
 
 Resolves a :class:`~hyera._config.hiera_config.HieraLevel`'s ``path``/``paths``/
@@ -148,8 +145,8 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
 
 
 class _GlobSpec(_ty.NamedTuple):
-    """One ``glob``/``globs`` declared string, interpolated and rooted, but
-    not yet walked -- the interpolation half of ``_expand_globs``, split out
+    """One ``glob``/``globs`` declared string, interpolated and rooted, before
+    it is walked -- the interpolation half of ``_expand_globs``, split out
     so a caller (``_LocationStore.location_entry_for``) can defer the actual
     ``Dir.glob`` match listing to per-lookup materialization instead of
     paying for it on every hierarchy build."""
@@ -222,18 +219,8 @@ def _expand_globs(config_root, datadir, declared, invocation):
 
 
 # --- Ruby URI() acceptance and normalization (uri/rfc3986_parser.rb) -------
-#
-# A hand port of Ruby's RFC 3986 grammar (`RFC3986_Parser::HOST`, `USERINFO`,
-# `SCHEME`, `SEG`, `SEG_NC`, `FRAGMENT`, `RFC3986_URI`,
-# `RFC3986_relative_ref`), translated to Python `re` with only the changes
-# the language forces: `\h` -> `[0-9A-Fa-f]`; every `\g<name>` subroutine
-# call (a re-invocation of the named pattern, which `re` has no equivalent
-# for) inlined as that pattern's own text; possessive `*+`/`++` -> greedy
-# `*`/`+` (neither 3.9 nor 3.14 has possessive quantifiers, and a backtracking
-# greedy quantifier accepts exactly the same language here); group names
-# without a `-` (a Python identifier); `\A`/`\z` -> `fullmatch`. Only the
-# groups this module actually reads (`scheme`, `port`, `query`) are named;
-# everything else is a plain, non-capturing `(?:...)`.
+# A port of Ruby's RFC 3986 grammar to Python `re`: `\h` -> `[0-9A-Fa-f]`, `\g<name>` calls
+# inlined, possessive quantifiers made greedy (same language), only the groups read below named.
 _HEXDIG = "[0-9A-Fa-f]"
 _PCT = "%" + _HEXDIG + _HEXDIG
 _USERINFO = "(?:" + _PCT + "|[!$&-.0-9:;=A-Z_a-z~])*"
@@ -316,7 +303,7 @@ _RFC3986_RELATIVE_REF = re.compile(
 )
 
 #: Default port dropped by ``URI#to_s`` when it exactly matches the
-#: scheme's own default (measured against Ruby 4.0.7; only the schemes
+#: scheme's own default (as in Ruby 4.0.7; only the schemes
 #: Puppet's own oracle exercises are covered).
 _DEFAULT_PORTS = {
     "http": "80",

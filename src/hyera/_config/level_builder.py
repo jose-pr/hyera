@@ -64,9 +64,8 @@ def _function_of(entry: dict, defaults: dict):
     ``defaults`` only ever reaches here after ``_check_defaults_type``
     rejected any key outside ``_DEFAULTS_KEYS``, which excludes
     ``hiera3_backend`` -- the same restriction Puppet's own ``defaults``
-    struct type places on it (``hiera_config.rb``'s ``@@CONFIG_TYPE``,
-    confirmed against a real Puppet 8.10 run in
-    ``config-defaults-hiera3-backend-key``). Puppet's own
+    struct type places on it (``hiera_config.rb``'s ``@@CONFIG_TYPE``;
+    conformance case ``config-defaults-hiera3-backend-key``). Puppet's own
     ``function_kind = FUNCTION_KEYS.find { |key| defaults.include?(key) }``
     has the identical shape, so this stays a literal port rather than a
     narrower, hand-trimmed key list.
@@ -183,10 +182,9 @@ def _build_level(
             function, conf, kind="v3", strict=getattr(scope, "strict", None)
         )
     elif kind in ("data_hash", "lookup_key", "data_dig"):
-        # Puppet resolves the function (name and kind alike) only when it
-        # calls it for an existing location, so a level naming an unknown
-        # function is built anyway and raises on its first such call (see
-        # `_lookup.function_provider`); every other level keeps answering.
+        # Puppet resolves the function only when it calls it for an existing location, so a
+        # level naming an unknown function is built anyway and raises on its first such call
+        # (see `_lookup.function_provider`); every other level keeps answering.
         function = _function_name(function)
         resolved_cls = Backend.find(function, kind="function")
         if resolved_cls is None or resolved_cls not in backends:
@@ -247,13 +245,9 @@ def _build_levels(
             conf["options"] = options
 
         if kind == "hiera3_backend":
-            # Global-only (_validate_v5 already rejected this entry
-            # everywhere else); replaces a v5 data_hash function with a
-            # registered v3-namespace backend, matching Puppet's own
-            # strip-then-Hiera-3-appends extension rule
-            # (hiera_config.rb:692-714, hiera/backend.rb:57-58) by giving
-            # it the same "append unless already present" extension a v3
-            # `backends:` entry gets.
+            # Global-only (_validate_v5 rejects it elsewhere): replaces a v5 data_hash function with
+            # a registered v3-namespace backend, with the same "append unless already present"
+            # extension a v3 entry gets (hiera_config.rb:692-714, hiera/backend.rb:57-58).
             line = _config_line(source.text, (area, i, "hiera3_backend"), key=True)
             backend_cls = _v3_backend_class(func_name, source, line)
             levels.append(
