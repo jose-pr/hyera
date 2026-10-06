@@ -218,6 +218,17 @@ def test_data_dig_gets_segments_and_result_is_undug(make_tree, backends, calls, 
     assert calls[0][1] == ("a", "b", 0)
 
 
+def test_data_dig_negative_index_segment_is_a_miss(make_tree, backends, script):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_dig": "test_data_dig", "path": "a.yaml"}]},
+        files={"data/a.yaml": "x"},
+    )
+    script["data_dig"] = lambda key_segments, options, context: "leaf"
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("a.-1", default_value="D") == "D"
+    assert "a.-1" not in h
+
+
 @pytest.mark.parametrize("revalidate, expected_calls", [(True, 2), (False, 1)])
 def test_data_dig_result_lifetime_follows_revalidate(
     make_tree, backends, calls, script, revalidate, expected_calls

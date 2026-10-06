@@ -661,6 +661,9 @@ class _DataDigProvider(_FunctionProvider):
                     return _MISSING
                 _validate_provider_value(value, "data_dig", self.backend.name, label)
                 wrapped = undig(segments, value)
+                if wrapped is _MISSING:
+                    invocation.report_not_found(root)
+                    return _MISSING
                 self._keep(ctx, cache_key, wrapped, context, invocation)
                 return invocation.report_found(root, unshare(wrapped))
 

@@ -15,10 +15,12 @@ from hyera.exceptions import HieraLookupError
 from hyera._lookup.navigation import (
     _MISSING,
     _ruby_class,
+    _ruby_to_i,
     join_key,
     parse_lookup_key,
     split_key,
     sub_lookup,
+    undig,
 )
 
 
@@ -254,6 +256,18 @@ def test_nested_null_is_not_found(make_tree):
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "n: ~\n"})
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("n.x", default_value="D") == "D"
+
+
+def test_undig_rebuilds_the_path_and_refuses_a_negative_index():
+    assert undig(("b", 1), "v") == {"b": [None, "v"]}
+    assert undig(("b", -1), "v") is _MISSING
+    assert undig((), "v") == "v"
+
+
+def test_to_i_skips_ascii_whitespace_only():
+    assert _ruby_to_i(" \t\n9") == 9
+    assert _ruby_to_i("\N{LINE SEPARATOR}\n9") == 0
+    assert split_key("a.\N{LINE SEPARATOR}\n9", _make_error) == ["a", 0]
 
 
 def test_ruby_class_hash_and_other_fallbacks_direct():

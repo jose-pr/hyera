@@ -71,7 +71,7 @@ _SEGMENT_RE = re.compile(r"""(\s*"[^"]+"\s*|\s*'[^']+'\s*|[^'".]+)""", re.ASCII)
 #: signed digits, and nothing else.
 _INT_SEGMENT_RE = re.compile(r"^(:?[+-]?[0-9]+)$", re.M)
 #: Ruby ``String#to_i``: the leading signed-digit run, or 0 if there is none.
-_TO_I_RE = re.compile(r"\s*([+-]?[0-9]+)")
+_TO_I_RE = re.compile(r"\s*([+-]?[0-9]+)", re.ASCII)
 #: Ruby ``String#strip``'s character set (ASCII whitespace plus NUL);
 #: ``str.strip()`` with no arguments strips a wider Unicode set instead.
 _RUBY_STRIP_CHARS = " \t\n\v\f\r\0"
@@ -263,9 +263,14 @@ def undig(segments, value) -> object:
     per-level/per-location merge treat a ``data_dig`` result exactly like a
     ``data_hash`` root value, with the caller's own :func:`sub_lookup` over
     the same ``segments`` recovering the original leaf after the merge.
+
+    A negative index has no place in a list built this way: the result is
+    :data:`_MISSING`, a miss.
     """
     for segment in reversed(segments):
         if isinstance(segment, int) and not isinstance(segment, bool):
+            if segment < 0:
+                return _MISSING
             lst = [None] * (segment + 1)
             lst[segment] = value
             value = lst
