@@ -41,6 +41,29 @@ def test_scoped_copies_and_pickles(use_path, make_tree):
         assert clone.lookup("k") == s.lookup("k")
 
 
+def test_getvar_returns_a_copy_of_the_scope_value(make_tree):
+    from hyera import Scope
+
+    root = make_tree(
+        {"hierarchy": [{"name": "os", "path": "os/%{facts.os.family}.yaml"}]},
+        files={
+            "data/os/RedHat.yaml": 'k: redhat\nwho: "%{facts.os.family}"\n',
+            "data/os/Debian.yaml": "k: debian\n",
+        },
+    )
+    scope = Scope(facts={"os": {"family": "RedHat"}})
+    h = Hiera(str(root / "hiera.yaml"), scope=scope)
+    assert h.lookup("who") == "RedHat"
+
+    os_fact = h.getvar("facts.os")
+    os_fact["family"] = "Debian"
+
+    assert h.getvar("facts.os.family") == "RedHat"
+    assert h.lookup("who") == "RedHat"
+    assert h.lookup("k") == "redhat"
+    assert h.scope == Scope(facts={"os": {"family": "RedHat"}})
+
+
 def test_scoped_missing_attribute_raises_attribute_error(make_tree):
     h = _make_hiera(make_tree, use_path=False)
     s = h.scoped(environment="production")

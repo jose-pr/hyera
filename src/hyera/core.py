@@ -39,7 +39,7 @@ from ._config.hiera_config import (
     _validate_v5,
 )
 from ._lookup.function_provider import PROVIDER_CLASSES, _EnvironmentContext
-from ._lookup.interpolation import interpolate
+from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._config.location_resolver import glob as _dir_glob
 from ._config.location_resolver import resolve_glob_specs, resolve_locations
@@ -199,6 +199,30 @@ def _dir_state(probe) -> _ty.Optional[tuple]:
     ``(st_ino, st_mtime_ns)``, or ``None`` when it is not a directory (an
     absent directory is consulted too -- creating it must invalidate)."""
     return probe.sig[:2] if probe.kind == "dir" else None
+
+
+#: Cache attributes that take the shared lock themselves in ``clear()``.
+_LOCKED_CACHES = ("_location_cache", "_lookup_options_cache", "_glob_cache")
+#: Cache attributes cleared under the shared lock by :meth:`Hiera.clear_cache`.
+_PLAIN_CACHES = (
+    "_file_cache",
+    "_loaded_paths",
+    "_paths",
+    "_pruned_cache",
+    "_compiled_options_cache",
+    "_providers",
+    "_environment_context",
+)
+#: Everything :meth:`Hiera._init_caches` creates: a copy or an unpickled
+#: instance starts with none of it.
+_DERIVED_STATE = (
+    ("_cache_lock", "_generation", "_paths_limit") + _LOCKED_CACHES + _PLAIN_CACHES
+)
+#: The derived state a view keeps for itself: bound to one scope.
+_VIEW_OWN_STATE = ("_providers",)
+#: The intern table is pruned to the paths live entries hold once it grows
+#: past this many entries (or twice the live count, if larger).
+_PATHS_FLOOR = 1024
 
 
 def _puppet_type_label(value) -> str:
@@ -402,46 +426,8 @@ class Hiera:
         #: Paths already warned about for an ignored version-3 layer config
         #: (:meth:`_usable`), so the warning fires once per config file.
         self._v3_warned_paths: set = set()
-        #: ``(module_name, function_name, path) -> (parsed data, pruned
-        #: data)``, apart from the unpruned ``_file_cache`` a global/
-        #: environment read of the same file uses; valid while the parsed
-        #: data is the very object the pruned copy was made from.
-        self._pruned_cache: dict = {}
-        #: ``module_name -> (scope, compiled)``: the single most recent
-        #: ``_retrieve_lookup_options`` result for that ``module_name``, an
-        #: identity fast path exactly like ``_ScopeKeyedCache``'s own
-        #: ``_last`` (safe because ``Scope`` is immutable -- the same scope
-        #: object always composes to the same result). Composing the three
-        #: layers' already-cached raw gathers and re-running
-        #: ``validate_lookup_options``/``compile_patterns`` (which
-        #: recompiles every ``^``-prefixed pattern's regex) on every single
-        #: lookup would otherwise repeat that work for a ``lookup_options``
-        #: mapping that never changed. A miss here (a different scope, or a
-        #: ``module_name`` not seen before) just recomputes, exactly as
-        #: before this cache existed -- never a correctness fallback to get
-        #: right, only a speedup to get to skip.
-        self._compiled_options_cache: dict = {}
-
         self._hierarchy: "list[HieraLevel]" = []
         self._default_hierarchy: "list[HieraLevel]" = []
-        #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
-        #: keyed by ``(tag, base_path, level index)`` -- never shared with
-        #: another view (see :meth:`_view`), since a provider's interpolated
-        #: options are bound to exactly one scope. ``base_path``
-        #: disambiguates a level index across layers (the global hierarchy
-        #: and an environment's/module's each start their own indexing from
-        #: 0), and ``tag`` tells a module's ``default_hierarchy`` apart from
-        #: its main one (same root, a different level list). A provider
-        #: already cached here has its own ``.locations`` refreshed in place
-        #: on every call while ``revalidate=True`` (:meth:`_provider_for`),
-        #: rather than rebuilt, so a repeated lookup on the same view still
-        #: sees a changed/added/removed file.
-        self._providers: dict = {}
-        #: Shared with every view (like ``_file_cache``): the file-content
-        #: cache a ``lookup_key``/``data_dig`` provider's ``LookupContext.
-        #: cached_file_data`` reads through.
-        self._environment_context = _EnvironmentContext()
-
         self._init_caches()
 
         self._load_config(
@@ -455,6 +441,10 @@ class Hiera:
         mutation on all of them; a rebuild itself never runs under it.
         """
         self._cache_lock = threading.Lock()
+        #: Bumped by :meth:`clear_cache`; shared by an instance and its
+        #: views. A provider built under an older value is rebuilt, which
+        #: drops the data it holds.
+        self._generation = [0]
         #: Resolved hierarchy locations for one ``(tag, base_path)`` layer,
         #: keyed on the values of the variables their own interpolation
         #: reads (``_cache.py``), not on the whole scope -- see
@@ -475,6 +465,7 @@ class Hiera:
         #: ``_file_cache``: ``s -> s`` so equal paths from independent
         #: builds share one string object.
         self._paths: dict = {}
+        self._paths_limit = [_PATHS_FLOOR]
         #: Parsed data files: ``(path, backend.strict, options) ->
         #: _FileEntry``. See ``_load_file``. Unbounded, as Puppet's own
         #: per-environment file cache is (its size follows the data tree,
@@ -490,6 +481,42 @@ class Hiera:
         #: not on scope, so a plain ``_LRU`` is enough). See
         #: :meth:`_glob_matches`.
         self._glob_cache = _LRU(self._cache_lock, self._cache_size)
+        #: ``(module_name, function_name, path) -> (parsed data, pruned
+        #: data)``, apart from the unpruned ``_file_cache`` a global/
+        #: environment read of the same file uses; valid while the parsed
+        #: data is the very object the pruned copy was made from.
+        self._pruned_cache: dict = {}
+        #: ``module_name -> (scope, compiled)``: the single most recent
+        #: ``_retrieve_lookup_options`` result for that ``module_name``, an
+        #: identity fast path exactly like ``_ScopeKeyedCache``'s own
+        #: ``_last`` (safe because ``Scope`` is immutable -- the same scope
+        #: object always composes to the same result). Composing the three
+        #: layers' already-cached raw gathers and re-running
+        #: ``validate_lookup_options``/``compile_patterns`` (which
+        #: recompiles every ``^``-prefixed pattern's regex) on every single
+        #: lookup would otherwise repeat that work for a ``lookup_options``
+        #: mapping that never changed. A miss here (a different scope, or a
+        #: ``module_name`` not seen before) just recomputes, exactly as
+        #: before this cache existed -- never a correctness fallback to get
+        #: right, only a speedup to get to skip.
+        self._compiled_options_cache: dict = {}
+        #: Per-(Hiera instance or ``h.scoped(...)`` view) function providers,
+        #: keyed by ``(tag, base_path, level index)`` -- never shared with
+        #: another view (see :meth:`_view`), since a provider's interpolated
+        #: options are bound to exactly one scope. ``base_path``
+        #: disambiguates a level index across layers (the global hierarchy
+        #: and an environment's/module's each start their own indexing from
+        #: 0), and ``tag`` tells a module's ``default_hierarchy`` apart from
+        #: its main one (same root, a different level list). A provider
+        #: already cached here has its own ``.locations`` refreshed in place
+        #: on every call while ``revalidate=True`` (:meth:`_provider_for`),
+        #: rather than rebuilt, so a repeated lookup on the same view still
+        #: sees a changed/added/removed file.
+        self._providers: dict = {}
+        #: Shared with every view (like ``_file_cache``): the file-content
+        #: cache a ``lookup_key``/``data_dig`` provider's ``LookupContext.
+        #: cached_file_data`` reads through.
+        self._environment_context = _EnvironmentContext()
 
     def clear_cache(self) -> None:
         """Drop every cached location, ``lookup_options`` mapping, glob
@@ -505,17 +532,14 @@ class Hiera:
         during an instance's life is out of this method's scope, same as the
         base config itself.
         """
-        self._location_cache.clear()
-        self._lookup_options_cache.clear()
-        self._glob_cache.clear()
         with self._cache_lock:
-            self._file_cache.clear()
-            self._loaded_paths.clear()
-            self._paths.clear()
-        self._pruned_cache.clear()
-        self._compiled_options_cache.clear()
-        self._providers.clear()
-        self._environment_context.clear()
+            self._generation[0] += 1
+        for name in _LOCKED_CACHES:
+            getattr(self, name).clear()
+        with self._cache_lock:
+            for name in _PLAIN_CACHES:
+                getattr(self, name).clear()
+            self._paths_limit[0] = _PATHS_FLOOR
 
     def __getstate__(self) -> _ty.Dict[str, _ty.Any]:
         """Drop every cache and the lock they share -- a ``threading.Lock``
@@ -525,14 +549,7 @@ class Hiera:
         including re-reading (and, for sops, re-decrypting) every data file.
         """
         state = self.__dict__.copy()
-        for name in (
-            "_cache_lock",
-            "_location_cache",
-            "_lookup_options_cache",
-            "_paths",
-            "_file_cache",
-            "_glob_cache",
-        ):
+        for name in _DERIVED_STATE:
             del state[name]
         return state
 
@@ -653,7 +670,33 @@ class Hiera:
         share one string object, which is what makes a :class:`_Location`
         cheap to hold in every cache entry that resolves to it."""
         s = os.fspath(p)
-        return self._paths.setdefault(s, s)
+        paths = self._paths
+        interned = paths.setdefault(s, s)
+        if len(paths) > self._paths_limit[0]:
+            self._prune_paths()
+        return interned
+
+    def _prune_paths(self) -> None:
+        """Shrink the intern table to the paths a live location entry or
+        glob listing holds, so it does not outgrow the bounded caches whose
+        entries it was filled for. The next prune waits until the table
+        has doubled."""
+        live: dict = {}
+        with self._cache_lock:
+            entries = list(self._location_cache._entries.values())
+            listings = list(self._glob_cache._entries.values())
+        for entry in entries:
+            for locations in entry.levels:
+                for loc in locations or ():
+                    if isinstance(loc, _Location) and not loc.is_uri:
+                        live[loc.location] = loc.location
+        for listing in listings:
+            for match in listing.matches:
+                live[match] = match
+        with self._cache_lock:
+            self._paths.clear()
+            self._paths.update(live)
+            self._paths_limit[0] = max(_PATHS_FLOOR, 2 * len(live))
 
     def _load_file(self, path, backend, options, invocation=None):
         """Load ``path`` via ``backend.data_hash(path, options)``, returning
@@ -898,7 +941,7 @@ class Hiera:
         (:func:`~hyera._config.location_resolver.resolve_locations`), distinct from
         one that resolves to zero candidates.
         """
-        kind = ("locations", tag, base_path)
+        kind = ("locations", tag, base_path, id(hierarchy))
         cached = self._location_cache.get(kind, scope)
         if cached is not _MISSING:
             return cached
@@ -1103,11 +1146,21 @@ class Hiera:
         no part in the cache key, since a level's owning module never
         changes once built.
         """
-        key = (tag, base_path, index)
+        key = (tag, base_path, id(hierarchy), index)
         provider = self._providers.get(key)
+        generation = self._generation[0]
+        if provider is not None and provider.generation != generation:
+            provider = None
         if provider is None:
             provider = self._build_provider(
-                hierarchy, index, scope, base_path, tag, invocation, module_name
+                hierarchy,
+                index,
+                scope,
+                base_path,
+                tag,
+                invocation,
+                module_name,
+                generation,
             )
             self._providers[key] = provider
         elif self._revalidate:
@@ -1117,7 +1170,15 @@ class Hiera:
         return provider
 
     def _build_provider(
-        self, hierarchy, index, scope, base_path, tag, invocation, module_name=None
+        self,
+        hierarchy,
+        index,
+        scope,
+        base_path,
+        tag,
+        invocation,
+        module_name=None,
+        generation=0,
     ):
         """Build one level's provider for ``scope``: interpolate its
         ``options`` (strict mode, no method calls -- ``hiera_config.rb:691``,
@@ -1143,12 +1204,6 @@ class Hiera:
             hierarchy, index, base_path, scope, tag, invocation
         )
         provider_cls = PROVIDER_CLASSES[level.kind]
-        prune = None
-        if module_name is not None:
-
-            def prune(data, function_name, path, _mod=module_name):
-                return self._pruned_module_data(data, _mod, function_name, path)
-
         return provider_cls(
             level.name,
             level.backend,
@@ -1157,11 +1212,13 @@ class Hiera:
             self._environment_context,
             scope.environment,
             load_file=self._load_file,
-            prune=prune,
+            module_name=module_name,
+            prune=self._pruned_module_data if module_name is not None else None,
             revalidate=self._revalidate,
+            generation=generation,
         )
 
-    def _pruned_module_data(self, data, module_name, function_name, path):
+    def _pruned_module_data(self, module_name, data, function_name, path):
         if path is None:
             return prune_module_data(data, module_name, function_name, path)
         key = (module_name, function_name, path)
@@ -1546,7 +1603,8 @@ class Hiera:
         # ``_file_cache``/``_glob_cache``, all keyed on the scope value
         # itself or not at all, and ``_environment_context``, whose file
         # cache has no scope at all).
-        view._providers = {}
+        for name in _VIEW_OWN_STATE:
+            setattr(view, name, {})
         return view
 
     def sources(self) -> _ty.List[str]:
@@ -1675,7 +1733,7 @@ class Hiera:
         scope = invocation.scope
         entry = self._location_entry_for(hierarchy, base_path, scope, tag, invocation)
         materialized = self._materialize(entry, invocation)
-        kind = ("lookup_options", tag, base_path)
+        kind = ("lookup_options", tag, base_path, id(hierarchy))
         if self._revalidate:
             versions = tuple(
                 (
@@ -1699,7 +1757,7 @@ class Hiera:
             return cached
 
         guard = invocation._state
-        pending_key = (scope, tag, base_path)
+        pending_key = (scope, tag, base_path, id(hierarchy))
         if pending_key in guard.pending:
             guard.hits += 1
             return _LO_ABSENT
@@ -2263,7 +2321,7 @@ class Hiera:
             variable name, or a navigation error was reached with no
             ``block``.
         """
-        return _data_functions.getvar(self.scope, dotted, default_value, block)
+        return unshare(_data_functions.getvar(self.scope, dotted, default_value, block))
 
     def explain(
         self,

@@ -331,7 +331,8 @@ since Hiera data is dynamic.
     by `.` or the string's end, else `HieraLookupError("'getvar' The given
     string does not start with a valid variable name")`. An undefined
     variable returns `default_value` regardless of the bound scope's
-    `strict` — never raises for that alone.
+    `strict` — never raises for that alone. A list/dict result is a copy,
+    never the scope's own object.
   - **`.explain(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, explain_options=False)`**
     — what `puppet lookup --explain`/`--explain-options` shows: takes
     exactly `.lookup()`'s own signature and dispatcher (the same five call
@@ -424,7 +425,8 @@ since Hiera data is dynamic.
     still re-checks: each candidate location is re-probed once, a data file
     whose inode, modification time or size changed is re-read, a location
     that starts or stops existing is seen, and a glob level is re-listed
-    only when a directory it walked has itself changed — one probe per
+    only when a directory it walked or tested a name in (absent ones
+    included) has itself changed — one probe per
     candidate and one re-list per changed directory, never a full re-walk
     of every glob on every lookup. With `revalidate=False`, files and
     listings stay exactly as first read for a given set of referenced
@@ -438,18 +440,17 @@ since Hiera data is dynamic.
     what it read at construction). `Hiera` (a `.scoped(...)` view included)
     survives `copy.deepcopy` and `pickle` (a spawn-start process pool can
     receive one; a relative config path stays relative to the receiving
-    process's working directory): every cache (location, `lookup_options`,
-    parsed-file, glob-listing) and the lock they share do NOT survive a
-    copy — each starts empty, so the next lookup re-reads every data file
-    (re-decrypting sops plaintext along with it) and rebuilds whatever else
-    it needs (`Scope`'s own warning-dedup state is NOT carried over
-    verbatim either — its internal lock cannot be pickled, so a copy starts
-    with the same dedup keys but a fresh, unlocked mutex). The same is NOT
-    true of an `eyaml_lookup_key`/other `lookup_key`/`data_dig` hierarchy
-    entry: its result (decrypted plaintext included) lives in the view's
-    own per-provider `LookupContext` cache (see "Backends" below), which is
-    a plain instance attribute `copy.deepcopy`/`pickle` copies right along
-    with the rest of the instance, unlike the caches above.
+    process's working directory): all derived state does NOT survive a
+    copy (`copy.copy` included) — locations, `lookup_options`, parsed files,
+    glob listings, module data, function providers with their kept results
+    and `LookupContext` caches, and the lock they share. Each copy starts
+    empty and independent of the original, so the next lookup re-reads every
+    data file (re-decrypting sops plaintext along with it) and rebuilds
+    whatever else it needs (`Scope`'s own warning-dedup state is NOT carried
+    over verbatim either — its internal lock cannot be pickled, so a copy
+    starts with the same dedup keys but a fresh, unlocked mutex).
+    `clear_cache()` on an instance or on any of its views reaches all of
+    them, function providers included.
     Concurrent `.lookup()` calls on one instance (or its views) from
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches under one lock per instance (untested on free-threaded

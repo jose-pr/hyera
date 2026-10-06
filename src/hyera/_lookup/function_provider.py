@@ -427,8 +427,10 @@ class _FunctionProvider:
         environment_context: _EnvironmentContext,
         environment_name,
         load_file=None,
+        module_name=None,
         prune=None,
         revalidate=True,
+        generation=0,
     ):
         self.name = name
         self.backend = backend
@@ -443,13 +445,17 @@ class _FunctionProvider:
         #: through ``load_file`` again (probe-checked) or can be reused
         #: outright (:meth:`_DataHashProvider.key_lookup`).
         self._revalidate = revalidate
-        #: ``(data, function_name, location) -> data``, set only for a level
-        #: owned by a module (``core.Hiera._build_provider``): Puppet's
-        #: module-data namespace rule
-        #: (:func:`~hyera._config.data_provider.prune_module_data`) applied to a
-        #: ``data_hash`` result only -- a ``lookup_key``/``data_dig`` value
-        #: is never pruned (``data_hash_function_provider.rb:72``).
+        #: The owning module, and ``(module_name, data, function_name,
+        #: location) -> data``; both set only for a level owned by a module
+        #: (``core.Hiera._build_provider``): Puppet's module-data namespace
+        #: rule (:func:`~hyera._config.data_provider.prune_module_data`)
+        #: applied to a ``data_hash`` result only -- a ``lookup_key``/
+        #: ``data_dig`` value is never pruned
+        #: (``data_hash_function_provider.rb:72``).
+        self._module_name = module_name
         self._prune = prune
+        #: ``Hiera.clear_cache()``'s counter when this provider was built.
+        self.generation = generation
         self._contexts: dict = {}
 
     def options_for(self, location) -> dict:
@@ -551,7 +557,9 @@ class _DataHashProvider(_FunctionProvider):
                     label = path
                     _validate_data_hash(data, self.backend.name, label)
                     if self._prune is not None:
-                        data = self._prune(data, self.backend.name, label)
+                        data = self._prune(
+                            self._module_name, data, self.backend.name, label
+                        )
                     ctx.data_hash = data
                     ctx.label = label
                 data = ctx.data_hash
@@ -566,7 +574,9 @@ class _DataHashProvider(_FunctionProvider):
                     raw = self.backend.data_hash(None, options)
                     _validate_data_hash(raw, self.backend.name, label)
                     if self._prune is not None:
-                        raw = self._prune(raw, self.backend.name, label)
+                        raw = self._prune(
+                            self._module_name, raw, self.backend.name, label
+                        )
                     ctx.data_hash = raw
                     ctx.label = label
                 data = ctx.data_hash

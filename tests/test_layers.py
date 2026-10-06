@@ -11,6 +11,7 @@ added alongside those features.
 import copy
 import logging
 import os
+import pickle
 
 import pytest
 
@@ -676,6 +677,72 @@ def test_two_locationless_module_levels_serve_their_own_data(
     )
     assert h.lookup("m::a") == "from-A"
     assert h.lookup("m::b") == "from-B"
+
+
+def test_instance_pickles_after_looking_up_a_module_key(tmp_path, make_tree):
+    base, modules = _module_tree(tmp_path, make_tree, {"c.yaml": "m::k: v\n"})
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[modules])
+    assert h.lookup("m::k") == "v"
+    for obj in (h, h.scoped(variables={"x": 1})):
+        clone = pickle.loads(pickle.dumps(obj))
+        assert clone.lookup("m::k") == "v"
+        assert copy.deepcopy(obj).lookup("m::k") == "v"
+
+
+_ROOT_GLOBAL = {
+    "version": 5,
+    "defaults": {"datadir": "gdata", "data_hash": "yaml_data"},
+    "hierarchy": [{"name": "global-only", "path": "g.yaml"}],
+}
+_ROOT_ENV = (
+    "version: 5\n"
+    "defaults: {datadir: data, data_hash: yaml_data}\n"
+    "hierarchy:\n"
+    '  - {name: node, path: "nodes/%{trusted.certname}.yaml"}\n'
+    '  - {name: os, path: "os/%{facts.osfam}.yaml"}\n'
+    "  - {name: common, path: common.yaml}\n"
+)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{}, {"revalidate": False}, {"cache_size": 0}],
+    ids=["default", "no-reval", "no-cache"],
+)
+def test_layers_rooted_at_the_same_directory_keep_their_own_hierarchies(
+    tmp_path, kwargs
+):
+    envroot = tmp_path / "envs" / "production"
+    _write(envroot / "hiera.yaml", _ROOT_ENV)
+    _write(envroot / "gdata" / "g.yaml", "gk: from-global\n")
+    _write(envroot / "data" / "common.yaml", "ek: from-env-common\nboth: env-common\n")
+    _write(envroot / "data" / "os" / "RedHat.yaml", "osk: from-env-os\nboth: env-os\n")
+    h = Hiera(
+        _ROOT_GLOBAL,
+        base_path=str(envroot),
+        scope=Scope(trusted={"certname": "n1"}, facts={"osfam": "RedHat"}),
+        environmentpath=str(tmp_path / "envs"),
+        **kwargs,
+    )
+    assert h.lookup("gk") == "from-global"
+    assert h.lookup("ek") == "from-env-common"
+    assert h.lookup("osk") == "from-env-os"
+    assert h.lookup("both") == "env-os"
+    assert "from-env-common" in h.explain("ek").text()
+
+
+def test_layers_with_one_level_each_rooted_at_the_same_directory(tmp_path):
+    envroot = tmp_path / "envs" / "production"
+    _write(
+        envroot / "hiera.yaml",
+        "version: 5\ndefaults: {datadir: envdata, data_hash: yaml_data}\n"
+        "hierarchy:\n  - {name: env-common, path: common.yaml}\n",
+    )
+    _write(envroot / "data" / "common.yaml", "gk: from-global-default-config\n")
+    _write(envroot / "envdata" / "common.yaml", "ek: from-env\n")
+    h = Hiera(None, base_path=str(envroot), environmentpath=str(tmp_path / "envs"))
+    assert h.lookup("gk") == "from-global-default-config"
+    assert h.lookup("ek") == "from-env"
 
 
 def test_modulepath_rejects_a_non_path_entry(make_tree):
