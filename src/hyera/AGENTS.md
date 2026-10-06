@@ -1280,11 +1280,8 @@ Every class above is importable directly from `hyera` (e.g.
   `_puppet_argv`, which joins a long value option with its following token
   (`--opt value` -> `--opt=value`) so a value that itself looks like an
   option (`--knock-out-prefix --`, `--default -x`) reaches argparse the way
-  Puppet's own parser would consume it; a value that is exactly `"--"` (in either the two-token or the `--opt=--`
-  spelling) is additionally routed through an internal placeholder, working around a
-  CPython `argparse` bug (fixed in 3.13, present on this project's 3.9
-  floor) that empties a single-value option's own value when it is
-  literally `"--"`.
+  Puppet's own parser would consume it; a value that is exactly `"--"`
+  (two-token or `--opt=--`, also in an MCP tool call) is kept as the value.
   Tokens after a bare `--` (not itself following a value option) go to
   duho's own passthrough, treated as more keys — Puppet's own
   "everything after this is a key" convention — and never reach
@@ -1469,8 +1466,7 @@ Not supported:
   `--compile`.
 - `--render-as binary|msgpack|console|flat|rich_data_json`, `-V`, underscore
   spellings of a hyphenated flag, abbreviated options, Ruby's JSON float
-  text, an empty `--environment`, and an MCP `knock_out_prefix` of exactly
-  `--` (the MCP server refuses it).
+  text and an empty `--environment`.
 - The GPG eyaml encryption scheme — detected and reported as an
   unsupported plugin; only PKCS7 is implemented.
 - Type aliases (`Stdlib::*`, user-defined) and `Timespan`/`Timestamp`/

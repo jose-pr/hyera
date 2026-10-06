@@ -596,6 +596,56 @@ def test_mcp_stdio_serves_lookup(hiera_root):
     assert replies[2]["result"]["content"] == [{"type": "text", "text": "myapp\n"}]
 
 
+def test_mcp_tool_call_accepts_double_dash_as_the_knockout_prefix(flags_root):
+    # An option value that is exactly "--" is a valid tool argument, not an
+    # invalid-arguments error: the knockout prefix applies to the merge.
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "hyera",
+                "arguments": {
+                    "keys": ["h"],
+                    "hiera_config": str(flags_root / "hiera.yaml"),
+                    "facts": str(flags_root / "facts.yaml"),
+                    "merge": "deep",
+                    "knock_out_prefix": "--",
+                    "render_as": "json",
+                },
+            },
+        },
+    ]
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera"],
+        input="".join(json.dumps(m) + "\n" for m in messages),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HYERA_MCP": "stdio", "PYTHONPATH": _SRC},
+        timeout=120,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    reply = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}[2]
+    assert "error" not in reply, reply
+    assert json.loads(reply["result"]["content"][0]["text"]) == {
+        "items": ["a", "c", "d"],
+        "rows": [{"y": 2}, {"x": 1}],
+    }
+
+
 def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, capsys):
     # The MCP trigger env var name must come from Lookup's own declared
     # `_parsername_`, not from sys.argv[0]'s stem -- otherwise embedding

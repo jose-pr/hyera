@@ -27,7 +27,7 @@ except ModuleNotFoundError as _e:
 from .. import __version__
 from ..exceptions import BackendError, KeyNotFoundError
 from ..backends import Backend
-from ._argv import _puppet_argv, _restored
+from ._argv import _free_text, _puppet_argv
 from ._options import _merge_options
 from ._run import _describe, _render, _resolve
 from ._scope import (
@@ -147,7 +147,7 @@ if duho is not None:
 
             :returns: the process exit code.
             """
-            opts = _restored(self)
+            opts = _free_text(self)
             keys = list(self.keys or ()) + list(self._passthrough_ or ())
             try:
                 merge_options = _merge_options(

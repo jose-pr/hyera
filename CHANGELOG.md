@@ -74,9 +74,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sys.stdout` and `sys.stderr` encodings alone.
 - `hyera.cli` is a package; `hyera.cli:main`, `python -m hyera`,
   `python -m hyera.cli`, `hyera.cli.Lookup` and `hyera.cli.main` are unchanged.
+- The `cli` extra requires `duho` 0.6.4 or later.
 
 ### Fixed
 
+- The knockout prefix `--` (and any option value that is exactly `--`) can
+  be sent in an MCP tool call; the server refused it.
 - A deep merge of a Hash over a non-Hash (a String at a lower level, say)
   merges every key after the first as Puppet does: arrays of the later keys
   lose duplicates and honour `knockout_prefix`. A `knockout_prefix` also

@@ -51,7 +51,7 @@ pip install hyera
 
 | Extra | Install | Adds | Needed for |
 | --- | --- | --- | --- |
-| `cli` | `pip install "hyera[cli]"` | `duho>=0.6.0,<0.7` | the `hyera` command / `python -m hyera` |
+| `cli` | `pip install "hyera[cli]"` | `duho>=0.6.4,<0.7` | the `hyera` command / `python -m hyera` |
 | `hocon` | `pip install "hyera[hocon]"` | `pyhocon>=0.3.62,<0.4` | `hocon_data` hierarchy levels |
 | `eyaml` | `pip install "hyera[eyaml]"` | `cryptography>=50.0,<51` | `eyaml_lookup_key` (PKCS7) levels |
 
@@ -722,7 +722,6 @@ locations and under globbed directories are seen by the next lookup.
 | `-V` | Not supported | use `--version`. |
 | Underscore and hyphen spellings of a flag (`--hiera-config`, `--render_as`, `--knock_out_prefix`) | Not supported | only the spellings under [Command line](#command-line) are accepted, and an option cannot be abbreviated (`--expl`). |
 | `--render-as json` float text | Not supported | floats print in Python's spelling (`1e-05`, `1000000000000000.0`), where Puppet's Ruby prints `0.00001` and `1e+15`; a `nil` hash key prints `"null"`. |
-| An MCP call with `knock_out_prefix` of exactly `--` | Not supported | the MCP server refuses a value of `--`; use the command line, or another prefix. |
 | An empty `--environment` | Not supported | Puppet falls back to its default environment; hyera reports an error. |
 | `--compile`/`--trusted` | Not supported | |
 | `calling_class`/`calling_module` | Not supported | |
