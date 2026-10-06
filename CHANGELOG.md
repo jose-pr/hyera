@@ -6,6 +6,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `BackendTimeoutError`, a `BackendError` that is also a `TimeoutError`, raised
+  when `sops` or `facter` exceeds its time limit. The child and every process
+  it started are killed.
+- `SopsBackend(timeout=...)`, and `SOPS_TIMEOUT` in `hyera.backends.__all__`.
+
+### Fixed
+
+- `hyera.backends.SOPS_TIMEOUT = n` changes the `sops` timeout; it was
+  documented but read from a private copy.
+- `sops` and `facter` run with their standard input closed instead of the
+  caller's, which under `HYERA_MCP=stdio` is the protocol stream.
+- `facts_from_facter` no longer runs a `facter.bat` found relative to the
+  current directory (Windows, Python 3.9 to 3.11); a relative resolution is
+  refused for both programs, a batch file at an absolute path still runs for
+  `facter`.
+- A `sops` failure keeps its own message (`sops executable not found`, `sops
+  failed (exit n)`) instead of being relabelled "Unable to parse", and quotes
+  at most the last 2,000 characters of stderr.
+- Registering a backend name that a registered pattern already answers to, or
+  a pattern that matches a registered name, raises `ValueError` naming both
+  classes.
+
 ## [0.0.0] - 2026-10-01
 
 ### Added

@@ -271,3 +271,68 @@ def test_hocon_check_available_names_extra(monkeypatch):
         HOCONBackend.check_available()
     assert "pyhocon" in str(excinfo.value)
     assert "hyera[hocon]" in str(excinfo.value)
+
+
+def test_exact_name_answered_by_a_registered_pattern_raises():
+    assert Backend.find("sops_yaml") is not None
+
+    with pytest.raises(ValueError, match="sops_yaml.*SopsBackend.*Hijack"):
+
+        class Hijack(Backend):
+            NAMES = {"function": ("sops_yaml",)}
+
+    assert Backend.find("sops_yaml").__name__ == "SopsBackend"
+
+
+def test_pattern_matching_a_registered_exact_name_raises():
+    with pytest.raises(ValueError, match="yaml_data.*YAMLBackend.*Greedy"):
+
+        class Greedy(Backend):
+            NAMES = {
+                "function": (NamePattern("any_<x>", re.compile(r"(?P<x>[a-z]+)_data")),)
+            }
+
+    assert Backend.find("yaml_data").__name__ == "YAMLBackend"
+
+
+def test_one_class_cannot_register_a_name_and_a_pattern_that_overlap():
+    with pytest.raises(ValueError, match="dup_1.*Both"):
+
+        class Both(Backend):
+            NAMES = {
+                "function": (
+                    "dup_1",
+                    NamePattern("dup_<n>", re.compile(r"dup_(?P<n>\d+)")),
+                )
+            }
+
+    with pytest.raises(ValueError, match="dup_1.*Both"):
+
+        class Both(Backend):  # noqa: F811
+            NAMES = {
+                "function": (
+                    NamePattern("dup_<n>", re.compile(r"dup_(?P<n>\d+)")),
+                    "dup_1",
+                )
+            }
+
+
+def test_the_same_name_in_another_kind_is_not_a_clash():
+    class Elsewhere(Backend):
+        NAMES = {"format": ("sops_yaml",)}
+
+        def loads(self, text):
+            return {}
+
+    assert Backend.find("sops_yaml", kind="format") is Elsewhere
+    assert Backend.find("sops_yaml").__name__ == "SopsBackend"
+
+
+def test_default_backends_returns_the_five_built_in_classes():
+    assert [cls.__name__ for cls in default_backends()] == [
+        "YAMLBackend",
+        "JSONBackend",
+        "HOCONBackend",
+        "SopsBackend",
+        "EyamlBackend",
+    ]

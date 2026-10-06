@@ -205,6 +205,19 @@ class Backend:
                                     entry.display, kind, other.__name__, cls.__name__
                                 )
                             )
+                    for exact, other in registry["exact"].items():
+                        if entry.regex.fullmatch(exact):
+                            raise ValueError(
+                                "pattern {!r} ({} kind) would take over the "
+                                "name {!r} registered to {}; {} cannot "
+                                "register it".format(
+                                    entry.display,
+                                    kind,
+                                    exact,
+                                    other.__name__,
+                                    cls.__name__,
+                                )
+                            )
                     registry["patterns"].append((entry, cls))
                 else:
                     other = registry["exact"].get(entry)
@@ -215,6 +228,19 @@ class Backend:
                                 entry, kind, other.__name__, cls.__name__
                             )
                         )
+                    for pattern, other in registry["patterns"]:
+                        if pattern.regex.fullmatch(entry):
+                            raise ValueError(
+                                "{!r} ({} kind) is already answered by the "
+                                "pattern {!r} of {}; {} cannot register "
+                                "it".format(
+                                    entry,
+                                    kind,
+                                    pattern.display,
+                                    other.__name__,
+                                    cls.__name__,
+                                )
+                            )
                     registry["exact"][entry] = cls
 
     # -- lookup -----------------------------------------------------------
@@ -558,7 +584,7 @@ from ._eyaml import EyamlBackend
 
 def default_backends() -> "_ty.List[_ty.Type[Backend]]":
     """The distinct backend classes registered in the ``function``
-    namespace, in definition order (YAML, JSON, HOCON, sops).
+    namespace, in definition order (YAML, JSON, HOCON, sops, eyaml).
 
     :returns: the default ``Hiera(backends=...)`` allow-list.
     """
