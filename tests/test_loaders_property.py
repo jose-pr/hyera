@@ -249,8 +249,8 @@ def test_any_input_returns_or_raises_hiera_error(kind, parse, count, request):
         logging.disable(logging.NOTSET)
 
 
-def test_pattern_python_cannot_compile_is_not_a_valid_type_spec():
-    with pytest.raises(HieraLookupError, match="not a valid type specification"):
+def test_pattern_that_cannot_compile_raises_a_lookup_error():
+    with pytest.raises(HieraLookupError, match="repeat operator"):
         parse_type("Pattern[/^?a/]")
 
 
