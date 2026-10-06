@@ -56,6 +56,38 @@ def _find_hocon_string_end(text: str, start: int) -> "tuple[int, str]":
     return (i + 1 if i < n else n), content
 
 
+_UNICODE_ESCAPE_RE = re.compile(r"\\u([0-9A-Fa-f]{4})")
+_DECODED_ESCAPES = {'"': '\\"', "\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+
+
+def _decode_unicode_escapes(text: str, out: "list[str]", start: int, content: str):
+    """Rewrite each ``\\uXXXX`` in the quoted string at ``text[start]`` to the
+    character it names, in ``out`` (the scanner's per-character copy of
+    ``text``): the first slot takes the character and the other five become
+    empty, so no other index shifts. Triple-quoted strings have no escapes,
+    and a surrogate code unit is left as written.
+    """
+    if text.startswith('"""', start):
+        return
+    pos = 0
+    while pos < len(content):
+        if content[pos] != "\\":
+            pos += 1
+            continue
+        match = _UNICODE_ESCAPE_RE.match(content, pos)
+        if match is None:
+            pos += 2  # any other escape pair, including ``\\``
+            continue
+        code = int(match.group(1), 16)
+        if not 0xD800 <= code <= 0xDFFF:
+            slot = start + 1 + pos
+            char = chr(code)
+            out[slot] = _DECODED_ESCAPES.get(char, char)
+            for k in range(slot + 1, slot + 6):
+                out[k] = ""
+        pos += 6
+
+
 def _skip_hocon_blanks(text: str, i: int) -> int:
     """Advance past spaces/tabs only (not newlines) from ``i``."""
     n = len(text)
@@ -147,7 +179,8 @@ def _refuse_hocon_includes(text: str) -> str:
             i += 1
             continue
         if c == '"':
-            end, _content = _find_hocon_string_end(text, i)
+            end, content = _find_hocon_string_end(text, i)
+            _decode_unicode_escapes(text, out, i, content)
             i = end
             last_sig = '"'
             continue
@@ -343,7 +376,8 @@ def _allow_hocon_includes(text: str) -> str:
             i += 1
             continue
         if c == '"':
-            end, _content = _find_hocon_string_end(text, i)
+            end, content = _find_hocon_string_end(text, i)
+            _decode_unicode_escapes(text, out, i, content)
             i = end
             last_sig = '"'
             continue
@@ -619,11 +653,19 @@ def _try_install_hocon_include_guard() -> None:
 _try_install_hocon_include_guard()
 
 
+def _unquote_key(key):
+    if isinstance(key, str) and len(key) > 2 and key[0] == key[-1] == '"':
+        return key[1:-1]
+    return key
+
+
 def _as_plain(obj):
     """Recursively convert pyhocon's ``ConfigTree``/``ConfigList`` (both
-    ``dict``/``list`` subclasses) into plain ``dict``/``list``."""
+    ``dict``/``list`` subclasses) into plain ``dict``/``list``, dropping the
+    quote characters pyhocon keeps around a quoted key such as
+    ``"ntp::servers"``."""
     if isinstance(obj, dict):
-        return {k: _as_plain(v) for k, v in obj.items()}
+        return {_unquote_key(k): _as_plain(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_as_plain(v) for v in obj]
     return obj
@@ -679,6 +721,39 @@ class _HoconLoggerShim:
         return getattr(self._real, name)
 
 
+# Blanks after a ``null`` keyword that a following value token continues; pyhocon
+# drops them, which would turn ``null x`` into ``nullx``.
+_NULL_TRAILING_BLANKS_RE = re.compile(r"([ \t]*)(?![\s#,\]}]|//|\Z)")
+
+
+def _make_null_text(none_value, replace_with):
+    """Return ``(NullText, replace_with)`` for the private parser copy:
+    ``NullText`` subclasses pyhocon's ``NoneValue`` and renders as ``null`` plus
+    the blanks that followed it when a concatenation (``k = null x``) turns it
+    into text; the returned ``replace_with`` builds it for the ``null`` keyword
+    and defers to ``replace_with`` for the other keywords.
+    """
+
+    class NullText(none_value):
+        def __init__(self, blanks=""):
+            self.blanks = blanks
+
+        def __str__(self):
+            return "null" + self.blanks
+
+    def null_aware_replace_with(value):
+        if not isinstance(value, NullText):
+            return replace_with(value)
+
+        def action(instring, loc, tokens):
+            match = _NULL_TRAILING_BLANKS_RE.match(instring, loc + len(tokens[0]))
+            return [NullText(match.group(1) if match else "")]
+
+        return action
+
+    return NullText, null_aware_replace_with
+
+
 def _hocon_parser():
     """A private copy of the ``pyhocon.config_parser`` module, with its
     ``get_period_expr`` grammar replaced by one that never matches, so a
@@ -713,6 +788,9 @@ def _hocon_parser():
                     'pip install "hyera[hocon]"'
                 )
             mod.get_period_expr = lambda: pyparsing.NoMatch()
+            mod.NoneValue, mod.replace_with = _make_null_text(
+                mod.NoneValue, mod.replace_with
+            )
             mod.codecs = _HoconFileCodecsShim()
             mod.logger = _HoconLoggerShim(mod.logger)
             _install_hocon_include_guard(mod)

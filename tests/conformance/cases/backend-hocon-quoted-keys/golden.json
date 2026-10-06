@@ -1,0 +1,76 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "d6142b749ea5fdd9d7a2bbec71e47e29dcd3eb959e271b9225b9a1a35c1a6ab0",
+  "results": {
+    "ntp::servers": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ntp::servers"
+      ],
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "quoted.dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "quoted.dotted"
+      ],
+      "status": "not_found"
+    },
+    "nested": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nested"
+      ],
+      "status": "found",
+      "value": {
+        "in::ner": 2
+      }
+    },
+    "nullcat": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nullcat"
+      ],
+      "status": "found",
+      "value": "null x"
+    },
+    "nullend": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nullend"
+      ],
+      "status": "found",
+      "value": "x null"
+    },
+    "nullalone": {
+      "argv": [
+        "--strict",
+        "warning",
+        "nullalone"
+      ],
+      "status": "found",
+      "value": null
+    },
+    "escaped": {
+      "argv": [
+        "--strict",
+        "warning",
+        "escaped"
+      ],
+      "status": "found",
+      "value": "caf é"
+    }
+  }
+}

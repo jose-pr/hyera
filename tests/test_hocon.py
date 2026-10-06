@@ -850,3 +850,67 @@ def test_hocon_loads_reraises_a_backend_error_raised_while_parsing(monkeypatch):
 
     with pytest.raises(BackendError, match="boom from parser"):
         HOCONBackend().loads("k = v")
+
+
+# -- values and keys pyhocon would hand back as parser objects or raw text --
+
+BS = chr(92)
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_quoted_key_loses_its_quote_characters(hocon_includes):
+    result = HOCONBackend(hocon_includes=hocon_includes).loads(
+        '"ntp::servers" = [a, b]\n"a.b" = 1\nq { "in::ner" = 2, "a b" = 3 }\n'
+        '"""tq""" = 4\n'
+    )
+    assert result == {
+        "ntp::servers": ["a", "b"],
+        "a.b": 1,
+        "q": {"in::ner": 2, "a b": 3},
+        "tq": 4,
+    }
+
+
+def test_null_in_a_concatenation_is_the_text_null():
+    result = HOCONBackend().loads(
+        'a = null x\nb = x null\nc = "p" null\nd = null\ne = [null x]\n'
+    )
+    assert result == {
+        "a": "null x",
+        "b": "x null",
+        "c": "p null",
+        "d": None,
+        "e": ["null x"],
+    }
+
+
+def test_null_alone_stays_null_and_keeps_only_the_blanks_between_values():
+    result = HOCONBackend().loads(
+        "a = null  # c\nb = [null, null]\nc { d = null }\ne = x null // c\n"
+        'f = null "q"\n'
+    )
+    assert result["a"] is None
+    assert result["b"] == [None, None]
+    assert result["c"] == {"d": None}
+    assert result["e"] == "x null"
+    assert result["f"] == "null q"
+
+
+@pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
+def test_unicode_escape_in_a_quoted_string_is_decoded(hocon_includes):
+    b = HOCONBackend(hocon_includes=hocon_includes)
+    assert b.loads('e = "' + BS + 'u00e9"') == {"e": "é"}
+    assert b.loads('e = "x' + BS + "u00E9y" + BS + 'n"') == {"e": "xéy\n"}
+    assert b.loads('"k' + BS + 'u00e9" = 1') == {"ké": 1}
+    # a decoded quote or backslash neither ends nor escapes the string
+    assert b.loads('e = "a' + BS + "u0022b" + BS + 'u005cc"') == {"e": 'a"b' + BS + "c"}
+    assert b.loads('e = "' + BS + 'u0041" "' + BS + 'u0042"') == {"e": "A B"}
+
+
+def test_unicode_escape_stays_literal_where_the_text_is_not_an_escape():
+    b = HOCONBackend()
+    assert b.loads('e = """' + BS + 'u00e9"""') == {"e": BS + "u00e9"}
+    assert b.loads('e = "' + BS * 2 + 'u00e9"') == {"e": BS + "u00e9"}
+    assert b.loads('e = "' + BS + 'u00zz"') == {"e": BS + "u00zz"}
+    assert b.loads('e = "' + BS + 'ud83d"') == {"e": BS + "ud83d"}
+    assert b.loads('# "' + BS + 'u00e9"\ne = 1') == {"e": 1}

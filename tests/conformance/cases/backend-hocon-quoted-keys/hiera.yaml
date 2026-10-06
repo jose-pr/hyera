@@ -1,0 +1,8 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: hocon_data
+hierarchy:
+  - name: common
+    path: common.conf
