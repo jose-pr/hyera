@@ -25,7 +25,13 @@ from ._config.data_provider import (
     split_path_setting,
 )
 from ._output import explain as _explain
-from ._output.explain import Explainer, ExplainResult, _ProviderRef, _DebugExplainer
+from ._output.explain import (
+    Explainer,
+    ExplainResult,
+    _ProviderRef,
+    _DebugExplainer,
+    _debug_preamble,
+)
 from ._config.hiera_config import (
     HieraLevel,
     _build_hierarchies,
@@ -54,7 +60,6 @@ from ._lookup.lookup_adapter import (
 from ._lookup.lookup_function import (
     depth_error,
     lookup as _lookup_call,
-    nested_lookup,
     parse_call,
     recursion_bound,
 )
@@ -1303,7 +1308,16 @@ class Hiera:
             with invocation.recording("data_provider", ref):
                 return provider.key_lookup(root, segments, invocation, strategy)
 
-        return strategy.lookup(list(enumerate(hierarchy)), at_level, invocation)
+        variants = list(enumerate(hierarchy))
+        if strategy.first_found:
+            # The reduce is a plain first-found loop; running it here saves
+            # a stack frame per hierarchy level of a nested lookup.
+            for variant in variants:
+                value = at_level(variant)
+                if value is not _MISSING:
+                    return value
+            return _MISSING
+        return strategy.lookup(variants, at_level, invocation)
 
     def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
         """Puppet's provider stack (``lookup_adapter.rb:332-340``): reduce
@@ -1403,6 +1417,12 @@ class Hiera:
                     invocation.report_not_found(root)
                 return result
 
+        if strategy.first_found:
+            for layer in _LAYERS:
+                value = at_layer(layer)
+                if value is not _MISSING:
+                    return value
+            return _MISSING
         return strategy.lookup(_LAYERS, at_layer, invocation)
 
     @staticmethod
@@ -1557,7 +1577,20 @@ class Hiera:
         (``interpolation.rb:77-86``). Returns
         :data:`~hyera._lookup.navigation._MISSING` on a miss instead of raising.
         """
-        return nested_lookup(key, invocation, self._search_and_merge)
+        # Inline rather than a helper call: each nested hop costs stack
+        # frames, and this one is on every ``%{lookup()}`` chain.
+        if key in invocation.override_values:
+            invocation.emit_debug_info(_debug_preamble((key,)))
+            return invocation.override_values[key]
+        value = self._search_and_merge(key, invocation, None)
+        if value is _MISSING:
+            if key in invocation.default_values:
+                value = invocation.default_values[key]
+            else:
+                invocation.emit_debug_info(_debug_preamble((key,)))
+                return _MISSING
+        invocation.emit_debug_info(_debug_preamble((key,)))
+        return value
 
     def scoped(
         self,

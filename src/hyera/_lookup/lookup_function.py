@@ -340,26 +340,3 @@ def lookup(call: LookupCall, invocation, search):
         raise KeyNotFoundError(list(call.names)) from None
     finally:
         _STRICT.reset(strict_token)
-
-
-def nested_lookup(key, invocation, search):
-    """A nested lookup from inside a value's own interpolation
-    (``%{hiera()}``/``%{lookup()}``/``%{alias()}``): ``interpolation.
-    rb:77-86`` -- the override hash, else a full lookup with ``merge=None``,
-    else the default values hash, else a miss. Named apart from
-    :func:`~hyera._lookup.navigation.sub_lookup` (a different kind of "sub"
-    lookup: this one is a full nested Hiera lookup, not a dig into an
-    already-found value).
-    """
-    if key in invocation.override_values:
-        invocation.emit_debug_info(_debug_preamble((key,)))
-        return invocation.override_values[key]
-    value = search(key, invocation, None)
-    if value is not _MISSING:
-        invocation.emit_debug_info(_debug_preamble((key,)))
-        return value
-    if key in invocation.default_values:
-        invocation.emit_debug_info(_debug_preamble((key,)))
-        return invocation.default_values[key]
-    invocation.emit_debug_info(_debug_preamble((key,)))
-    return _MISSING

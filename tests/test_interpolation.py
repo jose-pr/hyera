@@ -223,6 +223,12 @@ def test_a_chain_beyond_the_stack_raises_interpolation_error(make_tree, method, 
         _ENTRY_POINTS[entry](h)
 
 
+@pytest.mark.parametrize("method", ["lookup", "alias"])
+def test_a_chain_of_sixty_interpolations_resolves(make_tree, method):
+    h = _hiera(make_tree, _chain(60, method))
+    assert h.lookup("k0") == "end"
+
+
 def test_explain_of_a_chain_beyond_the_stack_never_raises_recursion_error(make_tree):
     h = _hiera(make_tree, _chain(300))
     try:
@@ -284,7 +290,7 @@ def test_unshare_copies_every_position():
 
 
 def test_shared_dict_anchor_interpolated_once():
-    # _interpolate's own dict-shaped memo cache hit -- distinct from the
+    # interpolate's own dict-shaped memo cache hit -- distinct from the
     # list-shaped one test_anchor_interpolated_once_and_shared above
     # already exercises.
     shared = {"x": "%{k}"}

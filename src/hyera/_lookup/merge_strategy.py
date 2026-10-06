@@ -199,6 +199,9 @@ class MergeStrategy:
 
     KEY = None
     INSTANCE = None
+    #: ``True`` when a reduce simply returns the first found variant, so a
+    #: caller may run that loop itself and save a stack frame per level.
+    first_found = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -337,6 +340,7 @@ class FirstFoundStrategy(MergeStrategy):
     """merge_strategy.rb:210-237 -- the first non-missing variant wins."""
 
     KEY = "first"
+    first_found = True
 
     def lookup(self, variants, fn, invocation=None):
         """merge_strategy.rb:223-228 -- stop at the first found; never

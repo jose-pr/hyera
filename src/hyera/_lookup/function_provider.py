@@ -593,6 +593,12 @@ class _DataHashProvider(_FunctionProvider):
             result = interpolate(value, invocation, allow_methods=True)
             return invocation.report_found(root, result)
 
+        if merge.first_found:
+            for location in locations:
+                found = at_location(location)
+                if found is not _MISSING:
+                    return found
+            return _MISSING
         return merge.lookup(locations, at_location, invocation)
 
 

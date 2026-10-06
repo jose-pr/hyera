@@ -170,7 +170,7 @@ def _float_to_s(f: float) -> str:
     )
 
 
-def interpolate(value, invocation, allow_methods=True):
+def interpolate(value, invocation, allow_methods=True, _memo=None):
     """Fully resolve every ``%{...}`` in ``value`` (``interpolation.rb:19-32``).
 
     A ``str`` with no ``"%{"`` is returned unchanged; any other ``str`` is
@@ -198,35 +198,33 @@ def interpolate(value, invocation, allow_methods=True):
     call to :func:`interpolate` (its own memo), since it is a new value with
     no relation to this call's document.
     """
-    return _interpolate(value, invocation, allow_methods, {})
-
-
-def _interpolate(value, invocation, allow_methods, memo):
     if isinstance(value, str):
         if "%{" not in value:
             return value
         return _interpolate_string(value, invocation, allow_methods)
     if isinstance(value, list):
+        memo = {} if _memo is None else _memo
         cached = memo.get(id(value))
         if cached is not None:
             return cached[1]
-        result = [_interpolate(v, invocation, allow_methods, memo) for v in value]
+        result = [interpolate(v, invocation, allow_methods, memo) for v in value]
         memo[id(value)] = (value, result)
         return result
     if isinstance(value, dict):
+        memo = {} if _memo is None else _memo
         cached = memo.get(id(value))
         if cached is not None:
             return cached[1]
         result = {}
         for k, v in value.items():
-            new_key = _interpolate(k, invocation, allow_methods, memo)
+            new_key = interpolate(k, invocation, allow_methods, memo)
             try:
                 hash(new_key)
             except TypeError:
                 raise InterpolationError(
                     "Interpolated hash key {!r} is not hashable".format(new_key)
                 ) from None
-            result[new_key] = _interpolate(v, invocation, allow_methods, memo)
+            result[new_key] = interpolate(v, invocation, allow_methods, memo)
         memo[id(value)] = (value, result)
         return result
     return value
@@ -335,7 +333,7 @@ def _global_lookup(key, inv, subject):
     (``interpolation.rb:77-86``): a sub-lookup through the invocation's host
     callable. A miss becomes ``""`` here (the *caller*, ``_interpolate_string``,
     returns an alias's result raw before this ever stringifies it)."""
-    value = inv.lookup(key)
+    value = inv._lookup(key, inv)
     return "" if value is _MISSING else value
 
 
