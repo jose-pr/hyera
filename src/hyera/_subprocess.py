@@ -84,6 +84,18 @@ def _kill_tree(proc: "subprocess.Popen[bytes]") -> None:
         pass
 
 
+def _kill_and_reap(proc: "subprocess.Popen[bytes]") -> None:
+    """Kill *proc*'s tree, wait for it a bounded time and close its pipes."""
+    _kill_tree(proc)
+    try:
+        proc.communicate(timeout=_REAP_TIMEOUT)
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        pass
+    for pipe in (proc.stdout, proc.stderr):
+        if pipe is not None:
+            pipe.close()
+
+
 def run(
     program: str,
     args: _ty.Sequence[str],
@@ -134,23 +146,21 @@ def run(
     except OSError as e:
         raise BackendError("Failed to run {}{}: {}".format(program, suffix, e)) from e
 
-    # Recorded and raised after the handler: a TimeoutExpired carries the
-    # child's partial stdout, and raising inside the handler would keep it
-    # reachable through __context__.
+    # The timeout error is raised after the handler: a TimeoutExpired carries
+    # the child's partial stdout, and raising inside the handler would keep it
+    # reachable through __context__. Any other exception (an interrupt, an
+    # error in communicate) kills the child, which is in its own process
+    # group and would otherwise outlive the caller, and propagates unchanged.
     timed_out = False
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
+    except BaseException:
+        _kill_and_reap(proc)
+        raise
     if timed_out:
-        _kill_tree(proc)
-        try:
-            proc.communicate(timeout=_REAP_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            pass
-        for pipe in (proc.stdout, proc.stderr):
-            if pipe is not None:
-                pipe.close()
+        _kill_and_reap(proc)
         raise BackendTimeoutError(
             "{} timed out after {}s{}".format(program, timeout, suffix)
         ) from None
