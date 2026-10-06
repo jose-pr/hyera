@@ -1,16 +1,14 @@
 """Benchmark suite: per-call CPU cost of ``hyera`` lookups on a generated tree.
 
-Generates a Hiera 5 tree modeled on the 2026-09-28 review's ``mkperf.py``
-fixture (five levels: a per-node path, a per-role path, a mapped ``apps``
-level, a glob ``modules/*.yaml`` level, and ``common.yaml``) into a temporary
-directory, times six scenarios against it, and prints one aligned line per
-metric. ``--save`` also writes a JSON result file; see ``benchmarks/README.md``
-for the schema and how to compare two files with the overlay's
-``compare_bench.py``.
+Generates a Hiera 5 tree (five levels: a per-node path, a per-role path, a
+mapped ``apps`` level, a glob ``modules/*.yaml`` level, and ``common.yaml``)
+into a temporary directory, times the scenarios listed in
+``benchmarks/README.md`` against it, and prints one aligned line per metric.
+``--save`` also writes a JSON result file; the README gives its schema and
+how to compare two files.
 
-Only ``hyera``'s public API is used here (``Hiera``, ``Scope``, ``.lookup()``,
-``.scoped()``), so this file runs unchanged across every phase of the cache
-rework it benchmarks.
+Only ``hyera``'s public API and its command line are used here, so this file
+runs unchanged across versions.
 
 Local numbers from this script are sanity checks only, never a performance
 claim -- see ``benchmarks/README.md``.
@@ -18,7 +16,9 @@ claim -- see ``benchmarks/README.md``.
 
 import argparse
 import json
+import os
 import platform
+import subprocess
 import sys
 import tempfile
 import time
@@ -146,6 +146,41 @@ def _base_scope(n_apps: int) -> Scope:
     )
 
 
+#: Levels in the ``lookup.levels40`` hierarchy: the key lives in the last one.
+_DEEP_LEVELS = 40
+
+
+def _write_deep_tree(root: Path) -> Path:
+    """Write the ``lookup.levels40`` hierarchy under ``root``; return its
+    ``hiera.yaml``. Every level but the last names a file that does not
+    exist."""
+    cfg = {
+        "version": 5,
+        "defaults": {"datadir": "data", "data_hash": "yaml_data"},
+        "hierarchy": [
+            {"name": "l{}".format(i), "path": "l{}/%{{role}}.yaml".format(i)}
+            for i in range(_DEEP_LEVELS - 1)
+        ]
+        + [{"name": "common", "path": "common.yaml"}],
+    }
+    _dump(root / "hiera.yaml", cfg)
+    _dump(root / "data" / "common.yaml", {"deep::key": "found"})
+    return root / "hiera.yaml"
+
+
+def _cli_command(cfg_path: Path, facts_path: Path) -> "list[str]":
+    return [
+        sys.executable,
+        "-m",
+        "hyera",
+        "--hiera_config",
+        str(cfg_path),
+        "--facts",
+        str(facts_path),
+        "common::key5",
+    ]
+
+
 def _time_calls(repeat: int, inner: int, call, *, warm: bool) -> "list[float]":
     """Run ``call(i)`` ``inner`` times per sample, ``repeat`` samples; return
     one ms-per-call value per sample. ``call`` receives a globally increasing
@@ -168,9 +203,10 @@ def _time_calls(repeat: int, inner: int, call, *, warm: bool) -> "list[float]":
 
 
 def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
-    """Return ``(iterations, metric_fns)``: ``iterations`` maps each metric
-    name to its inner-call count (for the saved JSON); ``metric_fns`` maps it
-    to ``(warm, inner, call)`` per :func:`_time_calls`.
+    """Return ``(repeat, iterations, metric_fns)``: ``iterations`` maps each
+    metric name to its inner-call count (for the saved JSON); ``metric_fns``
+    maps it to ``(warm, inner, call, samples)`` per :func:`_time_calls`, where
+    ``samples`` is that metric's own sample count (``None``: ``repeat``).
     """
     sizes = _QUICK if quick else _FULL
     n_apps = sizes["apps"]
@@ -187,7 +223,13 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
 
     inner = 1 if quick else 3
     iterations["construct"] = inner
-    metrics["construct"] = (False, inner, construct_call)
+    metrics["construct"] = (False, inner, construct_call, None)
+
+    def cold_call(_i):
+        Hiera(str(cfg_path), scope=scope0, revalidate=revalidate).lookup("common::key5")
+
+    iterations["lookup.cold"] = inner
+    metrics["lookup.cold"] = (False, inner, cold_call, None)
 
     h = Hiera(str(cfg_path), scope=scope0, revalidate=revalidate)
 
@@ -196,7 +238,7 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
 
     inner = 20 if quick else 200
     iterations["lookup.first"] = inner
-    metrics["lookup.first"] = (True, inner, first_call)
+    metrics["lookup.first"] = (True, inner, first_call, None)
 
     def keys100_call(i):
         m = i % keys100_n
@@ -204,14 +246,41 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
 
     inner = keys100_n
     iterations["lookup.keys100"] = inner
-    metrics["lookup.keys100"] = (True, inner, keys100_call)
+    metrics["lookup.keys100"] = (True, inner, keys100_call, None)
+
+    def miss_call(_i):
+        h.lookup("no::such::key", default_value=None)
+
+    inner = 20 if quick else 200
+    iterations["lookup.miss"] = inner
+    metrics["lookup.miss"] = (True, inner, miss_call, None)
+
+    deep = Hiera(
+        str(_write_deep_tree(cfg_path.parent / "levels40")),
+        scope=scope0,
+        revalidate=revalidate,
+    )
+
+    def levels40_call(_i):
+        deep.lookup("deep::key")
+
+    inner = 10 if quick else 100
+    iterations["lookup.levels40"] = inner
+    metrics["lookup.levels40"] = (True, inner, levels40_call, None)
+
+    def explain_call(_i):
+        h.explain("common::key5")
+
+    inner = 3 if quick else 20
+    iterations["explain"] = inner
+    metrics["explain"] = (True, inner, explain_call, None)
 
     def deep_call(_i):
         h.lookup("settings", merge="deep")
 
     inner = 3 if quick else 10
     iterations["lookup.deep.glob500"] = inner
-    metrics["lookup.deep.glob500"] = (True, inner, deep_call)
+    metrics["lookup.deep.glob500"] = (True, inner, deep_call, None)
 
     repeat = 2 if quick else 7
 
@@ -224,7 +293,12 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
         volatile_views[i].lookup("common::key5")
 
     iterations["lookup.scope.volatile"] = volatile_inner
-    metrics["lookup.scope.volatile"] = (False, volatile_inner, volatile_call)
+    metrics["lookup.scope.volatile"] = (
+        False,
+        volatile_inner,
+        volatile_call,
+        None,
+    )
 
     new_node_inner = 5 if quick else 20
     new_node_views = [
@@ -236,7 +310,26 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
         new_node_views[i].lookup("common::key5")
 
     iterations["lookup.scope.new_node"] = new_node_inner
-    metrics["lookup.scope.new_node"] = (False, new_node_inner, new_node_call)
+    metrics["lookup.scope.new_node"] = (
+        False,
+        new_node_inner,
+        new_node_call,
+        None,
+    )
+
+    facts_path = cfg_path.parent / "facts.yaml"
+    _dump(facts_path, {"values": {}})
+    command = _cli_command(cfg_path, facts_path)
+    env = dict(os.environ)
+    src = str(Path(hyera.__file__).resolve().parent.parent)
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [src, env.get("PYTHONPATH")]))
+
+    def cli_call(_i):
+        subprocess.run(command, env=env, check=True, capture_output=True)
+
+    cli_samples = 2 if quick else 5
+    iterations["cli.run"] = 1
+    metrics["cli.run"] = (False, 1, cli_call, cli_samples)
 
     iterations["repeat"] = repeat
     return repeat, iterations, metrics
@@ -245,11 +338,16 @@ def _build_metrics(cfg_path: Path, quick: bool, revalidate: bool = True):
 #: Print/save order (also the order metrics are built in, above).
 _METRIC_ORDER = (
     "construct",
+    "lookup.cold",
     "lookup.first",
     "lookup.keys100",
+    "lookup.miss",
+    "lookup.levels40",
+    "explain",
     "lookup.deep.glob500",
     "lookup.scope.volatile",
     "lookup.scope.new_node",
+    "cli.run",
 )
 
 
@@ -265,8 +363,8 @@ def run(*, quick: bool, revalidate: bool = True) -> dict:
 
         results = {}
         for name in _METRIC_ORDER:
-            warm, inner, call = metric_fns[name]
-            samples = _time_calls(repeat, inner, call, warm=warm)
+            warm, inner, call, count = metric_fns[name]
+            samples = _time_calls(count or repeat, inner, call, warm=warm)
             results[name] = {
                 "min_ms": round(min(samples), 6),
                 "median_ms": (
@@ -341,8 +439,11 @@ def main(argv=None) -> int:
 
     revalidate = args.revalidate == "on"
     result = run(quick=args.quick, revalidate=revalidate)
-    default_name = "hyera-{}-py{}{}".format(
-        hyera.__version__, sys.version_info.major, sys.version_info.minor
+    default_name = "hyera-{}-py{}{}{}".format(
+        hyera.__version__,
+        sys.version_info.major,
+        sys.version_info.minor,
+        "" if revalidate else "-norevalidate",
     )
     name = args.name or default_name
     result = dict(result)
