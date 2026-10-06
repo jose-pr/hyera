@@ -603,6 +603,40 @@ def test_default_hierarchy_only_for_qualified_keys(tmp_path, make_tree):
         h.lookup("unq")
 
 
+def test_global_only_lookup_never_reaches_a_module_default_hierarchy(
+    make_tree, monkeypatch
+):
+    root = make_tree(
+        ":backends: [yaml]\n:yaml:\n  :datadir: data\n:hierarchy: [common]\n",
+        files={
+            "data/common.yaml": "x: \"a%{lookup('mymod::k')}b\"\n",
+            "modules/mymod/hiera.yaml": (
+                "version: 5\ndefaults: {datadir: data, data_hash: yaml_data}\n"
+                "hierarchy:\n  - name: main\n    path: main.yaml\n"
+                "default_hierarchy:\n  - name: dflt\n    path: dflt.yaml\n"
+            ),
+            "modules/mymod/data/main.yaml": "mymod::other: v\n",
+            "modules/mymod/data/dflt.yaml": "mymod::k: from-default\n",
+        },
+        raw=True,
+    )
+    monkeypatch.chdir(root)
+    h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
+    # The version 3 global value's nested lookup stays in the global layer,
+    # so it never sees the module's default hierarchy ...
+    assert h.lookup("x") == "ab"
+    # ... which a direct lookup of the same key does reach.
+    assert h.lookup("mymod::k") == "from-default"
+
+
+def test_key_starting_with_double_colon_belongs_to_no_module(tmp_path, make_tree):
+    base = _global(make_tree)
+    h = Hiera(str(base / "hiera.yaml"), basemodulepath=[tmp_path / "modules"])
+    text = h.explain("::k", default_value="d").text()
+    assert 'Module ""' not in text
+    assert 'No such key: "::k"' in text
+
+
 def _module_tree(tmp_path, make_tree, files):
     base = _global(make_tree)
     modules = tmp_path / "modules"

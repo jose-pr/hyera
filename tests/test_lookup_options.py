@@ -102,6 +102,20 @@ def test_non_hash_lookup_options_raises(make_tree):
         h.lookup("k")
 
 
+def test_non_hash_entry_error_names_the_key(make_tree):
+    root = _two_level(
+        make_tree,
+        "kint: [1]\nlookup_options:\n  kint: 5\n",
+        "kint: [2]\n",
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(
+        HieraLookupError,
+        match="The lookup_options entry for key 'kint' is not a hash",
+    ):
+        h.lookup("kint")
+
+
 def test_entry_shapes(make_tree):
     root = _two_level(
         make_tree,

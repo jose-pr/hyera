@@ -13,7 +13,6 @@ import datetime
 import decimal
 import os
 import re
-import time
 
 import pytest
 
@@ -482,18 +481,14 @@ def test_cached_file_data_revalidates_by_stat(make_tree, backends, script, tmp_p
         return context.cached_file_data(str(side_path))
 
     script["lookup_key"] = fn
-    h = Hiera(str(root / "hiera.yaml"))
+    h = Hiera(str(root / "hiera.yaml"), revalidate=True)
     assert h.lookup("k") == "one"
 
-    # Rewrite with a bumped mtime -- a fresh Hiera/provider must see the
-    # new content (a within-lookup cache would otherwise freeze the first
-    # read, since h.lookup("k") itself is cached per key on the same
-    # instance).
-    time.sleep(0.05)
+    # Same size, newer mtime: only the stat stamp tells the two apart.
     side_path.write_text("two", encoding="utf-8")
-    os.utime(side_path, None)
-    h2 = Hiera(str(root / "hiera.yaml"))
-    assert h2.lookup("k") == "two"
+    stat = side_path.stat()
+    os.utime(side_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    assert h.lookup("k") == "two"
 
 
 def test_cached_file_data_missing_file_is_backend_error(
@@ -609,7 +604,9 @@ def test_cached_file_data_parse_backend_error_wrapped_or_reraised(
         h2.lookup("k")
 
 
-def test_cached_file_data_hit_within_one_call(make_tree, backends, script, tmp_path):
+def test_cached_file_data_parses_an_unchanged_file_once(
+    make_tree, backends, script, tmp_path
+):
     root = make_tree(
         {
             "hierarchy": [
@@ -620,16 +617,23 @@ def test_cached_file_data_hit_within_one_call(make_tree, backends, script, tmp_p
     )
     side_path = tmp_path / "side.txt"
     side_path.write_text("one", encoding="utf-8")
+    parsed = []
+
+    def parse(text):
+        parsed.append(text)
+        return text.upper()
 
     def fn(key, options, context):
-        first = context.cached_file_data(str(side_path))
-        second = context.cached_file_data(str(side_path))
-        assert first == second == "one"
+        first = context.cached_file_data(str(side_path), parse)
+        second = context.cached_file_data(str(side_path), parse)
+        assert first == second == "ONE"
         return "v"
 
     script["lookup_key"] = fn
     h = Hiera(str(root / "hiera.yaml"))
     assert h.lookup("k") == "v"
+    assert h.lookup("other") == "v"
+    assert parsed == ["one"]
 
 
 def test_lookup_context_names_and_explain_noop(make_tree, backends, script):

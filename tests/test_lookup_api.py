@@ -99,6 +99,20 @@ def test_name_lists(fn):
         h.lookup([])
 
 
+def test_default_values_hash_beats_default_value(fn):
+    assert (
+        fn.lookup(
+            "missing", default_value="DFLT", default_values_hash={"missing": "DVH"}
+        )
+        == "DVH"
+    )
+    # A name the hash lacks still falls back to default_value.
+    assert (
+        fn.lookup("missing", default_value="DFLT", default_values_hash={"other": "x"})
+        == "DFLT"
+    )
+
+
 def test_default_precedence(fn):
     h = fn
     # override beats a found value.
