@@ -843,6 +843,25 @@ for.
   supported.** Configure `environmentpath`/`modulepath`/`basemodulepath`
   explicitly instead of relying on `environment.conf` discovery, and there
   is no catalog-compilation mode to fall back to. (id: `environment-conf-compile-trusted-unsupported`)
+- **Hash keys Python cannot tell apart are an error or one key.** Ruby
+  keeps `1`, `1.0` and `true` as three keys; Python treats them as one. A
+  YAML mapping whose keys collide only that way (`{1: a, 1.0: b}`) raises
+  `BackendError` naming them, rather than silently dropping one entry, and
+  `--merge deep` joins such keys from different levels into one. Write the
+  keys as strings to avoid it. (id: `python-equal-hash-keys`)
+- **Data that is not valid UTF-8 is rejected as a whole.** hyera reads data
+  files and `eyaml` plaintext as strict UTF-8. A `json_data` file with one
+  non-UTF-8 byte fails every lookup that reaches it, where Puppet answers
+  the other keys and fails only when it renders that value; an `eyaml`
+  plaintext that is not UTF-8 raises, where Puppet returns the bytes; a
+  `!!binary` value whose bytes are not UTF-8 cannot be rendered as `s` or
+  `json`. (id: `non-utf8-data`)
+- **Collections nested more than 500 levels deep are a parse error**, in
+  YAML and JSON files, `--facts` files and `--scope` values, with the
+  message `nested too deeply`. Puppet reads YAML to about 10,000 levels and
+  stops JSON at 100; the bound keeps a hostile file from ending the
+  interpreter, which libyaml's recursive composer does on Python 3.9.
+  (id: `nesting-bound`)
 
 ## Development
 

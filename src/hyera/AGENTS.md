@@ -1379,6 +1379,17 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `environment-conf-compile-trusted-unsupported` —
   `environment.conf` is not read; `--compile` and `--trusted` are not
   supported.
+- **difference** `python-equal-hash-keys` — A YAML mapping whose keys
+  collide only in Python (`1`/`1.0`/`true`) raises `BackendError` naming
+  them, and `--merge deep` joins such keys from different levels; Ruby
+  keeps them apart.
+- **difference** `non-utf8-data` — Data files and `eyaml` plaintext are
+  read as strict UTF-8: a `json_data` file with one bad byte fails every
+  lookup that reaches it, non-UTF-8 `eyaml` plaintext raises, and a
+  `!!binary` value that is not UTF-8 cannot be rendered as `s` or `json`.
+- **difference** `nesting-bound` — YAML and JSON documents (data, facts,
+  `--scope` values) nested more than 500 levels deep raise `BackendError`
+  ("nested too deeply").
 
 Not supported:
 

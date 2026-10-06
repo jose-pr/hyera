@@ -89,6 +89,18 @@ DOC_ONLY = {
         "the harness never invokes puppet lookup --compile/--trusted, so "
         "no case could record what hyera does not implement"
     ),
+    "python-equal-hash-keys": (
+        "a golden holds the value Puppet returns, and hyera raises instead "
+        "of returning one, so no case can assert the two together"
+    ),
+    "non-utf8-data": (
+        "the harness stores every case file as UTF-8 text, so no fixture "
+        "can hold a byte that is not valid UTF-8"
+    ),
+    "nesting-bound": (
+        "the oracle answers a document nested past the bound with a value or "
+        "its own error text, which no case asserts a different outcome from"
+    ),
 }
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by
