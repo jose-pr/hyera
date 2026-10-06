@@ -8,8 +8,9 @@ project overview is the shipped `README.md`; development documentation
 lives with the source at <https://github.com/jose-pr/hyera>.
 
 Import as `import hyera`; import every public name from `hyera` itself, or
-from the public modules `hyera.types`, `hyera.backends` and `hyera.cli` —
-`hyera._*` modules are private engine internals with no stability contract.
+from the public modules `hyera.exceptions`, `hyera.types`, `hyera.backends`
+and `hyera.cli` — `hyera._*` modules are private engine internals with no
+stability contract.
 
 Install as `hyera` (`pip install hyera`); extras: `pip install "hyera[cli]"`
 (the console script, `duho`), `pip install "hyera[hocon]"` (`HOCONBackend`,

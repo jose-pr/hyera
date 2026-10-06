@@ -18,7 +18,7 @@ per-feature fidelity table is
 
 | Shipped header | Covers |
 | --- | --- |
-| [`src/hyera/AGENTS.md`](src/hyera/AGENTS.md) | the whole public API: `hyera`, `hyera.types`, `hyera.backends` and `hyera.cli` with every signature, argument, contract and gotcha, the exception classes, the environment variables and the differences from Puppet |
+| [`src/hyera/AGENTS.md`](src/hyera/AGENTS.md) | the whole public API: `hyera`, `hyera.exceptions`, `hyera.types`, `hyera.backends` and `hyera.cli` with every signature, argument, contract and gotcha, the exception classes, the environment variables and the differences from Puppet |
 
 ## Layout
 
@@ -239,8 +239,8 @@ error), `130` on an interrupt.
 
 `hyera._*` modules are private engine internals mirroring Puppet's own file
 split; import public names from `hyera` itself, or from the public modules
-`hyera.types`, `hyera.backends` and `hyera.cli`, never from a `hyera._*`
-module. `src/hyera/AGENTS.md` is the shipped API header (see
+`hyera.exceptions`, `hyera.types`, `hyera.backends` and `hyera.cli`, never
+from a `hyera._*` module. `src/hyera/AGENTS.md` is the shipped API header (see
 [Packaging](#packaging) below) — every export with its exact signature,
 arguments and gotchas, so a consuming agent skips the source.
 
