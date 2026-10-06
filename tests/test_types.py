@@ -607,7 +607,9 @@ def test_assert_matches_golden(qid, type_text, value, result):
         return
     with pytest.raises(HieraLookupError) as exc_info:
         assert_instance_of("Found value", t, value)
-    assert str(exc_info.value).splitlines()[0].strip() == result["message"].strip()
+    # Puppet lists one line per mismatch; hyera reports the first.
+    first = result["message"].splitlines()[0]
+    assert str(exc_info.value).splitlines()[0].strip() == first.strip()
 
 
 def test_describe_evidence():
