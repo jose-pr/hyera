@@ -1170,8 +1170,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
 `HieraError(*args, path=None)` (base; `.path` names the file concerned, or
 `None`) →
 
-- **`ConfigError(*args, path=None, line=None)`** — anything about
-  `hiera.yaml`: missing, unreadable, unparsable, non-mapping, an
+- **`ConfigError(*args, path=None, line=None)`** (also a `ValueError`) —
+  anything about `hiera.yaml`: missing, unreadable, unparsable, non-mapping, an
   unsupported `version`, or wrong shape. A read/shape problem's message
   names the origin directly; an unparsable file's is `(<path>): <problem>
   at line L column C` (Psych's shape, one line). `.line` (in addition to
@@ -1179,8 +1179,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   found at, when known (`None` for a dict config, or when no line
   applies); a message that includes a line also ends with Puppet's own
   `(file: F, line: N)` suffix.
-- **`BackendError`** — a data file could not be read or parsed. `.path`
-  names it; an unparsable file's message is `Unable to parse (<path>):
+- **`BackendError`** (also a `ValueError`) — a data file could not be read
+  or parsed. `.path` names it; an unparsable file's message is `Unable to parse (<path>):
   <problem> at line L column C`, one line. Raised from the first lookup
   whose scope reaches the bad file (never from `Hiera(...)` itself — see
   "Lookup" above).
@@ -1192,9 +1192,10 @@ is a `Backend` subclass, found by name rather than passed around directly.
   a key, including a `convert_to` whose type cannot be parsed or whose
   conversion/result-type assertion fails (see "Types" above and the
   `convert_to` Gotcha below for the two message forms). →
-  - **`InterpolationError`** — a `%{...}` interpolation or function call
-    could not be resolved.
-  - **`MergeError`** — an unknown or invalid merge strategy.
+  - **`InterpolationError`** (also a `ValueError`) — a `%{...}`
+    interpolation or function call could not be resolved.
+  - **`MergeError`** (also a `ValueError`) — an unknown or invalid merge
+    strategy.
   - **`KeyNotFoundError(name)`** (also a `KeyError`) — `.lookup()`'s miss (no
     default given), with Puppet's message ("Function lookup() did not find
     a value for the name '<key>'", or the "any of the names [...]" plural

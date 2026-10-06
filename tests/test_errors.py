@@ -335,3 +335,47 @@ def test_data_file_errors_surface_on_lookup(make_tree):
 
     with pytest.raises(BackendError):
         h.lookup("k")
+
+
+MALFORMED_INPUT_ERRORS = (ConfigError, BackendError, InterpolationError, MergeError)
+
+
+@pytest.mark.parametrize("cls", MALFORMED_INPUT_ERRORS)
+def test_malformed_input_errors_are_also_value_errors(cls):
+    assert issubclass(cls, ValueError)
+    assert issubclass(cls, HieraError)
+    with pytest.raises(ValueError, match="boom"):
+        raise cls("boom")
+
+
+def test_other_errors_are_not_value_errors():
+    assert not issubclass(HieraLookupError, ValueError)
+    assert not issubclass(KeyNotFoundError, ValueError)
+    assert issubclass(KeyNotFoundError, KeyError)
+    assert issubclass(hyera.exceptions.BackendTimeoutError, TimeoutError)
+    assert issubclass(hyera.exceptions.BackendTimeoutError, BackendError)
+
+
+@pytest.mark.parametrize("cls", MALFORMED_INPUT_ERRORS)
+def test_malformed_input_error_text_and_copies_are_unchanged(cls):
+    e = cls("boom", "more", path="p.yaml")
+    assert e.args == ("boom", "more")
+    assert str(e) == "('boom', 'more')"
+    assert repr(e) == cls.__name__ + "('boom', 'more')"
+    for clone in (pickle.loads(pickle.dumps(e)), copy.copy(e), copy.deepcopy(e)):
+        assert type(clone) is cls
+        assert clone.args == e.args
+        assert clone.path == "p.yaml"
+    assert str(cls("boom")) == "boom"
+
+
+def test_config_error_keeps_its_line_through_copies():
+    e = ConfigError("bad", path="hiera.yaml", line=3)
+    for clone in (pickle.loads(pickle.dumps(e)), copy.copy(e), copy.deepcopy(e)):
+        assert (clone.path, clone.line) == ("hiera.yaml", 3)
+
+
+def test_a_backend_timeout_is_still_an_os_error_and_a_value_error():
+    e = hyera.exceptions.BackendTimeoutError("sops timed out")
+    assert isinstance(e, (TimeoutError, OSError, ValueError, BackendError))
+    assert str(e) == "sops timed out"

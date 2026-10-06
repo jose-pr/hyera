@@ -37,8 +37,10 @@ class HieraError(Exception):
         self.path: _ty.Optional[str] = path
 
 
-class ConfigError(HieraError):
+class ConfigError(HieraError, ValueError):
     """The base hiera configuration (``hiera.yaml``) is missing or invalid.
+
+    Also a :class:`ValueError`.
 
     ``line``, when known, is the 1-based line in ``.path`` the problem was
     found at (e.g. a malformed hierarchy entry).
@@ -60,8 +62,11 @@ class ConfigError(HieraError):
         self.line: _ty.Optional[int] = line
 
 
-class BackendError(HieraError):
-    """A data file could not be read or parsed. ``.path`` names it."""
+class BackendError(HieraError, ValueError):
+    """A data file could not be read or parsed. ``.path`` names it.
+
+    Also a :class:`ValueError`.
+    """
 
 
 class BackendTimeoutError(BackendError, TimeoutError):
@@ -74,12 +79,18 @@ class HieraLookupError(HieraError):
     """Puppet's ``LookupError``: a failure while resolving a key."""
 
 
-class InterpolationError(HieraLookupError):
-    """A ``%{...}`` interpolation or function call could not be resolved."""
+class InterpolationError(HieraLookupError, ValueError):
+    """A ``%{...}`` interpolation or function call could not be resolved.
+
+    Also a :class:`ValueError`.
+    """
 
 
-class MergeError(HieraLookupError):
-    """An unknown or invalid merge strategy was requested."""
+class MergeError(HieraLookupError, ValueError):
+    """An unknown or invalid merge strategy was requested.
+
+    Also a :class:`ValueError`.
+    """
 
 
 def _issue_coded(exc: HieraLookupError) -> HieraLookupError:

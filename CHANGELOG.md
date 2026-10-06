@@ -23,6 +23,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `ConfigError`, `BackendError`, `InterpolationError` and `MergeError` are
+  also `ValueError`, so a caller's `except ValueError` catches malformed
+  config, data and interpolation text. Their text, `args`, pickling and
+  copying are unchanged; `HieraLookupError` and `KeyNotFoundError` do not
+  gain the base.
 - YAML and JSON documents nested more than 500 levels deep (data files,
   `--facts` files, `--scope` values) raise `BackendError` ("nested too
   deeply"); a deeply nested YAML document used to end the interpreter on
