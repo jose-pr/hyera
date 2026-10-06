@@ -86,7 +86,8 @@ included at LICENSES/hiera-eyaml-MIT.txt.
 The files ported from hiera-eyaml are:
 
     src/hyera/backends/_eyaml.py  (from hiera-eyaml/lib/hiera/backend/eyaml/parser/encrypted_tokens.rb,
-                                        parser/parser.rb, encryptors/pkcs7.rb)
+                                        parser/parser.rb)
+    src/hyera/backends/_pkcs7.py  (from hiera-eyaml/lib/hiera/backend/eyaml/encryptors/pkcs7.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 

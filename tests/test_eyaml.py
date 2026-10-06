@@ -23,9 +23,9 @@ from hyera.backends._eyaml import (
     _decode64,
     _has_encrypted_token,
     _load_private_key,
-    _pkcs7_decrypt,
     decrypt_string,
 )
+from hyera.backends._pkcs7 import _pkcs7_decrypt
 from hyera.backends import Backend
 
 FIXTURE = (
