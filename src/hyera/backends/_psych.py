@@ -597,8 +597,20 @@ def _yaml_problem(exc) -> str:
 _MAX_NESTING = 500
 _TOO_DEEP = "nested too deeply (more than {} levels)".format(_MAX_NESTING)
 
-_COLLECTION_STARTS = (yaml.events.SequenceStartEvent, yaml.events.MappingStartEvent)
-_COLLECTION_ENDS = (yaml.events.SequenceEndEvent, yaml.events.MappingEndEvent)
+_DEPTH_STEP = {
+    yaml.events.SequenceStartEvent: 1,
+    yaml.events.MappingStartEvent: 1,
+    yaml.events.SequenceEndEvent: -1,
+    yaml.events.MappingEndEvent: -1,
+}
+_ANCHORED = frozenset(
+    (
+        yaml.events.ScalarEvent,
+        yaml.events.SequenceStartEvent,
+        yaml.events.MappingStartEvent,
+    )
+)
+_DOCUMENT_END = yaml.events.DocumentEndEvent
 
 
 def _scan_structure(text: str):
@@ -615,22 +627,25 @@ def _scan_structure(text: str):
     depth = 0
     anchors = set()
     redefined = False
+    track_anchors = "&" in text
     scanner = _LOADER(text)
+    get_event = scanner.get_event
     try:
-        while scanner.check_event():
-            event = scanner.get_event()
-            if isinstance(event, _COLLECTION_STARTS):
-                depth += 1
+        while True:
+            event = get_event()
+            kind = type(event)
+            step = _DEPTH_STEP.get(kind)
+            if step is not None:
+                depth += step
                 if depth > _MAX_NESTING:
                     raise BackendError(_TOO_DEEP)
-            elif isinstance(event, _COLLECTION_ENDS):
-                depth -= 1
-            elif isinstance(event, yaml.events.DocumentEndEvent):
+            elif kind is _DOCUMENT_END or event is None:
                 break
-            anchor = getattr(event, "anchor", None)
-            if anchor is not None and not isinstance(event, yaml.events.AliasEvent):
-                redefined = redefined or anchor in anchors
-                anchors.add(anchor)
+            if track_anchors and kind in _ANCHORED:
+                anchor = event.anchor
+                if anchor is not None:
+                    redefined = redefined or anchor in anchors
+                    anchors.add(anchor)
     finally:
         scanner.dispose()
     return _PURE_LOADER if redefined else _LOADER
