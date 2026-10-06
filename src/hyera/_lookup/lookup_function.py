@@ -6,15 +6,21 @@ Original code. (see ``core.Hiera.lookup``, which is the thin method
 wrapping this module).
 """
 
+import contextlib
 import typing as _ty
 from collections.abc import Mapping
 
 from .._output.explain import _debug_preamble
 from .invocation import _STRICT
-from .navigation import _MISSING
+from .navigation import _MISSING, join_key
 from .._types.parser import as_type
 from .._types.mismatch import assert_instance_of
-from ..exceptions import HieraLookupError, KeyNotFoundError, _escapes
+from ..exceptions import (
+    HieraLookupError,
+    InterpolationError,
+    KeyNotFoundError,
+    _escapes,
+)
 
 #: The keyword-equivalent option names a form-4/5 options hash may carry
 #: (never ``"name"``, which is form 4's own key, and never ``"block"``,
@@ -26,6 +32,33 @@ _OPTION_KEYS = (
     "default_values_hash",
     "merge",
 )
+
+
+def depth_error(exc: RecursionError) -> InterpolationError:
+    """The error that stands for a ``RecursionError`` raised while resolving
+    a value: it names the lookup keys that were being resolved (recorded on
+    ``exc`` by :meth:`~hyera._lookup.invocation.Invocation.check`)."""
+    keys = list(getattr(exc, "_hyera_keys", ()))
+    if len(keys) > 8:
+        keys = keys[:4] + ["..."] + keys[-3:]
+    where = " while resolving [{}]".format(", ".join(keys)) if keys else ""
+    return InterpolationError(
+        "Resolution is nested too deeply{}: a chain of interpolations or "
+        "a value nested beyond the interpreter's recursion limit".format(where)
+    )
+
+
+@contextlib.contextmanager
+def recursion_bound():
+    """Turn a ``RecursionError`` into :class:`~hyera.InterpolationError`
+    for the guarded block -- every public entry point runs under it."""
+    try:
+        yield
+    except RecursionError as exc:
+        error = depth_error(exc)
+    else:
+        return
+    raise error from None
 
 
 class LookupCall(_ty.NamedTuple):
@@ -199,7 +232,8 @@ def parse_call(
 
     _validate_name(real_name)
     try:
-        parsed_type = as_type(value_type)
+        with recursion_bound():
+            parsed_type = as_type(value_type)
     except TypeError as e:
         raise TypeError("lookup(): value_type {}".format(e)) from None
     _validate_merge(merge)
@@ -220,6 +254,12 @@ def parse_call(
         override=override or {},
         block=block,
     )
+
+
+def _key_text(name) -> str:
+    """The string a name is known by in ``override`` and
+    ``default_values_hash``: a tuple key path reads as its dotted form."""
+    return join_key(name) if isinstance(name, tuple) else name
 
 
 def _assert(call: LookupCall, subject: str, value):
@@ -258,11 +298,12 @@ def lookup(call: LookupCall, invocation, search):
     strict_token = _STRICT.set(invocation.scope.strict)
     try:
         for name in call.names:
-            if name in invocation.override_values:
+            text = _key_text(name)
+            if text in invocation.override_values:
                 result = _assert(
                     call,
-                    "Value found for key '{}' in override hash".format(name),
-                    invocation.override_values[name],
+                    "Value found for key '{}' in override hash".format(text),
+                    invocation.override_values[text],
                 )
                 invocation.emit_debug_info(_debug_preamble(call.names))
                 return result
@@ -273,11 +314,12 @@ def lookup(call: LookupCall, invocation, search):
                 return result
 
         for name in call.names:
-            if name in invocation.default_values:
+            text = _key_text(name)
+            if text in invocation.default_values:
                 result = _assert(
                     call,
-                    "Value found for key '{}' in default values hash".format(name),
-                    invocation.default_values[name],
+                    "Value found for key '{}' in default values hash".format(text),
+                    invocation.default_values[text],
                 )
                 invocation.emit_debug_info(_debug_preamble(call.names))
                 return result

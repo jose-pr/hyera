@@ -286,3 +286,16 @@ def test_legacy_function_mapping(fn):
 def test_hiera_is_not_iterable(fn):
     with pytest.raises(TypeError):
         iter(fn)
+
+
+def test_a_tuple_name_matches_override_through_its_dotted_form(fn):
+    assert fn.lookup(("k",), override={"k": "OVR"}) == "OVR"
+    assert fn.lookup(("hsi", "a"), override={"hsi.a": 99}) == fn.lookup(
+        "hsi.a", override={"hsi.a": 99}
+    )
+    assert fn.lookup(("hsi", "a"), override={"hsi.a": 99}) == 99
+
+
+def test_a_tuple_name_matches_default_values_hash_through_its_dotted_form(fn):
+    assert fn.lookup(("zz",), default_values_hash={"zz": "D"}) == "D"
+    assert fn.lookup(("zz", 0), default_values_hash={"zz.0": "D"}) == "D"
