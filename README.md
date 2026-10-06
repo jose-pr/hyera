@@ -491,9 +491,11 @@ working directory, or absolute); a directive in value position (including
 inside a `[...]` array) is kept as literal text; `url(…)`, `classpath(…)`,
 `required(…)`, `package(…)` and a case-mismatched keyword all raise
 `BackendError`, matching Puppet's own parse/method errors for those forms.
-Pass `hocon_includes=False` to `HOCONBackend` (or set `hocon_includes:
-false` on the hierarchy entry/`defaults` -- hyera's own extension, not
-Puppet vocabulary) to restore the stricter, pre-fidelity behaviour instead:
+Pass `hocon_includes=False` to `HOCONBackend`, or set `options:
+{hocon_includes: false}` on a `hocon_data` hierarchy entry (or in
+`defaults: {options: ...}`; hyera's own extension, which Puppet rejects --
+it refuses every `options` key on `hocon_data`), to restore the stricter,
+pre-fidelity behaviour instead:
 every form but a plain quoted include raises, `include file(…)` included.
 In either mode, pyhocon's own include-resolving methods stay wrapped as a
 fail-closed backstop, so an undiscovered gap in the text scanner still
@@ -768,9 +770,9 @@ for.
   argument and includes every match; Puppet's own `hocon_data` never
   expands such a glob (it contributes nothing). There is no opt-in that
   reproduces Puppet's non-globbing `file(...)` exactly, though
-  `hocon_includes=False` (or `hocon_includes: false` on the entry/
-  `defaults`) is available as a stricter, non-resolving alternative for
-  every include form. Every other `include` form matches Puppet exactly
+  `hocon_includes=False` (or `options: {hocon_includes: false}` on the
+  entry or in `defaults`) is available as a stricter, non-resolving
+  alternative for every include form. Every other `include` form matches Puppet exactly
   (see [Backends](#backends)). (id: `hocon-include-glob`)
 - **`eyaml_lookup_key` supports only the PKCS7 encryptor.** hiera-eyaml's
   other encryptors (GPG, and any third-party plugin) raise the same

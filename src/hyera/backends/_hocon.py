@@ -13,7 +13,7 @@ import re
 import threading
 import typing as _ty
 
-from ..exceptions import BackendError, _one_line
+from ..exceptions import BackendError, ConfigError, _one_line
 from . import Backend, _Names
 
 _LOGGER = logging.getLogger(__name__)
@@ -817,6 +817,37 @@ class HOCONBackend(Backend):
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
         self.hocon_includes: bool = bool(hocon_includes)
+
+    def data_hash(
+        self,
+        path: _ty.Any,
+        options: _ty.Mapping[str, _ty.Any],
+    ) -> _ty.Dict[str, _ty.Any]:
+        """The ``data_hash`` hook. Besides ``path``, the one hierarchy
+        option accepted is ``hocon_includes`` (a Boolean), which selects the
+        include mode for this level; any other option raises as for every
+        built-in file function.
+
+        :param path: the location's file path.
+        :param options: the hierarchy entry's ``options``.
+        :returns: the parsed data.
+        :raises ConfigError: ``hocon_includes`` is not a Boolean, or
+            ``options`` carries anything else besides ``path``.
+        :raises BackendError: the file could not be read or parsed.
+        """
+        rest = dict(options)
+        if "hocon_includes" not in rest:
+            return super().data_hash(path, rest)
+        value = rest.pop("hocon_includes")
+        if not isinstance(value, bool):
+            raise ConfigError(
+                "'hocon_data' option 'hocon_includes' must be a Boolean, "
+                "not {}".format(type(value).__name__)
+            )
+        backend = self
+        if value != self.hocon_includes:
+            backend = type(self)(self.conf, strict=self._strict, hocon_includes=value)
+        return super(HOCONBackend, backend).data_hash(path, rest)
 
     @classmethod
     def check_available(cls) -> None:

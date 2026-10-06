@@ -963,10 +963,10 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `5 minutes`) or size string (`10MB`) stays literal text — matching real
   Ruby hocon, which has no duration/size type at all — instead of becoming
   a `datetime.timedelta`; the *shared* `pyhocon` module (what a third party
-  importing `pyhocon` directly sees) is never touched, except for two
-  deprecation shims scoped to the private copy only (its `codecs`/`logger`
-  names, so pyhocon's own deprecated calls never raise under this
-  project's `filterwarnings = ["error"]`). A root value that is not an
+  importing `pyhocon` directly sees) is never touched; the private copy
+  alone gets two deprecation shims (its `codecs`/`logger` names, so
+  pyhocon's own deprecated calls never raise under this project's
+  `filterwarnings = ["error"]`). A root value that is not an
   object (e.g. a top-level `[1, 2]`) raises `BackendError("... has type
   LIST rather than object at file root")`. `.loads` returns plain
   `dict`/`list`. Invalid UTF-8 (handled by the base `.load`), and any other
@@ -974,10 +974,15 @@ is a `Backend` subclass, found by name rather than passed around directly.
   (`str(e)`, whitespace-collapsed), no exception chain.
 
   `hocon_includes` (hyera's own extension, not Puppet vocabulary):
-  `None` (the constructor default) reads `conf.get("hocon_includes", True)`,
-  so a hierarchy entry/`defaults` key of the same name reaches it the same
-  way `datadir` already does; an explicit `True`/`False` overrides `conf`.
-  It selects which of two scanners `.loads` runs before pyhocon ever parses
+  `None` (the constructor default) reads `conf.get("hocon_includes", True)`;
+  an explicit `True`/`False` overrides `conf`. From hiera.yaml, set it with
+  `options: {hocon_includes: false}` on a `hocon_data` entry or in
+  `defaults: {options: ...}` (a bare `hocon_includes:` key is not valid
+  hiera.yaml): `.data_hash(path, options)` takes it from `options`, raises
+  `ConfigError` when it is not a Boolean, and still raises the usual
+  "one of 'path' ..." `ConfigError` for any other option (Puppet 8.10
+  refuses every `options` key on `hocon_data`; this one is hyera's
+  extension). It selects which of two scanners `.loads` runs before pyhocon ever parses
   the text:
   - **`True` (default, matches Puppet's own `hocon_data`):** a plain
     `include "..."` contributes nothing; `include file(...)` (relative or
@@ -1006,8 +1011,13 @@ is a `Backend` subclass, found by name rather than passed around directly.
   whichever forms the active mode does not intend to resolve for real
   (`url`/`package` always; `file` too when `hocon_includes` is `False`),
   so an undiscovered gap in the text scanner still cannot read a file or
-  reach the network; this backstop wraps both the shared `pyhocon.config_parser`
-  module and hyera's own private copy.
+  reach the network; this backstop wraps hyera's private copy only, and is
+  installed the first time a document is parsed (importing `hyera` imports
+  no `pyhocon`). Each file reached through `include file(...)` goes through
+  the same scanner before it is parsed, so these rules hold at every depth.
+  A quoted key (`"ntp::servers" = ...`) loads without its quote characters,
+  `null` inside a concatenation (`k = null x`) is the text `null`, and a
+  `\uXXXX` escape in a quoted string is decoded.
 - **`SopsBackend(conf=None, *, strict=None, format=None, timeout=None)`** — `NAMES = {"function": ("sops_data", "sops", NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`.
   Not a `YAMLBackend` subclass; `format` is set by the `NamePattern`
   capture, else inferred.

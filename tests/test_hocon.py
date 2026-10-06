@@ -38,7 +38,7 @@ import types
 
 import pytest
 
-from hyera import BackendError, Hiera, default_backends
+from hyera import BackendError, ConfigError, Hiera, default_backends
 from hyera.backends import HOCONBackend, has_hocon
 from hyera.backends import _hocon as hocon_mod
 from hyera.backends._hocon import _hocon_parser
@@ -986,6 +986,72 @@ def test_parse_error_chain_holds_no_document_text():
         assert secret not in repr(vars(exc))
         exc = exc.__cause__ or exc.__context__
     assert len(seen) == 1
+
+
+# -- the stricter include mode is selected from hiera.yaml through options --
+
+
+def _hocon_tree(make_tree, tmp_path, monkeypatch, entry_options=None, defaults=None):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "inc.conf").write_bytes(b"fromfile = included\n")
+    entry = {"name": "h", "data_hash": "hocon_data", "path": "c.conf"}
+    if entry_options is not None:
+        entry["options"] = entry_options
+    config = {"hierarchy": [entry]}
+    if defaults is not None:
+        config["defaults"] = defaults
+    root = make_tree(
+        config,
+        files={"data/c.conf": 'include file("inc.conf")\nk = v\n'},
+    )
+    return Hiera(str(root / "hiera.yaml"))
+
+
+def test_hocon_includes_option_unset_reads_the_included_file(
+    make_tree, tmp_path, monkeypatch
+):
+    h = _hocon_tree(make_tree, tmp_path, monkeypatch)
+    assert h.lookup("fromfile") == "included"
+
+
+def test_hocon_includes_false_option_on_the_entry_refuses_file_includes(
+    make_tree, tmp_path, monkeypatch
+):
+    h = _hocon_tree(make_tree, tmp_path, monkeypatch, {"hocon_includes": False})
+    with pytest.raises(BackendError, match="line 1"):
+        h.lookup("k")
+
+
+def test_hocon_includes_true_option_keeps_the_default(make_tree, tmp_path, monkeypatch):
+    h = _hocon_tree(make_tree, tmp_path, monkeypatch, {"hocon_includes": True})
+    assert h.lookup("fromfile") == "included"
+
+
+def test_hocon_includes_false_option_from_defaults_refuses_file_includes(
+    make_tree, tmp_path, monkeypatch
+):
+    h = _hocon_tree(
+        make_tree,
+        tmp_path,
+        monkeypatch,
+        defaults={"options": {"hocon_includes": False}},
+    )
+    with pytest.raises(BackendError, match="line 1"):
+        h.lookup("k")
+
+
+def test_hocon_includes_option_must_be_a_boolean(make_tree, tmp_path, monkeypatch):
+    h = _hocon_tree(make_tree, tmp_path, monkeypatch, {"hocon_includes": "no"})
+    with pytest.raises(ConfigError, match="hocon_includes.*Boolean"):
+        h.lookup("k")
+
+
+def test_other_hocon_data_options_are_still_refused(make_tree, tmp_path, monkeypatch):
+    h = _hocon_tree(
+        make_tree, tmp_path, monkeypatch, {"hocon_includes": False, "other": 1}
+    )
+    with pytest.raises(ConfigError, match="one of 'path'"):
+        h.lookup("k")
 
 
 # -- hyera neither imports nor patches pyhocon until a document is parsed --
