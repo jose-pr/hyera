@@ -25,10 +25,8 @@ from .mismatch import assert_instance_of, short_name
 from .inference import infer_generic, infer_set
 from .types import (
     Any,
-    Array,
     Boolean,
     Float,
-    Hash,
     Integer,
     NotUndef,
     Numeric,
@@ -36,11 +34,9 @@ from .types import (
     Regexp,
     SensitiveType,
     String,
-    Struct,
-    Tuple,
     Sensitive,
-    _PNamedType,
 )
+from .compound_types import Array, Hash, Struct, Tuple, _PNamedType
 
 __all__ = ["new_instance"]
 

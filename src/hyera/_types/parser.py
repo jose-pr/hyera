@@ -19,10 +19,8 @@ import typing as _ty
 
 from ..exceptions import HieraLookupError
 from .types import (
-    ALIASES,
     ANY,
     BOOLEAN,
-    COLLECTION,
     NAMED_ONLY_TYPES,
     NUMERIC,
     REGEXP,
@@ -30,12 +28,9 @@ from .types import (
     SCALAR_DATA,
     UNDEF,
     Any,
-    Array,
     Boolean,
-    Collection,
     Enum,
     Float,
-    Hash,
     Integer,
     NotUndef,
     Optional,
@@ -43,14 +38,21 @@ from .types import (
     Regexp,
     SensitiveType,
     String,
+    _num_str,
+    _type_instance,
+)
+from .compound_types import (
+    ALIASES,
+    COLLECTION,
+    Array,
+    Collection,
+    Hash,
     StructElement,
     Struct,
     Tuple,
     TypeReference,
     Variant,
     _PNamedType,
-    _num_str,
-    _type_instance,
 )
 from .ruby_regexp import _ruby_regex
 

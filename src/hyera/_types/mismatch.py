@@ -17,21 +17,23 @@ from ..exceptions import HieraLookupError
 from .inference import infer_set
 from .types import (
     ANY,
-    Array,
     Enum,
-    Hash,
     NotUndef,
     Optional,
     Pattern,
     SensitiveType,
     String,
+    _type_instance,
+    puppet_quote,
+)
+from .compound_types import (
+    Array,
+    Hash,
     Struct,
     Tuple,
     TypeAlias,
     TypeReference,
     Variant,
-    _type_instance,
-    puppet_quote,
 )
 
 __all__ = ["assert_instance_of"]

@@ -45,6 +45,7 @@ The files ported from Puppet are:
     src/hyera/backends/_yaml.py (from puppet/functions/yaml_data.rb)
     src/hyera/backends/_psych.py (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
     src/hyera/_types/types.py (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+    src/hyera/_types/compound_types.py (from puppet/pops/types/types.rb, pops/loader/static_loader.rb)
     src/hyera/_types/inference.py (from puppet/pops/types/type_calculator.rb)
     src/hyera/_types/parser.py (from puppet/pops/types/type_parser.rb)
     src/hyera/_types/mismatch.py (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)

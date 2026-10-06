@@ -13,21 +13,23 @@ import re
 
 from .types import (
     UNDEF,
-    Array,
     Boolean,
     Float,
-    Hash,
     Integer,
     Regexp,
-    Runtime,
     Sensitive,
     SensitiveType,
     String,
+    generalize,
+)
+from .compound_types import (
+    Array,
+    Hash,
+    Runtime,
     Struct,
     StructElement,
     Tuple,
     Variant,
-    generalize,
 )
 
 

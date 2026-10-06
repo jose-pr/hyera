@@ -26,17 +26,16 @@ from hyera._types.mismatch import (
 )
 from hyera._types.parser import _Parser, parse_type
 from hyera._types.types import (
-    ALIASES,
     Any,
     Enum,
     NotUndef,
     Optional,
-    TypeReference,
     _eql_key,
     _literal_str,
     _num_str,
     generalize,
 )
+from hyera._types.compound_types import ALIASES, TypeReference
 
 _CASES = Path(__file__).parent / "conformance" / "cases"
 
