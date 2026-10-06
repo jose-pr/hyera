@@ -267,6 +267,44 @@ def test_readme_config_is_the_example():
         yaml.safe_load(body)
 
 
+def test_badges_and_sections_follow_the_standard_order():
+    text = README.read_text(encoding="utf-8")
+    badges = re.findall(r"^\[!\[([^\]]+)\]", text, re.M)
+    assert badges == ["Version", "Python versions", "License", "Docs", "CI"]
+
+    headings = re.findall(r"^## (.+)$", text, re.M)
+    standard = [
+        "Features",
+        "Installation",
+        "Quick start",
+        "Command line",
+        "API overview",
+    ]
+    assert headings[: len(standard)] == standard
+    assert headings[-2:] == ["Development", "License"]
+
+
+def test_installation_table_names_each_extra_without_a_version_range():
+    text = README.read_text(encoding="utf-8")
+    install_section = text.split("## Installation", 1)[1].split("\n## ", 1)[0]
+    rows = {
+        match.group(1): match.group(0)
+        for match in re.finditer(r"^\| `(\w+)` \|.*$", install_section, re.M)
+    }
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    declared = {
+        name: re.findall(r'"([A-Za-z0-9_.-]+)', body)
+        for name, body in re.findall(
+            r"^(cli|hocon|eyaml)\s*=\s*\[(.*?)\]", pyproject, re.M
+        )
+    }
+    assert set(rows) == set(declared) == {"cli", "hocon", "eyaml"}
+    for extra, row in rows.items():
+        for requirement in declared[extra]:
+            assert "`{}`".format(requirement) in row
+        assert re.search(r"[<>=!~]=?\s*\d", row) is None, row
+
+
 def test_install_commands_quote_extras():
     text = README.read_text(encoding="utf-8")
     install_section = text.split("## Installation", 1)[1].split("\n## ", 1)[0]

@@ -1,6 +1,6 @@
 # hyera
 
-[![PyPI](https://img.shields.io/pypi/v/hyera.svg)](https://pypi.org/project/hyera/)
+[![Version](https://img.shields.io/pypi/v/hyera.svg)](https://pypi.org/project/hyera/)
 [![Python versions](https://img.shields.io/pypi/pyversions/hyera.svg)](https://pypi.org/project/hyera/)
 [![License](https://img.shields.io/badge/license-MIT_AND_Apache--2.0_AND_BSD--2--Clause-blue.svg)](https://github.com/jose-pr/hyera#license)
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://jose-pr.github.io/hyera/)
@@ -57,9 +57,9 @@ pip install hyera
 
 | Extra | Install | Adds | Needed for |
 | --- | --- | --- | --- |
-| `cli` | `pip install "hyera[cli]"` | `duho>=0.6.4,<0.7` | the `hyera` command / `python -m hyera` |
-| `hocon` | `pip install "hyera[hocon]"` | `pyhocon>=0.3.62,<0.4` | `hocon_data` hierarchy levels |
-| `eyaml` | `pip install "hyera[eyaml]"` | `cryptography>=50.0,<51` | `eyaml_lookup_key` (PKCS7) levels |
+| `cli` | `pip install "hyera[cli]"` | `duho` | the `hyera` command / `python -m hyera` |
+| `hocon` | `pip install "hyera[hocon]"` | `pyhocon` | `hocon_data` hierarchy levels |
+| `eyaml` | `pip install "hyera[eyaml]"` | `cryptography` | `eyaml_lookup_key` (PKCS7) levels |
 
 The `sops_data`/`sops`/`sops_<format>` backend needs the external
 [`sops`](https://github.com/getsops/sops) binary on `PATH`, not a Python
@@ -113,6 +113,64 @@ $ hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --node we
 `puppet lookup` takes the same flags, as
 [`examples/README.md`](https://github.com/jose-pr/hyera/blob/main/examples/README.md)
 shows.
+
+## Command line
+
+Install the `cli` extra to get the command: `pip install "hyera[cli]"`
+(without it, `hyera`/`python -m hyera` print that hint and exit 2).
+
+`hyera` takes `puppet lookup`'s flags, apart from those listed as not
+supported under [Hiera coverage](#hiera-coverage):
+
+```sh
+hyera [options] KEY [KEY ...]
+
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --node web01.example.com ntp::servers
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --merge deep --knock-out-prefix=-- --render-as json users
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --explain ntp::servers
+python -m hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml ntp::servers
+```
+
+Options, grouped:
+
+- **lookup**: one or more `KEY`s (the first one found wins); `--merge
+  first|unique|hash|deep`; `--knock-out-prefix`, `--sort-merged-arrays` and
+  `--merge-hash-arrays` (only with `--merge deep`); `--type` (asserts the
+  found value and `--default` against a Puppet type expression); `--default`;
+  `--explain`/`--explain-options`.
+- **facts and scope**: `--facts FILE` (`.json`/`.yaml`/`.yml`, or any other
+  name tried as JSON then YAML); `--node NAME` (used in messages only, sets
+  no fact); `--scope NAME=VALUE`/`-s` (repeatable; VALUE is YAML, a dotted
+  NAME builds a hash -- hyera's one flag with no `puppet lookup` counterpart).
+- **settings**: `--hiera_config PATH` (default `./hiera.yaml` if present,
+  else Puppet's built-in default configuration); `--environment NAME`;
+  `--environmentpath`/`--modulepath`/`--basemodulepath` (each a list of
+  paths separated by the OS path separator); `--codedir`; `--strict
+  off|warning|error` (default `warning`).
+- **output**: `--render-as s|json|yaml` (default `yaml`, or `s` while
+  explaining).
+- **logging**: `-v`/`--verbose` (repeatable; adds info, then debug),
+  `-d`/`--debug` (debug, same as `-vv`), `-q`/`--quiet` (repeatable; drops
+  to error, then critical), `--loglevel [NAME:]LEVEL`.
+
+Without `--merge`, the data's `lookup_options` decides; an explicit
+`--merge`, `first` included, overrides it. See
+[Errors and exit codes](#errors-and-exit-codes) below for what each exit
+status means and what this CLI does not (yet) support.
+
+`HYERA_MCP=stdio hyera` runs the same command as an MCP server over
+stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
+`hyera`, whose arguments are the command-line fields (`keys`, `hiera_config`,
+`facts`, `scope`, `merge`, ...) and whose result is what the command would
+print. An option value of exactly `--` (the knock-out prefix `--`) is passed
+through as the value, as on the command line.
+
+An MCP caller that controls the tool's arguments can do what a user at the
+command line can: read any file the process can read as a facts file or a
+`hiera.yaml` (an error message can name the keys of a YAML or JSON mapping
+it finds there, and shows whether a path exists), and read any hiera data on
+disk. A hierarchy level that names `sops_data` runs the `sops` binary.
+Expose the tool only to a caller you would trust with that access.
 
 ## API overview
 
@@ -568,64 +626,6 @@ hierarchy:
 - Other hiera-eyaml encryptors (GPG and third-party plugins) are not
   supported; a value using one raises the same "cannot load such file"
   error Puppet itself gives without that plugin installed.
-
-### Command line
-
-Install the `cli` extra to get the command: `pip install "hyera[cli]"`
-(without it, `hyera`/`python -m hyera` print that hint and exit 2).
-
-`hyera` takes `puppet lookup`'s flags, apart from those listed as not
-supported under [Hiera coverage](#hiera-coverage):
-
-```sh
-hyera [options] KEY [KEY ...]
-
-hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --node web01.example.com ntp::servers
-hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --merge deep --knock-out-prefix=-- --render-as json users
-hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --explain ntp::servers
-python -m hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml ntp::servers
-```
-
-Options, grouped:
-
-- **lookup**: one or more `KEY`s (the first one found wins); `--merge
-  first|unique|hash|deep`; `--knock-out-prefix`, `--sort-merged-arrays` and
-  `--merge-hash-arrays` (only with `--merge deep`); `--type` (asserts the
-  found value and `--default` against a Puppet type expression); `--default`;
-  `--explain`/`--explain-options`.
-- **facts and scope**: `--facts FILE` (`.json`/`.yaml`/`.yml`, or any other
-  name tried as JSON then YAML); `--node NAME` (used in messages only, sets
-  no fact); `--scope NAME=VALUE`/`-s` (repeatable; VALUE is YAML, a dotted
-  NAME builds a hash -- hyera's one flag with no `puppet lookup` counterpart).
-- **settings**: `--hiera_config PATH` (default `./hiera.yaml` if present,
-  else Puppet's built-in default configuration); `--environment NAME`;
-  `--environmentpath`/`--modulepath`/`--basemodulepath` (each a list of
-  paths separated by the OS path separator); `--codedir`; `--strict
-  off|warning|error` (default `warning`).
-- **output**: `--render-as s|json|yaml` (default `yaml`, or `s` while
-  explaining).
-- **logging**: `-v`/`--verbose` (repeatable; adds info, then debug),
-  `-d`/`--debug` (debug, same as `-vv`), `-q`/`--quiet` (repeatable; drops
-  to error, then critical), `--loglevel [NAME:]LEVEL`.
-
-Without `--merge`, the data's `lookup_options` decides; an explicit
-`--merge`, `first` included, overrides it. See
-[Errors and exit codes](#errors-and-exit-codes) below for what each exit
-status means and what this CLI does not (yet) support.
-
-`HYERA_MCP=stdio hyera` runs the same command as an MCP server over
-stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
-`hyera`, whose arguments are the command-line fields (`keys`, `hiera_config`,
-`facts`, `scope`, `merge`, ...) and whose result is what the command would
-print. An option value of exactly `--` (the knock-out prefix `--`) is passed
-through as the value, as on the command line.
-
-An MCP caller that controls the tool's arguments can do what a user at the
-command line can: read any file the process can read as a facts file or a
-`hiera.yaml` (an error message can name the keys of a YAML or JSON mapping
-it finds there, and shows whether a path exists), and read any hiera data on
-disk. A hierarchy level that names `sops_data` runs the `sops` binary.
-Expose the tool only to a caller you would trust with that access.
 
 ### Errors and exit codes
 
