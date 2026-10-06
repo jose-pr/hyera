@@ -23,11 +23,9 @@ from .._config.data_provider import (
 )
 from .._output.explain_refs import _provider_ref
 
-#: Sentinel distinguishing "no location in this layer's own hierarchy
-#: declares ``lookup_options`` at all" from an explicit ``lookup_options: ~``
-#: (``None``) -- needed because :class:`~hyera._lookup.cache._ScopeKeyedCache`
-#: already uses :data:`~hyera._lookup.navigation._MISSING` to mean "not cached yet"
-#: (:func:`layer_options_cached`).
+#: Sentinel for "no location in this layer's hierarchy declares ``lookup_options``", as opposed
+#: to an explicit ``lookup_options: ~`` (``None``); ``_ScopeKeyedCache`` already uses
+#: :data:`~hyera._lookup.navigation._MISSING` for "not cached yet" (:func:`layer_options_cached`).
 _LO_ABSENT = object()
 
 
@@ -92,8 +90,8 @@ def layer_options_cached(hiera, hierarchy, base_path, tag, module_name, invocati
     ``invocation._state`` guards a value inside ``lookup_options``
     that itself runs a full sub-lookup (:meth:`_sub_lookup`) asking this
     same method for its own key's options while this gather is still
-    running (measured against a ``merge:`` spec interpolated through a
-    nested ``%{lookup(...)}``): marking ``(scope, tag, base_path)``
+    running (a ``merge:`` spec interpolated through a nested
+    ``%{lookup(...)}``): marking ``(scope, tag, base_path)``
     pending before the gather starts means that nested lookup sees no
     options at all (:data:`_LO_ABSENT`), instead of re-entering this
     gather and recursing forever (``lookup_adapter.rb:376-378``). The

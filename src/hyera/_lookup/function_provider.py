@@ -1,8 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/function_provider.rb,
-# data_hash_function_provider.rb, lookup_key_function_provider.rb,
-# data_dig_function_provider.rb, context.rb, data_provider.rb,
-# configured_data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
-# Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{function_provider,data_hash_function_provider,
+# lookup_key_function_provider,data_dig_function_provider,context,data_provider,configured_data_provider}.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """Function providers: dispatching a hierarchy level's ``data_hash``,
 ``lookup_key`` or ``data_dig`` function per key and per location, with a
 :class:`LookupContext` for the ``lookup_key``/``data_dig`` cases.
@@ -26,10 +24,8 @@ from ..exceptions import BackendError, ConfigError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
 
-#: The shared no-op context manager every ``at_location`` closure below uses
-#: for a location-less entry (``locations is None`` -> a single ``None``
-#: "location"): Puppet's own function providers call their function with no
-#: location at all there, so nothing about a location is ever pushed.
+#: The shared no-op context manager for a location-less entry (``locations is None``):
+#: Puppet's function providers call their function with no location there, so none is pushed.
 _NULL_CONTEXT = contextlib.nullcontext()
 
 
@@ -78,15 +74,9 @@ def _kind_mismatch_text(backend, func_name: str, kind: str) -> str:
         return "'{}' expects 3 arguments, got 2".format(func_name)
     if has_dh:
         return "'{}' expects 2 arguments, got 3".format(func_name)
-    # Only "data_dig" and "lookup_key" are left for `kind` (Puppet has no
-    # fourth function kind), has_dh is now known false, and at least one
-    # of has_lk/has_dh/has_dd was true (the first check above already
-    # returned otherwise) -- so exactly one of has_lk/has_dd is true,
-    # matching whichever of the two kind values `kind` is not (the
-    # precondition above rules out backend implementing `kind` itself).
-    # Neither branch's own "and has_lk"/"and has_dd" condition can ever be
-    # false when reached, so there is no remaining case for a trailing
-    # fallback to catch.
+    # Only "data_dig" and "lookup_key" remain for `kind`, has_dh is false and one of has_lk/has_dd
+    # is true, so exactly one is: whichever kind `kind` is not. Neither branch's own condition can
+    # be false when reached, so no trailing fallback is needed.
     if kind == "data_dig":
         return "'{}' parameter 'key' expects a String value, got Tuple".format(
             func_name
@@ -126,9 +116,9 @@ class _NotFound(BaseException):
 
 def _puppet_type_label(value) -> str:
     """The Puppet type name ``data_provider.rb``'s Hash check would report
-    for a non-Hash ``data_hash`` result (measured against Puppet 8.10.0,
-    ``--strict warning``, on JSON's seven possible top-level shapes; the
-    same labels apply to any backend's non-dict result)."""
+    for a non-Hash ``data_hash`` result (Puppet 8.10.0, ``--strict warning``,
+    on JSON's seven possible top-level shapes; the same labels apply to any
+    backend's non-dict result)."""
     if isinstance(value, bool):  # bool before int: bool is an int subclass.
         return "Boolean"
     if value is None:
@@ -249,11 +239,8 @@ class _EnvironmentContext:
             with open(path, "rb") as fh:
                 raw = fh.read()
         except OSError as e:
-            # Same shape as the stat branch above (e.g. a directory at
-            # `path`, or a permission error): Puppet itself also leaves
-            # this one raw, but the sibling branch here already wraps its
-            # own failures, so this stays consistent with that rather than
-            # with Puppet.
+            # Same shape as the stat branch above (a directory at `path`, a permission error): Puppet
+            # leaves this one raw, but the sibling branch wraps its failures, so this stays consistent with it.
             raise BackendError(
                 "Unable to read ({}): {}".format(path, e.strerror or e), path=path
             ) from e

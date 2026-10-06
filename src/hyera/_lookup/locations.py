@@ -85,7 +85,7 @@ class _GlobEntry(_ty.NamedTuple):
     """One cached glob listing: ``matches`` is the interned-string tuple of
     matched files (directories already dropped); ``dirs`` is the
     ``((directory, state), ...)`` pairs for every directory the walk
-    consulted (:func:`_dir_state`), used to decide whether the listing is
+    consulted (:func:`_dir_state`), which decide whether the listing is
     still fresh (:meth:`_LocationStore.glob_matches`, ``revalidate=True``) without
     re-walking unless one of them changed."""
 
@@ -126,10 +126,8 @@ class _LocationStore:
         #: depends on directory contents, not on scope. See
         #: :meth:`glob_matches`.
         self._glob_cache = _LRU(lock, cache_size)
-        #: Parsed data files: ``(path, backend.strict, options) ->
-        #: _FileEntry``. See :meth:`load_file`. Unbounded, as Puppet's own
-        #: per-environment file cache is (its size follows the data tree,
-        #: not the number of scopes seen).
+        #: Parsed data files: ``(path, backend.strict, options) -> _FileEntry``, see :meth:`load_file`.
+        #: Unbounded, as Puppet's per-environment file cache is: its size follows the data tree.
         self._file_cache: dict = {}
         #: Every plain path ever loaded successfully into ``_file_cache``,
         #: under any ``strict``/``options`` variant.
@@ -190,7 +188,7 @@ class _LocationStore:
         the parsed, cached data, or :data:`~hyera._lookup.navigation._MISSING` when
         ``revalidate=True`` and ``path`` has vanished since it was last
         cached (a materialized location whose ``exist`` was true earlier in
-        this same lookup, per its own memoized probe, but no longer is --
+        this same lookup, per its own memoized probe, but is now false --
         caught here rather than treated as a read error, the same way an
         always-absent location is).
 
@@ -248,20 +246,15 @@ class _LocationStore:
             probe = _probe_for(invocation, path)
             if probe.kind == "absent":
                 if entry is not None:
-                    # A path that was cached (successfully read before) and
-                    # has since vanished reads as absent, as Puppet's next
-                    # compilation would see it -- never an error for that
-                    # alone.
+                    # A path cached earlier that has since vanished reads as absent, as Puppet's next
+                    # compilation would see it, not as an error.
                     with self.lock:
                         self._file_cache.pop(cache_key, None)
                         self._loaded_paths.discard(path)
                     return _MISSING
-                # Never cached, and materialization still says this is a
-                # location to read (a glob match's own `exist` is not a
-                # fresh probe result -- a dangling symlink matches by name
-                # like any other file): attempt the read and let it fail
-                # naturally, exactly as it would have with no revalidation
-                # at all.
+                # Never cached, and materialization still says this is a location to read (a glob match's
+                # `exist` is not a fresh probe: a dangling symlink matches by name): attempt the read and let
+                # it fail naturally.
             elif entry is not None and entry.signature == probe.sig:
                 return entry.data
         elif entry is not None:
@@ -484,11 +477,8 @@ class _LocationStore:
         )
         matches = []
         for m in raw:
-            # Only a directory is dropped here (``reject(&:directory?)``,
-            # as the eager `_expand_globs` does) -- a dangling symlink match
-            # is kept, exactly like the eager path: `_load_file` is what
-            # raises for it, when something actually tries to read it, not
-            # this listing step.
+            # Only a directory is dropped (``reject(&:directory?)``, as the eager `_expand_globs` does); a
+            # dangling symlink match is kept, and `_load_file` raises for it when something reads it.
             if self.revalidate:
                 is_dir = _probe_for(invocation, m).kind == "dir"
             else:

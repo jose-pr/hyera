@@ -61,17 +61,13 @@ def _rec(invocation, kind, qualifier):
 #: A key needs sub-key parsing only if it contains a quote or a dot
 #: (``sub_lookup.rb`` ``SPECIAL``).
 _SPECIAL_RE = re.compile(r"""['".]""")
-#: One key segment: a double- or single-quoted run (with its surrounding
-#: whitespace, so that whitespace is consumed by the segment rather than
-#: left as stray delimiter text), or a run of characters that is none of
-#: quote/dot. ``re.ASCII`` matches Ruby's ASCII-only ``\s`` -- Python's
-#: default ``\s`` also matches Unicode whitespace such as U+00A0 NBSP.
+#: One key segment: a quoted run (with its surrounding whitespace, which the segment consumes)
+#: or a run of characters that is none of quote/dot. ``re.ASCII`` matches Ruby's ASCII-only
+#: ``\s`` (Python's default also matches Unicode whitespace such as U+00A0).
 _SEGMENT_RE = re.compile(r"""(\s*"[^"]+"\s*|\s*'[^']+'\s*|[^'".]+)""", re.ASCII)
-#: A segment that is (optionally colon-prefixed -- ``sub_lookup.rb:39``'s
-#: ``(:?...)`` is a literal-colon-then-digits group, not a Ruby
-#: non-capturing group; the leading colon is admitted here too, then
-#: dropped by ``_ruby_to_i`` since Ruby's ``to_i`` does not parse it either)
-#: signed digits, and nothing else.
+#: An optionally colon-prefixed, signed-digit segment (``sub_lookup.rb:39``'s ``(:?...)`` is a
+#: literal colon then digits, not a non-capturing group); ``_ruby_to_i`` drops the colon, as
+#: Ruby's ``to_i`` does not parse it.
 _INT_SEGMENT_RE = re.compile(r"^(:?[+-]?[0-9]+)$", re.M)
 #: Ruby ``String#to_i``: the leading signed-digit run, or 0 if there is none.
 _TO_I_RE = re.compile(r"\s*([+-]?[0-9]+)", re.ASCII)
@@ -123,13 +119,9 @@ def split_key(
     # Ruby's String#split drops trailing empty strings; re.split keeps them.
     while segments and segments[-1] == "":
         segments.pop()
-    # The loop above guarantees that once it exits, a non-empty `segments`
-    # never ends in "" -- so a length-1 list's one and only element is
-    # never "", and the check below already raises for it (its first
-    # element, being both first and last, fails `!= ""`). Reaching past
-    # that check with a non-empty first element therefore always leaves
-    # at least one element behind after popping it: `count` can never be
-    # 0 here, so there is no separate empty-after-pop case to check.
+    # The loop above leaves a non-empty `segments` never ending in "", so a one-element list's
+    # element is never "" and the check below raises for it; past that check, popping the first
+    # element leaves at least one behind, so there is no empty-after-pop case.
     if not segments or segments.pop(0) != "":
         raise make_error("Syntax error")
 

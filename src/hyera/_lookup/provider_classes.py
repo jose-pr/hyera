@@ -1,8 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/function_provider.rb,
-# data_hash_function_provider.rb, lookup_key_function_provider.rb,
-# data_dig_function_provider.rb, configured_data_provider.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{function_provider,data_hash_function_provider,
+# lookup_key_function_provider,data_dig_function_provider,configured_data_provider}.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """The provider classes that call a hierarchy level's ``data_hash``,
 ``lookup_key`` or ``data_dig`` function, and ``PROVIDER_CLASSES``, the table
 that picks one per function kind.
@@ -65,19 +63,13 @@ class _FunctionProvider:
         self._environment_context = environment_context
         self._environment_name = environment_name
         self._load_file = load_file
-        #: Mirrors the owning ``Hiera``'s own ``revalidate`` -- read by
-        #: :class:`_DataHashProvider` to decide whether a location already
-        #: cached on this provider's own ``_FunctionContext`` needs to go
-        #: through ``load_file`` again (probe-checked) or can be reused
+        #: Mirrors the owning ``Hiera``'s ``revalidate``: :class:`_DataHashProvider` reads it to decide
+        #: whether a cached location goes through ``load_file`` again (probe-checked) or is reused
         #: outright (:meth:`_DataHashProvider.key_lookup`).
         self._revalidate = revalidate
-        #: The owning module, and ``(module_name, data, function_name,
-        #: location) -> data``; both set only for a level owned by a module
-        #: (``core.Hiera._build_provider``): Puppet's module-data namespace
-        #: rule (:func:`~hyera._config.data_provider.prune_module_data`)
-        #: applied to a ``data_hash`` result only -- a ``lookup_key``/
-        #: ``data_dig`` value is never pruned
-        #: (``data_hash_function_provider.rb:72``).
+        #: The owning module and ``(module_name, data, function_name, location) -> data``, set only for a
+        #: module-owned level: Puppet's module-data namespace rule (``prune_module_data``), applied to
+        #: ``data_hash`` results only (``data_hash_function_provider.rb:72``).
         self._module_name = module_name
         self._prune = prune
         #: ``Hiera.clear_cache()``'s counter when this provider was built.
@@ -173,18 +165,9 @@ class _DataHashProvider(_FunctionProvider):
                 self._require_kind_implemented()
             ctx = self._context(location)
             if location is not None and not location.is_uri:
-                # A real file. While `self._revalidate`, `_LocationStore.load_file`
-                # owns both the parsed-content cache and its revalidation
-                # (probed at most once per top-level lookup, through
-                # `invocation`'s memo) and must run on every call -- gating
-                # it behind `ctx.data_hash` would skip revalidation after
-                # the first lookup this (view, provider) pair ever makes.
-                # With revalidation off there is nothing left for a repeat
-                # call to discover (the file is read at most once for the
-                # instance's life either way), so a lookup after the first
-                # skips `load_file` entirely -- no options merge, no cache
-                # key, no lock -- the same fast path a location-less/``uri``
-                # entry already gets below.
+                # A real file. While `self._revalidate`, `_LocationStore.load_file` owns the parsed-content cache
+                # and its revalidation (one probe per top-level lookup) and must run on every call. With
+                # revalidation off a repeat call skips `load_file`: no options merge, cache key or lock.
                 path = str(location.location)
                 if self._revalidate or ctx.data_hash is None:
                     options = self.options_for(location)

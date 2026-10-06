@@ -25,17 +25,13 @@ from ..exceptions import HieraLookupError
 
 __all__ = []
 
-#: A recorded reference read as ``_UNSTABLE`` during replay: something about
-#: it makes this reference set impossible to judge (a sub-lookup segment
-#: walk hit a genuine type-mismatch error), so this ref tuple is skipped
-#: rather than treated as a match or a miss -- the caller falls through to
-#: rebuilding.
+#: A recorded reference that read as ``_UNSTABLE`` during replay (a sub-lookup segment walk
+#: hit a type-mismatch error) is skipped, neither a match nor a miss; the caller rebuilds.
 _UNSTABLE = object()
 
-#: At most this many distinct reference sets are kept per cache "kind": the
-#: set of scope reads a build makes can itself depend on values (a
-#: re-interpolated value, a mapped collection), so more than one set can be
-#: valid for the same kind at once.
+#: At most this many distinct reference sets are kept per cache "kind": the scope reads a
+#: build makes can depend on values (a re-interpolated value, a mapped collection), so
+#: several sets can be valid at once.
 _MAX_KNOWN = 16
 
 
@@ -137,15 +133,9 @@ class _ScopeKeyedCache:
     def get(self, kind, scope, extra=()):
         last = self._last.get(kind)
         if last is not None and last[0] is scope and last[1] == extra:
-            # Identity fast path: ``scope`` is immutable by construction, so
-            # if this is the exact same object this cache last saw for
-            # ``kind``, every reference it would replay is guaranteed to
-            # read the same value it did last time -- replaying them (each
-            # a ``scope.lookup()``, some with a sub-lookup walk) would only
-            # ever confirm what identity already guarantees. Skip straight
-            # to the one thing that can still have changed: the entry
-            # itself being evicted since (a plain dict lookup, still under
-            # the shared lock -- no scope read at all).
+            # Identity fast path: ``scope`` is immutable, so the exact object this cache last saw for
+            # ``kind`` would replay every reference to the same values. Skip to the one thing that can
+            # still have changed: the entry's eviction (a dict lookup under the shared lock).
             key = last[2]
             with self._lock:
                 value = self._entries.get(key, _MISSING)

@@ -310,8 +310,7 @@ def lookup(call: LookupCall, invocation, search):
     Binds :data:`~hyera._lookup.invocation._STRICT` from ``invocation.scope.strict``
     for the whole call and resets it in ``finally`` -- the one place that
     binding happens, so every caller that reaches the engine through here
-    reads the bound scope's own strictness, the same way ``core.Hiera._get``
-    used to before this module existed.
+    reads the bound scope's own strictness.
     """
     strict_token = _STRICT.set(invocation.scope.strict)
     try:

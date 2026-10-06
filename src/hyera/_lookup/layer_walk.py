@@ -1,8 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb,
-# interpolation.rb, hiera_config.rb, function_provider.rb,
-# data_hash_function_provider.rb, configured_data_provider.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{lookup_adapter,interpolation,hiera_config,function_provider,
+# data_hash_function_provider,configured_data_provider}.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """The lookup walk: locations within a level, levels within a hierarchy,
 the global, environment and module layers, then lookup_options, the merge
 and the dotted sub-key.
@@ -34,10 +32,8 @@ from .merge_strategy import MergeStrategy
 from .navigation import LOOKUP_OPTIONS, _MISSING, join_key, parse_lookup_key, sub_lookup
 from .providers import provider_for
 
-#: Puppet's provider stack (``lookup_adapter.rb:296``): a key is looked up
-#: through each layer in turn, merged the same way as levels/locations
-#: within a layer. All three layers are wired through
-#: :meth:`Hiera._lookup_layers`; ``environment``/``module`` contribute
+#: Puppet's provider stack (``lookup_adapter.rb:296``): a key is looked up through each layer in
+#: turn and merged like levels and locations within a layer; ``environment`` and ``module`` give
 #: :data:`~hyera._lookup.navigation._MISSING` when no usable config exists there.
 _LAYERS = ("global", "environment", "module")
 
@@ -97,11 +93,9 @@ def _lookup_levels(
             and provider.locations is not None
             and not any(loc.exist for loc in provider.locations)
         ):
-            # hiera_config.rb:688: Puppet's own built-in default config
-            # drops an entry left with no existing candidate at all --
-            # never shown, not even as "Path not found" -- functionally
-            # identical to letting it run (every location misses either
-            # way), so this only changes what explain() displays.
+            # hiera_config.rb:688: Puppet's built-in default config drops an entry left with no existing
+            # candidate, never shown even as "Path not found"; running it would miss anyway, so this
+            # only changes what explain() displays.
             return _MISSING
         ref = _ProviderRef('Hierarchy entry "{}"'.format(level.name))
         with invocation.recording("data_provider", ref):
@@ -160,11 +154,8 @@ def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
             provider = usable_provider(self, state.provider, invocation)
             inv = invocation
         else:
-            # `layer` is always one of `_LAYERS` (the only caller,
-            # `strategy.lookup(_LAYERS, at_layer, invocation)` below,
-            # never passes anything else); "global" and "environment"
-            # are already handled above, so reaching here always means
-            # "module" -- never a fourth, unhandled name to check for.
+            # `layer` is one of `_LAYERS` (the only caller passes nothing else) and "global" and
+            # "environment" are handled above, so this is always "module".
             if module_name is None:
                 return _MISSING
             state = environment_for(self, scope.environment)
@@ -198,22 +189,15 @@ def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
                     module_name=mod,
                 )
             except HieraLookupError as e:
-                # lookup_adapter.rb:148-153: only the GLOBAL layer turns
-                # a code-less LookupError into one that escapes
-                # explain() outright; environment/module data reports
-                # the same error as the report's own last line instead.
-                # (A BackendError needs no marking here: Hiera.explain()
-                # always re-raises it unconditionally, wherever it came
-                # from -- a data/infrastructure problem, never one of
-                # Puppet's own reportable LookupErrors.)
+                # lookup_adapter.rb:148-153: only the GLOBAL layer turns a code-less LookupError into one that
+                # escapes explain(); environment/module data report it as the last line. A BackendError needs
+                # no marking: explain() always re-raises it (a data problem, not a reportable LookupError).
                 if layer == "global" and not getattr(e, "_explain_issue", False):
                     raise _escapes(e)
                 raise
             if result is _MISSING and self._is_default_config:
-                # The built-in default config's own "Common" entry can
-                # be pruned away entirely (above), leaving this layer's
-                # own node with no nested location to report a miss at
-                # all -- reported directly on it only in that one case.
+                # The built-in default config's "Common" entry can be pruned away (above), leaving this layer's
+                # node with no nested location to report a miss at: reported on it in that case only.
                 invocation.report_not_found(root)
             return result
 
@@ -248,7 +232,7 @@ def _search_and_merge(self, key, invocation, merge, parsed=None):
     ``lookup_options`` and a ``"lookup_options."``-prefixed key always
     miss without reaching any data (``lookup_adapter.rb:48-52``) -- the
     one place that rule is enforced (:class:`~hyera._lookup.invocation.
-    Invocation` no longer duplicates it). Otherwise: ``lookup_options``
+    Invocation` does not repeat it). Otherwise: ``lookup_options``
     for the key's root is fetched *always*, even when ``merge`` is
     given explicitly -- only the *merge* it names is then skipped,
     never its ``convert_to`` (``lookup_adapter.rb:65-72``). The main

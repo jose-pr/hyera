@@ -21,10 +21,8 @@ from .cache import _ScopeRef, _freeze, _probe
 from .._scope.scope import Scope
 from ..exceptions import InterpolationError
 
-#: A lookup's host sub-lookup callable: ``(key, invocation) -> value``, or
-#: ``hyera._lookup.navigation._MISSING`` for a miss. Resolves ``%{hiera()}``/
-#: ``%{lookup()}``/``%{alias()}`` and is what :meth:`Invocation.lookup`
-#: delegates to.
+#: A lookup's host sub-lookup callable: ``(key, invocation) -> value`` or ``_MISSING`` (in
+#: ``hyera._lookup.navigation``) for a miss; resolves ``%{hiera()}``/``%{lookup()}``/``%{alias()}``.
 _LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
 
 #: The shared no-op context manager every recording hook uses when
@@ -32,13 +30,9 @@ _LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
 #: nodes at all.
 _NULL_CONTEXT = contextlib.nullcontext()
 
-#: The call-time ``strict`` default for a data file's non-hash rule
-#: (``yaml_data.rb:31`` reads ``Puppet[:strict]`` per call, not at
-#: construction, since one backend instance is shared across scopes). Set
-#: from ``invocation.scope.strict`` at the single engine entry every public
-#: call shares (``_lookup_function.lookup``) and reset in ``finally``;
-#: :attr:`~hyera.backends.Backend.strict` falls back to it when the backend
-#: has no explicit value.
+#: The call-time ``strict`` default for a data file's non-hash rule (``yaml_data.rb:31`` reads
+#: ``Puppet[:strict]`` per call, as one backend instance serves many scopes). Set from
+#: ``invocation.scope.strict`` at the engine entry and reset in ``finally``; ``Backend.strict`` falls back to it.
 _STRICT: "contextvars.ContextVar[str]" = contextvars.ContextVar(
     "hiera_strict", default="warning"
 )
@@ -75,7 +69,7 @@ class Invocation:
     Create exactly one per top-level lookup (``Hiera.lookup``/``.format``);
     never share one across threads or across independent lookups. ``lookup``
     is the host's sub-lookup callable, ``(key, invocation) -> value |
-    hyera._lookup.navigation._MISSING``, used to resolve ``%{hiera()}``/
+    hyera._lookup.navigation._MISSING``, which resolves ``%{hiera()}``/
     ``%{lookup()}``/``%{alias()}``.
     """
 
@@ -104,56 +98,32 @@ class Invocation:
             {} if default_values is None else default_values
         )
         self.lenient = lenient
-        #: The :class:`~hyera._output.explain.Explainer` this lookup's recording
-        #: hooks report to, or ``None`` (the overwhelming common case: no
-        #: explanation was asked for, so every hook below is a no-op).
-        #: Shared, unchanged, with every ``Invocation`` :meth:`derive`d from
-        #: this one (``invocation.rb:61-62``).
+        #: The :class:`~hyera._output.explain.Explainer` this lookup's recording hooks report to, or
+        #: ``None`` (no explanation asked: every hook is a no-op). Shared with every derived
+        #: ``Invocation`` (``invocation.rb:61-62``).
         self.explainer = explainer
-        #: ``Hiera.explain()``'s own per-call ``lookup_options`` memo (a
-        #: fresh ``_ScopeKeyedCache``), or ``None`` (every ordinary lookup:
-        #: ``lookup_adapter.retrieve_lookup_options`` and friends then use the
-        #: instance's real, persistent cache instead). Shared, unchanged,
-        #: with every ``Invocation`` :meth:`derive`d from this one, so a
-        #: nested sub-lookup made *during* one ``explain()`` call reuses the
-        #: same never-persisted memo the top-level search already built,
-        #: exactly like Puppet's own per-compilation ``LookupAdapter``
-        #: cache would -- discarded once the call returns, never reaching
-        #: the instance's own cache.
+        #: ``Hiera.explain()``'s per-call ``lookup_options`` memo (a fresh ``_ScopeKeyedCache``), or
+        #: ``None`` for an ordinary lookup, which uses the instance's persistent cache. Shared with
+        #: derived invocations, so a nested sub-lookup reuses it; discarded once the call returns.
         self._lo_cache = _lo_cache
         #: This top-level lookup's identity and ``lookup_options``
         #: re-entrancy guard, shared with every ``Invocation`` derived from or
         #: built around it, so nothing reaches another thread's lookup.
         self._state = _LookupState() if _state is None else _state
-        #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only on
-        #: the invocation used to resolve a version 3 global layer's own
-        #: data (``core.Hiera._lookup_layers``), when no environment
-        #: provider of version 5 exists for the current scope. A nested
-        #: ``%{lookup()}``/``%{hiera()}``/``%{alias()}`` reached while
-        #: interpolating that data inherits it via :meth:`derive`, which is
-        #: what confines it to the global layer and skips a module's
-        #: ``default_hierarchy`` (``lookup_adapter.rb:76,266-269,332-339``).
+        #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only when resolving a version 3
+        #: global layer's own data with no version 5 environment provider. Derived invocations inherit
+        #: it, confining a nested lookup to the global layer (``lookup_adapter.rb:76,266-269,332-339``).
         self.global_only = global_only
-        #: Recursion-detection stack, shared with every ``Invocation``
-        #: :meth:`derive`d from this one (``invocation.rb:47-52``): the same
-        #: list object, never copied, so a name pushed by one still guards a
-        #: derived invocation's own lookups.
+        #: Recursion-detection stack, shared (the same list, never copied) with every derived
+        #: ``Invocation`` (``invocation.rb:47-52``), so a name pushed by one guards the others.
         self._name_stack = [] if _name_stack is None else _name_stack
-        #: ``None`` (the default -- most lookups never build a cache entry)
-        #: or a list of ``(_ScopeRef, (undefined, frozen_value))`` pairs,
-        #: shared with every ``Invocation`` :meth:`derive`d from this one,
-        #: appended to by :meth:`remember_scope_lookup` (Puppet's
-        #: ``ScopeLookupCollectingInvocation``). A caller building a cache
-        #: entry (``_LocationStore.location_entry_for``/``_lookup_options_map``)
-        #: passes its own fresh list here and reads it back afterwards.
+        #: ``None`` or a list of ``(_ScopeRef, (undefined, frozen_value))`` pairs shared with derived
+        #: invocations and appended to by :meth:`remember_scope_lookup` (Puppet's
+        #: ``ScopeLookupCollectingInvocation``); a caller building a cache entry passes a fresh list.
         self.scope_interpolations = scope_interpolations
-        #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with
-        #: every ``Invocation`` :meth:`derive`d from this one and with every
-        #: other ``Invocation`` the same top-level lookup builds (the
-        #: ``lookup_options`` gather, a hierarchy build's own interpolation
-        #: invocations): one top-level lookup sees one filesystem snapshot
-        #: and probes each path at most once. A fresh ``{}`` when not given
-        #: (a bare ``Invocation()`` with no sharing intent -- ``sources()``).
+        #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with derived invocations and the
+        #: other invocations of the same top-level lookup: one filesystem snapshot, each path probed
+        #: at most once. A fresh ``{}`` when not given (``sources()``).
         self._fs_memo = {} if _fs_memo is None else _fs_memo
 
     def _memo_probe(self, path):
