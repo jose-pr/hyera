@@ -43,7 +43,8 @@ The files ported from Puppet are:
     src/hyera/_output/explain.py (from puppet/pops/lookup/explainer.rb, configured_data_provider.rb)
     src/hyera/backends/__init__.py (from puppet/functions/yaml_data.rb)
     src/hyera/backends/_yaml.py (from puppet/functions/yaml_data.rb)
-    src/hyera/backends/_psych.py (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
+    src/hyera/backends/_psych.py (from puppet/pops/lookup/hiera_config.rb)
+    src/hyera/backends/_psych_loader.py (from puppet/util/yaml.rb)
     src/hyera/_types/types.py (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
     src/hyera/_types/compound_types.py (from puppet/pops/types/types.rb, pops/loader/static_loader.rb)
     src/hyera/_types/literal_format.py (from puppet/pops/types/string_converter.rb)
@@ -98,8 +99,8 @@ at LICENSES/psych-MIT.txt.
 
 The files ported from Psych are:
 
-    src/hyera/backends/_psych.py  (from psych/lib/psych/scalar_scanner.rb,
-                                        psych/lib/psych/visitors/to_ruby.rb)
+    src/hyera/backends/_psych.py  (from psych/lib/psych/scalar_scanner.rb)
+    src/hyera/backends/_psych_loader.py  (from psych/lib/psych/visitors/to_ruby.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 

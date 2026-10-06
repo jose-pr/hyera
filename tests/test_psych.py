@@ -12,13 +12,12 @@ import yaml
 
 from hyera.backends import BackendError, YAMLBackend
 from hyera.exceptions import ConfigError
-from hyera.backends._psych import (
-    RubySymbol,
+from hyera.backends._psych import RubySymbol, symkeys_to_string
+from hyera.backends._psych_loader import (
     _C_LOADER,
     _PURE_LOADER,
     _yaml_problem,
     safe_load,
-    symkeys_to_string,
 )
 from hyera._config.hiera_config import _read_base_config
 

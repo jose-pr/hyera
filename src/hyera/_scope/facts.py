@@ -14,6 +14,7 @@ import os
 import typing as _ty
 
 from ..backends import _psych as _psych
+from ..backends import _psych_loader
 from ..backends._json import (
     TOO_DEEP,
     _reject_json_constant,
@@ -95,7 +96,7 @@ def _parse_yaml_facts(raw: bytes, label: str):
         problem = str(e)
     if problem is None:
         try:
-            parsed = _psych.safe_load(text)
+            parsed = _psych_loader.safe_load(text)
         except BackendError as e:
             problem = str(e)
     if problem is not None:

@@ -429,7 +429,7 @@ def _adversarial_documents(rng):
 
 
 def test_nesting_bound_never_undercounts():
-    from hyera.backends._psych import _nesting_bound
+    from hyera.backends._psych_loader import _nesting_bound
 
     rng = random.Random("bound")
     checked = 0
@@ -445,8 +445,8 @@ def test_nesting_bound_never_undercounts():
 
 
 def test_limit_check_agrees_with_the_bound():
-    from hyera.backends._psych import _MAX_NESTING, _nesting_bound
-    from hyera.backends._psych import _within_nesting_limit
+    from hyera.backends._psych_loader import _MAX_NESTING, _nesting_bound
+    from hyera.backends._psych_loader import _within_nesting_limit
 
     for blocks in (0, 100, 247, 248, 249, 250, 251, 400):
         for flows in (0, 1, 3, 100, 499, 500, 501):
@@ -457,7 +457,7 @@ def test_limit_check_agrees_with_the_bound():
 
 
 def test_ordinary_block_documents_skip_the_event_walk(monkeypatch):
-    from hyera.backends import _psych
+    from hyera.backends import _psych_loader
 
     text = "".join(
         "svc{0}:\n  name: h\n  ports:\n    - 80\n    - 443\n".format(i)
@@ -468,12 +468,12 @@ def test_ordinary_block_documents_skip_the_event_walk(monkeypatch):
     def boom(*_args):
         raise AssertionError("the event walk ran")
 
-    monkeypatch.setattr(_psych, "_LOADER", boom)
-    assert _psych._scan_structure(text) is boom
+    monkeypatch.setattr(_psych_loader, "_LOADER", boom)
+    assert _psych_loader._scan_structure(text) is boom
 
 
 def test_repeated_anchor_names_are_still_found():
-    from hyera.backends._psych import _anchors_may_repeat
+    from hyera.backends._psych_loader import _anchors_may_repeat
 
     assert not _anchors_may_repeat("a: &x 1\nb: *x\n")
     assert not _anchors_may_repeat("a: &x 1\nb: &y 2\n")

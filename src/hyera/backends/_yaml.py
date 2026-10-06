@@ -12,7 +12,8 @@ import yaml
 
 from ..exceptions import BackendError
 from . import Backend, _Names
-from ._psych import safe_load, symkeys_to_string
+from ._psych import symkeys_to_string
+from ._psych_loader import safe_load
 
 _LOGGER = logging.getLogger(__name__)
 
