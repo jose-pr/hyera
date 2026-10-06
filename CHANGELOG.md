@@ -24,6 +24,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Internal modules are reorganised so none passes 600 lines except `core.py` and
+  `backends/__init__.py`; no public import path, class `__module__` or
+  signature changed.
 - `repr(Hiera(...))` is one line naming the class, the base config and the
   scope's environment (`Hiera(config='/etc/hiera.yaml', environment='production')`),
   and never data or scope values.

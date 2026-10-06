@@ -39,43 +39,69 @@ src/hyera/
 │   ├── _run.py                           # one lookup: build the Hiera, resolve, render
 │   ├── _scope.py                          # scope, facts and path-list handling
 │   └── _stdout.py                          # writing the result to stdout
-├── _config/                        # base hiera.yaml, hierarchy/location resolution, layer discovery
-│   ├── hiera_config.py               # HieraLevel, base config reading, hierarchy building (hiera_config.rb)
-│   ├── location_resolver.py           # hierarchy level path resolution: interpolation rules, mapped_paths, glob (location_resolver.rb, hiera_config.rb)
-│   └── data_provider.py                # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
-├── _lookup/                          # dispatch, interpolation, merge, navigation, caching
-│   ├── function_provider.py           # data_hash/lookup_key/data_dig dispatch, LookupContext (function_provider.rb, {data_hash,lookup_key,data_dig}_function_provider.rb, context.rb)
-│   ├── cache.py                        # scope-keyed caching: Puppet's scope-interpolation stability check
-│   ├── locations.py                     # _LocationStore: resolved locations, glob listings and parsed data files, shared by an instance and its views
-│   ├── providers.py                      # per-level function providers: build, refresh while revalidating, and the sources() walk
-│   ├── lookup_options.py                  # gather and compose lookup_options across the global, environment and module layers; the default_hierarchy lookup
-│   ├── navigation.py                    # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
-│   ├── interpolation.py                  # the %{...} engine: resolving functions and variable references (interpolation.rb)
-│   ├── invocation.py                      # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
-│   ├── merge_strategy.py                   # merge strategies for accumulating values across the hierarchy (merge_strategy.rb, deep_merge gem's core.rb)
-│   ├── lookup_adapter.py                    # lookup_options matching + convert_result (lookup_adapter.rb)
-│   ├── lookup_function.py                    # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
-│   └── data_functions.py                      # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
-├── _types/                          # the Puppet type model: type objects, parsing, mismatch, conversion
-│   ├── types.py                       # type model, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
-│   ├── parser.py                       # parse_type: Puppet type-expression parser (type_parser.rb)
-│   ├── mismatch.py                      # type mismatch messages and instance assertion (type_mismatch_describer.rb, type_asserter.rb)
-│   ├── string_converter.py               # value-to-string conversion: String.new()'s engine (string_converter.rb)
-│   └── new_function.py                    # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb, types.rb)
-├── _scope/                          # scope and fact sources bound to a lookup
-│   ├── scope.py                       # Scope: node parameters, facts, trusted, server_facts, top-scope lookup (compiler.rb, node.rb, trusted_information.rb, scope.rb)
-│   └── facts.py                        # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
-├── _output/                          # the explain tree and CLI render backends
-│   ├── explain.py                      # explain()'s tree and text rendering (pops/lookup/explainer.rb)
-│   └── render.py                        # s/json/yaml CLI render backends: puppet lookup --render-as output
-└── backends/                          # self-registering Backend registry (same import path: hyera.backends)
-    ├── __init__.py                      # Backend, registry, default_backends; re-exports every public backend class
-    ├── _yaml.py                          # YAMLBackend, Puppet-only (functions/yaml_data.rb)
-    ├── _json.py                           # JSONBackend
-    ├── _hocon.py                           # HOCONBackend, has_hocon (the private pyhocon parser copy)
-    ├── _sops.py                             # SopsBackend, DotenvBackend
-    ├── _eyaml.py                             # EyamlBackend: token scanning, PKCS7 key loading, a bounds-checked PKCS7 decrypt
-    └── _psych.py                        # Psych-compatible YAML parsing on libyaml (scalar_scanner.rb, to_ruby.rb)
+├── _config/                  # base hiera.yaml, hierarchy/location resolution, layer discovery
+│   ├── __init__.py           # package marker
+│   ├── config_source.py      # a hiera.yaml's source, its error messages and its version dispatch (hiera_config.rb, issues.rb)
+│   ├── config_v5.py          # Hiera 5 schema validation (hiera_config.rb, issues.rb)
+│   ├── config_v4.py          # the Hiera 4 dialect: defaults, validation, levels (hiera_config.rb)
+│   ├── config_v3.py          # the Hiera 3 dialect: defaults, validation, levels, the code directory (hiera_config.rb, type_mismatch_describer.rb, run_mode.rb)
+│   ├── hiera_config.py       # FunctionKind, HieraLevel, base config reading (hiera_config.rb)
+│   ├── level_builder.py      # HieraLevel objects from a validated config's hierarchy entries (hiera_config.rb)
+│   ├── location_resolver.py  # hierarchy level path resolution: interpolation rules, mapped_paths, uris, glob specs (location_resolver.rb, hiera_config.rb, uri's rfc3986_parser.rb)
+│   ├── pathname.py           # Ruby's Pathname#+ and the Windows anchor rules host paths follow (pathname.rb)
+│   ├── dir_glob.py           # Ruby's Dir.glob over a literal root: braces, fnmatch, the walk
+│   └── data_provider.py      # global/environment/module layer discovery and per-layer config loading (lookup_adapter.rb, environment_data_provider.rb, module_data_provider.rb)
+├── _lookup/                  # dispatch, interpolation, merge, navigation, caching
+│   ├── __init__.py           # package marker
+│   ├── function_provider.py  # LookupContext, the contexts and the helpers the providers share (function_provider.rb, context.rb, data_provider.rb)
+│   ├── provider_classes.py   # the data_hash/lookup_key/data_dig provider classes and PROVIDER_CLASSES ({data_hash,lookup_key,data_dig}_function_provider.rb, function_provider.rb)
+│   ├── cache.py              # scope-keyed caching: Puppet's scope-interpolation stability check (hiera_config.rb, context.rb)
+│   ├── locations.py          # _LocationStore: resolved locations, glob listings and parsed data files, shared by an instance and its views (data_hash_function_provider.rb)
+│   ├── providers.py          # per-level function providers: build, refresh while revalidating, and the sources() walk (hiera_config.rb)
+│   ├── lookup_options.py     # gather and compose lookup_options across the global, environment and module layers; the default_hierarchy lookup (lookup_adapter.rb, module_data_provider.rb)
+│   ├── navigation.py         # dotted-key sub-navigation: split_key/sub_lookup (sub_lookup.rb, lookup_key.rb)
+│   ├── interpolation.py      # the %{...} engine: resolving functions and variable references (interpolation.rb)
+│   ├── invocation.py         # per-lookup state for interpolation: scope, sub-lookup and recursion stack (invocation.rb)
+│   ├── merge_strategy.py     # Merge and the merge strategies (merge_strategy.rb)
+│   ├── deep_merge.py         # the deep_merge gem's deep_merge! and the Ruby value helpers the strategies share (deep_merge core.rb)
+│   ├── lookup_adapter.py     # lookup_options matching + convert_result (lookup_adapter.rb)
+│   ├── lookup_function.py    # the public lookup() call: dispatch + precedence (functions/lookup.rb, pops/lookup.rb)
+│   └── data_functions.py     # dig, get, getvar: navigation over a looked-up value or the scope (functions/dig.rb, get.rb, getvar.rb)
+├── _types/                   # the Puppet type model: type objects, parsing, mismatch, conversion
+│   ├── __init__.py           # package marker
+│   ├── types.py              # Any, the scalar types, SensitiveType, Sensitive, convert_to (types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+│   ├── compound_types.py     # Collection, Array, Hash, Tuple, Struct, Variant, Runtime, TypeAlias and the static aliases (types.rb, static_loader.rb)
+│   ├── inference.py          # infer, infer_set and their generalizing variants (type_calculator.rb)
+│   ├── literal_format.py     # puppet_quote, range bounds and size arguments rendered as Puppet literals (string_converter.rb)
+│   ├── ruby_regexp.py        # translating a Ruby (Onigmo) regexp into Python's re
+│   ├── type_syntax.py        # the lexer and recursive-descent reader of type expressions (type_parser.rb)
+│   ├── type_names.py         # the bare, never-parameterized and unsupported type names (type_parser.rb)
+│   ├── parser.py             # parse_type, build_access, as_type: the builders that interpret the reader's nodes (type_parser.rb)
+│   ├── mismatch.py           # type mismatch messages and instance assertion (type_mismatch_describer.rb, type_asserter.rb)
+│   ├── string_converter.py   # value-to-string conversion: String.new()'s engine (string_converter.rb)
+│   └── new_function.py       # new_instance: Puppet's new() plus each type's own new_function (functions/new.rb)
+├── _scope/                   # scope and fact sources bound to a lookup
+│   ├── __init__.py           # package marker
+│   ├── scope.py              # Scope, Strict: top-scope variables, the lookup rules and the collision warning (compiler.rb, node.rb, scope.rb)
+│   ├── scope_data.py         # validating and sanitizing variables, facts and trusted data (scope.rb, node/facts.rb, trusted_information.rb)
+│   └── facts.py              # load_facts, facts_from_facter: --facts file rules and bare facter (application/lookup.rb, util/yaml.rb)
+├── _output/                  # the explain tree and CLI render backends
+│   ├── __init__.py           # package marker
+│   ├── explain.py            # Explainer, ExplainResult and the debug wrapper (pops/lookup/explainer.rb)
+│   ├── explain_nodes.py      # the explain tree's node classes and their rendering (explainer.rb)
+│   ├── explain_refs.py       # the provider and location references a node carries, and the value dump (explainer.rb, configured_data_provider.rb)
+│   └── render.py             # s/json/yaml CLI render backends: puppet lookup --render-as output
+└── backends/                 # self-registering Backend registry (same import path: hyera.backends)
+    ├── __init__.py           # Backend, registry, default_backends; re-exports every public backend class
+    ├── _yaml.py              # YAMLBackend, Puppet-only (functions/yaml_data.rb)
+    ├── _json.py              # JSONBackend
+    ├── _hocon.py             # HOCONBackend, has_hocon (the private pyhocon parser copy)
+    ├── _hocon_includes.py    # the HOCON include-directive scanner: refuse or allow each form
+    ├── _sops.py              # SopsBackend, DotenvBackend
+    ├── _eyaml.py             # EyamlBackend: token scanning and PKCS7 key loading (eyaml_lookup_key.rb, hiera-eyaml's encrypted_tokens.rb, parser.rb)
+    ├── _pkcs7.py             # a bounds-checked BER/DER reader and the cert-free PKCS7 decrypt (hiera-eyaml's pkcs7.rb)
+    ├── _psych.py             # RubySymbol, symkeys_to_string and Psych's scalar scanner (scalar_scanner.rb, hiera_config.rb)
+    └── _psych_loader.py      # safe_load: the PyYAML loader wired to Psych's rules (to_ruby.rb, util/yaml.rb)
 
 tests/
 ├── conftest.py              # make_tree: a valid Hiera 5 tree on disk, LF/UTF-8, per test
@@ -130,7 +156,7 @@ module. `src/hyera/AGENTS.md` is the shipped API header (see
 arguments and gotchas, so a consuming agent skips the source.
 
 `pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
-levels use hyera's own Ruby `Dir.glob` port in `_config/location_resolver.py`, never
+levels use hyera's own Ruby `Dir.glob` port in `_config/dir_glob.py`, never
 `Path.glob`.
 
 ## How it fits together
