@@ -46,6 +46,7 @@ The files ported from Puppet are:
     src/hyera/_scope/scope.py (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
          context/trusted_information.rb, node/facts.rb)
     src/hyera/_scope/facts.py (from puppet/application/lookup.rb, util/yaml.rb)
+    src/hyera/backends/_eyaml.py (from puppet/functions/eyaml_lookup_key.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -73,8 +74,7 @@ included at LICENSES/hiera-eyaml-MIT.txt.
 The files ported from hiera-eyaml are:
 
     src/hyera/backends/_eyaml.py  (from hiera-eyaml/lib/hiera/backend/eyaml/parser/encrypted_tokens.rb,
-                                        parser/parser.rb, encryptors/pkcs7.rb,
-                                        lib/puppet/functions/eyaml_lookup_key.rb)
+                                        parser/parser.rb, encryptors/pkcs7.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
