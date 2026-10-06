@@ -109,6 +109,14 @@ DOC_ONLY = {
         "the harness cannot record a Ruby construct hyera refuses, and its "
         "Unicode POSIX-class behaviour differs only for non-ASCII subjects"
     ),
+    "interpolation-chain-depth": (
+        "the harness records no chain longer than the shortest depth either "
+        "side reaches, so no query separates the two limits"
+    ),
+    "interpolation-key-shapes": (
+        "the harness's golden schema cannot hold an Array as a hash key, and "
+        "a key spelled with four colons is not in any recorded case"
+    ),
 }
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by

@@ -30,6 +30,15 @@ def _lookup_value_type():
     return _LOOKUP_VALUE_TYPE
 
 
+def value_type_label(value) -> str:
+    """The Puppet type of ``value`` as an error message names it; a value
+    of a Python type with no Puppet counterpart is named by its class."""
+    try:
+        return str(infer(value))
+    except TypeError:
+        return type(value).__name__
+
+
 def validate_data_value(value, function_name, location, root_key) -> None:
     """Puppet's RichData check on a value found at a root key
     (``data_provider.rb:84-91``), run once per location before the value
@@ -52,13 +61,13 @@ def validate_data_value(value, function_name, location, root_key) -> None:
             raise HieraLookupError(
                 "Value for key '{}', in hash returned from data_hash "
                 "function '{}', has wrong type, expects Puppet::LookupValue, "
-                "got {}".format(root_key, function_name, infer(value))
+                "got {}".format(root_key, function_name, value_type_label(value))
             )
         raise HieraLookupError(
             "Value for key '{}', in hash returned from data_hash function "
             "'{}', when using location '{}', has wrong type, expects "
             "Puppet::LookupValue, got {}".format(
-                root_key, function_name, location, infer(value)
+                root_key, function_name, location, value_type_label(value)
             )
         )
 

@@ -891,7 +891,15 @@ is a `Backend` subclass, found by name rather than passed around directly.
   location with a `hyera.LookupContext` as `context` (below). Neither
   hook's return value is interpolated by the engine — call
   `context.interpolate(value)` yourself; signal a miss with
-  `context.not_found()`, never a sentinel return value. `options` carries
+  `context.not_found()`, never a sentinel return value. A hook's return
+  value must be Puppet data (`None`, `bool`, `int`, `float`, `str`, and
+  `list`/`dict` of those; a `lookup_key`/`data_dig` hook may also return a
+  tuple, read as a list at any depth); any other type (`date`, `Decimal`,
+  `bytes`, `set`, ...) raises `BackendError` naming the function, the
+  location and the type. A `data_hash` hook returning such a value under a
+  key raises `HieraLookupError` naming the key. An exception a
+  `lookup_key`/`data_dig` hook raises itself propagates unchanged.
+  `options` carries
   `path` (a `str`) or `uri` (interpolated and normalized like Ruby's
   `URI#to_s`, never fetched) for a located entry, or neither for a
   location-less one — the same mapping a `data_hash` hook receives.
@@ -1430,6 +1438,13 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   directive per value: a type-map format, the `#` indenting flag on an
   Array or Hash, and a precision on `%a`/`%A` raise `HieraLookupError`, as
   does converting a Binary, Timestamp, URI or Object value.
+- **difference** `interpolation-chain-depth` — A chain of `%{lookup()}`/
+  `%{alias()}` interpolations resolves to about 80 hops (Puppet: 100); a
+  longer one, or a value nested past Python's recursion limit, raises
+  `InterpolationError` naming the keys.
+- **difference** `interpolation-key-shapes` — `%{::::x}` is an undefined
+  variable (Puppet prints the fact), and a hash key that interpolates to an
+  Array raises `InterpolationError` (Puppet keeps the Array as the key).
 
 Not supported:
 

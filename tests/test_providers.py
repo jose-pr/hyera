@@ -9,6 +9,8 @@ call in ``calls``; their return/raise behavior for a given test comes from
 """
 
 import copy
+import datetime
+import decimal
 import os
 import re
 import time
@@ -19,6 +21,7 @@ from hyera import (
     BackendError,
     ConfigError,
     Hiera,
+    HieraError,
     InterpolationError,
     KeyNotFoundError,
     LookupContext,
@@ -710,6 +713,102 @@ def test_provider_value_rich_data_validated_no_location(make_tree, backends, scr
         h.lookup("k")
     assert "when using location" not in str(exc.value)
     assert "has wrong type, expects Puppet::LookupValue" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [datetime.date(2026, 1, 2), decimal.Decimal("1.5"), b"bytes", {1, 2}],
+    ids=["date", "decimal", "bytes", "set"],
+)
+@pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
+def test_provider_value_of_an_unknown_python_type_is_a_backend_error(
+    make_tree, backends, script, kind, value
+):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "path": "a.yaml", kind: "test_" + kind},
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    script[kind] = lambda *args: value
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(BackendError, match="function 'test_" + kind + "'.*got "):
+        h.lookup("k")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [datetime.date(2026, 1, 2), decimal.Decimal("1.5"), b"bytes", {1, 2}],
+    ids=["date", "decimal", "bytes", "set"],
+)
+def test_data_hash_value_of_an_unknown_python_type_names_function_and_key(
+    make_tree, backends, script, value
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash", "path": "a.yaml"}]},
+        files={"data/a.yaml": "x"},
+    )
+    script["data_hash"] = lambda path, options: {"k": value}
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(HieraError, match="key 'k'.*function 'test_data_hash'"):
+        h.lookup("k")
+
+
+@pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
+def test_an_exception_a_hook_raises_propagates_unchanged(
+    make_tree, backends, script, kind
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "path": "a.yaml", kind: "test_" + kind}]},
+        files={"data/a.yaml": "x"},
+    )
+
+    def hook(*args):
+        raise ValueError("from the hook")
+
+    script[kind] = hook
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(ValueError, match="from the hook"):
+        h.lookup("k")
+
+
+@pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
+def test_a_tuple_from_a_hook_reads_as_a_list(make_tree, backends, script, kind):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "s", "path": "a.yaml", kind: "test_" + kind},
+            ]
+        },
+        files={"data/a.yaml": "x"},
+    )
+    script[kind] = lambda *args: {"k": ("a", ("b", "c"))}
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == {"k": ["a", ["b", "c"]]}
+    assert h.lookup("k", merge="deep") == {"k": ["a", ["b", "c"]]}
+
+
+def test_a_tuple_from_a_lookup_key_hook_is_navigable_and_merges(
+    make_tree, backends, script
+):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "a", "path": "a.yaml", "lookup_key": "test_lookup_key"},
+                {"name": "b", "path": "b.yaml", "lookup_key": "test_lookup_key"},
+            ]
+        },
+        files={"data/a.yaml": "x", "data/b.yaml": "x"},
+    )
+    script["lookup_key"] = lambda key, options, context: (
+        ("a", "b") if options["path"].endswith("a.yaml") else ("c",)
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("tup") == ["a", "b"]
+    assert h.lookup("tup.0") == "a"
+    assert h.lookup("tup", merge="unique") == ["a", "b", "c"]
 
 
 def test_data_hash_non_dict_return_is_backend_error(make_tree, backends, script):

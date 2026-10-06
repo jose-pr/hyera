@@ -155,26 +155,40 @@ def _validate_data_hash(data, name, location) -> None:
     )
 
 
-def _validate_provider_value(value, kind, name, location) -> None:
+def _tuples_to_lists(value):
+    """``value`` with every tuple, at any depth, replaced by a list; a value
+    holding no tuple is returned as is."""
+    if isinstance(value, tuple):
+        return [_tuples_to_lists(item) for item in value]
+    if isinstance(value, list):
+        items = [_tuples_to_lists(item) for item in value]
+        return value if all(a is b for a, b in zip(items, value)) else items
+    if isinstance(value, dict):
+        items = {k: _tuples_to_lists(v) for k, v in value.items()}
+        return value if all(items[k] is v for k, v in value.items()) else items
+    return value
+
+
+def _validate_provider_value(value, kind, name, location):
     """The ``lookup_key``/``data_dig`` value check
     (``{lookup_key,data_dig}_function_provider.rb``'s own ``assert_value_type``,
     the same RichData rule as :func:`~hyera._lookup.lookup_adapter.validate_data_value`
-    but worded for a scalar return rather than a hash entry)."""
-    from .lookup_adapter import _lookup_value_type
-    from .._types.types import infer
+    but worded for a scalar return rather than a hash entry). Returns the
+    value with any tuple read as a list."""
+    from .lookup_adapter import _lookup_value_type, value_type_label
 
     t = _lookup_value_type()
     if t.instance(value):
-        return
+        return _tuples_to_lists(value)
     if location is None:
         raise BackendError(
             "Value returned from {} function '{}' has wrong type, expects "
-            "Puppet::LookupValue, got {}".format(kind, name, infer(value))
+            "Puppet::LookupValue, got {}".format(kind, name, value_type_label(value))
         )
     raise BackendError(
         "Value returned from {} function '{}', when using location '{}', "
         "has wrong type, expects Puppet::LookupValue, got {}".format(
-            kind, name, location, infer(value)
+            kind, name, location, value_type_label(value)
         ),
         path=str(location),
     )
@@ -626,7 +640,9 @@ class _LookupKeyProvider(_FunctionProvider):
                 except _NotFound:
                     invocation.report_not_found(root)
                     return _MISSING
-                _validate_provider_value(value, "lookup_key", self.backend.name, label)
+                value = _validate_provider_value(
+                    value, "lookup_key", self.backend.name, label
+                )
                 self._keep(ctx, root, value, context, invocation)
                 return invocation.report_found(root, unshare(value))
 
@@ -659,7 +675,9 @@ class _DataDigProvider(_FunctionProvider):
                 except _NotFound:
                     invocation.report_not_found(root)
                     return _MISSING
-                _validate_provider_value(value, "data_dig", self.backend.name, label)
+                value = _validate_provider_value(
+                    value, "data_dig", self.backend.name, label
+                )
                 wrapped = undig(segments, value)
                 if wrapped is _MISSING:
                     invocation.report_not_found(root)

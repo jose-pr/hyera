@@ -883,6 +883,16 @@ for.
   indenting flag on an Array or Hash, and a precision on `%a`/`%A` raise
   `HieraLookupError`, as does converting a Binary, Timestamp, URI or Object
   value; Puppet accepts all of them. (id: `string-format-subset`)
+- **A chain of `%{lookup()}` or `%{alias()}` interpolations resolves to
+  about 80 hops.** Puppet resolves 100; hyera recurses once per hop and
+  never changes Python's recursion limit, so a longer chain, or a value
+  nested past the limit, raises `InterpolationError` naming the keys being
+  resolved. (id: `interpolation-chain-depth`)
+- **Two interpolation shapes differ.** `%{::::x}` reads as an undefined
+  variable, where Puppet prints the fact it names; and a hash key that
+  interpolates to an Array (`%{alias('arr')}`) raises `InterpolationError`
+  ("not hashable"), where Puppet keeps the Array as the key.
+  (id: `interpolation-key-shapes`)
 
 ## Development
 
