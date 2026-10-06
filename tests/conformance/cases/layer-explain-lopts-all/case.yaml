@@ -1,0 +1,31 @@
+description: >
+  --explain when the global, the environment and a module layer all declare
+  lookup_options, with a module default_hierarchy: several keys in one call
+  report each layer once, a key that misses both hierarchies adds no extra
+  line, and a hash merge over arrays in two layers fails instead of
+  reporting.
+puppet_args:
+  - --environment
+  - production
+queries:
+  - key: mymod::arr
+    explain: data
+    ordered: true
+  - key: mymod::k
+    explain: data
+    ordered: true
+  - key: [nokey, mymod::arr, mymod::k]
+    id: several-keys
+    explain: data
+    ordered: true
+  - key: mymod::nokey
+    explain: data
+    ordered: true
+  - key: mymod::dflt
+    explain: data
+    ordered: true
+  - key: mymod::arr
+    id: mymod::arr-merge-hash
+    merge: hash
+    explain: data
+    ordered: true

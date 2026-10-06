@@ -1424,7 +1424,22 @@ class Hiera:
                 if value is not _MISSING:
                     return value
             return _MISSING
-        return strategy.lookup(_LAYERS, at_layer, invocation)
+
+        def in_layer(layer):
+            try:
+                return at_layer(layer)
+            except HieraLookupError as e:
+                e._in_layer = True
+                raise
+
+        try:
+            return strategy.lookup(_LAYERS, in_layer, invocation)
+        except HieraLookupError as e:
+            # A merge across layers failing is not an error in any layer's
+            # own data: it always escapes explain() instead of ending it.
+            if getattr(e, "_in_layer", False):
+                raise
+            raise _escapes(e)
 
     @staticmethod
     def _explain_layer_cache(invocation):
@@ -1882,9 +1897,7 @@ class Hiera:
             return e
         if e is None:
             return g
-        with invocation.recording("scope", "Global and Environment"):
-            merged = MergeStrategy.strategy("hash").merge(g, e)
-            return invocation.report_found(LOOKUP_OPTIONS, merged)
+        return MergeStrategy.strategy("hash").merge(g, e)
 
     def _retrieve_lookup_options(self, module_name, invocation, cache=None):
         """The compiled ``lookup_options`` mapping for ``module_name`` (or
@@ -1932,7 +1945,12 @@ class Hiera:
         guard_hits = invocation._state.hits
 
         state = self._environment(scope.environment)
-        opts = self._environment_lookup_options(state, invocation, cache)
+        opts = self._memoized_options(
+            invocation,
+            "environment",
+            None,
+            lambda: self._environment_lookup_options(state, invocation, cache),
+        )
         if module_name is not None:
             raw_provider = self._module_provider(state, module_name)
             if raw_provider is None:
@@ -1956,11 +1974,9 @@ class Hiera:
                     if opts is None:
                         opts = m
                     elif m is not None:
-                        with invocation.recording(
-                            "scope", 'Module "{}"'.format(module_name)
-                        ):
-                            opts = MergeStrategy.strategy("hash").merge(opts, m)
-                            invocation.report_found(LOOKUP_OPTIONS, opts)
+                        opts = self._merge_options_report(
+                            opts, m, module_name, invocation
+                        )
                     else:
                         opts = None
         compiled = compile_patterns(opts)
@@ -1973,6 +1989,21 @@ class Hiera:
         ):
             self._compiled_options_cache[module_name] = (scope, compiled)
         return compiled
+
+    @staticmethod
+    def _merge_options_report(env_opts, module_opts, module_name, invocation):
+        """The global/environment options merged with a module's own
+        (``lookup_adapter.rb:358-364``): reported as a HASH merge over a
+        ``Global and Environment`` scope and a ``Module NAME`` scope."""
+        names = ("Global and Environment", "Module {}".format(module_name))
+
+        def found(name):
+            with invocation.recording("scope", name):
+                return invocation.report_found(
+                    LOOKUP_OPTIONS, env_opts if name == names[0] else module_opts
+                )
+
+        return MergeStrategy.strategy("hash").lookup(names, found, invocation)
 
     def _module_default_lookup_options(self, provider, invocation, cache=None):
         """The compiled ``lookup_options`` mapping gathered from
@@ -2047,8 +2078,6 @@ class Hiera:
                             segments,
                             module_name=module_name,
                         )
-                    if result is _MISSING:
-                        invocation.report_not_found(key)
                 return result
 
     def lookup(

@@ -1,0 +1,5 @@
+---
+ek: e
+mymod::arr: [e]
+lookup_options:
+  mymod::arr: {merge: unique}

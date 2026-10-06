@@ -1,0 +1,521 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "173dc9aab4a7310fb0e15bf3613bfd27045e9ce717105fa9f6b48bcea6462261",
+  "results": {
+    "gk": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "gk"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "gk": {
+                            "merge": "first"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"g\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"e\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "gk",
+                        "value": "g",
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"g\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              }
+            ],
+            "key": "gk",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"g\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"gk\" => {",
+        "            \"merge\" => \"first\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"e\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"gk\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"g\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"gk\" value: \"g\""
+      ]
+    },
+    "mymod::arr": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain",
+        "mymod::arr"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "gk": {
+                            "merge": "first"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/gdata/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"g\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Global Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "value": {
+                          "mymod::arr": {
+                            "merge": "unique"
+                          }
+                        },
+                        "event": "found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"e\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Environment Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/hiera.yaml"
+              },
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "key": "lookup_options",
+                        "event": "not_found",
+                        "type": "path",
+                        "original_path": "common.yaml",
+                        "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Hierarchy entry \"m\""
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                "module": "mymod"
+              }
+            ],
+            "key": "lookup_options",
+            "type": "root"
+          },
+          {
+            "type": "merge_source",
+            "merge_source": "lookup_options"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "mymod::arr",
+                            "value": [
+                              "g"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/gdata/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"g\""
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Global Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/hiera.yaml"
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "mymod::arr",
+                            "value": [
+                              "e"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"e\""
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Environment Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/environments/production/hiera.yaml"
+                  },
+                  {
+                    "branches": [
+                      {
+                        "branches": [
+                          {
+                            "key": "mymod::arr",
+                            "value": [
+                              "m"
+                            ],
+                            "event": "found",
+                            "type": "path",
+                            "original_path": "common.yaml",
+                            "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                          }
+                        ],
+                        "type": "data_provider",
+                        "name": "Hierarchy entry \"m\""
+                      }
+                    ],
+                    "type": "data_provider",
+                    "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+                    "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+                    "module": "mymod"
+                  }
+                ],
+                "value": [
+                  "g",
+                  "e",
+                  "m"
+                ],
+                "event": "result",
+                "type": "merge",
+                "merge": "unique"
+              }
+            ],
+            "key": "mymod::arr",
+            "type": "root"
+          }
+        ]
+      },
+      "text": [
+        "Searching for \"lookup_options\"",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"g\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"gk\" => {",
+        "            \"merge\" => \"first\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"e\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"m\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "Using merge options from \"lookup_options\" hash",
+        "Searching for \"mymod::arr\"",
+        "  Merge strategy unique",
+        "    Global Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/hiera.yaml\"",
+        "      Hierarchy entry \"g\"",
+        "        Path \"<case>/gdata/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"mymod::arr\" value: [",
+        "            \"g\"",
+        "          ]",
+        "    Environment Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "      Hierarchy entry \"e\"",
+        "        Path \"<case>/environments/production/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"mymod::arr\" value: [",
+        "            \"e\"",
+        "          ]",
+        "    Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "      Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "      Hierarchy entry \"m\"",
+        "        Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "          Original path: \"common.yaml\"",
+        "          Found key: \"mymod::arr\" value: [",
+        "            \"m\"",
+        "          ]",
+        "    Merged result: [",
+        "      \"g\",",
+        "      \"e\",",
+        "      \"m\"",
+        "    ]"
+      ]
+    },
+    "mymod::arr-options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "production",
+        "--explain-options",
+        "mymod::arr"
+      ],
+      "status": "explained",
+      "tree": {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "value": {
+                      "gk": {
+                        "merge": "first"
+                      }
+                    },
+                    "event": "found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/gdata/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"g\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Global Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/hiera.yaml"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "value": {
+                      "mymod::arr": {
+                        "merge": "unique"
+                      }
+                    },
+                    "event": "found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/environments/production/data/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"e\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Environment Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/environments/production/hiera.yaml"
+          },
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "key": "lookup_options",
+                    "event": "not_found",
+                    "type": "path",
+                    "original_path": "common.yaml",
+                    "path": "<case>/environments/production/modules/mymod/data/common.yaml"
+                  }
+                ],
+                "type": "data_provider",
+                "name": "Hierarchy entry \"m\""
+              }
+            ],
+            "type": "data_provider",
+            "name": "Module \"mymod\" Data Provider (hiera configuration version 5)",
+            "configuration_path": "<case>/environments/production/modules/mymod/hiera.yaml",
+            "module": "mymod"
+          }
+        ],
+        "value": {
+          "mymod::arr": {
+            "merge": "unique"
+          },
+          "gk": {
+            "merge": "first"
+          }
+        },
+        "event": "result",
+        "type": "merge",
+        "merge": "hash"
+      },
+      "text": [
+        "Merge strategy hash",
+        "  Global Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/hiera.yaml\"",
+        "    Hierarchy entry \"g\"",
+        "      Path \"<case>/gdata/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"gk\" => {",
+        "            \"merge\" => \"first\"",
+        "          }",
+        "        }",
+        "  Environment Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/hiera.yaml\"",
+        "    Hierarchy entry \"e\"",
+        "      Path \"<case>/environments/production/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        Found key: \"lookup_options\" value: {",
+        "          \"mymod::arr\" => {",
+        "            \"merge\" => \"unique\"",
+        "          }",
+        "        }",
+        "  Module \"mymod\" Data Provider (hiera configuration version 5)",
+        "    Using configuration \"<case>/environments/production/modules/mymod/hiera.yaml\"",
+        "    Hierarchy entry \"m\"",
+        "      Path \"<case>/environments/production/modules/mymod/data/common.yaml\"",
+        "        Original path: \"common.yaml\"",
+        "        No such key: \"lookup_options\"",
+        "  Merged result: {",
+        "    \"mymod::arr\" => {",
+        "      \"merge\" => \"unique\"",
+        "    },",
+        "    \"gk\" => {",
+        "      \"merge\" => \"first\"",
+        "    }",
+        "  }"
+      ]
+    }
+  }
+}

@@ -265,3 +265,98 @@ def test_explain_returns_explain_result(make_tree):
     assert isinstance(result, ExplainResult)
     assert result.error is None
     assert str(result) == result.text()
+
+
+def _layered(tmp_path, global_options, environment_options, module_options):
+    """A global, an environment ("production") and a module ("mymod") layer,
+    each holding ``mymod::arr`` and the given ``lookup_options`` (or none)."""
+
+    def write(path, text):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(text.encode("utf-8"))
+
+    def data(name, options):
+        text = "mymod::arr: [{}]\n".format(name)
+        if options:
+            text += "lookup_options:\n" + "".join(
+                "  {}: {{merge: {}}}\n".format(k, v) for k, v in options.items()
+            )
+        return text
+
+    layer = "version: 5\nhierarchy:\n  - name: {}\n    path: common.yaml\n"
+    write(
+        tmp_path / "hiera.yaml",
+        "version: 5\ndefaults: {datadir: gdata, data_hash: yaml_data}\n"
+        "hierarchy:\n  - name: g\n    path: common.yaml\n",
+    )
+    write(tmp_path / "gdata" / "common.yaml", data("g", global_options))
+    env = tmp_path / "environments" / "production"
+    write(env / "hiera.yaml", layer.format("e"))
+    write(env / "data" / "common.yaml", data("e", environment_options))
+    module = env / "modules" / "mymod"
+    write(
+        module / "hiera.yaml",
+        layer.format("m")
+        + "default_hierarchy:\n  - name: d\n    path: defaults.yaml\n",
+    )
+    write(
+        module / "data" / "common.yaml",
+        data("m", module_options).replace("mymod::arr", "mymod::k"),
+    )
+    write(module / "data" / "defaults.yaml", "mymod::dflt: x\n")
+    return Hiera(
+        str(tmp_path / "hiera.yaml"),
+        environmentpath=[str(tmp_path / "environments")],
+        scope=Scope(environment="production"),
+    )
+
+
+def _names(node, out=None):
+    out = [] if out is None else out
+    if "name" in node:
+        out.append(node["name"])
+    for branch in node.get("branches", []):
+        _names(branch, out)
+    return out
+
+
+def test_explain_global_and_environment_options_merge_has_no_node(tmp_path):
+    h = _layered(tmp_path, {"gk": "first"}, {"mymod::arr": "unique"}, None)
+    tree = h.explain("gk").to_hash()
+    assert "Global and Environment" not in _names(tree)
+    assert h.lookup("mymod::arr") == ["g", "e"]
+
+
+def test_explain_module_options_merge_names_both_scopes(tmp_path):
+    h = _layered(tmp_path, {"gk": "first"}, None, {"mymod::k": "first"})
+    text = h.explain("mymod::arr").text()
+    assert "  Merge strategy hash\n    Global and Environment\n" in text
+    assert "    Module mymod\n" in text
+    assert "    Merged result: {" in text
+
+
+def test_explain_reports_a_layer_once_across_several_keys(tmp_path):
+    h = _layered(tmp_path, None, None, None)
+    text = h.explain(["nokey", "mymod::arr"]).text()
+    # Each layer is searched for lookup_options once, then once per key.
+    assert text.count("Global Data Provider") == 3
+    assert text.count("Environment Data Provider") == 2
+    assert text.count('Module "mymod" Data Provider') == 1
+
+
+def test_explain_a_miss_in_the_default_hierarchy_adds_no_extra_line(tmp_path):
+    h = _layered(tmp_path, None, None, None)
+    text = h.explain("mymod::nokey").text()
+    assert text.count('No such key: "mymod::nokey"') == 4  # g, e, m, default
+    assert 'Searching default_hierarchy of module "mymod"' in text
+
+
+def test_explain_a_merge_failing_across_layers_raises(tmp_path):
+    h = _layered(tmp_path, None, None, None)
+    try:
+        h.explain("mymod::arr", merge="hash")
+        raised = None
+    except HieraLookupError as e:
+        raised = e
+    assert raised is not None
+    assert "wrong type" in str(raised)

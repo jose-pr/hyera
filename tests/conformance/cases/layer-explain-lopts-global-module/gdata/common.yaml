@@ -1,0 +1,5 @@
+---
+gk: g
+mymod::arr: [g]
+lookup_options:
+  gk: {merge: first}

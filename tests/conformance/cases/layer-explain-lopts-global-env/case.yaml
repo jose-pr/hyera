@@ -1,0 +1,18 @@
+description: >
+  --explain when the global and the environment layer both declare
+  lookup_options: the two are merged without an explain node of their own,
+  for an unqualified key and for a module-qualified one.
+puppet_args:
+  - --environment
+  - production
+queries:
+  - key: gk
+    explain: data
+    ordered: true
+  - key: mymod::arr
+    explain: data
+    ordered: true
+  - key: mymod::arr
+    id: mymod::arr-options
+    explain: options
+    ordered: true

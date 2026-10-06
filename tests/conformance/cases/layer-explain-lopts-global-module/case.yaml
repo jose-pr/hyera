@@ -1,0 +1,18 @@
+description: >
+  --explain when the global layer and a module declare lookup_options: the
+  module's options merge over the global ones as a hash-merge node that
+  names both scopes.
+puppet_args:
+  - --environment
+  - production
+queries:
+  - key: mymod::arr
+    explain: data
+    ordered: true
+  - key: mymod::k
+    explain: data
+    ordered: true
+  - key: mymod::arr
+    id: mymod::arr-options
+    explain: options
+    ordered: true
