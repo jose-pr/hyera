@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-#: Long-spelling value options _puppet_argv joins with their following
-#: token (--opt value -> --opt=value), so a value that itself looks
-#: like an option (--knock-out-prefix --, --default -x) reaches
-#: argparse the way Puppet's own option parser would consume it.
+#: Long-spelling value options _puppet_argv joins with their following token (--opt value -> --opt=value), so a
+#: value that looks like an option (--knock-out-prefix --, --default -x) reaches argparse as Puppet's parser takes it.
 _VALUE_OPTIONS = (
     "--merge",
     "--knock-out-prefix",
