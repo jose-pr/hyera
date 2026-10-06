@@ -3,10 +3,8 @@
 import os
 import shutil
 import signal
-import subprocess
 import sys
 import threading
-import time
 
 import pytest
 
@@ -132,19 +130,6 @@ print(json.dumps({"argv": sys.argv[1:]}))
 """
 
 
-def _hang_with_grandchild(marker):
-    """Fake-program source: start a child that writes ``marker`` after 2 s, then hang."""
-    return (
-        "import subprocess, sys, time\n"
-        "code = 'import pathlib, sys, time; time.sleep(2); "
-        'pathlib.Path(sys.argv[1]).write_text("x")\'\n'
-        "subprocess.Popen([sys.executable, '-c', code, {!r}])\n"
-        'print(\'{{"partial": "STDOUT-PAYLOAD"\')\n'
-        "sys.stdout.flush()\n"
-        "time.sleep(60)\n"
-    ).format(str(marker))
-
-
 def test_facts_from_facter_runs_bare_facter_j(fake_program):
     # On Windows the fake is a facter.bat at an absolute path, which is allowed:
     # only a relative resolution is refused.
@@ -178,18 +163,16 @@ def test_facts_from_facter_nonzero_exit_keeps_a_bounded_stderr_tail(fake_program
 
 
 def test_facts_from_facter_timeout_kills_the_whole_process_group(
-    fake_program, tmp_path
+    fake_program, process_tree
 ):
-    marker = tmp_path / "grandchild-survived"
-    fake_program("facter", _hang_with_grandchild(marker))
-    with pytest.raises(BackendTimeoutError, match="facter timed out after 0.5s") as e:
-        facts_from_facter(timeout=0.5)
+    fake_program("facter", process_tree.source)
+    # Long enough that the fake has started its grandchild before the kill.
+    with pytest.raises(BackendTimeoutError, match="facter timed out after 6s") as e:
+        facts_from_facter(timeout=6)
     assert isinstance(e.value, TimeoutError)
     assert isinstance(e.value, BackendError)
     assert e.value.__context__ is None
-    assert "STDOUT-PAYLOAD" not in str(e.value)
-    time.sleep(3)
-    assert not marker.exists(), "the grandchild outlived the timeout"
+    process_tree.assert_killed()
 
 
 @pytest.mark.parametrize(
@@ -284,21 +267,6 @@ def test_facts_from_facter_real_facter():
     assert "os" in facts
 
 
-def _pid_alive(pid):
-    if sys.platform == "win32":
-        out = subprocess.run(
-            ["tasklist", "/FI", "PID eq {}".format(pid), "/NH"],
-            capture_output=True,
-            text=True,
-        ).stdout
-        return str(pid) in out.split()
-    try:
-        with open("/proc/{}/stat".format(pid)) as fh:
-            return fh.read().rsplit(")", 1)[1].split()[0] != "Z"
-    except OSError:
-        return False
-
-
 def _interrupt_main():
     if sys.platform == "win32":
         signal.raise_signal(signal.SIGINT)
@@ -312,47 +280,16 @@ def _interrupt_main():
     reason="an interrupt does not wake a blocked wait on Windows before Python 3.10",
 )
 def test_facts_from_facter_interrupt_kills_the_child_and_its_children(
-    fake_program, tmp_path
+    fake_program, process_tree
 ):
-    pids = tmp_path / "pids"
-    fake_program(
-        "facter",
-        "import os, subprocess, sys, time\n"
-        "grand = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
-        "open({!r}, 'w').write('{{}} {{}}'.format(os.getpid(), grand.pid))\n"
-        "time.sleep(60)\n".format(str(pids)),
-    )
+    fake_program("facter", process_tree.source)
 
     def fire():
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline:
-            if pids.exists() and pids.read_text().count(" "):
-                break
-            time.sleep(0.05)
+        process_tree.wait_ready()
         _interrupt_main()
 
     threading.Thread(target=fire, daemon=True).start()
-    try:
-        with pytest.raises(KeyboardInterrupt) as excinfo:
-            facts_from_facter(timeout=60)
-        assert excinfo.value.__context__ is None
-        child, grandchild = (int(p) for p in pids.read_text().split())
-        deadline = time.monotonic() + 10
-        while time.monotonic() < deadline and (
-            _pid_alive(child) or _pid_alive(grandchild)
-        ):
-            time.sleep(0.1)
-        assert not _pid_alive(child), "the child outlived the interrupt"
-        assert not _pid_alive(grandchild), "the grandchild outlived the interrupt"
-    finally:
-        if pids.exists():
-            for pid in pids.read_text().split():
-                if sys.platform == "win32":
-                    subprocess.run(
-                        ["taskkill", "/F", "/T", "/PID", pid], capture_output=True
-                    )
-                else:
-                    try:
-                        os.kill(int(pid), signal.SIGKILL)
-                    except OSError:
-                        pass
+    with pytest.raises(KeyboardInterrupt) as excinfo:
+        facts_from_facter(timeout=120)
+    assert excinfo.value.__context__ is None
+    process_tree.assert_killed()

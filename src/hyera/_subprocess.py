@@ -56,8 +56,91 @@ def _resolve(program: str, refuse_batch: bool) -> str:
     return exe
 
 
-def _kill_tree(proc: "subprocess.Popen[bytes]") -> None:
+def _job_for(proc: "subprocess.Popen[bytes]") -> _ty.Any:
+    """On Windows, a Job Object holding *proc*, set to kill its members when
+    closed; ``None`` elsewhere or when any Win32 call fails. Unlike
+    ``taskkill /T``, which walks the tree as it is at that instant, a job also
+    holds processes spawned while it is being killed.
+    """
+    if not _WINDOWS:
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class _Basic(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_int64),
+                ("PerJobUserTimeLimit", ctypes.c_int64),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
+
+        class _Extended(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", _Basic),
+                ("IoInfo", ctypes.c_uint64 * 6),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                ("PeakJobMemoryUsed", ctypes.c_size_t),
+            ]
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.SetInformationJobObject.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        ]
+        kernel32.AssignProcessToJobObject.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        job = kernel32.CreateJobObjectW(None, None)
+        if not job:
+            return None
+        info = _Extended()
+        info.BasicLimitInformation.LimitFlags = 0x2000  # KILL_ON_JOB_CLOSE
+        ok = kernel32.SetInformationJobObject(
+            job,
+            9,  # JobObjectExtendedLimitInformation
+            ctypes.byref(info),
+            ctypes.sizeof(info),
+        ) and kernel32.AssignProcessToJobObject(
+            job, int(proc._handle)
+        )  # type: ignore[attr-defined]
+        if not ok:
+            kernel32.CloseHandle(ctypes.c_void_p(job))
+            return None
+        return (kernel32, job)
+    except Exception:
+        return None
+
+
+def _job_call(job: _ty.Any, name: str) -> None:
+    """Terminate (``TerminateJobObject``) or close (``CloseHandle``) *job*."""
+    if job is None:
+        return
+    import ctypes
+
+    kernel32, handle = job
+    try:
+        if name == "terminate":
+            kernel32.TerminateJobObject(ctypes.c_void_p(handle), 1)
+        else:
+            kernel32.CloseHandle(ctypes.c_void_p(handle))
+    except Exception:
+        pass
+
+
+def _kill_tree(proc: "subprocess.Popen[bytes]", job: _ty.Any = None) -> None:
     """Kill *proc* and every process it started."""
+    _job_call(job, "terminate")
     if _WINDOWS:
         taskkill = os.path.join(
             os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe"
@@ -84,9 +167,9 @@ def _kill_tree(proc: "subprocess.Popen[bytes]") -> None:
         pass
 
 
-def _kill_and_reap(proc: "subprocess.Popen[bytes]") -> None:
+def _kill_and_reap(proc: "subprocess.Popen[bytes]", job: _ty.Any = None) -> None:
     """Kill *proc*'s tree, wait for it a bounded time and close its pipes."""
-    _kill_tree(proc)
+    _kill_tree(proc, job)
     try:
         proc.communicate(timeout=_REAP_TIMEOUT)
     except (subprocess.TimeoutExpired, OSError, ValueError):
@@ -146,6 +229,21 @@ def run(
     except OSError as e:
         raise BackendError("Failed to run {}{}: {}".format(program, suffix, e)) from e
 
+    job = _job_for(proc)
+    try:
+        return _wait(proc, job, program, timeout, suffix)
+    finally:
+        _job_call(job, "close")
+
+
+def _wait(
+    proc: "subprocess.Popen[bytes]",
+    job: _ty.Any,
+    program: str,
+    timeout: float,
+    suffix: str,
+) -> bytes:
+    """Wait for *proc*; kill its tree on timeout or any other exception."""
     # The timeout error is raised after the handler: a TimeoutExpired carries
     # the child's partial stdout, and raising inside the handler would keep it
     # reachable through __context__. Any other exception (an interrupt, an
@@ -157,10 +255,10 @@ def run(
     except subprocess.TimeoutExpired:
         timed_out = True
     except BaseException:
-        _kill_and_reap(proc)
+        _kill_and_reap(proc, job)
         raise
     if timed_out:
-        _kill_and_reap(proc)
+        _kill_and_reap(proc, job)
         raise BackendTimeoutError(
             "{} timed out after {}s{}".format(program, timeout, suffix)
         ) from None

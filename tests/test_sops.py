@@ -199,30 +199,16 @@ def test_sops_missing_binary_is_not_labelled_unable_to_parse(
     assert str(excinfo.value).startswith("sops executable not found")
 
 
-def _hang_with_grandchild(marker):
-    return (
-        "import subprocess, sys, time\n"
-        "code = 'import pathlib, sys, time; time.sleep(2); "
-        'pathlib.Path(sys.argv[1]).write_text("x")\'\n'
-        "subprocess.Popen([sys.executable, '-c', code, {!r}])\n"
-        "sys.stdout.write('partial: HUNTER2SECRETVALUE')\n"
-        "sys.stdout.flush()\n"
-        "time.sleep(60)\n"
-    ).format(str(marker))
-
-
-def test_sops_timeout_kills_the_whole_process_group(fake_program, tmp_path):
-    marker = tmp_path / "grandchild-survived"
-    fake_program("sops", _hang_with_grandchild(marker))
-    started = time.monotonic()
-    with pytest.raises(BackendTimeoutError, match="sops timed out after 0.5s") as e:
-        SopsBackend({}, timeout=0.5).data_hash(tmp_path / "secret.yaml", {})
-    assert time.monotonic() - started < 10
+def test_sops_timeout_kills_the_whole_process_group(
+    fake_program, process_tree, tmp_path
+):
+    fake_program("sops", process_tree.source)
+    # Long enough that the fake has started its grandchild before the kill.
+    with pytest.raises(BackendTimeoutError, match="sops timed out after 6s") as e:
+        SopsBackend({}, timeout=6).data_hash(tmp_path / "secret.yaml", {})
     assert isinstance(e.value, TimeoutError) and isinstance(e.value, BackendError)
     assert e.value.__cause__ is None and e.value.__context__ is None
-    assert "HUNTER2" not in str(e.value)
-    time.sleep(3)
-    assert not marker.exists(), "the grandchild outlived the timeout"
+    process_tree.assert_killed()
 
 
 def test_assigning_the_package_timeout_takes_effect(

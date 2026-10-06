@@ -2,8 +2,11 @@
 
 import copy
 import os
+import signal
+import subprocess
 import sys
 import textwrap
+import time
 
 import pytest
 import yaml
@@ -159,3 +162,82 @@ def fake_program(tmp_path, monkeypatch):
         return program
 
     return _make
+
+
+def _pid_alive(pid):
+    if sys.platform == "win32":
+        out = subprocess.run(
+            ["tasklist", "/FI", "PID eq {}".format(pid), "/NH"],
+            capture_output=True,
+            text=True,
+        ).stdout
+        return str(pid) in out.split()
+    try:
+        with open("/proc/{}/stat".format(pid)) as fh:
+            return fh.read().rsplit(")", 1)[1].split()[0] != "Z"
+    except OSError:
+        return False
+
+
+class _ProcessTree:
+    """A fake program that starts a grandchild, records both pids, then hangs."""
+
+    def __init__(self, ready):
+        self.ready = ready
+        self.source = (
+            "import os, subprocess, sys, time\n"
+            "grand = subprocess.Popen("
+            "[sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+            "open({0!r} + '.tmp', 'w').write('{{}} {{}}'.format(os.getpid(), grand.pid))\n"
+            "os.replace({0!r} + '.tmp', {0!r})\n"
+            "time.sleep(120)\n"
+        ).format(str(ready))
+
+    def pids(self):
+        try:
+            return [int(p) for p in self.ready.read_text().split()]
+        except (OSError, ValueError):
+            return []
+
+    def wait_ready(self, seconds=30):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if len(self.pids()) == 2:
+                return True
+            time.sleep(0.05)
+        return False
+
+    def assert_killed(self):
+        """Fail unless both processes existed and are now gone (bounded wait)."""
+        assert self.ready.exists(), (
+            "inconclusive: the timeout fired before the fake started its "
+            "grandchild; raise the timeout"
+        )
+        pids = self.pids()
+        assert len(pids) == 2
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and any(_pid_alive(p) for p in pids):
+            time.sleep(0.1)
+        assert not _pid_alive(pids[0]), "the child outlived the kill"
+        assert not _pid_alive(pids[1]), "the grandchild outlived the kill"
+
+    def kill_leftovers(self):
+        for pid in self.pids():
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True
+                )
+            else:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError:
+                    pass
+
+
+@pytest.fixture
+def process_tree(tmp_path):
+    """A fake program source that leaves a child and a grandchild running, and
+    the checks that both are gone afterwards; leftovers are killed on teardown."""
+    tree = _ProcessTree(tmp_path / "tree-ready")
+    yield tree
+    tree.kill_leftovers()
