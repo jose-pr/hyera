@@ -61,6 +61,7 @@ The files ported from Puppet are:
     src/hyera/_types/new_function.py (from puppet/functions/new.rb)
     src/hyera/_scope/scope.py (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
          context/trusted_information.rb, node/facts.rb)
+    src/hyera/_scope/scope_data.py (from puppet/parser/scope.rb, node/facts.rb, context/trusted_information.rb)
     src/hyera/_scope/facts.py (from puppet/application/lookup.rb, util/yaml.rb)
     src/hyera/backends/_eyaml.py (from puppet/functions/eyaml_lookup_key.rb)
 
