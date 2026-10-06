@@ -378,40 +378,94 @@ def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
     assert rc == 2
 
 
-def test_broken_pipe_while_emitting_exits_2_and_silences_stdout(
-    monkeypatch, render_root
+@pytest.mark.parametrize(
+    "error",
+    [
+        BrokenPipeError(32, "Broken pipe"),
+        OSError(22, "Invalid argument"),
+        OSError(28, "No space left on device"),
+    ],
+    ids=["EPIPE", "EINVAL", "ENOSPC"],
+)
+def test_stdout_write_failure_exits_2_and_silences_stdout(
+    error, monkeypatch, render_root, caplog
 ):
     # The in-process counterpart to test_closed_stdout_exits_2_quietly
-    # above: that test needs a real OS pipe closed from the reader side,
-    # so it runs as a subprocess whose own coverage this run never
-    # measures. Forcing the same BrokenPipeError through _emit exercises
-    # Lookup.__call__'s except BrokenPipeError: _silence_stdout(); return
-    # 2 in-process instead; _silence_stdout itself is mocked out rather
-    # than actually called, since its real dup2() would redirect this
-    # test process's own stdout to the null device for the rest of the
-    # pytest run.
+    # above, which needs a real OS pipe closed from the reader side.
+    # _silence_stdout is mocked out: its real dup2() would redirect this
+    # test process's own stdout to the null device for the rest of the run.
     import hyera.cli as cli
 
-    monkeypatch.setattr(
-        cli,
-        "_emit",
-        lambda text: (_ for _ in ()).throw(BrokenPipeError()),
-    )
+    def refuse(text):
+        raise error
+
+    monkeypatch.setattr(cli, "_emit", refuse)
     silenced = []
     monkeypatch.setattr(cli, "_silence_stdout", lambda: silenced.append(True))
-    rc = cli.main(
+    with caplog.at_level(logging.ERROR):
+        rc = cli.main(
+            [
+                "--hiera_config",
+                str(render_root / "hiera.yaml"),
+                "--facts",
+                str(render_root / "facts.yaml"),
+                "--render-as",
+                "json",
+                "str",
+            ]
+        )
+    assert rc == 2
+    assert silenced == [True]
+    assert _error_records(caplog) == []
+
+
+def test_reader_gone_before_the_first_write_exits_2_quietly(render_root):
+    proc = subprocess.Popen(
         [
+            sys.executable,
+            "-m",
+            "hyera",
             "--hiera_config",
             str(render_root / "hiera.yaml"),
             "--facts",
             str(render_root / "facts.yaml"),
-            "--render-as",
-            "json",
             "str",
-        ]
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={**os.environ, "PYTHONPATH": _SRC},
     )
+    try:
+        proc.stdout.close()
+        err = proc.stderr.read()
+        rc = proc.wait(timeout=60)
+    finally:
+        proc.stderr.close()
+    assert err == b""
     assert rc == 2
-    assert silenced == [True]
+
+
+@pytest.mark.skipif(not os.path.exists("/dev/full"), reason="needs /dev/full")
+def test_full_device_stdout_exits_2_quietly(render_root):
+    with open("/dev/full", "wb") as full:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "hyera",
+                "--hiera_config",
+                str(render_root / "hiera.yaml"),
+                "--facts",
+                str(render_root / "facts.yaml"),
+                "str",
+            ],
+            stdout=full,
+            stderr=subprocess.PIPE,
+            env={**os.environ, "PYTHONPATH": _SRC},
+            timeout=60,
+        )
+    assert proc.stderr == b""
+    assert proc.returncode == 2
 
 
 @pytest.mark.parametrize("flag", ["-o", "--output"])

@@ -277,16 +277,20 @@ if duho is not None:
                     )
                 else:
                     text = Backend.new(fmt, kind="render").dumps(value)
-                _emit(text)
-            except BrokenPipeError:
-                _silence_stdout()
-                return 2
             except Exception as e:
                 return self._fail(
                     "Cannot render the value of key '{}': {}".format(
                         joined_keys, _describe(e)
                     )
                 )
+            try:
+                _emit(text)
+            except OSError:
+                # The reader is gone or the device is full: nothing can be
+                # reported on stdout, and one more line on stderr would be
+                # noise for a caller that stopped listening.
+                _silence_stdout()
+                return 2
             return 0
 
     __all__.append("Lookup")
