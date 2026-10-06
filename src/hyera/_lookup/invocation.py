@@ -41,6 +41,19 @@ _STRICT: "contextvars.ContextVar[str]" = contextvars.ContextVar(
 _UNSET = object()
 
 
+class _OptionsGuard:
+    """Re-entrancy guard for one top-level lookup's ``lookup_options``
+    gathers: ``pending`` holds the gathers currently running, ``hits``
+    counts how often a nested call was refused because its gather was
+    already running (such a call composed its options without that layer)."""
+
+    __slots__ = ("pending", "hits")
+
+    def __init__(self) -> None:
+        self.pending: set = set()
+        self.hits = 0
+
+
 class Invocation:
     """Per-lookup state, threaded through one top-level lookup: the bound
     :class:`~hyera.Scope`, the current sub-lookup callable, and the
@@ -66,6 +79,7 @@ class Invocation:
         _name_stack: _ty.Optional[_ty.List[str]] = None,
         _fs_memo: "_ty.Optional[_ty.Dict[_ty.Any, _ty.Any]]" = None,
         _lo_cache: _ty.Optional[_ty.Any] = None,
+        _lo_guard: "_ty.Optional[_OptionsGuard]" = None,
         global_only: bool = False,
     ) -> None:
         self.scope = scope
@@ -94,6 +108,10 @@ class Invocation:
         #: cache would -- discarded once the call returns, never reaching
         #: the instance's own cache.
         self._lo_cache = _lo_cache
+        #: The ``lookup_options`` gathers running for this top-level lookup,
+        #: shared with every ``Invocation`` derived from or built around it,
+        #: so the re-entrancy guard never reaches another thread's lookup.
+        self._lo_guard = _OptionsGuard() if _lo_guard is None else _lo_guard
         #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only on
         #: the invocation used to resolve a version 3 global layer's own
         #: data (``core.Hiera._lookup_layers``), when no environment
@@ -180,6 +198,7 @@ class Invocation:
             _name_stack=self._name_stack,
             _fs_memo=self._fs_memo,
             _lo_cache=self._lo_cache,
+            _lo_guard=self._lo_guard,
             global_only=(self.global_only if global_only is _UNSET else global_only),
         )
 

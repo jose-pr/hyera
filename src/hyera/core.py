@@ -462,16 +462,6 @@ class Hiera:
         self._lookup_options_cache = _ScopeKeyedCache(
             self._cache_lock, self._cache_size
         )
-        #: ``(scope, tag, base_path)`` tuples whose ``lookup_options`` gather
-        #: is currently running on this instance -- guards against a value
-        #: inside ``lookup_options`` that sub-looks-up a key whose own
-        #: ``lookup_options`` gather would otherwise re-enter this same
-        #: gather while it is still running (a merge spec written as
-        #: ``%{lookup(...)}``). A reentrant call sees no options at all
-        #: (matching a key with none), never recurses, and the pending
-        #: marker is removed in ``finally`` so a gather that raises does not
-        #: wedge future lookups.
-        self._lookup_options_pending: set = set()
         #: Interned path strings, shared by every location entry and by
         #: ``_file_cache``: ``s -> s`` so equal paths from independent
         #: builds share one string object.
@@ -530,7 +520,6 @@ class Hiera:
             "_cache_lock",
             "_location_cache",
             "_lookup_options_cache",
-            "_lookup_options_pending",
             "_paths",
             "_file_cache",
             "_glob_cache",
@@ -1651,17 +1640,17 @@ class Hiera:
         ``if``/``elsif`` with no ``else``, ``lookup_adapter.rb:358-365``)
         treats differently.
 
-        ``self._lookup_options_pending`` guards a value inside
-        ``lookup_options`` that itself runs a full sub-lookup
-        (:meth:`_sub_lookup`) asking this same method for its own key's
-        options while this gather is still running (measured against a
-        ``merge:`` spec interpolated through a nested ``%{lookup(...)}``):
-        marking ``(scope, tag, base_path)`` pending before the gather starts
-        means that nested lookup sees no options at all (:data:`_LO_ABSENT`),
-        instead of re-entering this gather and recursing forever
-        (``lookup_adapter.rb:376-378``); the marker comes off in ``finally``,
-        so a gather that raises does not wedge a later, independent lookup
-        for the same ``(scope, tag, base_path)``.
+        ``invocation._lo_guard`` guards a value inside ``lookup_options``
+        that itself runs a full sub-lookup (:meth:`_sub_lookup`) asking this
+        same method for its own key's options while this gather is still
+        running (measured against a ``merge:`` spec interpolated through a
+        nested ``%{lookup(...)}``): marking ``(scope, tag, base_path)``
+        pending before the gather starts means that nested lookup sees no
+        options at all (:data:`_LO_ABSENT`), instead of re-entering this
+        gather and recursing forever (``lookup_adapter.rb:376-378``). The
+        guard belongs to one top-level lookup, so another thread's lookup
+        never sees it; the marker comes off in ``finally``, so a gather that
+        raises does not wedge a later lookup.
 
         ``cache``, when given (``Hiera.explain()``'s own per-call, never-
         stores bypass -- Design decision: explain always re-walks, never
@@ -1697,10 +1686,12 @@ class Hiera:
         if cached is not _MISSING:
             return cached
 
+        guard = invocation._lo_guard
         pending_key = (scope, tag, base_path)
-        if pending_key in self._lookup_options_pending:
+        if pending_key in guard.pending:
+            guard.hits += 1
             return _LO_ABSENT
-        self._lookup_options_pending.add(pending_key)
+        guard.pending.add(pending_key)
         try:
             lo_refs = []
             made_sub_lookup = False
@@ -1718,6 +1709,7 @@ class Hiera:
                 explainer=invocation.explainer,
                 _fs_memo=fs_memo,
                 _lo_cache=invocation._lo_cache,
+                _lo_guard=guard,
             )
             with gather_invocation.check(LOOKUP_OPTIONS):
                 raw = self._lookup_levels(
@@ -1731,7 +1723,7 @@ class Hiera:
                     module_name=module_name,
                 )
         finally:
-            self._lookup_options_pending.discard(pending_key)
+            guard.pending.discard(pending_key)
 
         result = _LO_ABSENT if raw is _MISSING else raw
         if not made_sub_lookup:
@@ -1826,6 +1818,7 @@ class Hiera:
             cached = self._compiled_options_cache.get(module_name)
             if cached is not None and cached[0] is scope:
                 return cached[1]
+        guard_hits = invocation._lo_guard.hits
 
         state = self._environment(scope.environment)
         opts = self._environment_lookup_options(state, invocation, cache)
@@ -1860,7 +1853,13 @@ class Hiera:
                     else:
                         opts = None
         compiled = compile_patterns(opts)
-        if not self._revalidate and cache is None:
+        # A result composed while the re-entrancy guard refused a layer lacks
+        # that layer's options: it answers this lookup only.
+        if (
+            not self._revalidate
+            and cache is None
+            and invocation._lo_guard.hits == guard_hits
+        ):
             self._compiled_options_cache[module_name] = (scope, compiled)
         return compiled
 
