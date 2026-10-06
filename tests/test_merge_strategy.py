@@ -4,11 +4,14 @@ Pure Python-level tests: no Puppet oracle, no I/O. Every rule cites the
 Ruby source line it mirrors in ``_merge_strategy.py`` itself.
 """
 
+import collections
 import re
+import types
 
 import pytest
 
 from hyera import Hiera, HieraError, MergeError
+from hyera._lookup import merge_strategy
 from hyera._lookup.merge_strategy import (
     _MISSING,
     DeepMergeStrategy,
@@ -687,3 +690,87 @@ def test_reverse_deep_lower_wins():
     assert strategy.merge({"l": ["--z", "a"]}, {"l": ["z", "b"]}) == {
         "l": ["--z", "a", "z", "b"]
     }
+
+
+# --- a Hash source over a non-Hash destination -----------------------
+
+
+def test_hash_over_non_hash_merges_every_key_after_the_first():
+    # The first key replaces the destination with the source Hash; each
+    # later key is then merged with itself, which dedupes its arrays.
+    source = {"a": ["x", "x"], "b": ["y", "y", "z"], "c": {"p": [1, 1]}}
+    assert deep_merge(source, "legacy", {}) == {
+        "a": ["x", "x"],
+        "b": ["y", "z"],
+        "c": {"p": [1]},
+    }
+
+
+def test_hash_over_non_hash_applies_knockout_after_the_first_key():
+    source = {"a": ["--x", "x", "y"], "b": ["--x", "x", "y"]}
+    options = {"knockout_prefix": "--"}
+    assert deep_merge(source, "legacy", options) == {
+        "a": ["--x", "x", "y"],
+        "b": [],
+    }
+
+
+def test_knockout_prefix_overwrite_matches_any_line_of_a_string_item():
+    options = {"knockout_prefix": "--"}
+    merged = deep_merge({"l": ["keep\n--drop", "c"]}, {"l": "legacy"}, options)
+    assert merged == {"l": ["c"]}
+
+
+# --- merge= accepts any mapping --------------------------------------
+
+
+@pytest.mark.parametrize("wrap", [types.MappingProxyType, collections.ChainMap])
+def test_merge_option_accepts_any_mapping(make_tree, wrap):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "a", "path": "a.yaml"},
+                {"name": "b", "path": "b.yaml"},
+            ]
+        },
+        files={"data/a.yaml": "k: {x: 1}\n", "data/b.yaml": "k: {y: 2}\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    spec = wrap({"strategy": "deep"})
+    assert h.lookup("k", merge=spec) == {"x": 1, "y": 2}
+    assert MergeStrategy.strategy(spec) is DeepMergeStrategy.INSTANCE
+
+
+# --- costs ------------------------------------------------------------
+
+
+def test_deep_lookup_merge_does_not_clone_values_it_already_owns(
+    make_tree, monkeypatch
+):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "a", "path": "a.yaml"},
+                {"name": "b", "path": "b.yaml"},
+            ]
+        },
+        files={"data/a.yaml": "k: {x: [1]}\n", "data/b.yaml": "k: {x: [2]}\n"},
+    )
+    calls = []
+    original = merge_strategy._deep_clone
+    monkeypatch.setattr(
+        merge_strategy, "_deep_clone", lambda v: calls.append(v) or original(v)
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k", merge="deep") == {"x": [2, 1]}
+    assert calls == []
+
+
+def test_sort_merged_arrays_orders_ints_and_strings_and_rejects_mixes():
+    options = {"sort_merged_arrays": True}
+    assert deep_merge({"l": [3, 1]}, {"l": [2, 1]}, options) == {"l": [1, 2, 3]}
+    assert deep_merge({"l": ["b", "a"]}, {"l": ["c"]}, options) == {
+        "l": ["a", "b", "c"]
+    }
+    with pytest.raises(MergeError):
+        deep_merge({"l": [1, "a"]}, {"l": [2]}, options)

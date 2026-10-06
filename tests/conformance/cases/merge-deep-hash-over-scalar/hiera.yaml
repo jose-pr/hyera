@@ -1,0 +1,5 @@
+version: 5
+defaults: {data_hash: yaml_data, datadir: data}
+hierarchy:
+  - {name: high, path: high.yaml}
+  - {name: low, path: low.yaml}

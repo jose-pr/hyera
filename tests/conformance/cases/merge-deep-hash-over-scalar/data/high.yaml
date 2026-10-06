@@ -1,0 +1,10 @@
+k:
+  first: [web, web]
+  second: [db, db, cache]
+  third:
+    ports: [80, 80, 443]
+ko:
+  first: ['--x', x, y]
+  second: ['--x', x, y]
+ml:
+  list: ["keep\n--drop-me", c]

@@ -7,6 +7,7 @@ wrapping this module).
 """
 
 import typing as _ty
+from collections.abc import Mapping
 
 from .._output.explain import _debug_preamble
 from .invocation import _STRICT
@@ -138,10 +139,10 @@ def _validate_merge(merge) -> None:
         if merge == "":
             raise TypeError("lookup(): merge must not be an empty string")
         return
-    if isinstance(merge, dict) and all(isinstance(k, str) for k in merge):
+    if isinstance(merge, Mapping) and all(isinstance(k, str) for k in merge):
         return
     raise TypeError(
-        "lookup(): merge must be a str or a dict with str keys, not {}".format(
+        "lookup(): merge must be a str or a mapping with str keys, not {}".format(
             type(merge).__name__
         )
     )

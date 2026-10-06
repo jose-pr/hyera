@@ -1,0 +1,21 @@
+description: >-
+  A Hash merged over a String at a lower level under the deep strategy:
+  deep_merge replaces the String with the Hash, then merges every later key
+  of that Hash with itself (dropping duplicates and applying a knockout
+  prefix), and a knockout prefix matches at the start of any line of a
+  String item.
+origin: "(hand-written)"
+queries:
+  - key: k
+    id: k_deep
+    merge: deep
+  - key: ko
+    id: ko_deep
+    merge:
+      strategy: deep
+      knockout_prefix: "--"
+  - key: ml
+    id: ml_deep
+    merge:
+      strategy: deep
+      knockout_prefix: "--"

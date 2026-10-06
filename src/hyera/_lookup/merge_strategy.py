@@ -10,6 +10,7 @@ Ports Puppet's ``pops/merge_strategy.rb`` and the deep_merge gem's
 ``deep_merge_core.rb``.
 """
 
+import collections.abc
 import contextlib
 import functools
 import json
@@ -212,7 +213,7 @@ class MergeStrategy:
             return DefaultMergeStrategy.INSTANCE
         if isinstance(merge, MergeStrategy):
             return merge
-        if isinstance(merge, dict):
+        if isinstance(merge, collections.abc.Mapping):
             name = _plain(merge.get("strategy"))
             if name is None:
                 raise MergeError(
@@ -296,7 +297,7 @@ class MergeStrategy:
                 if memo is _MISSING:
                     memo = self.convert_value(value)
                 else:
-                    memo = self.merge(memo, value)
+                    memo = self._merge_owned(memo, value)
             if invocation is not None and memo is not _MISSING:
                 invocation.report_result(memo)
             return memo
@@ -306,6 +307,11 @@ class MergeStrategy:
         self._assert("The first element of the merge", e1)
         self._assert("The second element of the merge", e2)
         return self.checked_merge(e1, e2)
+
+    def _merge_owned(self, e1, e2):
+        """:meth:`merge` for two values the caller owns outright, so a
+        strategy that clones its lower-priority side may skip the clone."""
+        return self.merge(e1, e2)
 
     def _assert(self, label, value):
         problem = self._value_problem(value)
@@ -584,7 +590,7 @@ def _overwrite_unmergeables(source, dest, options):
             pattern = _ko_pattern(knockout_prefix)
             _ruby_delete_if(
                 source,
-                lambda item: isinstance(item, str) and pattern.match(item) is not None,
+                lambda item: isinstance(item, str) and pattern.search(item) is not None,
             )
             return source
         return source
@@ -662,6 +668,8 @@ def _ruby_sort(lst):
             raise MergeError(_ruby_cmperr(b[1], a[1]))
         return cmp
 
+    if all(type(item) is str for item in lst) or all(type(item) is int for item in lst):
+        return sorted(lst)
     indexed = list(enumerate(lst))
     indexed.sort(key=functools.cmp_to_key(compare))
     return [item for _, item in indexed]
@@ -744,17 +752,11 @@ def deep_merge(source, dest, options):
                 dest.append(source)
             else:
                 # :134-138 -- dest isn't a Hash (or Array to extend): the
-                # entire value is overwritten by source (not just this one
-                # key). Real Ruby re-checks this every iteration; with
-                # ``overwrite_unmergeable`` and no knockout, one overwrite
-                # already reaches that fixed point (dest becomes source
-                # itself, a Hash, so every later key hits the ``isinstance
-                # (dest, dict)`` branch instead and re-derives the same
-                # value) -- and with it false, or a knockout_prefix
-                # stripping every source key down to "", nothing further
-                # changes either. Either way this stops here.
+                # whole value is overwritten by source. Every later key
+                # sees the new dest (the source Hash itself) and merges
+                # its own value with itself, which dedupes arrays and
+                # applies the knockout prefix there.
                 dest = _overwrite_unmergeables(source, dest, options)
-                break
         return dest
 
     if isinstance(source, list):
@@ -836,7 +838,7 @@ class DeepMergeStrategy(MergeStrategy):
 
     KEY = "deep"
 
-    def checked_merge(self, e1, e2):
+    def checked_merge(self, e1, e2, *, clone=True):
         """merge_strategy.rb:372-377 -- ``deep_merge!(e1, deep_clone(e2))``.
 
         ``preserve_unmergeables`` defaults false -- ``deep`` itself can
@@ -846,7 +848,10 @@ class DeepMergeStrategy(MergeStrategy):
         """
         merge_options = {k: v for k, v in self.options.items() if k != "strategy"}
         merge_options.setdefault("preserve_unmergeables", False)
-        return deep_merge(e1, _deep_clone(e2), merge_options)
+        return deep_merge(e1, _deep_clone(e2) if clone else e2, merge_options)
+
+    def _merge_owned(self, e1, e2):
+        return self.checked_merge(e1, e2, clone=False)
 
     def _value_problem(self, value):
         """merge_strategy.rb:410-412 -- ``Any``: never a problem."""
@@ -912,6 +917,6 @@ class ReverseDeepMergeStrategy(UnconstrainedDeepMergeStrategy):
 
     KEY = "reverse_deep"
 
-    def checked_merge(self, e1, e2):
+    def checked_merge(self, e1, e2, *, clone=True):
         """merge_strategy.rb:442-444."""
-        return super().checked_merge(e2, e1)
+        return super().checked_merge(e2, e1, clone=clone)

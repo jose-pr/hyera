@@ -51,6 +51,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A deep merge of a Hash over a non-Hash (a String at a lower level, say)
+  merges every key after the first as Puppet does: arrays of the later keys
+  lose duplicates and honour `knockout_prefix`. A `knockout_prefix` also
+  removes a String array item that has the prefix at the start of any line.
+- `merge=` accepts any `Mapping` with `str` keys, not only a `dict`.
 - `hyera.backends.SOPS_TIMEOUT = n` changes the `sops` timeout; it was
   documented but read from a private copy.
 - `sops` and `facter` run with their standard input closed instead of the

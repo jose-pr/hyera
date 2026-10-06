@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "node": "golden.example.com",
+  "inputs_sha256": "cc91c660a074c494597e00d48d8ddf448b356c259ca8166732b71d42e50c2542",
+  "results": {
+    "k_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "k"
+      ],
+      "status": "found",
+      "value": {
+        "first": [
+          "web",
+          "web"
+        ],
+        "second": [
+          "db",
+          "cache"
+        ],
+        "third": {
+          "ports": [
+            80,
+            443
+          ]
+        }
+      }
+    },
+    "ko_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ko"
+      ],
+      "status": "found",
+      "value": {
+        "first": [
+          "--x",
+          "x",
+          "y"
+        ],
+        "second": []
+      }
+    },
+    "ml_deep": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--merge",
+        "deep",
+        "--knock-out-prefix",
+        "--",
+        "ml"
+      ],
+      "status": "found",
+      "value": {
+        "list": [
+          "c"
+        ]
+      }
+    }
+  }
+}
