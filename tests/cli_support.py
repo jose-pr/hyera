@@ -22,12 +22,10 @@ def _error_records(caplog):
 
 @pytest.fixture
 def hiera_root(make_tree):
-    """``conftest.hiera_root``, plus a ``facts.yaml`` -- the CLI now
-    requires ``--facts`` for every lookup (an empty facts mapping is
-    Puppet's own "No facts available" error), so every CLI test needs a
-    real facts file even when the data itself never reads a fact.
-    Overrides (shadows) the shared ``conftest.py`` fixture of the same
-    name for this module only; other test files keep the plain one.
+    """``conftest.hiera_root`` plus a ``facts.yaml``, shadowing it for this module.
+
+    The CLI requires ``--facts`` for every lookup (empty facts is Puppet's "No
+    facts available" error).
     """
     return make_tree(
         {
@@ -106,11 +104,8 @@ def render_root(make_tree):
     )
 
 
-# ---------------------------------------------------------------------------
 # puppet lookup's flag set: merge validation and deep-merge options, --type,
-# scope/facts/node, layers (--environment*/--modulepath*), --strict,
-# --explain/--explain-options, and the flags this CLI removed outright.
-# ---------------------------------------------------------------------------
+# scope/facts/node, layers, --strict, --explain, and the removed flags.
 
 
 @pytest.fixture

@@ -23,13 +23,9 @@ from cli_support import (  # noqa: F401
 
 @pytest.fixture
 def mergefirst_root(make_tree):
-    """A tree where ``lookup_options`` declares ``unique`` for ``classes``,
-    so an explicit ``--merge first`` overriding it is observable.
+    """A tree whose ``lookup_options`` declares ``unique`` for ``classes``.
 
-    Uses a flat ``os_family`` scope var, not a dotted ``facts.os.family``
-    one: ``--scope`` rejects a dotted name outright now (a Puppet variable
-    name cannot contain ``.``), and this fixture only needs *some*
-    per-scope hierarchy level, not specifically a dotted one.
+    The scope variable is flat (``os_family``): ``--scope`` rejects dotted names.
     """
     return make_tree(
         {
@@ -445,11 +441,8 @@ def test_hiera_config_default_falls_back_to_puppet_default(
 def test_hiera_config_default_with_no_hiera_yaml_uses_builtin_default(
     tmp_path, monkeypatch
 ):
-    # Distinct from the case above (whose tmp tree has its own real
-    # hiera.yaml, found by the "default_path exists" branch): with no
-    # --hiera_config and no hiera.yaml in the cwd at all, base_path falls
-    # back to the cwd itself for Hiera's own Puppet-default config, rather
-    # than crashing on a missing file.
+    # With no --hiera_config and no hiera.yaml in the cwd, base_path falls back to
+    # the cwd for Hiera's own Puppet-default config instead of crashing.
     (tmp_path / "facts.yaml").write_text("role: web\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     rc = main(["--facts", "facts.yaml", "--node", "n", "nosuchkey", "--render-as", "s"])

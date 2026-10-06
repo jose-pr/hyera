@@ -108,10 +108,9 @@ def test_closed_stdout_exits_2_quietly(render_root, tmp_path):
 def test_stdout_write_failure_exits_2_and_silences_stdout(
     error, monkeypatch, render_root, caplog
 ):
-    # The in-process counterpart to test_closed_stdout_exits_2_quietly
-    # above, which needs a real OS pipe closed from the reader side.
-    # _silence_stdout is mocked out: its real dup2() would redirect this
-    # test process's own stdout to the null device for the rest of the run.
+    # In-process counterpart to test_closed_stdout_exits_2_quietly, which needs a real
+    # pipe. _silence_stdout is mocked: its dup2() would redirect the test process's
+    # own stdout.
     import hyera.cli as cli
 
     def refuse(text):
@@ -187,14 +186,10 @@ def test_full_device_stdout_exits_2_quietly(render_root):
 
 
 def test_emit_falls_back_to_plain_write_without_a_buffer_attr():
-    # _emit's own fallback for a stdout with no `.buffer` (a StringIO
-    # under contextlib.redirect_stdout, as the conformance harness uses,
-    # or a genuine one here) -- real sys.stdout (even under pytest's
-    # capsys) always has one, so no in-process CLI test exercises this any
-    # other way; the subprocess-based BrokenPipeError test above covers
-    # the real-console path, and test_broken_pipe_while_emitting_exits_2_
-    # and_silences_stdout covers the same except-branch in-process (with
-    # _emit mocked) so it is actually measured.
+    # _emit's fallback for a stdout with no `.buffer` (a StringIO under
+    # redirect_stdout, as the conformance harness uses); real sys.stdout always has
+    # one. The except-branch is covered in-process with _emit mocked, in
+    # test_broken_pipe_while_emitting_exits_2_and_silences_stdout.
     from hyera.cli import _emit, _silence_stdout
 
     buf = io.StringIO()

@@ -1,9 +1,6 @@
 """CLI/entry-point behavior when the ``cli`` extra (duho) is not installed.
 
-No ``duho`` import at module level here -- both local venvs have duho
-installed (it's in the ``dev`` extra), so each check runs in a fresh
-subprocess with ``sys.modules["duho"]`` forced to ``None`` before importing
-``hyera``, to simulate a plain ``pip install hyera`` with no extras.
+Each check runs in a subprocess with ``sys.modules["duho"]`` set to ``None``.
 """
 
 import os

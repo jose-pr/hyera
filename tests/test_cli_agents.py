@@ -19,10 +19,8 @@ from cli_support import (  # noqa: F401
 
 
 def test_mcp_stdio_serves_lookup(hiera_root):
-    # HYERA_MCP=stdio runs the CLI as an MCP server exposing one tool. Both
-    # the tool name and the initialize response's serverInfo.name come from
-    # duho's root tool-name resolution (Lookup._parsername_),
-    # which is "hyera", not the command class's own name "Lookup".
+    # HYERA_MCP=stdio serves one tool; its name and the serverInfo.name both come from
+    # duho's root tool-name resolution (Lookup._parsername_): "hyera", not "Lookup".
     messages = [
         {
             "jsonrpc": "2.0",
@@ -118,11 +116,8 @@ def test_mcp_tool_call_accepts_double_dash_as_the_knockout_prefix(flags_root):
 
 
 def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, capsys):
-    # The MCP trigger env var name must come from Lookup's own declared
-    # `_parsername_`, not from sys.argv[0]'s stem -- otherwise embedding
-    # hyera's CLI in another script (or running it as `python -m hyera.cli`)
-    # silently changes which env var launches the MCP server, contradicting
-    # the documented HYERA_MCP contract.
+    # The MCP trigger env var name comes from Lookup's `_parsername_`, not from
+    # sys.argv[0]'s stem, so embedding the CLI in another script keeps HYERA_MCP.
     monkeypatch.setattr(sys, "argv", ["/x/cli.py"])
     monkeypatch.setenv("HYERA_MCP", "bogus")
 
