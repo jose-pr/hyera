@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import functools
 
-from .function_provider import PROVIDER_CLASSES
+from .provider_classes import PROVIDER_CLASSES
 from .interpolation import interpolate
 from .invocation import Invocation
 from .._config.data_provider import prune_module_data
@@ -40,7 +40,7 @@ def resolved_locations_for(hiera, hierarchy, index, base_path, scope, tag, invoc
 def provider_for(
     hiera, tag, base_path, index, hierarchy, scope, invocation, module_name=None
 ):
-    """The :class:`~hyera._lookup.function_provider._FunctionProvider` for one
+    """The :class:`~hyera._lookup.provider_classes._FunctionProvider` for one
     hierarchy level, bound to ``scope`` -- built once per ``(tag,
     base_path, index)`` on this instance/view and cached in
     ``hiera._providers`` (never shared with another view; see

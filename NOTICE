@@ -35,6 +35,8 @@ The files ported from Puppet are:
     src/hyera/_lookup/function_provider.py (from puppet/pops/lookup/function_provider.rb, data_hash_function_provider.rb,
          lookup_key_function_provider.rb, data_dig_function_provider.rb, context.rb,
          data_provider.rb, configured_data_provider.rb)
+    src/hyera/_lookup/provider_classes.py (from puppet/pops/lookup/function_provider.rb, data_hash_function_provider.rb,
+         lookup_key_function_provider.rb, data_dig_function_provider.rb, configured_data_provider.rb)
     src/hyera/_lookup/data_functions.py (from puppet/functions/dig.rb, get.rb, getvar.rb)
     src/hyera/_lookup/cache.py (from puppet/pops/lookup/hiera_config.rb, context.rb)
     src/hyera/_lookup/locations.py (from puppet/pops/lookup/data_hash_function_provider.rb)

@@ -34,7 +34,7 @@ class _Location(_ty.NamedTuple):
     ``Path``: a consumer that needs one builds it from ``.location``) or the
     normalized ``uri`` string when ``is_uri``. Field names match
     :class:`~hyera._config.location_resolver.ResolvedLocation` exactly, so a
-    :class:`~hyera._lookup.function_provider._FunctionProvider` (built from either
+    :class:`~hyera._lookup.provider_classes._FunctionProvider` (built from either
     kind) never has to tell them apart.
     """
 

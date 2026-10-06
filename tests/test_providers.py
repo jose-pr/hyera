@@ -26,7 +26,8 @@ from hyera import (
     LookupContext,
     Scope,
 )
-from hyera._lookup.function_provider import _EnvironmentContext, _FunctionProvider
+from hyera._lookup.function_provider import _EnvironmentContext
+from hyera._lookup.provider_classes import _FunctionProvider
 from hyera._lookup.invocation import Invocation
 from hyera._lookup.lookup_adapter import extract_lookup_options_for_key
 from hyera._lookup.lookup_options import retrieve_lookup_options
