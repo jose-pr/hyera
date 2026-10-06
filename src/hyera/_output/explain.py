@@ -216,9 +216,9 @@ class _DebugExplainer(Explainer):
         parts = [preamble, "\n"]
         self.dump_on(parts, "  ", "  ")
         message = "".join(parts)
-        # `message` always ends in "\n" here (`parts` starts with one after `preamble`, and every
-        # `dump_on`/`_dump_texts` appends nothing or text ending in "\n"). The guard mirrors Ruby's
-        # `chomp!` (a no-op without a trailing newline) rather than relying on that invariant.
+        # `message` always ends in "\n" here (`parts` starts with one after `preamble`,
+        # and `dump_on`/`_dump_texts` append nothing or text ending in "\n"). The guard
+        # mirrors Ruby's `chomp!`, a no-op without one, not that invariant.
         if message.endswith("\n"):
             message = message[:-1]
         _LOGGER.debug("%s", message)

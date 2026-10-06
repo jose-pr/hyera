@@ -1,5 +1,6 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/explainer.rb, configured_data_provider.rb, hiera_config.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/explainer.rb, configured_data_provider.rb,
+# hiera_config.rb (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by
+# jose-pr. See NOTICE.
 """The provider and location references an explain tree node carries, and the
 value dump every node renders through.
 
