@@ -55,9 +55,9 @@ class _LookupState:
     __slots__ = ("serial", "pending", "hits")
 
     def __init__(self) -> None:
-        self.serial = next(_SERIAL)
-        self.pending: set = set()
-        self.hits = 0
+        self.serial: int = next(_SERIAL)
+        self.pending: _ty.Set[_ty.Any] = set()
+        self.hits: int = 0
 
 
 class Invocation:
