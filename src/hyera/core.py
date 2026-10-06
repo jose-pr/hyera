@@ -636,8 +636,7 @@ class Hiera:
     ) -> _ty.Any:
         """Puppet's ``get()`` (``functions/get.rb``): resolve the root of
         ``dotted`` through `.lookup()`, then dig the rest of it out of the
-        result -- unlike the removed old ``.get()``, this ``dotted``
-        argument is a single Puppet dotted-navigation *string*
+        result. ``dotted`` is a single Puppet dotted-navigation *string*
         (``"a.b.0"``), not a plain key.
 
         ``dotted`` must be a non-empty ``str`` (there is no whole-data value
