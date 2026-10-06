@@ -1,6 +1,7 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/{function_provider,data_hash_function_provider,
-# lookup_key_function_provider,data_dig_function_provider,configured_data_provider}.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{function_provider,
+# data_hash_function_provider,lookup_key_function_provider,data_dig_function_provider,
+# configured_data_provider}.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """The provider classes that call a hierarchy level's ``data_hash``,
 ``lookup_key`` or ``data_dig`` function, and ``PROVIDER_CLASSES``, the table
 that picks one per function kind.
@@ -63,13 +64,13 @@ class _FunctionProvider:
         self._environment_context = environment_context
         self._environment_name = environment_name
         self._load_file = load_file
-        #: Mirrors the owning ``Hiera``'s ``revalidate``: :class:`_DataHashProvider` reads it to decide
-        #: whether a cached location goes through ``load_file`` again (probe-checked) or is reused
-        #: outright (:meth:`_DataHashProvider.key_lookup`).
+        #: Mirrors the owning ``Hiera``'s ``revalidate``: :class:`_DataHashProvider`
+        #: reads it to decide whether a cached location goes through ``load_file`` again
+        #: (probe-checked) or is reused outright (:meth:`_DataHashProvider.key_lookup`).
         self._revalidate = revalidate
-        #: The owning module and ``(module_name, data, function_name, location) -> data``, set only for a
-        #: module-owned level: Puppet's module-data namespace rule (``prune_module_data``), applied to
-        #: ``data_hash`` results only (``data_hash_function_provider.rb:72``).
+        #: Module name and ``(module_name, data, function_name, location) -> data`` for
+        #: a module-owned level: Puppet's namespace rule (``prune_module_data``),
+        #: ``data_hash`` only (``data_hash_function_provider.rb:72``).
         self._module_name = module_name
         self._prune = prune
         #: ``Hiera.clear_cache()``'s counter when this provider was built.
@@ -165,9 +166,9 @@ class _DataHashProvider(_FunctionProvider):
                 self._require_kind_implemented()
             ctx = self._context(location)
             if location is not None and not location.is_uri:
-                # A real file. While `self._revalidate`, `_LocationStore.load_file` owns the parsed-content cache
-                # and its revalidation (one probe per top-level lookup) and must run on every call. With
-                # revalidation off a repeat call skips `load_file`: no options merge, cache key or lock.
+                # While `self._revalidate`, `_LocationStore.load_file` owns the content
+                # cache and its revalidation (one probe per lookup) and runs every call;
+                # otherwise repeat calls skip it: no options merge, key or lock.
                 path = str(location.location)
                 if self._revalidate or ctx.data_hash is None:
                     options = self.options_for(location)

@@ -362,8 +362,9 @@ def deep_merge(source, dest, options):
                     # :114-116.
                     dest[src_key] = deep_merge(src_value, dest_value, options)
                 else:
-                    # :117-130 -- dest lacks this key (or it is falsy): merge src_value with its own shallow
-                    # dup, so a nested container can end up aliased between source and dest one level down.
+                    # :117-130 -- dest lacks this key (or it is falsy): merge src_value
+                    # with its own shallow dup, so a nested container can end up aliased
+                    # between source and dest one level down.
                     src_dup = _ruby_dup(src_value)
                     if isinstance(src_dup, list) and keep_array_duplicates:
                         # :127-129 -- the merge is additive (concat, not a
@@ -372,12 +373,14 @@ def deep_merge(source, dest, options):
                         src_dup = []
                     dest[src_key] = deep_merge(src_value, src_dup, options)
             elif isinstance(dest, list) and extend_existing_arrays:
-                # :132-133 -- pushes the whole (Hash) ``source`` once per source key: dest stays an Array
-                # and never reaches a fixed point, as in Ruby; reproduced, not optimized to one push.
+                # :132-133 -- pushes the whole (Hash) ``source`` once per source key:
+                # dest stays an Array and never reaches a fixed point, as in Ruby;
+                # reproduced, not optimized to one push.
                 dest.append(source)
             else:
-                # :134-138 -- dest is not a Hash (or Array to extend): source overwrites it, and each later
-                # key merges its own value with itself, which dedupes arrays and applies the knockout prefix.
+                # :134-138 -- dest is not a Hash (or Array to extend): source overwrites
+                # it, and each later key merges its own value with itself, which dedupes
+                # arrays and applies the knockout prefix.
                 dest = _overwrite_unmergeables(source, dest, options)
         return dest
 
@@ -401,9 +404,9 @@ def deep_merge(source, dest, options):
             _ruby_delete(source, knockout_prefix)
         if isinstance(dest, list):
             if knockout_prefix is not None:
-                # :159-175 -- for each prefixed source item, strip the prefix, remove both the stripped and
-                # original forms from dest, then drop the item from source. Mutating one live array that
-                # source and dest alias is what produces the "shares nested objects" quirk.
+                # :159-175 -- for each prefixed source item, strip the prefix, remove
+                # both forms from dest, then drop the item from source. Source and dest
+                # aliasing one array gives the "shares nested objects" quirk.
                 pattern = _ko_pattern(knockout_prefix)
 
                 def _knockout(ko_item, _dest=dest, _pattern=pattern):

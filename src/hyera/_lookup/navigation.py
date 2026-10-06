@@ -61,13 +61,13 @@ def _rec(invocation, kind, qualifier):
 #: A key needs sub-key parsing only if it contains a quote or a dot
 #: (``sub_lookup.rb`` ``SPECIAL``).
 _SPECIAL_RE = re.compile(r"""['".]""")
-#: One key segment: a quoted run (with its surrounding whitespace, which the segment consumes)
-#: or a run of characters that is none of quote/dot. ``re.ASCII`` matches Ruby's ASCII-only
-#: ``\s`` (Python's default also matches Unicode whitespace such as U+00A0).
+#: One key segment: a quoted run (with its surrounding whitespace) or a run of
+#: non-quote, non-dot characters. ``re.ASCII`` matches Ruby's ASCII-only ``\s``
+#: (Python's default also matches Unicode spaces such as U+00A0).
 _SEGMENT_RE = re.compile(r"""(\s*"[^"]+"\s*|\s*'[^']+'\s*|[^'".]+)""", re.ASCII)
-#: An optionally colon-prefixed, signed-digit segment (``sub_lookup.rb:39``'s ``(:?...)`` is a
-#: literal colon then digits, not a non-capturing group); ``_ruby_to_i`` drops the colon, as
-#: Ruby's ``to_i`` does not parse it.
+# : An optionally colon-prefixed, signed-digit segment (``sub_lookup.rb:39``'s
+# ``(:?...)`` is a : literal colon then digits, not a non-capturing group);
+# ``_ruby_to_i`` drops the colon, as : Ruby's ``to_i`` does not parse it.
 _INT_SEGMENT_RE = re.compile(r"^(:?[+-]?[0-9]+)$", re.M)
 #: Ruby ``String#to_i``: the leading signed-digit run, or 0 if there is none.
 _TO_I_RE = re.compile(r"\s*([+-]?[0-9]+)", re.ASCII)
@@ -119,9 +119,9 @@ def split_key(
     # Ruby's String#split drops trailing empty strings; re.split keeps them.
     while segments and segments[-1] == "":
         segments.pop()
-    # The loop above leaves a non-empty `segments` never ending in "", so a one-element list's
-    # element is never "" and the check below raises for it; past that check, popping the first
-    # element leaves at least one behind, so there is no empty-after-pop case.
+    # The loop above leaves a non-empty `segments` never ending in "", so a one-element
+    # list's element is never "" and the check below raises for it; past that check,
+    # popping the first element leaves at least one behind.
     if not segments or segments.pop(0) != "":
         raise make_error("Syntax error")
 

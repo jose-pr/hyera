@@ -44,8 +44,8 @@ def provider_for(
     hierarchy level, bound to ``scope`` -- built once per ``(tag,
     base_path, index)`` on this instance/view and cached in
     ``hiera._providers`` (never shared with another view; see
-    :meth:`Hiera._view <hyera.core.Hiera._view>`). While ``revalidate=True``, an already-cached
-    provider has its ``.locations`` refreshed in place
+    :meth:`Hiera._view <hyera.core.Hiera._view>`). While ``revalidate=True``,
+    an already-cached provider has its ``.locations`` refreshed in place
     (:func:`resolved_locations_for`) on every call, so a repeated
     lookup on the same view/scope still sees a changed, added or
     removed location -- rebuilding the whole provider (re-interpolating
@@ -55,14 +55,14 @@ def provider_for(
     ``base_path`` -- the owning layer's own root -- disambiguates a
     level index across layers (the global hierarchy and every
     environment's/module's own each start indexing from 0) the same way
-    :meth:`~hyera._lookup.locations._LocationStore.location_entry_for`'s own cache key already does; ``tag``
-    additionally tells a module's ``default_hierarchy`` apart from its
-    main one, since both share the same root. ``module_name`` -- set
-    only for a level in a module's own hierarchy -- makes a
-    ``data_hash`` result go through :func:`~hyera._config.data_provider.
-    prune_module_data` (Puppet's module-data namespace rule); it plays
-    no part in the cache key, since a level's owning module never
-    changes once built.
+    :meth:`~hyera._lookup.locations._LocationStore.location_entry_for`'s own
+    cache key already does; ``tag`` additionally tells a module's
+    ``default_hierarchy`` apart from its main one, since both share the same
+    root. ``module_name`` -- set only for a level in a module's own hierarchy
+    -- makes a ``data_hash`` result go through
+    :func:`~hyera._config.data_provider.prune_module_data` (Puppet's
+    module-data namespace rule); it plays no part in the cache key, since a
+    level's owning module never changes once built.
     """
     key = (tag, base_path, id(hierarchy), index)
     provider = hiera._providers.get(key)
@@ -163,20 +163,21 @@ def files_for(hiera, hierarchy, base_path, scope, tag, invocation=None):
     shows.
 
     Only a ``data_hash`` level's *path* locations are ever loaded here
-    (through :meth:`~hyera._lookup.locations._LocationStore.load_file`, so they land in its file cache exactly
-    as a real lookup would find them): a ``lookup_key``/``data_dig``
-    function is never called without a real key, and a ``uri`` location
-    is never fetched or stat'ed -- ``sources()`` keeps its documented
-    meaning, "the files a lookup may read".
+    (through :meth:`~hyera._lookup.locations._LocationStore.load_file`, so they
+    land in its file cache exactly as a real lookup would find them): a
+    ``lookup_key``/``data_dig`` function is never called without a real key,
+    and a ``uri`` location is never fetched or stat'ed -- ``sources()`` keeps
+    its documented meaning, "the files a lookup may read".
 
     Re-derived on every call, never cached as its own flattened list:
     the expensive part -- resolving/materializing locations, and
     reading each file -- is already cached the referenced-variable/
-    ``(path, strict, options)`` way (:meth:`~hyera._lookup.locations._LocationStore.location_entry_for`/
-    :meth:`~hyera._lookup.locations._LocationStore.load_file`), both shared across every view of this
-    instance, so re-walking an already-cached level/location list here
-    costs no repeated filesystem access beyond what ``revalidate=True``
-    itself asks for.
+    ``(path, strict, options)`` way
+    (:meth:`~hyera._lookup.locations._LocationStore.location_entry_for`/
+    :meth:`~hyera._lookup.locations._LocationStore.load_file`), both shared
+    across every view of this instance, so re-walking an already-cached
+    level/location list here costs no repeated filesystem access beyond what
+    ``revalidate=True`` itself asks for.
     """
     paths = []
     for index, level in enumerate(hierarchy):

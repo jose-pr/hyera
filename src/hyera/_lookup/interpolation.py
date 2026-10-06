@@ -18,18 +18,19 @@ from .._types.types import Sensitive
 from .._digits import format_decimal_int
 from ..exceptions import ConfigError, HieraLookupError, InterpolationError, _issue_coded
 
-#: One ``%{...}`` occurrence (``interpolation.rb:51``'s ``/%\{([^}]*)\}/``): any text up to the
-#: first ``}``, so an empty expression or embedded quotes reach the grammar below and get its error.
+# : One ``%{...}`` occurrence (``interpolation.rb:51``'s ``/%\{([^}]*)\}/``): any text
+# up to the : first ``}``, so an empty expression or embedded quotes reach the grammar
+# below and get its error.
 _EXPR_RE = re.compile(r"%\{([^}]*)\}")
-#: A method call: a bare word, then a quoted argument in parentheses, nothing else, no whitespace
-#: (``interpolation.rb:146``). ``re.ASCII`` matches Ruby's ASCII-only ``\w``; ``re.MULTILINE`` with
-#: ``.search`` matches Ruby's line-anchored ``^``/``$``.
+# : A method call: a bare word, then a quoted argument in parentheses, nothing else, no
+# whitespace : (``interpolation.rb:146``). ``re.ASCII`` matches Ruby's ASCII-only
+# ``\w``; ``re.MULTILINE`` with : ``.search`` matches Ruby's line-anchored ``^``/``$``.
 _METHOD_RE = re.compile(
     r"""^(\w+)\((?:"([^"]+)"|'([^']+)')\)$""", re.ASCII | re.MULTILINE
 )
-#: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a ``%{...}`` whose stripped content is one of
-#: these tokens resolves to the empty string without a scope lookup (an empty quoted name is not
-#: sub-key syntax: ``split_key`` would raise a spurious "Syntax error").
+#: ``interpolation.rb``'s ``EMPTY_INTERPOLATIONS``: a ``%{...}`` whose stripped content
+#: is one of these tokens resolves to the empty string without a scope lookup (an empty
+#: quoted name is not sub-key syntax: ``split_key`` would raise "Syntax error").
 _EMPTY_INTERPOLATIONS = frozenset(["", "::", '""', "''", '"::"', "'::'"])
 
 
@@ -144,9 +145,9 @@ def _float_to_s(f: float) -> str:
     -4..14 (and 15 when the shortest round-trip digits run past the point),
     ``<d>.<digits>e±NN`` otherwise; ``NaN``/``Infinity``/``-Infinity`` for
     the non-finite cases. Checked against Ruby 4.0.7 over 8,291 floats
-    spanning exponents -30..39 and 1-17 significant digits: Python's own ``repr()`` agrees with Ruby
-    in the fixed-notation range, so this only has to pick which range
-    applies and reformat the scientific case.
+    spanning exponents -30..39 and 1-17 significant digits: Python's own
+    ``repr()`` agrees with Ruby in the fixed-notation range, so this only has
+    to pick which range applies and reformat the scientific case.
     """
     if f != f:
         return "NaN"
@@ -289,8 +290,9 @@ def _interpolate_string(subject, inv, allow_methods):
                 # the entire value (already asserted equal to `subject`
                 # above), with no re-interpolation and no stringification.
                 return value
-            # Re-interpolating a method's own result can recurse (a fact whose value is "%{that same fact}"):
-            # the name-stack check the sub-lookup path applies to a whole key guards it (`interpolation.rb:68`).
+            # Re-interpolating a method's own result can recurse (a fact whose value is
+            # "%{that same fact}"): the name-stack check the sub-lookup path applies to
+            # a whole key guards it (`interpolation.rb:68`).
             check_name = "scope:" + key if method == "scope" else key
             with inv.check(check_name):
                 value = interpolate(value, inv, allow_methods)
@@ -382,9 +384,9 @@ def _scope_lookup(key, inv, subject):
             value = inv.default_values.get(root)
             if root in inv.default_values:
                 inv.report_found_in_defaults(root, value)
-        # An undefined root is reported neither found nor not_found (as in Puppet's Explainer).
-    # The dig runs after the "Global Scope" node's push/pop: Puppet's tree has `sub_key` as a
-    # sibling of `scope` under `interpolate`, never nested inside it.
+        # An undefined root is reported neither found nor not_found (as in Puppet's
+        # Explainer). The dig runs after the "Global Scope" push/pop: in Puppet's tree
+        # `sub_key` is a sibling of `scope` under `interpolate`.
     if value is not None and rest:
         result = sub_lookup(key, rest, value, inv)
         value = None if result is _MISSING else result
@@ -393,8 +395,8 @@ def _scope_lookup(key, inv, subject):
 
 
 #: Each interpolation method's resolver, keyed by name (``interpolation.rb:132-145``).
-#: ``lookup``/``hiera``/``alias`` share one sub-lookup implementation; only ``_interpolate_string``
-#: treats ``alias`` differently (whole-result, never stringified or re-scanned).
+#: ``lookup``/``hiera``/``alias`` share one sub-lookup; only ``_interpolate_string``
+#: treats ``alias`` differently (whole result, never stringified or re-scanned).
 _METHODS = {
     "lookup": _global_lookup,
     "hiera": _global_lookup,

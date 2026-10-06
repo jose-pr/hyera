@@ -126,8 +126,9 @@ class _LocationStore:
         #: depends on directory contents, not on scope. See
         #: :meth:`glob_matches`.
         self._glob_cache = _LRU(lock, cache_size)
-        #: Parsed data files: ``(path, backend.strict, options) -> _FileEntry``, see :meth:`load_file`.
-        #: Unbounded, as Puppet's per-environment file cache is: its size follows the data tree.
+        # : Parsed data files: ``(path, backend.strict, options) -> _FileEntry``, see
+        # :meth:`load_file`. : Unbounded, as Puppet's per-environment file cache is: its
+        # size follows the data tree.
         self._file_cache: dict = {}
         #: Every plain path ever loaded successfully into ``_file_cache``,
         #: under any ``strict``/``options`` variant.
@@ -229,12 +230,13 @@ class _LocationStore:
         function's own options check (``Backend._require_path_only``) --
         ``options`` is Puppet ``Data``, so it always serializes.
         ``self._loaded_paths`` separately tracks which plain paths were ever
-        read successfully, for :func:`~hyera._lookup.providers.files_for`'s "was this location
-        loaded" check, independent of which ``strict``/``options`` variant
-        did the loading. This is the only place a location is actually
-        read: a hierarchy build only resolves and records locations now, so
-        every location -- even one visited many times across many lookups --
-        is parsed here at most once per probe-confirmed version.
+        read successfully, for :func:`~hyera._lookup.providers.files_for`'s
+        "was this location loaded" check, independent of which
+        ``strict``/``options`` variant did the loading. This is the only place
+        a location is actually read: a hierarchy build only resolves and
+        records locations, so every location -- even one visited many times
+        across many lookups -- is parsed here at most once per
+        probe-confirmed version.
         """
         options_key = json.dumps(options, sort_keys=True)
         cache_key = (path, backend.strict, options_key)
@@ -246,15 +248,15 @@ class _LocationStore:
             probe = _probe_for(invocation, path)
             if probe.kind == "absent":
                 if entry is not None:
-                    # A path cached earlier that has since vanished reads as absent, as Puppet's next
-                    # compilation would see it, not as an error.
+                    # A path cached earlier that has since vanished reads as absent, as
+                    # Puppet's next compilation would see it, not as an error.
                     with self.lock:
                         self._file_cache.pop(cache_key, None)
                         self._loaded_paths.discard(path)
                     return _MISSING
-                # Never cached, and materialization still says this is a location to read (a glob match's
-                # `exist` is not a fresh probe: a dangling symlink matches by name): attempt the read and let
-                # it fail naturally.
+                # Never cached, and materialization still says this is a location to
+                # read (a glob match's `exist` is not a fresh probe: a dangling symlink
+                # matches by name): attempt the read and let it fail naturally.
             elif entry is not None and entry.signature == probe.sig:
                 return entry.data
         elif entry is not None:
@@ -298,9 +300,10 @@ class _LocationStore:
         built for.
 
         Shared by every view derived from this instance (unlike
-        ``self._providers``, see :meth:`Hiera._view <hyera.core.Hiera._view>`): ``base_path`` -- the owning
-        layer's own root -- disambiguates a layer's hierarchy from any
-        other's the same way :func:`~hyera._lookup.providers.provider_for`'s own cache key already
+        ``self._providers``, see :meth:`Hiera._view <hyera.core.Hiera._view>`):
+        ``base_path`` -- the owning layer's own root -- disambiguates a layer's
+        hierarchy from any other's the same way
+        :func:`~hyera._lookup.providers.provider_for`'s own cache key already
         does, so two providers never collide even under the same ``tag``.
 
         This only resolves locations, and probes each non-glob, non-uri one
@@ -477,8 +480,9 @@ class _LocationStore:
         )
         matches = []
         for m in raw:
-            # Only a directory is dropped (``reject(&:directory?)``, as the eager `_expand_globs` does); a
-            # dangling symlink match is kept, and `_load_file` raises for it when something reads it.
+            # Only a directory is dropped (``reject(&:directory?)``, as the eager
+            # `_expand_globs` does); a dangling symlink match is kept, and `_load_file`
+            # raises for it when something reads it.
             if self.revalidate:
                 is_dir = _probe_for(invocation, m).kind == "dir"
             else:

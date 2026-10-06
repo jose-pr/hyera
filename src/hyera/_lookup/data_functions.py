@@ -19,8 +19,9 @@ from .navigation import split_key
 from .._types.inference import infer
 from ..exceptions import HieraLookupError
 
-#: getvar.rb:50 -- must start with a valid (optionally ``::``-qualified) Puppet variable name
-#: followed by ``.`` or the end. ``(?a)`` keeps Puppet's ASCII-only ``\w``.
+# : getvar.rb:50 -- must start with a valid (optionally ``::``-qualified) Puppet
+# variable name : followed by ``.`` or the end. ``(?a)`` keeps Puppet's ASCII-only
+# ``\w``.
 _VALID_START_RE = re.compile(r"(?a)\A(?:::)?(?:[a-z]\w*::)*[a-z_]\w*(?:\.|\Z)")
 #: getvar.rb:69 -- splits the leading variable name from the rest.
 _NAME_RE = re.compile(r"(?a)^((?:::)?(?:\w+::)*\w+)")

@@ -23,9 +23,9 @@ from .._config.data_provider import (
 )
 from .._output.explain_refs import _provider_ref
 
-#: Sentinel for "no location in this layer's hierarchy declares ``lookup_options``", as opposed
-#: to an explicit ``lookup_options: ~`` (``None``); ``_ScopeKeyedCache`` already uses
-#: :data:`~hyera._lookup.navigation._MISSING` for "not cached yet" (:func:`layer_options_cached`).
+#: Sentinel for "no location in this layer's hierarchy declares ``lookup_options``", as
+#: opposed to an explicit ``lookup_options: ~`` (``None``); ``_ScopeKeyedCache`` already
+#: uses :data:`~hyera._lookup.navigation._MISSING` for "not cached yet".
 _LO_ABSENT = object()
 
 
@@ -383,8 +383,9 @@ def lookup_default_in_module(hiera, key, root, segments, module_name, invocation
     the default hierarchy's own ``lookup_options``
     (:func:`module_default_lookup_options`) -- never the caller's
     ``merge=`` or the main hierarchy's options, which
-    :meth:`Hiera._search_and_merge <hyera.core.Hiera._search_and_merge>` still applies its ``convert_to`` from,
-    regardless of which walk actually found the value.
+    :meth:`Hiera._search_and_merge <hyera.core.Hiera._search_and_merge>` still
+    applies its ``convert_to`` from, regardless of which walk actually found
+    the value.
     """
     if module_name is None:
         return _MISSING

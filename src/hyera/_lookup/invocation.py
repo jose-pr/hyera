@@ -1,5 +1,5 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/invocation.rb,
-# lookup_adapter.rb, hiera_config.rb, context.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Ported from Puppet 8 lib/puppet/pops/lookup/invocation.rb, lookup_adapter.rb,
+# hiera_config.rb, context.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
 # Modified by jose-pr. See NOTICE.
 """Invocation: per-lookup state for interpolation.
 
@@ -21,8 +21,9 @@ from .cache import _ScopeRef, _freeze, _probe
 from .._scope.scope import Scope
 from ..exceptions import InterpolationError
 
-#: A lookup's host sub-lookup callable: ``(key, invocation) -> value`` or ``_MISSING`` (in
-#: ``hyera._lookup.navigation``) for a miss; resolves ``%{hiera()}``/``%{lookup()}``/``%{alias()}``.
+# : A lookup's host sub-lookup callable: ``(key, invocation) -> value`` or ``_MISSING``
+# (in : ``hyera._lookup.navigation``) for a miss; resolves
+# ``%{hiera()}``/``%{lookup()}``/``%{alias()}``.
 _LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
 
 #: The shared no-op context manager every recording hook uses when
@@ -30,9 +31,9 @@ _LookupFn = _ty.Callable[[str, "Invocation"], _ty.Any]
 #: nodes at all.
 _NULL_CONTEXT = contextlib.nullcontext()
 
-#: The call-time ``strict`` default for a data file's non-hash rule (``yaml_data.rb:31`` reads
-#: ``Puppet[:strict]`` per call, as one backend instance serves many scopes). Set from
-#: ``invocation.scope.strict`` at the engine entry and reset in ``finally``; ``Backend.strict`` falls back to it.
+#: Call-time ``strict`` default for a data file's non-hash rule (``yaml_data.rb:31``
+#: reads ``Puppet[:strict]`` per call; one backend serves many scopes). Set from the
+#: scope at engine entry, reset in ``finally``; ``Backend.strict`` falls back to it.
 _STRICT: "contextvars.ContextVar[str]" = contextvars.ContextVar(
     "hiera_strict", default="warning"
 )
@@ -98,32 +99,33 @@ class Invocation:
             {} if default_values is None else default_values
         )
         self.lenient = lenient
-        #: The :class:`~hyera._output.explain.Explainer` this lookup's recording hooks report to, or
-        #: ``None`` (no explanation asked: every hook is a no-op). Shared with every derived
-        #: ``Invocation`` (``invocation.rb:61-62``).
+        # : The :class:`~hyera._output.explain.Explainer` this lookup's recording hooks
+        # report to, or : ``None`` (no explanation asked: every hook is a no-op). Shared
+        # with every derived : ``Invocation`` (``invocation.rb:61-62``).
         self.explainer = explainer
-        #: ``Hiera.explain()``'s per-call ``lookup_options`` memo (a fresh ``_ScopeKeyedCache``), or
-        #: ``None`` for an ordinary lookup, which uses the instance's persistent cache. Shared with
-        #: derived invocations, so a nested sub-lookup reuses it; discarded once the call returns.
+        #: ``Hiera.explain()``'s per-call ``lookup_options`` memo (a fresh
+        #: ``_ScopeKeyedCache``), shared with derived invocations; ``None`` for an
+        #: ordinary lookup, which uses the instance's cache.
         self._lo_cache = _lo_cache
         #: This top-level lookup's identity and ``lookup_options``
         #: re-entrancy guard, shared with every ``Invocation`` derived from or
         #: built around it, so nothing reaches another thread's lookup.
         self._state = _LookupState() if _state is None else _state
-        #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only when resolving a version 3
-        #: global layer's own data with no version 5 environment provider. Derived invocations inherit
-        #: it, confining a nested lookup to the global layer (``lookup_adapter.rb:76,266-269,332-339``).
+        #: ``global_only`` (``invocation.rb:222-229``): set for a version 3 global layer
+        #: with no v5 environment provider and inherited by derived invocations,
+        #: confining nested lookups to it (``lookup_adapter.rb:76,266-269,332-339``).
         self.global_only = global_only
-        #: Recursion-detection stack, shared (the same list, never copied) with every derived
-        #: ``Invocation`` (``invocation.rb:47-52``), so a name pushed by one guards the others.
+        # : Recursion-detection stack, shared (the same list, never copied) with every
+        # derived : ``Invocation`` (``invocation.rb:47-52``), so a name pushed by one
+        # guards the others.
         self._name_stack = [] if _name_stack is None else _name_stack
-        #: ``None`` or a list of ``(_ScopeRef, (undefined, frozen_value))`` pairs shared with derived
-        #: invocations and appended to by :meth:`remember_scope_lookup` (Puppet's
-        #: ``ScopeLookupCollectingInvocation``); a caller building a cache entry passes a fresh list.
+        #: ``None`` or a list of ``(_ScopeRef, (undefined, frozen_value))`` pairs shared
+        #: with derived invocations; :meth:`remember_scope_lookup` appends (Puppet's
+        #: ``ScopeLookupCollectingInvocation``). A cache builder passes a fresh list.
         self.scope_interpolations = scope_interpolations
-        #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with derived invocations and the
-        #: other invocations of the same top-level lookup: one filesystem snapshot, each path probed
-        #: at most once. A fresh ``{}`` when not given (``sources()``).
+        #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with derived
+        #: invocations and the lookup's other invocations: one filesystem snapshot, each
+        #: path probed once. A fresh ``{}`` when not given (``sources()``).
         self._fs_memo = {} if _fs_memo is None else _fs_memo
 
     def _memo_probe(self, path):

@@ -25,13 +25,14 @@ from ..exceptions import HieraLookupError
 
 __all__ = []
 
-#: A recorded reference that read as ``_UNSTABLE`` during replay (a sub-lookup segment walk
-#: hit a type-mismatch error) is skipped, neither a match nor a miss; the caller rebuilds.
+# : A recorded reference that read as ``_UNSTABLE`` during replay (a sub-lookup segment
+# walk : hit a type-mismatch error) is skipped, neither a match nor a miss; the caller
+# rebuilds.
 _UNSTABLE = object()
 
-#: At most this many distinct reference sets are kept per cache "kind": the scope reads a
-#: build makes can depend on values (a re-interpolated value, a mapped collection), so
-#: several sets can be valid at once.
+# : At most this many distinct reference sets are kept per cache "kind": the scope reads
+# a : build makes can depend on values (a re-interpolated value, a mapped collection),
+# so : several sets can be valid at once.
 _MAX_KNOWN = 16
 
 
@@ -133,9 +134,9 @@ class _ScopeKeyedCache:
     def get(self, kind, scope, extra=()):
         last = self._last.get(kind)
         if last is not None and last[0] is scope and last[1] == extra:
-            # Identity fast path: ``scope`` is immutable, so the exact object this cache last saw for
-            # ``kind`` would replay every reference to the same values. Skip to the one thing that can
-            # still have changed: the entry's eviction (a dict lookup under the shared lock).
+            # Identity fast path: ``scope`` is immutable, so the object last seen for
+            # ``kind`` replays every reference to the same values; only the entry's
+            # eviction (a dict lookup under the shared lock) can have changed.
             key = last[2]
             with self._lock:
                 value = self._entries.get(key, _MISSING)
