@@ -93,3 +93,19 @@ def test_extras_table_matches_pyproject():
     pyproject_extras -= {"dev", "docs"}
 
     assert table_extras == pyproject_extras
+
+
+def test_every_api_page_documents_one_module_and_is_linked():
+    pages = {
+        page.name: page.read_text(encoding="utf-8").strip()
+        for page in (ROOT / "docs" / "api").glob("*.md")
+    }
+    modules = sorted(body.split(" ", 1)[1] for body in pages.values())
+    assert all(body.startswith("::: hyera") for body in pages.values())
+    assert len(set(modules)) == len(modules)
+    assert "hyera.exceptions" in modules
+    nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    index = DOC.read_text(encoding="utf-8")
+    for name in pages:
+        assert "api/" + name in nav, name
+        assert "api/" + name in index, name

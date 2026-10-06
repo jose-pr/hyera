@@ -80,6 +80,7 @@ $ python -m hyera classes --hiera_config hiera.yaml --facts facts.yaml --environ
 ## Learn more
 
 - [hyera](api/hyera.md)
+- [hyera.exceptions](api/exceptions.md)
 - [hyera.types](api/types.md)
 - [hyera.backends](api/backends.md)
 - [hyera.cli](api/cli.md)

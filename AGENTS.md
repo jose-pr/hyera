@@ -107,7 +107,7 @@ examples/
 docs/
 ├── index.md            # the hand-written landing page (its examples are tested, see Develop)
 ├── changelog.md          # snippet-embeds CHANGELOG.md
-└── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.types, hyera.backends, hyera.cli)
+└── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.exceptions, hyera.types, hyera.backends, hyera.cli)
 
 .github/workflows/
 ├── test.yml            # on-demand test matrix, types, floors, coverage, format, docs, console-script, benchmark
