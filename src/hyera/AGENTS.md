@@ -882,18 +882,26 @@ is a `Backend` subclass, found by name rather than passed around directly.
     callable) to this lookup's `explain()` report.
   - `.cache(key, value)` / `.cache_all(mapping)` / `.cache_has_key(key)` /
     `.cached_value(key)` (`None` when absent) / `.cached_entries()` (an
-    iterator of `(key, value)` pairs) — a per-location cache private to this
-    hierarchy entry, living for the bound view's lifetime; a
-    `lookup_key`/`data_dig` result a hook itself cached (`.cache(key, ...)`)
-    is returned from that cache on a later call for the same key, and a copy
-    (never the cached object) leaves the cache each time, so a caller
-    mutating a returned list/dict never corrupts it. A miss
-    (`context.not_found()`) is never cached — a later call for the same key
+    iterator of `(key, value)` pairs) — the hook's own per-location store,
+    private to this hierarchy entry, living for the bound view's lifetime.
+    The engine never reads or writes it: it is not where results live, and
+    a hook is called for every key whatever it stored.
+  - The engine keeps each `lookup_key`/`data_dig` result separately, and a
+    copy (never the kept object) leaves it each time, so a caller mutating a
+    returned list/dict never corrupts it. A result is kept until a file the
+    hook read through `.cached_file_data()` for it changes (inode,
+    modification time or size); the hook is then called again. A result
+    whose call read no file is kept for the top-level lookup that produced
+    it, so the next lookup calls the hook again. With `revalidate=False`
+    every result is kept until `clear_cache()`. A miss
+    (`context.not_found()`) is never kept — a later call for the same key
     calls the hook again.
   - `.cached_file_data(path, parse=None)` — reads and, if `parse` is given,
     parses `path` once, revalidated by `(inode, mtime_ns, size)` on every
     call (not by content); shared by every hierarchy entry on the same
     `Hiera` instance (like the `data_hash` file cache), never per-location.
+    Reading a file through it is what lets the engine keep the call's
+    result across lookups.
   - `.environment_name` (the scope's `environment`, `"production"` when
     unset) / `.module_name` (always `None` today — no provider kind yet
     fills it in).
@@ -1404,9 +1412,9 @@ Not supported:
   built at all — checked once per top-level call, not once per hook.
 - The engine interpolates a `data_hash` value (methods allowed) but never a
   `lookup_key`/`data_dig` result — a backend that wants interpolation calls
-  `context.interpolate(value)` itself. `lookup_key`/`data_dig` providers and
-  their `LookupContext` caches are per scope-binding object (`Hiera`/
-  `h.scoped(...)` view), never shared with another view; `cached_file_data`
+  `context.interpolate(value)` itself. `lookup_key`/`data_dig` providers,
+  their kept results and their `LookupContext` caches are per scope-binding
+  object (`Hiera`/`h.scoped(...)` view), never shared with another view; `cached_file_data`
   is per `Hiera` instance, shared by every hierarchy entry. A backend's
   `context.not_found()` raises a `BaseException` subclass, not `Exception`
   — a backend wrapping its own logic in `except Exception:` does not

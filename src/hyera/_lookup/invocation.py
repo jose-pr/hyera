@@ -7,6 +7,7 @@ set) the recording hooks a lookup's explain tree is built through.
 
 import contextlib
 import contextvars
+import itertools
 import typing as _ty
 
 from .cache import _ScopeRef, _freeze, _probe
@@ -41,15 +42,20 @@ _STRICT: "contextvars.ContextVar[str]" = contextvars.ContextVar(
 _UNSET = object()
 
 
-class _OptionsGuard:
-    """Re-entrancy guard for one top-level lookup's ``lookup_options``
-    gathers: ``pending`` holds the gathers currently running, ``hits``
-    counts how often a nested call was refused because its gather was
-    already running (such a call composed its options without that layer)."""
+_SERIAL = itertools.count(1)
 
-    __slots__ = ("pending", "hits")
+
+class _LookupState:
+    """What one top-level lookup shares between its invocations: ``serial``
+    identifies the lookup; ``pending`` holds the ``lookup_options`` gathers
+    currently running (the re-entrancy guard); ``hits`` counts how often a
+    nested call was refused because its gather was already running (such a
+    call composed its options without that layer)."""
+
+    __slots__ = ("serial", "pending", "hits")
 
     def __init__(self) -> None:
+        self.serial = next(_SERIAL)
         self.pending: set = set()
         self.hits = 0
 
@@ -79,7 +85,7 @@ class Invocation:
         _name_stack: _ty.Optional[_ty.List[str]] = None,
         _fs_memo: "_ty.Optional[_ty.Dict[_ty.Any, _ty.Any]]" = None,
         _lo_cache: _ty.Optional[_ty.Any] = None,
-        _lo_guard: "_ty.Optional[_OptionsGuard]" = None,
+        _state: "_ty.Optional[_LookupState]" = None,
         global_only: bool = False,
     ) -> None:
         self.scope = scope
@@ -108,10 +114,10 @@ class Invocation:
         #: cache would -- discarded once the call returns, never reaching
         #: the instance's own cache.
         self._lo_cache = _lo_cache
-        #: The ``lookup_options`` gathers running for this top-level lookup,
-        #: shared with every ``Invocation`` derived from or built around it,
-        #: so the re-entrancy guard never reaches another thread's lookup.
-        self._lo_guard = _OptionsGuard() if _lo_guard is None else _lo_guard
+        #: This top-level lookup's identity and ``lookup_options``
+        #: re-entrancy guard, shared with every ``Invocation`` derived from or
+        #: built around it, so nothing reaches another thread's lookup.
+        self._state = _LookupState() if _state is None else _state
         #: Puppet's ``global_only`` (``invocation.rb:222-229``): set only on
         #: the invocation used to resolve a version 3 global layer's own
         #: data (``core.Hiera._lookup_layers``), when no environment
@@ -198,7 +204,7 @@ class Invocation:
             _name_stack=self._name_stack,
             _fs_memo=self._fs_memo,
             _lo_cache=self._lo_cache,
-            _lo_guard=self._lo_guard,
+            _state=self._state,
             global_only=(self.global_only if global_only is _UNSET else global_only),
         )
 

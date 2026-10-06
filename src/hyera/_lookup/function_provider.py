@@ -197,6 +197,15 @@ class _EnvironmentContext:
         """The cached result of ``parse(text)`` (or the raw text when
         ``parse`` is ``None``) for the file at ``path``, revalidated by
         ``(inode, mtime_ns, size)``, not by content."""
+        return self.cached_file_stamped(path, parse)[1]
+
+    def cached_file_stamped(
+        self,
+        path: _ty.Union[str, "os.PathLike[str]"],
+        parse: _ty.Optional[_ty.Callable[[str], _ty.Any]] = None,
+    ) -> _ty.Tuple[_ty.Tuple[int, int, int], _ty.Any]:
+        """:meth:`cached_file_data`'s value together with the
+        ``(inode, mtime_ns, size)`` stamp it was validated against."""
         path = os.fspath(path)
         try:
             st = os.stat(path)
@@ -207,7 +216,7 @@ class _EnvironmentContext:
         stamp = (st.st_ino, st.st_mtime_ns, st.st_size)
         cached = self._cache.get(path)
         if cached is not None and cached[0] == stamp:
-            return cached[1]
+            return stamp, cached[1]
         try:
             with open(path, "rb") as fh:
                 raw = fh.read()
@@ -235,7 +244,18 @@ class _EnvironmentContext:
                 ) from e
             raise
         self._cache[path] = (stamp, value)
-        return value
+        return stamp, value
+
+
+class _Result(_ty.NamedTuple):
+    """One ``lookup_key``/``data_dig`` result the engine kept: ``value`` is
+    what the hook returned; ``deps`` is ``(path, stamp)`` for each file the
+    hook read through ``cached_file_data`` while producing it; ``serial``
+    identifies the top-level lookup that produced it."""
+
+    value: _ty.Any
+    deps: tuple
+    serial: int
 
 
 class _FunctionContext:
@@ -257,13 +277,12 @@ class _FunctionContext:
         #: The location label a ``data_hash`` provider validated ``data_hash``
         #: with -- ``None`` for a location-less entry, else ``str(location)``.
         self.label: _ty.Optional[str] = None
+        #: What the hook stored through ``LookupContext.cache``; the engine
+        #: never reads or writes it.
         self._cache: _ty.Dict[_ty.Any, _ty.Any] = {}
-
-    def has_cached(self, key: _ty.Any) -> bool:
-        """Whether ``key`` was already cached for this location (by a
-        ``lookup_key``/``data_dig`` provider's own ``context.cache(...)``
-        call on a previous invocation)."""
-        return key in self._cache
+        #: The engine's own per-key results (:class:`_Result`), apart from
+        #: the hook's cache.
+        self.results: _ty.Dict[_ty.Any, _Result] = {}
 
 
 class LookupContext:
@@ -282,6 +301,9 @@ class LookupContext:
     ) -> None:
         self._fc = function_context
         self._invocation = invocation
+        #: ``(path, stamp)`` of every file read through
+        #: :meth:`cached_file_data` by this call.
+        self._deps: _ty.List[_ty.Tuple[str, _ty.Any]] = []
 
     def interpolate(self, value: _ty.Any) -> _ty.Any:
         """Interpolate ``value`` (methods allowed) against the current
@@ -366,7 +388,9 @@ class LookupContext:
         :raises BackendError: ``path`` could not be read, decoded as UTF-8,
             or ``parse`` raised a :class:`BackendError` of its own.
         """
-        return self._fc.environment_context.cached_file_data(path, parse)
+        stamp, value = self._fc.environment_context.cached_file_stamped(path, parse)
+        self._deps.append((os.fspath(path), stamp))
+        return value
 
     @property
     def environment_name(self) -> _ty.Optional[str]:
@@ -447,6 +471,31 @@ class _FunctionProvider:
             fc = _FunctionContext(self._environment_context, self._environment_name)
             self._contexts[key] = fc
         return fc
+
+    def _kept(self, ctx, key, invocation):
+        """The engine's :class:`_Result` for ``key`` at this location while
+        it still holds, else ``None``.
+
+        With ``revalidate=False`` a result lives until ``clear_cache()``.
+        Otherwise it holds while every file the hook read through
+        ``cached_file_data`` still has the stamp it had then; a result whose
+        call read no file holds only within the lookup that produced it,
+        since nothing says when the hook's source changed.
+        """
+        result = ctx.results.get(key)
+        if result is None or not self._revalidate:
+            return result
+        if result.deps:
+            for path, stamp in result.deps:
+                if invocation._memo_probe(path).sig != stamp:
+                    return None
+            return result
+        return result if result.serial == invocation._state.serial else None
+
+    def _keep(self, ctx, key, value, context, invocation):
+        ctx.results[key] = _Result(
+            value, tuple(context._deps), invocation._state.serial
+        )
 
     def key_lookup(self, root, segments, invocation, merge):
         """Reduce this level's locations for ``root`` (plus, for a
@@ -546,8 +595,9 @@ class _LookupKeyProvider(_FunctionProvider):
                     return _MISSING
                 _check_kind_implemented(self.backend, self.kind)
                 ctx = self._context(location)
-                if ctx.has_cached(root):
-                    return invocation.report_found(root, unshare(ctx._cache[root]))
+                kept = self._kept(ctx, root, invocation)
+                if kept is not None:
+                    return invocation.report_found(root, unshare(kept.value))
                 options = self.options_for(location)
                 label = None if location is None else str(location.location)
                 context = LookupContext(ctx, invocation)
@@ -557,7 +607,7 @@ class _LookupKeyProvider(_FunctionProvider):
                     invocation.report_not_found(root)
                     return _MISSING
                 _validate_provider_value(value, "lookup_key", self.backend.name, label)
-                ctx._cache[root] = value
+                self._keep(ctx, root, value, context, invocation)
                 return invocation.report_found(root, unshare(value))
 
         return merge.lookup(locations, at_location, invocation)
@@ -578,8 +628,9 @@ class _DataDigProvider(_FunctionProvider):
                     return _MISSING
                 _check_kind_implemented(self.backend, self.kind)
                 ctx = self._context(location)
-                if ctx.has_cached(cache_key):
-                    return invocation.report_found(root, unshare(ctx._cache[cache_key]))
+                kept = self._kept(ctx, cache_key, invocation)
+                if kept is not None:
+                    return invocation.report_found(root, unshare(kept.value))
                 options = self.options_for(location)
                 label = None if location is None else str(location.location)
                 context = LookupContext(ctx, invocation)
@@ -590,7 +641,7 @@ class _DataDigProvider(_FunctionProvider):
                     return _MISSING
                 _validate_provider_value(value, "data_dig", self.backend.name, label)
                 wrapped = undig(segments, value)
-                ctx._cache[cache_key] = wrapped
+                self._keep(ctx, cache_key, wrapped, context, invocation)
                 return invocation.report_found(root, unshare(wrapped))
 
         return merge.lookup(locations, at_location, invocation)

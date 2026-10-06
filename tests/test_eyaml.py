@@ -1014,24 +1014,32 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key, private_
     assert hits == []
 
 
-def test_lookup_key_returns_cached_value_without_recomputing():
-    # `EyamlBackend.lookup_key`'s own per-key cache check is normally
-    # unreachable through a real `Hiera` lookup: the engine's own
-    # `_LookupKeyProvider.key_lookup` already short-circuits on a repeat
-    # lookup of the same key before ever calling back into this method (see
-    # `test_decrypted_value_cached_per_key`, which never re-enters here at
-    # all). Call the public method directly with a minimal stub context to
-    # exercise its own cache-hit branch.
-    class _FakeContext:
-        def cache_has_key(self, key):
-            return True
+@pytest.mark.parametrize("revalidate", [True, False])
+def test_changed_eyaml_file_is_reread(tmp_path, revalidate):
+    from hyera import Hiera
 
-        def cached_value(self, key):
-            return "cached-value-for-{}".format(key)
+    (tmp_path / "data").mkdir()
+    data = tmp_path / "data" / "a.eyaml"
+    data.write_text("password: old-secret\nother: 1\n", encoding="utf-8")
+    (tmp_path / "hiera.yaml").write_text(
+        "version: 5\n"
+        "defaults: {datadir: data, data_hash: yaml_data}\n"
+        "hierarchy:\n"
+        "  - {name: s, lookup_key: eyaml_lookup_key, path: a.eyaml, "
+        "options: {pkcs7_private_key: " + PRIVATE_KEY_PATH.replace("\\", "/") + "}}\n",
+        encoding="utf-8",
+    )
+    h = Hiera(str(tmp_path / "hiera.yaml"), revalidate=revalidate)
+    assert h.lookup("password") == "old-secret"
 
-    backend = EyamlBackend()
-    result = backend.lookup_key("some-key", {}, _FakeContext())
-    assert result == "cached-value-for-some-key"
+    data.write_text("password: rotated-new-secret\nadded: yes\n", encoding="utf-8")
+    if revalidate:
+        assert h.lookup("password") == "rotated-new-secret"
+        assert h.lookup("added") is True
+    else:
+        assert h.lookup("password") == "old-secret"
+        h.clear_cache()
+        assert h.lookup("password") == "rotated-new-secret"
 
 
 def test_eyaml_backend_registered_under_eyaml_lookup_key():

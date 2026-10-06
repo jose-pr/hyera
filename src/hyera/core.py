@@ -1652,7 +1652,7 @@ class Hiera:
         ``if``/``elsif`` with no ``else``, ``lookup_adapter.rb:358-365``)
         treats differently.
 
-        ``invocation._lo_guard`` guards a value inside ``lookup_options``
+        ``invocation._state`` guards a value inside ``lookup_options``
         that itself runs a full sub-lookup (:meth:`_sub_lookup`) asking this
         same method for its own key's options while this gather is still
         running (measured against a ``merge:`` spec interpolated through a
@@ -1698,7 +1698,7 @@ class Hiera:
         if cached is not _MISSING:
             return cached
 
-        guard = invocation._lo_guard
+        guard = invocation._state
         pending_key = (scope, tag, base_path)
         if pending_key in guard.pending:
             guard.hits += 1
@@ -1721,7 +1721,7 @@ class Hiera:
                 explainer=invocation.explainer,
                 _fs_memo=fs_memo,
                 _lo_cache=invocation._lo_cache,
-                _lo_guard=guard,
+                _state=guard,
             )
             with gather_invocation.check(LOOKUP_OPTIONS):
                 raw = self._lookup_levels(
@@ -1830,7 +1830,7 @@ class Hiera:
             cached = self._compiled_options_cache.get(module_name)
             if cached is not None and cached[0] is scope:
                 return cached[1]
-        guard_hits = invocation._lo_guard.hits
+        guard_hits = invocation._state.hits
 
         state = self._environment(scope.environment)
         opts = self._environment_lookup_options(state, invocation, cache)
@@ -1870,7 +1870,7 @@ class Hiera:
         if (
             not self._revalidate
             and cache is None
-            and invocation._lo_guard.hits == guard_hits
+            and invocation._state.hits == guard_hits
         ):
             self._compiled_options_cache[module_name] = (scope, compiled)
         return compiled

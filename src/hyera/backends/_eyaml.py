@@ -592,13 +592,14 @@ def decrypt_string(data: str, options: dict, key, path) -> str:
 class EyamlBackend(Backend):
     """Puppet's hiera-eyaml ``lookup_key`` function, PKCS7 only (behind the
     optional ``eyaml`` extra). Ports ``functions/eyaml_lookup_key.
-    rb:25-79``: the raw ``.eyaml`` file loads once per location (through
+    rb:25-79``: the raw ``.eyaml`` file loads once per change (through
     :meth:`~hyera._lookup.function_provider.LookupContext.cached_file_data`, its
     *raw* parse only -- caching the non-Hash rule's strict-sensitive result
     would freeze whichever strictness read it first, exactly the trap
     ``Hiera._load_file`` guards against for ``data_hash``), then each
-    requested key's value is decrypted (:func:`hyera.backends._eyaml.decrypt_string`)
-    and cached; the raw hash is never returned to the engine, and its
+    requested key's value is decrypted (:func:`hyera.backends._eyaml.decrypt_string`);
+    the engine keeps that result until the file changes. The raw hash is
+    never returned to the engine, and its
     values are never interpolated except through
     :func:`~hyera.backends._eyaml.decrypt_string`'s own trailing ``context.
     interpolate`` call.
@@ -630,8 +631,6 @@ class EyamlBackend(Backend):
         :raises BackendError: the private key or ciphertext could not be
             read, parsed or decrypted.
         """
-        if context.cache_has_key(key):
-            return context.cached_value(key)
         if "path" not in options:
             raise ConfigError(
                 "'eyaml_lookup_key': one of 'path', 'paths' 'glob', 'globs' "
@@ -639,12 +638,7 @@ class EyamlBackend(Backend):
                 "using this lookup_key function"
             )
         path = options["path"]
-        if context.cache_has_key(None):
-            parsed = context.cached_value(None)
-        else:
-            yaml_backend = YAMLBackend()
-            parsed = context.cached_file_data(path, parse=yaml_backend.loads)
-            context.cache(None, parsed)
+        parsed = context.cached_file_data(path, parse=YAMLBackend().loads)
 
         # The non-Hash rule reads `self.strict` at call time, same as
         # `yaml_data`'s own -- applied fresh on every read (never cached),
@@ -653,8 +647,7 @@ class EyamlBackend(Backend):
         if key not in raw:
             context.not_found()
         value = raw[key]
-        decrypted = self._decrypt(value, options, context, key, path)
-        return context.cache(key, decrypted)
+        return self._decrypt(value, options, context, key, path)
 
     def _decrypt(self, value, options, context, key, path):
         """Recurse into ``value`` decrypting every string
