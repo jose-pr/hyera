@@ -15,7 +15,7 @@ import typing as _ty
 from .cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from .function_provider import _validate_data_hash
 from .navigation import _MISSING
-from .._config.location_resolver import glob as _dir_glob
+from .._config.dir_glob import glob as _dir_glob
 from .._config.location_resolver import resolve_glob_specs, resolve_locations
 from ..exceptions import BackendError, HieraError
 

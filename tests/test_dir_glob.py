@@ -13,12 +13,11 @@ import threading
 
 import pytest
 
-from hyera._config.location_resolver import (
+from hyera._config.dir_glob import (
     _entry_is_dir,
     _expand_braces,
     _fnmatch,
     _glob_one,
-    _glob_root_and_pattern,
     _has_magic,
     _is_link,
     _prepare_segments,
@@ -26,6 +25,7 @@ from hyera._config.location_resolver import (
     _segment_matches,
     glob,
 )
+from hyera._config.location_resolver import _glob_root_and_pattern
 
 
 def _write(root, rel, content=""):
