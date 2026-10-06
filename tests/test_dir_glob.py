@@ -1,7 +1,5 @@
-"""hyera's own Ruby ``Dir.glob`` port: brace expansion, the segment matcher,
-the depth-first walker, and the datadir/config-root split -- the pieces
-``hyera._config.dir_glob.glob`` is built from. A glob hierarchy level never
-delegates to ``pathlib_next.Path.glob``.
+"""hyera's Ruby ``Dir.glob`` port: brace expansion, segment matcher, depth-first
+walker and datadir/config-root split.
 """
 
 import json
@@ -145,10 +143,8 @@ def test_prepare_segments_unescapes_a_literal_segment():
 
 
 def test_segment_matches_unknown_kind_is_false():
-    # _segment_matches's own fallback: every real caller only ever builds
-    # "literal"/"magic" segments through _prepare_segments (a "recursive"
-    # segment is handled by _glob_one's own walk, never passed here) --
-    # exercised directly.
+    # _segment_matches's fallback: callers build only "literal"/"magic" segments
+    # (_glob_one handles "recursive"), so it is exercised directly.
     assert _segment_matches("recursive", None, "x") is False
 
 
@@ -304,11 +300,9 @@ def test_wildcards_are_case_sensitive_on_every_os(tmp_path):
     _write(tmp_path, "a.yaml")
     assert glob(str(tmp_path), "*.YAML") == []
     if os.path.exists(str(tmp_path / "A.yaml")):
-        # Case-insensitive filesystem: "a.yaml" already answers to "A.yaml"
-        # at the OS level, so a literal pattern finds it through the
-        # filesystem (as the literal segment it was given, since a literal
-        # match is an existence check, never a directory listing) even
-        # though our own wildcard matching stays case-sensitive.
+        # Case-insensitive filesystem: "a.yaml" answers to "A.yaml" at the OS level, so
+        # a literal pattern finds it (a literal is an existence check) though our own
+        # wildcard matching stays case-sensitive.
         assert _rel(tmp_path, glob(str(tmp_path), "A.yaml")) == ["A.yaml"]
     else:
         _write(tmp_path, "A.yaml")

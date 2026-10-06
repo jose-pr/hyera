@@ -1,12 +1,10 @@
-"""Record golden results for the conformance cases from real Puppet.
+"""Record golden results for the conformance cases from real Puppet (dev-only).
 
 usage: python record.py [--runner local|wsl|wsl:<distro>] [--jobs N]
                          [--check] [--list-markers] [CASE ...]
 
-Each query in ``cases/<case>/case.yaml`` is one isolated ``puppet lookup`` run;
-results land in ``cases/<case>/golden.json``. ``--check`` re-records in memory and
-prints ``DRIFT <case>::<id>`` on any difference; ``--list-markers`` needs no
-Puppet. Dev-only: needs Puppet 8.10's ``puppet lookup`` locally or in WSL.
+Each query in ``cases/<case>/case.yaml`` is one isolated ``puppet lookup`` run
+(Puppet 8.10); ``--check`` diffs in memory and prints ``DRIFT <case>::<id>``.
 """
 
 import argparse
@@ -95,10 +93,9 @@ def _command(runner: str, case_dir: Path, args: list, program: str = "puppet"):
     prefix = ["wsl.exe"]
     if distro:
         prefix += ["-d", distro]
-    # `-e <command> [args...]`, not `-- <command> [args...]`: wsl.exe's `--` form relays
-    # argv through a Linux-side shell that strips a lone or wrapping single quote
-    # (`ruby -e 'puts ARGV.inspect' "'a.b'"` gives `["a.b"]` with `--`, `["'a.b'"]`
-    # with `-e`, the true argument). Otherwise `-e` runs the same way.
+    # `-e <command>`, not `-- <command>`: wsl.exe's `--` relays argv through a Linux
+    # shell that strips a lone or wrapping single quote (`ruby -e 'puts ARGV.inspect'
+    # "'a.b'"` gives `["a.b"]` with `--`, `["'a.b'"]` with `-e`).
     return prefix + ["--cd", str(case_dir), "-e", program] + args, None
 
 
@@ -177,10 +174,9 @@ def record_query(
     if warnings:
         result["warnings"] = warnings
     if query.get("explain"):
-        # Not the --explain miss-vs-error fallback below: --explain/--explain-options is
-        # already in `tail` (via lookup_argv), and a swallowed LookupError is Puppet's
-        # last text line; rc is 0 whenever the report printed
-        # (application/lookup.rb:305-335).
+        # Not the --explain fallback below: --explain is already in `tail`, and a
+        # swallowed LookupError is Puppet's last text line; rc is 0 whenever the report
+        # printed (application/lookup.rb:305-335).
         errors = [l for l in err.splitlines() if l.startswith("Error:")]
         if rc != 0 or errors or not out.strip():
             result["status"] = "error"
@@ -211,12 +207,9 @@ def record_query(
             result["status"] = "error"
             result["message"] = _error_text(err.splitlines(), case_dir, root)
         else:
-            # Exit 1 with no output is ambiguous: a genuine miss and a swallowed
-            # LookupError (unknown interpolation method, embedded alias,
-            # default_hierarchy outside a module) look alike. Only the last line of
-            # --explain tells them apart, but a benign Warning: (an `environment` fact
-            # colliding with the node parameter) goes to stderr on every call, so read
-            # stdout's last line first and stderr's only when stdout is empty.
+            # Exit 1 with no output is ambiguous: a miss and a swallowed LookupError
+            # look alike and only the last line of --explain tells them apart. A benign
+            # stderr Warning: accompanies every call, so read stdout's last line first.
             _, out2, err2 = _run(runner, case_dir, base + ["--explain"] + tail)
             out2_lines = [l for l in out2.splitlines() if l.strip()]
             err2_lines = [l for l in err2.splitlines() if l.strip()]

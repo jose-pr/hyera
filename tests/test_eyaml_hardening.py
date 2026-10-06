@@ -1,4 +1,6 @@
-"""``eyaml_lookup_key`` hardening against adversarial input, key paths and secrets reachable from the context."""
+"""``eyaml_lookup_key`` hardening: adversarial input, key paths and secrets
+reachable from the context.
+"""
 
 import base64
 import os
@@ -211,11 +213,9 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key, private_
     base_der = bytearray(_envelope(b"x" * 64, public_key))
     with open(PRIVATE_KEY_PATH, "rb") as fh:
         key_pem = fh.read()
-    # Flipping a bit in the last ciphertext byte scrambles the final AES block, which
-    # usually leaves invalid PKCS7 padding; `_envelope` draws a fresh key and IV per
-    # call, so about 1 in 256 flips still looks like a valid pad and surfaces as a
-    # UTF-8 error instead. Search for a flip that breaks the padding for this run's
-    # key and IV rather than a fixed `^= 1`.
+    # Flipping a bit in the last ciphertext byte usually breaks the PKCS7 padding, but
+    # `_envelope` draws a fresh key and IV per call, so ~1 in 256 flips still looks
+    # like a valid pad. Search for a flip that breaks it for this run's key and IV.
     for flip in range(1, 256):
         der = bytearray(base_der)
         der[-1] ^= flip

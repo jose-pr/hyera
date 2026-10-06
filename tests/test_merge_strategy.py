@@ -1,7 +1,5 @@
-"""Unit tests for the Puppet MergeStrategy port (``hyera._lookup.merge_strategy``).
-
-Pure Python-level tests: no Puppet oracle, no I/O. Every rule cites the
-Ruby source line it mirrors in ``_merge_strategy.py`` itself.
+"""Unit tests for the Puppet MergeStrategy port (``hyera._lookup.merge_strategy``):
+pure Python, no Puppet oracle, no I/O.
 """
 
 import collections
@@ -78,8 +76,8 @@ def test_strategy_factory_errors():
         assert isinstance(excinfo.value, HieraError)
         assert str(excinfo.value) == message
 
-    # A legacy Python type (list/set/dict) is no longer an accepted merge=
-    # spelling; it misses like any other non-string name.
+    # A legacy Python type (list/set/dict) is not a merge= spelling; it misses like any
+    # other non-string name.
     with pytest.raises(MergeError) as excinfo:
         MergeStrategy.strategy(list)
     assert isinstance(excinfo.value, HieraError)
@@ -193,10 +191,9 @@ def test_unpack_arrays_renders_a_hash_element_the_way_ruby_inspects_it():
 
 
 def test_subclass_without_key_is_not_registered():
-    # __init_subclass__ only registers (and instantiates INSTANCE for) a
-    # subclass that sets its own KEY -- every real strategy in this module
-    # does, so an intermediate/abstract subclass with no KEY of its own is
-    # the only way to exercise the "skip" side.
+    # __init_subclass__ registers (and instantiates INSTANCE for) only a subclass that
+    # sets its own KEY; an abstract intermediate subclass is the only way to reach the
+    # "skip" side.
     from hyera._lookup.merge_strategy import _STRATEGIES
 
     class _NoKeyStrategy(MergeStrategy):
@@ -208,10 +205,9 @@ def test_subclass_without_key_is_not_registered():
 
 
 def test_merge_strategy_base_is_abstract_and_first_found_never_rejects():
-    # MergeStrategy's own checked_merge()/_value_problem() are abstract
-    # (every concrete strategy overrides both) -- exercised by direct
-    # construction/call. FirstFoundStrategy overrides only _value_problem
-    # (never checked_merge, since it "never merges" per its own docstring).
+    # MergeStrategy's checked_merge()/_value_problem() are abstract (every concrete
+    # strategy overrides both), so they are called by direct construction.
+    # FirstFoundStrategy overrides only _value_problem (it never merges).
     base = MergeStrategy({})
     with pytest.raises(NotImplementedError):
         base.checked_merge(1, 2)
@@ -314,10 +310,9 @@ def test_deep_merge_type_table():
     assert deep_merge({"k": ["a"]}, {"k": False}, {}) == {"k": ["a"]}
     assert deep_merge({"k": None}, {"k": 1}, {}) == {"k": 1}
 
-    # Whole-value type mismatches (not nested under a key): a non-empty Hash
-    # source always overwrites; an EMPTY Hash source leaves dest untouched
-    # (Ruby's `source.each` never enters its "overwrite dest" branch at all
-    # for an empty source -- deep_merge_core.rb:111-138).
+    # Whole-value type mismatches (not under a key): a non-empty Hash source overwrites;
+    # an empty Hash source leaves dest untouched (Ruby's `source.each` never enters its
+    # "overwrite dest" branch, deep_merge_core.rb:111-138).
     assert deep_merge({"a": 1, "b": 2}, ["x"], {}) == {"a": 1, "b": 2}
     assert deep_merge({}, "s", {}) == "s"
 
@@ -354,10 +349,9 @@ def test_knockout_semantics():
     memo = deep_merge(memo, unshare(["a", "c"]), options)
     assert memo == ["a", "c", "b"]
 
-    # A key only present in the higher level: the dup of the containing
-    # dict shares the SAME nested list with source (a shallow dup only
-    # copies the dict, not its values) -- this aliasing is what makes the
-    # 2-element case knock itself out entirely; see _ruby_delete_if.
+    # A key only in the higher level: the dup of the containing dict shares the same
+    # nested list with source (a shallow dup), which makes the 2-element case knock
+    # itself out entirely; see _ruby_delete_if.
     result = deep_merge({"k": {"l": ["--a", "b"]}}, {"other": 1}, options)
     assert result == {"other": 1, "k": {"l": []}}
 
@@ -672,11 +666,9 @@ def test_overwrite_unmergeable_scalar_source_wins_over_falsy_dest():
             "merge_nil_values": True,
         }
     )
-    # A Ruby-falsy dest (nil -- an empty Hash/Array is truthy in Ruby,
-    # unlike Python) is replaced outright by a scalar source, never merged
-    # into. Nested in a dict, a missing/falsy dest key instead recurses
-    # with a dup of the source as dest (always truthy if source is), so
-    # this only fires at deep_merge's own top level.
+    # A Ruby-falsy dest (nil; an empty Hash/Array is truthy in Ruby, unlike Python) is
+    # replaced by a scalar source, never merged into. Nested in a dict a falsy dest key
+    # recurses with a dup of the source, so this fires only at deep_merge's top level.
     assert strategy.merge(5, None) == 5
 
 

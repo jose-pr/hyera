@@ -1,26 +1,7 @@
-"""Guard against internal working-artefact labels leaking into tracked files.
+"""Guard against internal working-artefact labels in tracked files.
 
-This project's working notes (a numbered plan, a phase/item inside one, a
-work-item or security-review finding code, a finding's slug, a decision log
-entry) live in a private, untracked directory and must never show up in
-anything this repository ships or records -- not source, not a comment or
-docstring, not a test, not the changelog. Those labels are meaningful only to someone
-with that private directory open; to everyone else (a user reading
-``--help``, a contributor reading a diff, a future maintainer years later)
-they are noise at best and a dangling reference at worst.
-
-This scans every ``git``-tracked text file for the label shapes and fails
-naming every offending ``path:line``. A short, explicit allowlist covers the
-rare genuine domain use that happens to match (each entry carries its own
-one-line reason). Skipped entirely outside a git checkout (e.g. a built
-sdist/wheel), since there is no ``git ls-files`` to run there.
-
-The matching logic is exercised directly (not just against this repo's
-current, clean state) by a second test that feeds it a planted offender per
-label shape and asserts it is caught -- so a future edit that loosens a
-pattern shows up as a test failure here, not as a silent gap. Those planted
-strings are assembled from pieces at runtime rather than written literally,
-so this file's own source never contains the shapes it is built to catch.
+Scans every ``git``-tracked text file for the label shapes and fails naming each
+``path:line``; a short allowlist covers genuine domain uses. Skipped outside git.
 """
 
 from __future__ import annotations
@@ -34,16 +15,9 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _THIS_FILE = Path(__file__).resolve()
 
-# --------------------------------------------------------------------------
-# Label shapes
-# --------------------------------------------------------------------------
-# Each entry is (name, compiled pattern). Kept as data, not inlined into the
-# scanner, so the planted-label test below can drive every shape generically.
-#
-# "work-item-code-*" and "review-code-bare" cover this project's own
-# security-hardening review labels (``R4b``, ``S7``, ``X1``, ...): a
-# capital letter from a small set, one or two digits, an optional lowercase
-# disambiguating letter -- parenthesized, bold, or bare in running prose.
+# Label shapes: each entry is (name, compiled pattern), kept as data so the
+# planted-label test can drive every shape. "work-item-code-*" and "review-code-bare"
+# cover capital-letter-plus-digits codes, parenthesized, bold or bare in prose.
 
 _CODE_LETTERS = "F|G|M|H|L|S|C|R|B|P|T|X"
 
@@ -61,11 +35,8 @@ _PATTERNS = [
         re.compile(r"\*\*(?:" + _CODE_LETTERS + r")\d{1,3}[a-z]?\*\*"),
     ),
     ("work-item-code-bare", re.compile(r"\b[FP]\d\b")),
-    # Bare review/security-hardening finding codes in running prose, e.g.
-    # "see R7a", "R4: the OID reader ...", "-- R5 adversarial forms". Scoped
-    # to R/S/X (this repo's own label letters) to avoid matching unrelated
-    # single-letter-plus-digit domain tokens (flake8's own "F401", a Unicode
-    # control-block name like "C0"/"C1").
+    # Bare work-item codes in running prose ("see R7a", "R4: ..."), scoped to R/S/X so
+    # unrelated tokens like flake8's "F401" or a Unicode block name "C0" do not match.
     ("review-code-bare", re.compile(r"\b(?:R|S|X)\d{1,2}[a-z]?\b")),
     # A kebab-case id of four or more words in backticks is a working-note
     # slug unless README.md publishes it as a difference id (see _line_hits).
@@ -96,10 +67,9 @@ _PATTERNS = [
     ("private-working-dir", re.compile(r"\." + r"agents\b")),
 ]
 
-# (path, substring, reason) -- a match on `path` whose offending line
-# contains `substring` is a genuine domain use, not an internal-artefact
-# reference. `_DOTTED_DIR` is assembled the same way as the pattern above,
-# for the same reason.
+# (path, substring, reason): a match on `path` whose line contains `substring` is a
+# genuine domain use, not an internal reference. `_DOTTED_DIR` is assembled like the
+# pattern above, for the same reason.
 _DOTTED_DIR = "." + "agents"
 _ALLOWLIST = [
     (
@@ -161,10 +131,8 @@ def _scan_text(text: str):
 
 
 def _git_tracked_files():
-    # -z (NUL-separated, no quoting) rather than plain newline-separated
-    # output: git otherwise C-quotes any path with a non-ASCII byte --
-    # wrapping it in literal double quotes and octal-escaping each byte --
-    # which this repo actually has (tests/conformance/cases/backend-utf8-path).
+    # -z (NUL-separated): git otherwise C-quotes a path with a non-ASCII byte in double
+    # quotes with octal escapes, as tests/conformance/cases/backend-utf8-path has.
     try:
         result = subprocess.run(
             ["git", "ls-files", "-z"],

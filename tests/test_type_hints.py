@@ -1,9 +1,4 @@
-"""Every function's annotations resolve at run time, on the oldest Python too.
-
-``typing.get_type_hints`` evaluates each annotation in its module's
-namespace, so a name that is only imported for the type checker, or not
-imported at all, shows up here as a ``NameError``.
-"""
+"""Every function's annotations resolve at run time, on the oldest Python too."""
 
 import importlib
 import inspect

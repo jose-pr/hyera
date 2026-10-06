@@ -122,10 +122,9 @@ def test_internal_keyerror_is_not_chained(make_tree):
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__suppress_context__ is True
 
-    # A missing inline `%{alias()}`/`%{hiera()}`/`%{lookup()}` now resolves
-    # to "" (interpolation.rb:77-86 -- Puppet's own behavior), so it no
-    # longer triggers InterpolationError; an unknown interpolation method
-    # does, with no internal exception chained onto it.
+    # A missing inline `%{alias()}`/`%{hiera()}`/`%{lookup()}` resolves to ""
+    # (interpolation.rb:77-86), so it raises no InterpolationError; an unknown
+    # interpolation method does, with no internal exception chained.
     unknown_method_root = make_tree(
         {"hierarchy": [{"name": "one", "path": "one.yaml"}]},
         files={
@@ -180,12 +179,9 @@ def test_unparsable_config_raises_config_error(make_tree):
 
 
 def test_non_mapping_config_falls_back_to_v3_default(make_tree, caplog):
-    # A hiera.yaml that parses but is not a YAML hash falls back to Puppet's
-    # Hiera version 3 default config (`hiera_config.rb:139-144`), which is
-    # itself schema-valid -- construction succeeds (Puppet's own AIO
-    # default codedir has no matching data file at rest here, so the key
-    # is simply not found, not a `ConfigError`). The fallback's own
-    # warning is what this test actually pins.
+    # A hiera.yaml that parses but is not a YAML hash falls back to Puppet's version 3
+    # default config (`hiera_config.rb:139-144`), which is schema-valid: construction
+    # succeeds, the key is not found, and only the warning is pinned.
     root = make_tree("- a\n- b\n", raw=True)
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(KeyNotFoundError):
@@ -268,10 +264,8 @@ def test_json_parse_error_names_file(make_tree):
 
 
 def test_yaml_control_character_names_position_not_line_column(make_tree):
-    # A raw control character is a yaml.reader.ReaderError, not a
-    # yaml.MarkedYAMLError -- _yaml_problem's own "at position N" shape,
-    # distinct from every other yaml parse error in this file (all "at
-    # line L column C").
+    # A raw control character is a yaml.reader.ReaderError, not a MarkedYAMLError:
+    # _yaml_problem's "at position N" shape, unlike the "at line L column C" ones.
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "c.yaml"}]},
         files={"data/c.yaml": b"k: \x01value\n"},
@@ -317,12 +311,9 @@ def test_empty_backends_list_raises_config_error(make_tree):
 
 
 def test_data_file_errors_surface_on_lookup(make_tree):
-    # Puppet reads data only inside a lookup (`hiera_config.rb:127` builds
-    # the config without touching data; `data_hash_function_provider.rb`
-    # reads a location only when a lookup reaches it). `Hiera(...)` must
-    # not read `common.yaml` at all, so a malformed data file cannot fail
-    # construction -- it fails the first lookup that reaches it, every
-    # time, not only once.
+    # Puppet reads data only inside a lookup (`hiera_config.rb:127`,
+    # `data_hash_function_provider.rb`), so `Hiera(...)` must not read `common.yaml`: a
+    # malformed data file fails every lookup that reaches it, not construction.
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
         files={"data/common.yaml": "a: [\n"},

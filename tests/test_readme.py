@@ -1,10 +1,5 @@
-"""Runs ``README.md``'s own examples as tests, and checks its install hints.
-
-``README.md`` is the PyPI long description and the only user guide; nothing
-else in the suite exercises its code blocks or its extras-quoting rule. A
-change that makes the page wrong -- a broken example, a stale extras table,
-an install hint that would fail in ``cmd.exe`` -- turns this module red
-instead of going unnoticed.
+"""Runs ``README.md``'s examples as tests and checks its install hints and extras
+quoting.
 """
 
 import doctest
@@ -21,11 +16,9 @@ README = ROOT / "README.md"
 HEADER = ROOT / "src" / "hyera" / "AGENTS.md"
 FENCE = re.compile(r"^```(\w+)[^\n]*\n(.*?)^```$", re.M | re.S)
 
-#: Differences-from-Puppet slugs with no conformance golden behind them,
-#: mapped to one sentence saying why the harness cannot record one. Checked
-#: two ways by ``test_differences_match_deviations``: every golden
-#: ``deviation:`` id plus every key here must equal the README's tagged
-#: bullet set, and none of these slugs may collide with a golden id.
+# Differences-from-Puppet slugs with no conformance golden, each with one sentence
+# on why the harness cannot record one. Every golden `deviation:` id plus these keys
+# must equal the README's tagged bullets, and none may collide with a golden id.
 DOC_ONLY = {
     "missing-config-raises": (
         "tests/conformance/_ours.py's run_api always passes an existing hiera.yaml"
@@ -145,10 +138,8 @@ DOC_ONLY = {
     ),
 }
 
-#: Any occurrence of the extras-bracket spelling not immediately preceded by
-#: a double quote. A real install command must read ``pip install
-#: "hyera[extra]"``; anything else (unquoted, single-quoted, or bare prose)
-#: fails a shell somewhere -- see README.md's own "Installation" section.
+# The extras-bracket spelling not immediately preceded by a double quote: a real
+# install command must read ``pip install "hyera[extra]"``, or a shell fails on it.
 _UNQUOTED_EXTRA = re.compile('(^|[^"])hyera' + r"\[", re.M)
 
 #: Files/globs checked for the unquoted spelling above, relative to ROOT.

@@ -1,16 +1,6 @@
-"""Tuple key paths in ``lookup()``: a tuple name is an exact key
-path -- element 0 the root key, the rest dig segments, each taken
-verbatim (no dot splitting, no quote syntax, no whitespace stripping). A
-``list`` keeps Puppet's own "names tried in order" meaning and may now
-hold tuple paths too. ``h[...]`` is unchanged (a tuple subscript still
-unpacks into ``lookup(*item)``), so a path there is ``h[(path,)]``.
-
-Equivalence with the matching quoted dotted string is checked directly
-against the conformance goldens (``test_tuple_path_matches_conformance_
-goldens``, below) -- real Puppet is the oracle there. The rest of this
-module covers validation and the Python-only call shapes (a name list, a
-form-4 name hash, ``[]``, ``in``, ``explain``, ``block``) a golden can't
-reach, plus the display/error text a tuple path produces.
+"""Tuple key paths in ``lookup()``: element 0 is the root key, the rest dig segments
+taken verbatim. Equivalence with the quoted dotted string is checked against the
+goldens; the rest covers validation, Python-only call shapes and display text.
 """
 
 import importlib.util
@@ -280,11 +270,9 @@ def test_tuple_path_matches_conformance_goldens():
                     context,
                     tuple_actual,
                 )
-            # Byte-identical display text is only guaranteed when the
-            # golden's own key spelling is already join_key's canonical
-            # form -- its quote-CHARACTER choice, not just its segments,
-            # has to match too (a hand-written golden may prefer single
-            # quotes where join_key's own default is double).
+            # Byte-identical display text needs the golden's key spelling to be
+            # join_key's canonical form, quote character included (a hand-written golden
+            # may use single quotes where join_key defaults to double).
             if join_key(path) == query["key"]:
                 assert tuple_actual["message"] == string_actual["message"], context
         seen += 1

@@ -1,37 +1,7 @@
-"""Static-typing consumer checks for :mod:`hyera.types`.
+"""Static-typing consumer checks for :mod:`hyera.types`, type-checked and never run.
 
-Not collected by pytest (no ``test_*``/``*_test`` name, matching the
-project's ``[tool.pytest.ini_options]`` default): this file is never
-executed, only type-checked, with ``pyright tests/typing/consumer_types.py``
-on both the project's floor and latest Python
-(``--pythonversion 3.9``/``3.14``), the way the CI ``types`` job's own
-``--verifytypes`` run does for the rest of the package.
-
-See ``src/hyera/AGENTS.md``'s "hyera.types" section for the two pyright
-limitations this file works around rather than asserting away (neither is a
-``hyera`` defect -- both are typeshed/pyright modeling an existing Python
-mechanism for a narrower idiom than this module uses it for):
-
-1. A **subscripted** type object (``Integer[1, 10]``) is a real, working
-   ``isinstance`` second argument at runtime (``__instancecheck__``,
-   verified in ``tests/test_public_types.py``), but typeshed's own
-   ``isinstance`` overloads only accept a ``type``/``UnionType``/tuple of
-   those -- a class with a custom ``__instancecheck__`` that is not itself
-   a ``type`` is outside what pyright can verify there, so this file never
-   passes one directly to ``isinstance``. The **bare** class form is
-   unaffected -- it genuinely is a ``type``, so ``isinstance(5,
-   types.Integer)`` type-checks clean.
-2. ``Sensitive[String]`` is built with ``__class_getitem__`` (the chosen
-   design for ``Sensitive``, already a concrete value-wrapper class, unlike
-   every other name here, which is built on a dedicated metaclass instead).
-   Pyright hard-codes ``ClassName[args]`` through ``__class_getitem__`` to
-   ``type[ClassName]`` -- the common `Generic`/`NamedTuple` idiom it is
-   built for -- regardless of the method's own declared return annotation,
-   so ``reveal_type(Sensitive[String])`` always reads ``type[Sensitive]``,
-   never the real ``SensitiveType`` instance it returns at runtime. The
-   metaclass approach every other class uses does not have this problem
-   (confirmed by (3) below correctly reading a non-``Any`` type), but
-   retrofitting ``Sensitive`` onto one was out of scope.
+``pyright --pythonversion 3.9``/``3.14 tests/typing/consumer_types.py``. It works
+around two pyright limits listed under "hyera.types" in ``src/hyera/AGENTS.md``.
 """
 
 from hyera import types
@@ -41,9 +11,8 @@ from hyera import types
 if isinstance(5, types.Integer):
     reveal_type(5)  # int, unaffected by `types.Integer` not being `int`
 
-# -- subscripting returns the true private type-object class (verified by
-#    its NOT reading back as `Any`/`type[Integer]` the way (1)/(2) above do
-#    for the two mechanisms this module cannot make pyright see through).
+# subscripting returns the true private type-object class (it does not read back as
+# `Any`/`type[Integer]` like (1)/(2) above, which pyright cannot see through).
 
 integer_range = types.Integer[1, 10]
 reveal_type(integer_range)  # the private `_types.types.Integer` instance's

@@ -179,10 +179,9 @@ def test_validate_lookup_options_module_prefix_direct():
 def test_validate_data_value_no_location_direct():
     from hyera._lookup.lookup_adapter import validate_data_value
 
-    # The location-less message clause (a data_hash function called with
-    # no path/uri at all) -- distinct from the "when using location"
-    # clause every other validate_data_value test in this file reaches
-    # through a real path-based hierarchy entry.
+    # The location-less message clause (a data_hash function called with no path/uri),
+    # unlike the "when using location" clause every other validate_data_value test
+    # reaches through a path-based entry.
     with pytest.raises(HieraLookupError) as exc_info:
         validate_data_value({True: "a"}, "test_data_hash", None, "k")
     assert str(exc_info.value) == (

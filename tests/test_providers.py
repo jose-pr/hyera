@@ -1,4 +1,6 @@
-"""``lookup_key``/``data_dig`` providers: per-location dispatch, locations and options."""
+"""``lookup_key``/``data_dig`` providers: per-location dispatch, locations and
+options.
+"""
 
 import pytest
 

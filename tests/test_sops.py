@@ -1,11 +1,5 @@
-"""``SopsBackend`` argv safety and plaintext-free parse errors.
-
-Tests that run the real subprocess path put a fake ``sops`` first on
-``PATH`` (``fake_program``; skipped on Windows, where a fake ``sops`` is a
-batch shim hyera refuses). The remaining tests replace the runner
-(``_install_recorder``) to check argv shape and that a decrypted file which
-fails to parse never leaks its plaintext into an error, a log record, or
-the CLI's output.
+"""``SopsBackend`` argv safety and plaintext-free parse errors, with a fake ``sops``
+on ``PATH`` (skipped on Windows) or a replaced runner (``_install_recorder``).
 """
 
 import json
@@ -304,11 +298,9 @@ def test_sops_never_runs_a_batch_file_from_the_current_directory(tmp_path, monke
     assert not marker.exists()
 
 
-# `_psych` messages that quote the offending scalar/class name
-# verbatim -- `invalid value for Float()/Integer(): "<data>"` and `Tried to
-# load unspecified class: <data>` -- reproduced against the fake-sops
-# `probe_leak.py` harness (93 payloads through all four formats; these 10
-# were the ones that actually leaked as YAML, 2026-09-29).
+# `_psych` messages that quote the offending scalar/class name verbatim
+# (`invalid value for Float()/Integer(): "<data>"`, `Tried to load unspecified class:
+# <data>`) can leak decrypted YAML; these payloads are redacted.
 _QUOTED_FLOAT_LEAK_PAYLOADS = [
     b"a: !!float HUNTER2\n",
     b"a: !!float 'HUNTER2'\n",
@@ -347,14 +339,9 @@ _QUOTED_TOKEN_IDS = [
     ids=["undefined-alias"] + _QUOTED_TOKEN_IDS,
 )
 def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
-    # These PyYAML/`_psych` error shapes quote the offending scalar
-    # or class name verbatim in ``context``/``problem`` (an undefined alias
-    # name, an invalid Float()/Integer() scalar,
-    # or a `!ruby/object`/`!ruby/hash` tag's class text) -- exactly the
-    # token an attacker-controlled or merely malformed decrypted value
-    # could carry. (An unknown *tag* on its own is no longer a parse error
-    # under the Psych-compatible loader -- it tokenizes the node's content
-    # instead, matching Ruby.)
+    # These PyYAML/`_psych` error shapes quote an offending scalar or class name (an
+    # alias, a Float()/Integer() value, a `!ruby/object` class) that a malformed
+    # decrypted value could carry. An unknown tag alone does not fail to parse.
     _install_recorder(monkeypatch, tmp_path, stdout=bad)
     backend = SopsBackend({})
 
@@ -487,13 +474,9 @@ def test_sops_parse_error_plaintext_absent_from_cli(
     assert not any("hunter2-SECRET" in r.getMessage() for r in caplog.records)
 
 
-# ---------------------------------------------------------------------------
-# Format inference (sops's own case-sensitive extension rule,
-# `cmd/sops/formats/formats.go`, verified against the real v3.13.3 binary
-# and source 2026-09-29 in WSL). Each recorded (format, native stdout) pair below is the exact
-# bytes a real `sops -d --input-type=<f> --output-type=<f>` printed for a
-# matching input file, captured the same day.
-# ---------------------------------------------------------------------------
+# Format inference (sops's case-sensitive extension rule, `cmd/sops/formats/formats.go`,
+# checked against sops v3.13.3). Each recorded (format, native stdout) pair is the
+# bytes a real `sops -d --input-type=<f> --output-type=<f>` printed for a matching file.
 
 
 @pytest.mark.parametrize(
@@ -504,11 +487,9 @@ def test_sops_parse_error_plaintext_absent_from_cli(
         ("a.json", "json", "json"),
         ("a.env", "dotenv", "dotenv"),
         (".env", "dotenv", "dotenv"),
-        # INI is always decrypted as sops's own JSON view, never as
-        # ini text -- sops's INI *writer* is ambiguous (a decrypted value
-        # can inject a key or replace a whole other section), so the
-        # input type is still ini (that is the file's real format) but
-        # the output type forced to json.
+        # INI is decrypted as sops's JSON view, never ini text, whose writer is
+        # ambiguous (a decrypted value can inject a key or replace a section): input
+        # type ini, output type json.
         ("a.ini", "ini", "json"),
     ],
 )
@@ -541,10 +522,9 @@ def test_sops_data_format_inference_rejected(monkeypatch, tmp_path, name):
 
 
 def test_run_sops_output_type_defaults_to_input_type(monkeypatch, tmp_path):
-    # SopsBackend.data_hash always passes an explicit output_type ("json"
-    # for ini, the same format otherwise), so _run_sops's own "default to
-    # input_type" branch is never reached through the public API --
-    # exercised directly against the private helper instead.
+    # SopsBackend.data_hash always passes an explicit output_type, so _run_sops's
+    # "default to input_type" branch is unreachable through the public API; exercised
+    # directly.
     from hyera.backends._sops import _run_sops
 
     calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b"a: 1\n")
@@ -555,10 +535,8 @@ def test_run_sops_output_type_defaults_to_input_type(monkeypatch, tmp_path):
     assert "--output-type=yaml" in args
 
 
-# Recorded (format, real sops-re-emitted native stdout, expected parsed
-# value) triples, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2
-# in WSL, decrypting a fixed age key's own encrypted copies of the recorded
-# inputs.
+# Recorded (format, real sops native stdout, expected parsed value) triples from
+# sops 3.13.3 + age 1.3.2 decrypting a fixed age key's encrypted copies of the inputs.
 _YAML_NATIVE_NO_DATE = (
     b'a: 1\nb:\n    c:\n        - x\n        - "y"\ne: bar\nsym: :foo\n'
     b':q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'
@@ -568,10 +546,8 @@ _YAML_NATIVE_WITH_DATE = (
     b'e: bar\nsym: :foo\n:q: 1\nbin: hello\nnul: null\nt: "yes"\noct: 493\n'
 )
 _JSON_NATIVE = b'{"a": 1, "b": {"c": ["x", "y"]}, "n": null, "f": 1.5}\n'
-# INI is always decrypted with --output-type=json, never the ini text a
-# real sops would otherwise write; this is that JSON view for the same
-# `s.ini` fixture the (now-removed) IniBackend's own recorded-pair test
-# used, captured 2026-09-29 against real sops 3.13.3 + age 1.3.2 in WSL
+# INI is decrypted with --output-type=json, never ini text: this is that JSON view of
+# the `s.ini` fixture from sops 3.13.3 + age 1.3.2
 # (`sops -d --input-type=ini --output-type=json -- enc.s.ini`).
 _INI_AS_JSON = (
     b'{"DEFAULT": {"top": "1"}, "sec1": {"k": "v", "num": "42", '
@@ -624,14 +600,9 @@ def test_sops_data_ini_recorded_pair(monkeypatch, tmp_path):
 
 
 def test_sops_data_ini_writer_ambiguity_is_not_reachable(monkeypatch, tmp_path):
-    # Regression test: a real sops 3.13.3 encrypt/decrypt of
-    # `{"db": {"password": "real-secret"}, "zz": {"note": "x\"\"\"\n[db]\n
-    # password = attacker\nq = \"\"\""}}` as ini writes an ambiguous
-    # `[db]\npassword = real-secret\n\n[zz]\nnote = """x"""\n[db]\n
-    # password = attacker\nq = """"""\n` that the (now-removed) ini text
-    # parser read back as `db.password == "attacker"`. Decrypting via
-    # sops's own JSON view instead (what SopsBackend now always does for
-    # ini) recovers the genuine value.
+    # Real sops 3.13.3 writes ambiguous ini for a decrypted value containing `"""` and a
+    # `[db]` section, which an ini text parser read back as `db.password == "attacker"`.
+    # Decrypting via sops's JSON view (always used for ini) recovers the genuine value.
     stdout = (
         b'{"DEFAULT": {}, "db": {"password": "real-secret"}, "zz": '
         b'{"note": "x\\"\\"\\"\\n[db]\\npassword = attacker\\nq = \\"\\"\\""}}\n'
@@ -657,10 +628,8 @@ def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
     "ext,stdout,match",
     [
         ("json", b'{"a": HUNTER2}\n', "Unable to parse"),
-        # ini is always decrypted+parsed as sops's own JSON view (see
-        # SopsBackend.data_hash), so a malformed decrypted ini payload
-        # fails the same JSON parse as the "json" case above, never the
-        # (now-removed) IniBackend's own "invalid ini line N".
+        # ini is decrypted and parsed as sops's JSON view (see SopsBackend.data_hash),
+        # so a malformed ini payload fails the same JSON parse as the "json" case above.
         ("ini", b'{"a": HUNTER2}\n', "Unable to parse"),
         ("env", b"HUNTER2_no_equals_sign\n", "invalid dotenv line 1"),
     ],
@@ -668,12 +637,9 @@ def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
 def test_sops_data_secret_free_for_json_ini_dotenv(
     monkeypatch, tmp_path, caplog, ext, stdout, match
 ):
-    # A malformed decrypted payload that genuinely fails to parse for each
-    # of the three non-YAML formats. dotenv's line-error message never
-    # embeds the line's own text at all (by construction -- only the line
-    # number); JSON's (and ini's) parse-error path goes through
-    # the same chain-free "Unable to parse" wrapping YAML already had
-    # covered above.
+    # A malformed decrypted payload that fails to parse for each non-YAML format.
+    # dotenv's line-error message embeds only the line number, never its text; JSON's
+    # parse-error path uses the same chain-free "Unable to parse" wrapping as YAML.
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(BackendError, match=match) as excinfo:

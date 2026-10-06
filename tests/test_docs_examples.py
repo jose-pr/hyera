@@ -1,10 +1,5 @@
-"""Runs the landing page's own examples as tests.
-
-``docs/index.md`` is hand-written and its examples are not otherwise
-exercised by the suite: this module runs its ``pycon`` blocks as doctests,
-its ``console`` block through the real CLI entry point, and checks its
-extras table against ``pyproject.toml``. An API change that would make the
-page wrong turns this test red instead of the page silently going stale.
+"""Runs the landing page's examples: ``pycon`` blocks as doctests, the ``console``
+block through the CLI, and the extras table against ``pyproject.toml``.
 """
 
 import doctest

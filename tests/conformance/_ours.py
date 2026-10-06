@@ -250,9 +250,8 @@ def _run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
             value = hiera.lookup(key, **_lookup_kwargs(query))
     except KeyNotFoundError as e:
         # The recorder's "not_found" heuristic (_NOT_FOUND in record.py) matches only
-        # Puppet's singular miss message ("the name"); a multi-name miss ("any of the
-        # names [...]") is filed as a generic "error" with the --explain message. Mirror
-        # that split rather than mapping every KeyNotFoundError to "not_found".
+        # Puppet's singular miss message; a multi-name miss is filed as a generic
+        # "error", so mirror that split.
         if isinstance(e.name, (list, tuple)) and len(e.name) != 1:
             return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
         return {"status": "not_found"}
@@ -319,10 +318,9 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
     if rc == 0:
         return {"status": "found", "value": json.loads(text) if text.strip() else None}
     if rc == 1:
-        # Mirrors run_api's name-list special case: a multi-name miss ("any of the names
-        # [...]") was recorded as a generic "error" with the --explain message, though
-        # both channels agree the lookup misses every name (rc 1 here, LookupError
-        # there).
+        # Mirrors run_api's name-list case: a multi-name miss was recorded as a generic
+        # "error", though both channels agree it misses every name (rc 1 here,
+        # LookupError there).
         key = query.get("key")
         if isinstance(key, (list, tuple)) and len(key) != 1:
             return {"status": "error"}

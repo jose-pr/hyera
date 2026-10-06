@@ -1,10 +1,5 @@
-"""Dotted scope references (``%{trusted.certname}``) in paths and values.
-
-Hiera 5 defines a dotted reference as nested key access. Both values and
-hierarchy locations resolve a dotted reference through the same
-interpolation engine (``hyera._lookup.interpolation.interpolate``, over a bound
-``Scope``) -- locations with ``allow_methods=False``, including for the
-README's own lead example config.
+"""Dotted scope references (``%{trusted.certname}``) in paths and values, resolved
+as nested key access by the one interpolation engine.
 """
 
 import pytest
@@ -98,10 +93,8 @@ def test_partial_nested_ref_in_path_probes_empty_segment(make_tree):
 
 
 def test_scalar_walked_as_container_raises(make_tree):
-    # A non-dict variable: walking `.certname` into it is a Puppet type
-    # mismatch, not a silent level skip. Construction itself still succeeds
-    # (a hierarchy location is only resolved on the first real lookup,
-    # which raises it).
+    # A non-dict variable: walking `.certname` into it is a Puppet type mismatch, not a
+    # level skip; construction succeeds and the first lookup raises.
     root = make_tree(
         """\
         version: 5
@@ -118,10 +111,9 @@ def test_scalar_walked_as_container_raises(make_tree):
 
 
 def test_flat_dotted_key_does_not_shadow(tree):
-    # Puppet reads %{a.b} as nested key access only -- a variable literally
-    # named "trusted.certname" is as unreachable here as it is in Puppet (a
-    # variable name cannot contain '.'), so the node level is skipped
-    # rather than matched by the flat key.
+    # Puppet reads %{a.b} as nested key access only; a variable literally named
+    # "trusted.certname" is unreachable (names cannot contain '.'), so the node level is
+    # skipped.
     h = Hiera(
         str(tree / "hiera.yaml"),
         scope=Scope(variables={"trusted.certname": "web01.example.com"}),

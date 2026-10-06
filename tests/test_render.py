@@ -1,8 +1,5 @@
-"""Puppet-shaped ``s``/``json``/``yaml`` CLI output rendering.
-
-Byte-exact against real Puppet 8 oracle measurements. Every value is a
-plain Python literal (no fixtures): rendering does not touch the
-filesystem.
+"""Puppet-shaped ``s``/``json``/``yaml`` CLI output rendering, byte-exact against
+Puppet 8 on plain Python literals.
 """
 
 import itertools

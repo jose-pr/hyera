@@ -184,9 +184,8 @@ def input_digest(case_dir: Path) -> str:
     }
     h.update(json.dumps(asked, sort_keys=True).encode("utf-8") + b"\0")
     # Sort by the relative POSIX path string, not Path objects: WindowsPath orders
-    # case-insensitively and PosixPath case-sensitively, so a case with mixed-case file
-    # names (location-glob-order2's B.yaml/_x.yaml/a.yaml, which tests Puppet's
-    # byte-order glob sort) would hash differently on Windows than on Linux/macOS.
+    # case-insensitively, so mixed-case names (location-glob-order2) would hash
+    # differently on Windows than on Linux/macOS.
     files = [p for p in case_dir.rglob("*") if p.is_file()]
     for path in sorted(files, key=lambda p: p.relative_to(case_dir).as_posix()):
         rel = path.relative_to(case_dir).as_posix()
@@ -325,10 +324,9 @@ def _is_marker_valid(value) -> bool:
     if isinstance(value, list):
         return bool(value) and all(_is_marker_valid(v) for v in value)
     if isinstance(value, dict):
-        # A bare `on:` (or `when:`) key is read back as the boolean True by PyYAML's
-        # YAML 1.1 resolver (the "Norway problem"); catching it here makes a guard
-        # written as `on: [...]` instead of `"on": [...]` fail loudly instead of never
-        # applying.
+        # A bare `on:`/`when:` key is read as the boolean True by PyYAML's YAML 1.1
+        # resolver; catching it makes a guard written `on: [...]` fail loudly instead of
+        # never applying.
         if set(value) - {"id", "on", "when"}:
             return False
         if not _DIVERGENCE_ID_RE.match(value.get("id", "")):

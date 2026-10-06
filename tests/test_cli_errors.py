@@ -247,11 +247,9 @@ def test_main_without_duho_prints_hint_and_exits_2(monkeypatch, capsys):
 
 
 def test_cli_module_reimported_without_duho_installed(monkeypatch, capsys):
-    # Faking sys.modules["duho"] = None makes `import duho` raise
-    # ModuleNotFoundError(name="duho"); dropping hyera.cli from sys.modules reruns its
-    # module body, import and `if duho is not None:` guard included. Reloading is safe:
-    # the module only defines names. monkeypatch.undo() runs before the final reimport
-    # so the restored hyera.cli sees the real duho.
+    # sys.modules["duho"] = None makes `import duho` raise ModuleNotFoundError; dropping
+    # hyera.cli from sys.modules reruns its module body and `if duho is not None:`
+    # guard. monkeypatch.undo() runs before the final reimport.
     import sys as _sys_mod
 
     import hyera.cli
@@ -273,10 +271,9 @@ def test_cli_module_reimported_without_duho_installed(monkeypatch, capsys):
 
 
 def test_cli_reraises_a_duho_internal_import_error(monkeypatch):
-    # A duho that is present but broken (here without `duho.logging`) must not be taken
-    # for a missing cli extra: only ModuleNotFoundError naming "duho" itself means that.
-    # A stub module with no `__path__` reproduces it, once the cached real
-    # `duho.logging` entry is removed from sys.modules.
+    # A broken duho (here without `duho.logging`) is not a missing cli extra: only
+    # ModuleNotFoundError naming "duho" is. A `__path__`-less stub reproduces it once
+    # the cached `duho.logging` is removed from sys.modules.
     import sys as _sys_mod
     import types
 

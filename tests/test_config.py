@@ -1,8 +1,5 @@
-"""``hiera.yaml`` reading: ``HieraConfig.create`` (``_hiera_config.py``).
-
-Copying and absolutizing the base config, Puppet's version dispatch, the
-empty/non-mapping-file fallback, the `defaults`/`hierarchy`/`datadir` fallbacks
-and version 5 schema validation.
+"""``hiera.yaml`` reading (``HieraConfig.create``): base config copy and version
+dispatch, the `defaults`/`hierarchy`/`datadir` fallbacks, version 5 validation.
 """
 
 import copy
@@ -402,11 +399,9 @@ def test_duplicate_names_dict_config_has_no_first_line():
 
 
 def test_multi_document_config_error_has_no_line(tmp_path):
-    # Puppet's `YAML.safe_load` (ported as backends._psych.safe_load) reads only the
-    # first document and ignores a later `---` one, so this builds like a
-    # single-document file. _config_line re-parses with plain `yaml.compose`, which
-    # raises ComposerError on a multi-document stream, so an error still raises but
-    # without a line number.
+    # Puppet's `YAML.safe_load` reads only the first document, so this builds like a
+    # single-document file; _config_line's plain `yaml.compose` raises ComposerError on
+    # the stream, so an error still raises, without a line number.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -426,11 +421,9 @@ def test_multi_document_config_error_has_no_line(tmp_path):
 
 
 def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
-    # `hierarchy: false` fills in Puppet's built-in default hierarchy
-    # (_fill_v5_defaults' ||= rule), which has no node in the YAML text. The
-    # kind-mismatch check (defaults' data_hash naming a function without data_hash) is
-    # lazy, raised only when invoked for an existing location, so this needs a real
-    # data file and a lookup; no line is ever looked up, so it is None.
+    # `hierarchy: false` fills in Puppet's default hierarchy, which has no YAML node.
+    # The kind-mismatch check is lazy (raised on invocation for an existing location),
+    # so this needs a data file and a lookup; no line is looked up, so it is None.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -449,10 +442,9 @@ def test_hierarchy_false_kind_mismatch_has_no_line(tmp_path):
 
 
 def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
-    # Here `hierarchy` is written out and its one entry inherits data_hash from
-    # `defaults` (ordinary Puppet usage). The kind-mismatch check is lazy (raised on
-    # invocation against an existing location), so this needs a real data file and a
-    # lookup; no line is looked up.
+    # `hierarchy` is written out and its entry inherits data_hash from `defaults`. The
+    # kind-mismatch check is lazy, so this needs a data file and a lookup; no line is
+    # looked up.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -472,10 +464,9 @@ def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
 
 
 def test_duplicate_top_level_hierarchy_key_last_one_wins(tmp_path):
-    # Psych and our loader keep the last of two duplicate top-level keys
-    # (`_psych._revive_hash`), so `hierarchy` is the two-entry definition. _config_line
-    # walks plain `yaml.compose` nodes, which keep both, and finds the first: a
-    # one-entry sequence, so index 1 is out of range there.
+    # Psych and our loader keep the last duplicate top-level key, so `hierarchy` is the
+    # two-entry one; _config_line's plain `yaml.compose` walk finds the first (one
+    # entry), so index 1 is out of range.
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         b"version: 5\n"
@@ -632,11 +623,9 @@ def test_function_kind_errors(entry, expected):
 def test_lookup_key_registered_as_data_hash_builds_and_only_errors_on_lookup(
     make_tree,
 ):
-    # A kind mismatch (a data_hash-only function named as the entry's data_hash key,
-    # which Puppet's data_hash_function_provider.rb resolves and later arity-rejects) is
-    # not a construction-time error: Puppet raises it only when the function is invoked
-    # for an existing location. A level with a missing location must not refuse the
-    # instance; one with an existing location must raise once looked up.
+    # A kind mismatch (a data_hash-only function named as data_hash, which Puppet's
+    # data_hash_function_provider.rb resolves and later arity-rejects) is raised only
+    # when invoked for an existing location, so a missing location must not refuse it.
     cfg = {
         "defaults": {"datadir": "data"},
         "hierarchy": [

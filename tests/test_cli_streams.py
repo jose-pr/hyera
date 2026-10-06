@@ -186,9 +186,8 @@ def test_full_device_stdout_exits_2_quietly(render_root):
 
 
 def test_emit_falls_back_to_plain_write_without_a_buffer_attr():
-    # _emit's fallback for a stdout with no `.buffer` (a StringIO under
-    # redirect_stdout, as the conformance harness uses); real sys.stdout always has
-    # one. The except-branch is covered in-process with _emit mocked, in
+    # _emit's fallback for a stdout with no `.buffer` (a StringIO under redirect_stdout,
+    # as the conformance harness uses); the except-branch is covered in-process in
     # test_broken_pipe_while_emitting_exits_2_and_silences_stdout.
     from hyera.cli import _emit, _silence_stdout
 

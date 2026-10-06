@@ -247,11 +247,9 @@ def test_override_and_defaults_feed_value_interpolation(fn, make_tree):
 
 
 def test_override_and_defaults_propagate_into_nested_lookup(make_tree):
-    # nested_lookup's own override/default_values check (for a %{lookup()}/
-    # %{hiera()} call embedded in an interpolated value) -- distinct from
-    # the outer lookup's own override/default handling
-    # test_override_and_defaults_feed_value_interpolation above exercises
-    # through a plain %{scope-variable} reference instead.
+    # nested_lookup's own override/default_values check (for a %{lookup()}/%{hiera()}
+    # call in an interpolated value), distinct from the outer lookup's handling that
+    # test_override_and_defaults_feed_value_interpolation covers via a scope variable.
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
         files={

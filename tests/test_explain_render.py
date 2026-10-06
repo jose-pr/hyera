@@ -1,12 +1,5 @@
-"""``hyera._output.explain``: the ported ``explainer.rb`` tree and its text
-rendering. No engine code is exercised here -- every tree is built by hand
-with direct ``push``/``accept_*`` calls, the same primitives a lookup's
-``Invocation`` will call once the hooks land.
-
-Tests 1-3 replay the literal event sequence a real lookup produces against
-``tests/conformance/cases/lookup-explain-basic/golden.json``, recorded from
-Puppet 8.10 itself -- so a mismatch here means the renderer, not the
-fixture, is wrong.
+"""``hyera._output.explain``: the ported ``explainer.rb`` tree and its text rendering,
+built by hand and replayed from ``lookup-explain-basic``'s golden (Puppet 8.10).
 """
 
 import collections

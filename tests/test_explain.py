@@ -1,12 +1,5 @@
-"""``Hiera.explain()``: the engine hooks wired through the lookup pipeline,
-and the public method built on top of them.
-
-The renderer itself (``hyera._output.explain``) has its own byte-exact tests
-against recorded Puppet goldens (``tests/test_explain_render.py``); these
-exercise the *hooks* -- that a real lookup across merges, interpolation,
-overrides/defaults, layers and the default config produces a sensible,
-well-formed report, and that explaining never changes what an ordinary
-lookup sees.
+"""``Hiera.explain()``: the engine hooks in the lookup pipeline and the public
+method; the renderer is tested in ``tests/test_explain_render.py``.
 """
 
 import hyera
@@ -82,11 +75,9 @@ def test_explain_reraises_data_file_errors(tmp_path, make_tree):
     (mod_dir / "hiera.yaml").write_bytes(
         b"version: 5\nhierarchy:\n  - name: c\n    path: c.yaml\n"
     )
-    # A malformed module data file is never touched by construction (which
-    # reads no data file at all), so it fails at explain/lookup time,
-    # exactly what this test needs to exercise. Genuine
-    # YAML syntax breakage (not just a non-hash top level, which the default
-    # strict="warning" only warns about) always raises.
+    # A malformed module data file is not touched by construction, so it fails at
+    # explain/lookup time. YAML syntax breakage always raises; only a non-hash top level
+    # is a warning under the default strict="warning".
     (mod_dir / "data" / "c.yaml").write_bytes(b"k: [1, 2\n")
     h = Hiera(str(root / "hiera.yaml"), basemodulepath=[str(tmp_path / "modules")])
     lookup_error = None

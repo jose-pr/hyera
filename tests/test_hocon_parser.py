@@ -1,4 +1,6 @@
-"""The private pyhocon parser copy, the include guard and the values and keys pyhocon returns."""
+"""The private pyhocon parser copy, the include guard and the values and keys
+pyhocon returns.
+"""
 
 import os
 import subprocess

@@ -1,4 +1,6 @@
-"""``eyaml_lookup_key`` (PKCS7): fixture ciphertext, key precedence, wrong keys and the ``ENC[...]`` token grammar."""
+"""``eyaml_lookup_key`` (PKCS7): fixture ciphertext, key precedence, wrong keys
+and the ``ENC[...]`` token grammar.
+"""
 
 import base64
 
@@ -191,9 +193,8 @@ def test_wrong_key_is_bad_decrypt(public_key, tmp_path):
 
 def test_decrypt_error_embeds_whole_value_not_just_the_token():
     # hiera-eyaml's eyaml_lookup_key.rb wraps one rescue around parsing and decrypting
-    # the whole stored value and interpolates the entire value into the message, not
-    # just the failing token (hiera-eyaml 5.0.1, backend-eyaml-pkcs7 case
-    # corrupt_prefixed).
+    # the whole value and interpolates it entirely into the message (hiera-eyaml 5.0.1,
+    # case backend-eyaml-pkcs7, query corrupt_prefixed).
     data = "prefix ENC[PKCS7,aGVsbG8=] suffix"
     with pytest.raises(BackendError) as exc:
         _decrypt(data)
@@ -203,10 +204,9 @@ def test_decrypt_error_embeds_whole_value_not_just_the_token():
 
 
 def test_bad_key_is_reported_before_the_ciphertext_is_ever_parsed(tmp_path):
-    # Pkcs7.decrypt (pkcs7.rb) parses the private key before it touches the ciphertext:
-    # a malformed key with a malformed ciphertext reports the key problem, never "Could
-    # not parse the PKCS7" (hiera-eyaml 5.0.1, "Error was Neither PUB key nor PRIV
-    # key"; case backend-eyaml-pkcs7-bad-key).
+    # Pkcs7.decrypt (pkcs7.rb) parses the private key before the ciphertext: a malformed
+    # key reports "Error was Neither PUB key nor PRIV key", never "Could not parse the
+    # PKCS7" (hiera-eyaml 5.0.1; case backend-eyaml-pkcs7-bad-key).
     bad_key_path = tmp_path / "garbage.pem"
     bad_key_path.write_text("this is not a pem key at all\n", encoding="utf-8")
     with pytest.raises(

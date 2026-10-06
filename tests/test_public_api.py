@@ -1,10 +1,5 @@
-"""Pins the shape of hyera's public API surface: every exported module's
-``__all__`` is complete, every public signature is fully typed, every
-public object carries its own docstring, and the shipped header documents
-all of it exactly.
-
-Shipped with the package (``tests/`` lands in the sdist), so no plan or
-decision reference belongs here.
+"""Pins hyera's public API shape: complete ``__all__``, fully typed signatures,
+a docstring on every public object, and a shipped header that documents all of it.
 """
 
 import ast
@@ -221,10 +216,8 @@ def test_public_objects_have_docstrings():
     assert not offenders, offenders
 
 
-#: A ``:param name:``/``:raises Name:`` Sphinx field line. ``:returns:``
-#: takes no name. Matches the one field style this project uses: no
-#: ``:type:``/``:rtype:`` fields, since the annotations already carry
-#: the types.
+# A ``:param name:``/``:raises Name:`` Sphinx field line; ``:returns:`` takes no name.
+# This project uses no ``:type:``/``:rtype:`` fields, the annotations carry the types.
 _PARAM_RE = re.compile(r"^\s*:param\s+([A-Za-z_][A-Za-z0-9_]*):", re.MULTILINE)
 _RETURNS_RE = re.compile(r"^\s*:returns:", re.MULTILINE)
 _RAISES_RE = re.compile(r"^\s*:raises\s+([A-Za-z_][A-Za-z0-9_.]*):", re.MULTILINE)
@@ -253,10 +246,8 @@ def test_docstring_fields_match_signatures():
             if target is None:
                 continue
             if target.__name__ == "__init__":
-                # __init__ needs no docstring of its own -- the owning
-                # class's docstring documents the constructor (already
-                # checked above, when the class itself was the
-                # _public_objects() entry).
+                # __init__ needs no docstring: the owning class's docstring documents
+                # the constructor (checked above).
                 continue
             doc = target.__doc__ or ""
             sig = inspect.signature(target)

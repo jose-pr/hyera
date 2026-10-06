@@ -1,13 +1,6 @@
-"""A long-lived ``Hiera`` answers like one built now.
-
-After any change on disk, an instance that already looked the key up (and a
-``.scoped(...)`` view of it) must return what ``Hiera(...)`` built at that
-moment returns -- the value, or the same error. The cases cross the kind of
-change (file added, edited, deleted, swapped for a directory and back, made
-unparsable and back) with the location layout (``path``, ``paths``,
-``mapped_paths``, glob levels), the layer the data lives in, the kind of
-backend and the cache bound. Timestamps are set with ``os.utime``, never by
-sleeping.
+"""A long-lived ``Hiera`` answers like one built now, after any change on disk
+(file added, edited, deleted, swapped for a directory, made unparsable), across
+location layouts, layers, backends and cache bounds.
 """
 
 import copy

@@ -84,12 +84,9 @@ def test_pathname_plus_unc_anchor():
 
 
 def test_location_and_option_no_lookup_callables_raise():
-    # Both _no_lookup (a hierarchy location's own Invocation) and
-    # _no_option_lookup (an entry's `options:` Invocation) are unreachable
-    # in practice -- interpolation there always runs with
-    # allow_methods=False, which rejects every method call
-    # (%{hiera()}/%{lookup()}/%{alias()}) before either callable could ever
-    # be reached -- exercised directly.
+    # _no_lookup and _no_option_lookup are unreachable in practice: interpolation there
+    # runs with allow_methods=False, which rejects %{hiera()}/%{lookup()}/%{alias()}
+    # first; exercised directly.
     with pytest.raises(RuntimeError, match="hierarchy locations never"):
         _no_lookup("k", None)
     with pytest.raises(RuntimeError, match="hierarchy options never"):
@@ -155,10 +152,9 @@ def test_hiera_level_new_no_location():
 
 
 def test_hiera_level_paths_no_location_returns_empty(tmp_path):
-    # A location-less level (a lookup_key/data_dig function called once with
-    # no location at all, resolve_locations' own `key is None` branch)
-    # yields no candidate paths -- distinct from a location key that simply
-    # expands to zero candidates.
+    # A location-less level (a lookup_key/data_dig function called once with no
+    # location, resolve_locations' `key is None` branch) yields no candidate paths,
+    # unlike a key that expands to zero candidates.
     from hyera import HieraLevel
     from hyera.backends import YAMLBackend
 
@@ -182,10 +178,8 @@ def test_hiera_level_paths_resolves_locations(tmp_path):
 
 
 def test_hiera_level_paths_resolves_a_glob(tmp_path):
-    # .paths() -- unlike the main lookup pipeline (which lazily
-    # materializes a glob level, see resolve_glob_specs) -- eagerly
-    # expands a glob/globs level through _expand_globs, since it has no
-    # lazy materialization step of its own.
+    # .paths() eagerly expands a glob/globs level through _expand_globs, having no lazy
+    # materialization step like the main lookup pipeline (see resolve_glob_specs).
     from hyera import HieraLevel
     from hyera.backends import YAMLBackend
 
@@ -207,11 +201,8 @@ def test_hiera_level_paths_resolves_a_glob(tmp_path):
 
 
 def test_hiera_level_paths_resolves_mapped_paths_uncached(tmp_path):
-    # .paths() gives every mapped_paths level's own Invocation no
-    # scope_interpolations list (it has no cache to key, unlike the main
-    # lookup pipeline's hierarchy-build path) -- with_local_memory_eluding's
-    # own no-op branch, exercised here directly rather than through a
-    # cached Hiera.lookup() call.
+    # .paths() gives each mapped_paths level's Invocation no scope_interpolations list
+    # (no cache to key): with_local_memory_eluding's no-op branch, exercised directly.
     from hyera import HieraLevel
     from hyera.backends import YAMLBackend
 
@@ -452,11 +443,9 @@ def test_method_syntax_in_datadir_raises(make_tree):
     ids=["bool", "int", "float"],
 )
 def test_mapped_collection_items_scalar_type_error_direct(value, rendered):
-    # A mapped_paths collection variable resolved to a non-collection
-    # scalar: Puppet's own NoMethodError calling .empty? on it, ported as
-    # a ConfigError naming the Ruby type. Exercised directly -- a scope
-    # variable can hold any of these, but not every one has a recorded
-    # Puppet-oracle case.
+    # A mapped_paths collection variable that is a non-collection scalar: Puppet's
+    # NoMethodError on .empty?, ported as a ConfigError naming the Ruby type. Exercised
+    # directly; not every scope value has a recorded Puppet case.
     from hyera._config.location_resolver import _mapped_collection_items
     from hyera.exceptions import ConfigError
 
@@ -469,10 +458,8 @@ def test_mapped_collection_items_scalar_type_error_direct(value, rendered):
 
 
 def test_mapped_collection_items_other_type_error_direct():
-    # The final fallback (neither a Puppet scalar/collection type this
-    # project's own scope values can otherwise be): a plain Python
-    # type name and str(), matching what any unmodeled object falls back
-    # to elsewhere in this codebase too.
+    # The final fallback (a type no Puppet scalar/collection covers): a plain Python
+    # type name and str(), like any unmodeled object elsewhere in this codebase.
     from hyera._config.location_resolver import _mapped_collection_items
     from hyera.exceptions import ConfigError
 
@@ -496,10 +483,9 @@ def test_mapped_paths_collection_array(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"roles": ["web", "db"]}))
     assert h.lookup("k") == "web"
-    # explain() resolves the same mapped_paths locations without ever
-    # recording them: location_resolver never touches the invocation's
-    # explainer at all, so resolving a path is structurally invisible to
-    # explain() regardless of whether explaining is active.
+    # explain() resolves the same mapped_paths locations without recording them:
+    # location_resolver never touches the explainer, so resolving a path is invisible to
+    # it whether or not explaining is active.
     assert "roles/web.yaml" in h.explain("k").text()
 
 

@@ -82,11 +82,9 @@ def test_sources_skips_a_location_less_data_hash_level(make_tree):
 def test_sources_skips_a_file_that_vanishes_between_its_own_exist_check_and_load(
     make_tree, monkeypatch
 ):
-    # _files_for resolves a single-location level and loads it right after, so only
-    # something outside Hiera (another process, simulated by the exist-check's probe
-    # deleting the file as a side effect) can remove the file between the two probes.
-    # load_file's fresh probe then finds it gone despite the cached entry from an
-    # earlier sources() call, and the level contributes nothing.
+    # _files_for loads a single-location level right after resolving it, so only the
+    # exist-check's probe deleting the file (simulating another process) can remove it
+    # between the probes; load_file then finds it gone and the level is empty.
     from hyera._lookup import locations
 
     root = make_tree(

@@ -1,9 +1,5 @@
-"""Every module under ``src/hyera`` stays at 600 lines or fewer.
-
-A module is read whole in one sitting, so one that grows past the limit is
-split by responsibility. The few exceptions are listed below with the reason
-each stays whole; a listed module that is back at or under the limit must be
-taken off the list.
+"""Every module under ``src/hyera`` stays at 600 lines or fewer; the listed
+exceptions give the reason each stays whole.
 """
 
 from __future__ import annotations

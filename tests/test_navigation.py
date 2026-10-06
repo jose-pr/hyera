@@ -1,9 +1,5 @@
-"""``hyera._lookup.navigation``: Puppet's dotted-key ``split_key``/``sub_lookup``.
-
-Behavioral acceptance for these two functions runs through the
-``dotted-navigation`` conformance case; this module unit-tests the parser
-and the walker directly, since ``puppet lookup`` output alone cannot show
-which internal rule applied.
+"""``hyera._lookup.navigation``: Puppet's dotted-key ``split_key``/``sub_lookup``,
+tested directly; the ``dotted-navigation`` conformance case covers behaviour.
 """
 
 import re
@@ -221,10 +217,9 @@ _COMMON_HIERARCHY = {"hierarchy": [{"name": "common", "path": "common.yaml"}]}
 
 
 def test_contains_raises_on_type_mismatch(make_tree):
-    # `in` only turns a genuine miss (KeyNotFoundError) into False; a
-    # type-mismatch HieraLookupError from the navigation walk propagates,
-    # same as lookup() -- only a miss should be silent, per Puppet's own
-    # lookup(), which raises both kinds of error even with a default set.
+    # `in` turns only a miss (KeyNotFoundError) into False; a type-mismatch
+    # HieraLookupError from the navigation walk propagates, as lookup() does even with a
+    # default set.
     root = make_tree(_COMMON_HIERARCHY, {"data/common.yaml": "s: hello\n"})
     h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(HieraLookupError, match="Got String"):
@@ -271,10 +266,8 @@ def test_to_i_skips_ascii_whitespace_only():
 
 
 def test_ruby_class_hash_and_other_fallbacks_direct():
-    # _ruby_class's own Hash and plain-Python-type-name branches: its one
-    # real caller (sub_lookup's "Data Provider type mismatch" message)
-    # only ever reaches it for a *non*-dict value (a dict is the expected,
-    # passing case there), so neither is reachable through any real
-    # lookup -- exercised directly, same as this module's other helpers.
+    # _ruby_class's Hash and plain-Python-type-name branches: its one caller
+    # (sub_lookup's "Data Provider type mismatch" message) reaches it only for a
+    # non-dict value, so no lookup reaches them; exercised directly.
     assert _ruby_class({"a": 1}) == "Hash"
     assert _ruby_class(object()) == "object"

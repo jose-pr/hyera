@@ -1,4 +1,6 @@
-"""The ``hocon_includes`` option on an entry, in ``defaults`` and in the hierarchy config."""
+"""The ``hocon_includes`` option on an entry, in ``defaults`` and in the hierarchy
+config.
+"""
 
 import pytest
 

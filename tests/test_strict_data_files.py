@@ -1,10 +1,6 @@
-"""A YAML data file's own non-hash rule (``YAMLBackend._as_data_hash``) reads
-``Backend.strict`` at call time (``yaml_data.rb:31``'s ``Puppet[:strict]``),
-not once and for all: the same file, on the same ``Hiera`` instance, raises
-under a ``strict="error"`` scope and warns-and-falls-through under
-``strict="warning"``, in either order -- guards the ``(path, backend.strict)``
-cache key in ``_LocationStore.load_file`` against caching the *adapted* result
-under a bare path, which would freeze whichever strictness ran first.
+"""A YAML data file's non-hash rule reads ``Backend.strict`` at call time
+(``yaml_data.rb:31``), so one file on one ``Hiera`` raises under ``strict="error"``
+and warns under ``"warning"``, in either order.
 """
 
 import logging

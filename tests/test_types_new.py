@@ -59,10 +59,9 @@ def _new_params():
 _Q8_UNSUPPORTED_QIDS = {"semver", "tspan", "re_t"}
 
 
-# convert-cv/tuple_t: Puppet's `Tuple.new()` called directly reports both index 0 and
-# index 1 mismatching, while the same conversion through lookup_options reports only
-# index 1. This subset collects every mismatch like the direct call, so the
-# comparison is loose.
+# convert-cv/tuple_t: `Tuple.new()` called directly reports both index 0 and 1
+# mismatching, while lookup_options reports only index 1. This subset collects every
+# mismatch like the direct call, so the comparison is loose.
 _KNOWN_QUIRK_QIDS = {"tuple_t"}
 
 

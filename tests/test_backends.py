@@ -27,10 +27,9 @@ def _isolated_registry(monkeypatch):
 
 
 def test_yaml_safeload_never_constructs_python_objects():
-    # Psych (unlike plain PyYAML) does not error on an unrecognized tag --
-    # it tokenizes the tagged node's own content as if untagged, per
-    # to_ruby.rb's default case. Nothing but a plain list of strings is
-    # ever constructed either way.
+    # Psych does not error on an unrecognized tag (unlike PyYAML): it tokenizes the
+    # node's content as if untagged (to_ruby.rb's default case); only a plain list of
+    # strings is constructed.
     result = YAMLBackend().loads("!!python/object/apply:os.system ['echo hi']")
     assert result == ["echo hi"]
 
@@ -292,10 +291,8 @@ def test_json_strict_utf8_errors(tmp_path):
         JSONBackend().load(path)
 
 
-# ---------------------------------------------------------------------------
-# JSON: Ruby's json-gem dialect (comments in; NaN/Infinity, unpaired
-# surrogates, and a leading BOM out -- the BOM case is covered above).
-# ---------------------------------------------------------------------------
+# JSON: Ruby's json-gem dialect (comments in; NaN/Infinity, unpaired surrogates and
+# a leading BOM out).
 
 
 @pytest.mark.parametrize(
@@ -365,10 +362,8 @@ def test_json_lone_surrogate_in_a_list_or_key_is_rejected():
         JSONBackend().loads('{"\\ud800": 1}')
 
 
-# ---------------------------------------------------------------------------
-# HOCON: durations stay text; a non-object root errors; the private parser
+# HOCON: durations stay text, a non-object root errors, and the private parser
 # copy never touches the shared pyhocon module.
-# ---------------------------------------------------------------------------
 
 
 def test_hocon_durations_stay_text():
@@ -405,10 +400,8 @@ def test_hocon_private_parser_copy_leaves_shared_module_alone():
     pytest.importorskip("pyhocon")
     import pyhocon
 
-    # pyhocon's own duration type depends on its environment (a
-    # relativedelta when python-dateutil is importable, a timedelta
-    # otherwise), so compare against the shared module's own answer before
-    # hyera parsed anything rather than naming either type.
+    # pyhocon's duration type depends on its environment (relativedelta with
+    # python-dateutil, else timedelta), so compare with the shared module's own answer.
     before = pyhocon.ConfigFactory.parse_string("d = 10s")["d"]
     HOCONBackend().loads("d = 10s")
     after = pyhocon.ConfigFactory.parse_string("d = 10s")["d"]
@@ -422,20 +415,9 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
         HOCONBackend().loads("k = v")
 
 
-# ---------------------------------------------------------------------------
-# DotenvBackend: reachable only through SopsBackend (see tests/test_sops.py
-# for the recorded-pair tests against real sops output); this covers its
-# error path directly.
-#
-# There is no IniBackend: go-ini's own
-# `"""..."""` writer output is ambiguous -- a decrypted
-# value can inject a key or replace a whole other section, and no ini-text
-# parser can tell those bytes apart from a genuine file -- so
-# SopsBackend.data_hash always decrypts `ini` as sops's own `--output-type
-# json` view and parses it with JSONBackend instead. `ini` was never a
-# Puppet data_hash/format name outside this backend, so nothing else
-# depended on it; it and its tests were removed rather than kept unused.
-# ---------------------------------------------------------------------------
+# DotenvBackend is reachable only through SopsBackend (see test_sops.py); this covers
+# its error path. There is no IniBackend: sops's ini writer is ambiguous, so ini is
+# decrypted as sops's JSON view.
 
 
 def test_dotenv_backend_no_equals_sign_raises():
@@ -456,10 +438,8 @@ def test_dotenv_registered_only_in_format_namespace():
 
 
 def test_format_backend_dumps_and_dump():
-    # The "format" namespace's own dumps()/dump() (distinct from
-    # _render.py's "render" namespace, which the CLI's --render-as uses):
-    # a general-purpose Backend serialization API, not yet called from
-    # anywhere else in this codebase.
+    # The "format" namespace's dumps()/dump() (not _render.py's "render" namespace used
+    # by --render-as): a general-purpose Backend serialization API.
     yaml_backend = Backend.new("yaml", kind="format")
     assert yaml_backend.dumps({"b": 1, "a": 2}) == "b: 1\na: 2\n"
     buf = io.StringIO()

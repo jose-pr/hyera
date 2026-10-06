@@ -1,11 +1,6 @@
-"""The root-key lookup pipeline: ``lookup_options`` fetched always on the
-root key, a found ``~`` treated as a genuine value, RichData validated per
-value, a dotted key dug once out of the *merged* root value (never per
-location or per level), ``convert_to`` applied regardless of an explicit
-``merge=``, and a sub-lookup (``%{lookup()}``/``%{hiera()}``/``%{alias()}``)
-running the same full pipeline as a top-level lookup -- its own
-``lookup_options``, its own ``default_hierarchy`` fallback, its own
-``convert_to`` -- with the caller's ``merge`` never carried over.
+"""The root-key lookup pipeline: ``lookup_options``, ``~`` as a value, RichData
+validation, a dotted key dug once from the merged root, ``convert_to`` and
+sub-lookups running the full pipeline.
 """
 
 import pytest
@@ -24,10 +19,9 @@ def _levels(make_tree, *level_data):
 
 
 def test_dotted_key_digs_after_first_found(make_tree):
-    # First-found stops at the first level that has the *root* key; the
-    # dig into that level's own value then misses without ever
-    # considering a lower level -- there is no falling through to l2's
-    # "port"/"b" once l1's "db"/"dot_first" was found at all.
+    # First-found stops at the first level that has the root key; the dig into its value
+    # then misses without considering a lower level (no falling through to l2's
+    # "port"/"b").
     root = _levels(
         make_tree,
         "db: {host: h1}\ndot_first: {a: 1}\n",
@@ -41,11 +35,9 @@ def test_dotted_key_digs_after_first_found(make_tree):
 
 
 def test_dotted_key_merges_root_then_digs(make_tree):
-    # A merge combines the *root* values across levels first; the dig
-    # into the merged result happens exactly once after. Digging each
-    # level's value separately and merging the dug results (the old,
-    # wrong order) would instead give {"x": 1, "y": 2} for dot_hash.b: l2's
-    # own "b" (never dug out on its own) would survive the hash merge.
+    # A merge combines the root values across levels first and digs once after: digging
+    # each level and merging the results would give {"x": 1, "y": 2} for dot_hash.b, as
+    # l2's own "b" would survive the hash merge.
     root = _levels(
         make_tree,
         "db: {port: 1}\ndot_hash: {b: {x: 1}}\n",
@@ -164,11 +156,9 @@ def test_rich_data_validated_per_value(make_tree):
 
 
 def test_lookups_inside_lookup_options_see_no_options(make_tree):
-    # rk's own lookup_options merge spec is itself an interpolated
-    # %{lookup('rk_strategy')}; resolving it is a sub-lookup that runs
-    # while this scope's lookup_options gather is still in progress. It
-    # must see no options for "rk_strategy" (there are none anyway) and,
-    # above all, must not recurse into gathering lookup_options again.
+    # rk's lookup_options merge spec is an interpolated %{lookup('rk_strategy')}: that
+    # sub-lookup runs while the lookup_options gather is in progress, so it must see no
+    # options for "rk_strategy" and must not gather lookup_options again.
     root = _levels(
         make_tree,
         "lookup_options: {rk: {merge: \"%{lookup('rk_strategy')}\"}}\n"

@@ -1,12 +1,5 @@
-"""A direct test for every public export: a name that never appears as a bare ``ast.Name``/``ast.Attribute``
-inside some ``test_*`` function's body has regressed unnoticed the moment
-nothing else in the suite references it.
-
-This is a presence check, not a depth check: a name collision (a local
-variable that happens to share a class member's name) makes a param pass
-without real coverage of that member. Branch coverage (``coverage run
---branch``) is what proves depth; this guard only proves the property holds
-for the *next* export too, at near-zero runtime.
+"""A direct test for every public export: a name that no ``test_*`` body mentions
+as an ``ast.Name``/``ast.Attribute`` is unreferenced (a presence check only).
 """
 
 import ast

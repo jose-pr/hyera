@@ -1,4 +1,4 @@
-"""CLI arguments: merge flags, scope variables, strict modes and the ``--`` separator."""
+"""CLI arguments: merge flags, scope variables, strict modes and ``--``."""
 
 import logging
 import os

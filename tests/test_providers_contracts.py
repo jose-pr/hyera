@@ -1,4 +1,6 @@
-"""What a function provider may return, and the errors it raises when it breaks the contract."""
+"""What a function provider may return, and the errors it raises when it breaks the
+contract.
+"""
 
 import datetime
 import decimal

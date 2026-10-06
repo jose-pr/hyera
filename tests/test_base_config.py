@@ -1,7 +1,5 @@
-"""``Hiera.load`` reads a path-configured ``hiera.yaml`` as UTF-8 bytes and
-holds no open file handle: a non-ASCII config resolves correctly regardless
-of the host locale, the config file can be replaced or removed while the
-instance is alive, and the instance survives ``pickle``/``deepcopy``.
+"""``Hiera.load`` reads a path-configured ``hiera.yaml`` as UTF-8 bytes and holds
+no open file handle: locale-independent, replaceable while live, picklable.
 """
 
 import copy
@@ -55,13 +53,9 @@ def test_non_ascii_config_is_read_as_utf8(tmp_path):
 
 
 def test_utf8_bom_config_parses(tmp_path):
-    # Flow style, not `CONFIG_TEXT`'s block style: `puppet lookup` reads hiera.yaml
-    # with `Puppet::Util::Yaml.safe_load(content)`, which keeps a literal BOM (as for
-    # a data file, `context.rb:53`), not the BOM-stripping `safe_load_file`. A
-    # block-style mapping after a BOM (swapped for a space, as Psych does) keeps only
-    # its first key (test_psych.py:
-    # test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key); a
-    # flow-style mapping has no such indentation problem.
+    # Flow style, not `CONFIG_TEXT`'s block style: `puppet lookup` reads hiera.yaml with
+    # `Puppet::Util::Yaml.safe_load`, keeping a literal BOM (`context.rb:53`); a
+    # block-style mapping after a BOM keeps only its first key (see test_psych.py).
     datadir = tmp_path / "données"
     datadir.mkdir()
     (datadir / "common.yaml").write_bytes("k: accented\n".encode("utf-8"))

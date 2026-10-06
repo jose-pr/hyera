@@ -1,6 +1,4 @@
-"""The per-lookup ``DEBUG`` trace (Puppet's ``DebugExplainer``) and the two
-logging leftovers this phase also fixes: an earlier dotted-only miss log
-(already gone by the time this landed) and ``cli.py``'s hard-coded
+"""The per-lookup ``DEBUG`` trace (Puppet's ``DebugExplainer``) and ``cli.py``'s
 package-name logger.
 """
 

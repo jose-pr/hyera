@@ -1,5 +1,5 @@
-"""HOCON ``include`` directives resolve as Puppet's ``hocon_data`` does by default
-and are refused under ``hocon_includes=False``; no form reaches pyhocon's own include machinery.
+"""HOCON ``include`` resolves as Puppet's ``hocon_data`` does by default and is
+refused under ``hocon_includes=False``; none reaches pyhocon's own includes.
 """
 
 import importlib
@@ -248,10 +248,9 @@ def test_include_file_globs_where_puppet_does_not(tmp_path, monkeypatch):
 def test_include_value_position_is_literal_text_by_default(
     content, expected, pyhocon_tripwire, http_server
 ):
-    # Puppet (real `puppet lookup`): `include` in any of these forms is ordinary text
-    # outside statement position, joined with its neighbours by HOCON string
-    # concatenation with quotes stripped. The tripwire/http_server prove none of them
-    # is treated as a directive.
+    # Puppet (real `puppet lookup`): `include` outside statement position is ordinary
+    # text, joined to its neighbours by HOCON string concatenation with quotes stripped.
+    # The tripwire/http_server prove it is never treated as a directive.
     _server, hits = http_server
     assert HOCONBackend().loads(content) == expected
     assert pyhocon_tripwire == []
@@ -276,10 +275,9 @@ def test_include_value_position_is_literal_text_by_default(
 def test_include_in_array_value_position_is_literal_text_by_default(
     content, expected, pyhocon_tripwire
 ):
-    # A key-position plain include contributes nothing at the top level or inside an
-    # object, but inside a `[...]` array it is a value: Puppet keeps it as literal text
-    # (`l=[include "inc.conf"]` -> `["include inc.conf"]`), so the default must neither
-    # blank it nor resolve it.
+    # A key-position plain include contributes nothing at top level or in an object, but
+    # in a `[...]` array it is a value: Puppet keeps literal text
+    # (`l=[include "inc.conf"]` -> `["include inc.conf"]`).
     assert HOCONBackend().loads(content) == expected
     assert pyhocon_tripwire == []
 

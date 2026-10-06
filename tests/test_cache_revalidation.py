@@ -89,11 +89,9 @@ def test_deleted_file_reads_as_absent(make_tree):
 
 
 def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree):
-    # load_file's absent-after-cached branch: a path read and cached once, then found
-    # gone by a later call's fresh probe, reads as absent, not an error. Unlike
-    # test_deleted_file_reads_as_absent above, the hierarchy still lists the location.
-    # A real two-lookup sequence cannot reach it through the scope-interpolation-stable
-    # caches above, so load_file is called directly.
+    # load_file's absent-after-cached branch: a path cached once, then gone on a later
+    # fresh probe, reads as absent. A real two-lookup sequence cannot reach it through
+    # the caches above, so load_file is called directly.
     from hyera._lookup.navigation import _MISSING
 
     root = make_tree(
@@ -323,10 +321,9 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
                 stat_counts[p] += c
         return max(stat_counts.values(), default=0)
 
-    # Every candidate (a plain location or the glob-walked directory) is probed at most
-    # once per lookup: a location build and its materialization share one memo, and
-    # `_glob_one`'s descent through the literal "mods" segment uses it too, not a bare
-    # `os.path.isdir`.
+    # Every candidate is probed at most once per lookup: a location build and its
+    # materialization share one memo, and `_glob_one`'s descent through the "mods"
+    # segment uses it too.
 
     assert h.lookup("k") == "node_a"
     if revalidate:
@@ -338,10 +335,8 @@ def test_filesystem_probes_per_lookup(make_tree, monkeypatch, revalidate):
     counts.clear()
     new_view = h.scoped(variables={"clientcert": "b"})
     assert new_view.lookup("k") == "node_b"
-    # A new clientcert rebuilds the location entry (referenced variables changed), yet
-    # every candidate is still probed at most once (build and materialize share one
-    # memo), and the mods glob's cache, whose key never depended on clientcert, is
-    # untouched: no scandir happens.
+    # A new clientcert rebuilds the location entry yet every candidate is still probed
+    # at most once, and the mods glob's cache (its key ignores clientcert) is untouched.
     assert max_stat_per_path() <= 1, counts
     assert scandir_count() == 0, counts
 

@@ -1,8 +1,5 @@
 """Property tests for every text parser: any input returns a value or raises a
-``HieraError``, and no raised error carries the document that was parsed.
-
-The inputs come from a seeded stdlib loop (mutated seeds plus random strings
-over each syntax's alphabet), so a failure reproduces from the printed input.
+``HieraError`` that carries no parsed document. Inputs come from a seeded loop.
 """
 
 import io

@@ -265,12 +265,9 @@ def test_mapped_paths(make_tree):
     assert h.lookup("db_setting") is True
 
 
-# --- default_hierarchy ----------------------------------------------
-#
-# `default_hierarchy` at the global layer is covered by the
-# config-default-hierarchy-global conformance golden instead of a unit
-# test: Puppet rejects it outright ("only allowed in the module layer"),
-# which every hand-written assertion here contradicted.
+# default_hierarchy at the global layer is covered by the
+# config-default-hierarchy-global golden, not a unit test: Puppet rejects it ("only
+# allowed in the module layer").
 
 
 def test_merge_spec_accepts_its_documented_shapes(make_tree):

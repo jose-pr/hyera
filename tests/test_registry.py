@@ -99,9 +99,8 @@ def test_name_pattern_captures_reach_init_and_exact_beats_pattern():
 
 
 def test_default_name_skips_a_leading_pattern():
-    # Every built-in backend lists an exact name before any pattern, so
-    # _default_name's own "skip a pattern, keep looking" loop step is only
-    # exercised by a class (a third-party backend is free to order its own
+    # Every built-in backend lists an exact name before any pattern, so _default_name's
+    # "skip a pattern, keep looking" step needs a class (a third-party one may order
     # NAMES either way) that puts the pattern first.
     class PatternFirst(Backend):
         NAMES = {
@@ -246,11 +245,9 @@ def test_duplicate_pattern_raises():
 
 
 def test_default_backends_dedups_a_class_registered_under_two_patterns():
-    # default_backends()'s second loop (over pattern entries) skips a class
-    # already seen -- normally only possible via the first (exact-name)
-    # loop, since no built-in backend registers more than one NamePattern.
-    # A throwaway backend with two distinct patterns for the same class
-    # exercises that same dedup within the patterns loop itself.
+    # default_backends()'s pattern loop skips a class already seen, normally possible
+    # only via the exact-name loop; a backend with two distinct patterns for one class
+    # exercises that dedup.
     class TwoPatterns(Backend):
         NAMES = {
             "function": (

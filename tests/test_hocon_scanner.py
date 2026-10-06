@@ -1,4 +1,6 @@
-"""The include scanner on adversarial inputs: unterminated tokens, substitutions and bracket nesting."""
+"""The include scanner on adversarial inputs: unterminated tokens, substitutions
+and bracket nesting.
+"""
 
 import pytest
 
@@ -9,14 +11,9 @@ from hocon_support import (  # noqa: F401
     pyhocon_tripwire,
 )
 
-# Adversarial forms: 17 inputs where the text scanner missed a directive that
-# pyhocon's grammar honours caselessly (after a triple-quoted string, a comment or
-# a substitution). Each raises under the opt-in guard; under the default each falls
-# into one of three buckets:
-# A. key position, case-mismatched keyword: still raises, never a real read;
-# B. key position, lowercase `include file(...)`: resolves (a missing target
-#    contributes nothing, as in the file() tests of test_hocon.py);
-# C. value position, any case: defangs to literal text, as in test_hocon.py.
+# Adversarial forms the text scanner once missed. Each raises under the opt-in
+# guard; by default: A key position, case-mismatched raises; B lowercase
+# `include file(...)` resolves; C value position defangs to text.
 
 
 _ADVERSARIAL_INCLUDE_FORMS = [
@@ -56,10 +53,9 @@ _ADVERSARIAL_INCLUDE_FORMS = [
 ]
 
 
-# Bucket per adversarial case for the default half. "D" is a singleton (see the
-# test below): the scanner recognizes `include file(...)` as in bucket B, but the
-# preceding `x\${` is invalid HOCON on its own ("Expected '}', found end of
-# text"), so the outcome is an error unrelated to includes.
+# Bucket per adversarial case for the default half; "D" is a singleton (see below):
+# recognized like bucket B, but the preceding `x\${` is invalid HOCON on its own
+# ("Expected '}', found end of text").
 _ADVERSARIAL_BUCKET = {
     "dotless-i-plain": "A",
     "dotless-i-file": "A",
@@ -138,10 +134,9 @@ def test_adversarial_include_forms_neutralized_by_default(
 def test_adversarial_include_forms_resolve_by_default(
     content, _line, label, tmp_path, monkeypatch, http_server
 ):
-    # Bucket B: a genuine lowercase `include file(...)` at key position resolves for
-    # real, so there is no tripwire. The target is missing (inc.conf is never created)
-    # and contributes nothing, without raising; that shows the include was recognized
-    # and handed to pyhocon, not ignored as text.
+    # Bucket B: a genuine lowercase `include file(...)` resolves, so no tripwire. The
+    # missing target (inc.conf) contributes nothing, which shows the include was
+    # recognized and handed to pyhocon.
     monkeypatch.chdir(tmp_path)
     _server, hits = http_server
 
@@ -153,10 +148,9 @@ def test_adversarial_include_forms_resolve_by_default(
 def test_adversarial_escaped_substitution_form_still_errors_by_default(
     tmp_path, monkeypatch
 ):
-    # Bucket D: the scanner recognizes `include file(...)` as in bucket B, but
-    # `a = x\${` before it is invalid HOCON with or without an include ("Expected '}',
-    # found end of text"). The opt-in refusal raises on `include` first; the default
-    # ends in a BackendError for pyhocon's own reason.
+    # Bucket D: recognized like bucket B, but `a = x\${` is invalid HOCON with or
+    # without an include. The opt-in refusal raises on `include` first; the default ends
+    # in a BackendError for pyhocon's own reason.
     content = [
         c
         for c, _l, label in _ADVERSARIAL_INCLUDE_FORMS

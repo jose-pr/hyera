@@ -16,10 +16,9 @@ from record import _command, _error_text
 
 
 def test_wsl_runner_uses_dash_e_not_dash_dash():
-    # wsl.exe's `--` form relays argv through a Linux-side shell that strips a lone or
-    # wrapping single quote; `-e` does not. `wsl.exe -d <distro> -- ruby -e 'puts
-    # ARGV.inspect' "'a.b'"` delivers `["a.b"]`, the `-e` form `["'a.b'"]` (the true
-    # argument).
+    # wsl.exe's `--` relays argv through a Linux shell that strips a lone or wrapping
+    # single quote; `-e` does not (`ruby -e 'puts ARGV.inspect' "'a.b'"` delivers
+    # `["a.b"]` with `--`, `["'a.b'"]` with `-e`).
     cmd, cwd = _command("wsl:FedoraLinux-44", Path("/some/case"), ["lookup", "k"])
     assert cwd is None
     assert "--" not in cmd

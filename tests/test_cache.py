@@ -58,10 +58,9 @@ def test_referenced_variable_change_rebuilds(make_tree, monkeypatch):
 
 
 def test_sub_lookup_becoming_unstable_falls_through_to_a_real_rebuild(make_tree):
-    # _read_ref when sub_lookup raises HieraLookupError (the location-cache replay's
-    # scope-stability check): a later scoped view whose referenced variable is no
-    # longer walkable like a cached ref combo's earlier scope is unstable, not a
-    # match; the real rebuild runs and raises Puppet's own error.
+    # _read_ref when sub_lookup raises HieraLookupError: a later scoped view whose
+    # referenced variable cannot be walked is unstable, not a match; the rebuild runs
+    # and raises Puppet's error.
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "x1/%{x.y}.yaml"}]},
         files={"data/x1/1.yaml": "k: v1\n"},

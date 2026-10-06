@@ -125,10 +125,8 @@ def test_get_navigates_like_puppet(fn):
 
 
 def test_data_functions_get_empty_navigation_direct():
-    # hyera._lookup.data_functions.get()'s own "empty navigation returns the
-    # value untouched" branch (core.Hiera.get() never calls it with an
-    # empty string -- "" parses to zero segments the same way a bare root
-    # key does, reaching get_segments directly instead).
+    # get()'s "empty navigation returns the value untouched" branch: core.Hiera.get()
+    # never passes "" (it parses to zero segments), so get_segments is called directly.
     from hyera._lookup.data_functions import get
 
     assert get({"a": 1}, "") == {"a": 1}

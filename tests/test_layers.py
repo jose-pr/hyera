@@ -1,8 +1,6 @@
 """Global/environment/module layer discovery and per-layer config rules.
 
-Covers the layer-discovery keywords, environment/module directory discovery,
-per-layer config versions and ``hiera3_backend``'s global-only rule. Cross-layer
-``lookup_options`` and ``default_hierarchy`` have their own tests.
+Cross-layer ``lookup_options`` and ``default_hierarchy`` have their own tests.
 """
 
 import copy
@@ -435,10 +433,8 @@ def test_environment_lookup_options_discarded_by_explicit_module_null(
     tmp_path, make_tree
 ):
     # The environment declares lookup_options for a module-qualified key; the module's
-    # data has an explicit `lookup_options: ~`. Unlike an absent key (the environment's
-    # options stay, see test_lookup_options_layer_precedence), Puppet's if/elsif with
-    # no else discards the environment's options, so the lookup uses the default
-    # first-match merge, not the environment's "unique".
+    # data has an explicit `lookup_options: ~`. Puppet's if/elsif with no else discards
+    # the environment's options (an absent key keeps them), so the merge is first-match.
     base = make_tree(
         {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
         files={"data/g.yaml": "mymod::a: [g]\n"},

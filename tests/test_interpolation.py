@@ -54,10 +54,9 @@ def test_empty_interpolation_variants_resolve_to_empty_string(text):
 
 
 def test_value_with_backslash_is_literal(make_tree):
-    # An interpolated value is inserted literally, never treated as a re.sub
-    # replacement template, so a backslash (e.g. a Windows path) is preserved
-    # as-is. Use a YAML double-quoted scalar so the stored value has exactly
-    # ONE backslash per separator: C:\data\sub
+    # An interpolated value is inserted literally, never as a re.sub template, so a
+    # backslash (a Windows path) is kept. A YAML double-quoted scalar stores exactly one
+    # backslash per separator: C:\data\sub
     h = _hiera(
         make_tree,
         'winpath: "C:\\\\data\\\\sub"\n' "ref: \"%{hiera('winpath')}\"\n",
@@ -86,9 +85,9 @@ def test_format_uses_bound_scope(make_tree):
     assert h.format("hi %{who}") == "hi bob"
 
 
-# Ruby Float#to_s: fixed notation for a scientific exponent of -4..14 (and 15
-# only when the shortest round-trip digits run past the point), scientific
-# otherwise. Measured against Ruby 4.0.7 over 8,291 floats.
+# Ruby Float#to_s: fixed notation for a scientific exponent of -4..14 (15 only when
+# the shortest round-trip digits run past the point), scientific otherwise (checked
+# against Ruby 4.0.7 over 8,291 floats).
 @pytest.mark.parametrize(
     "value,want",
     [
@@ -121,11 +120,9 @@ def test_float_to_s_nan():
     assert _float_to_s(float("nan")) == "NaN"
 
 
-# Ruby String#inspect: a double-quoted, escaped rendering. Named control
-# escapes get their short mnemonic; "#" before "{"/"$"/"@" is escaped since
-# Ruby would otherwise read it as interpolation syntax; the rest of C0, DEL,
-# C1 and U+2028/9 become \uXXXX; everything else -- including non-ASCII text
-# outside those ranges -- is left raw.
+# Ruby String#inspect: named control escapes get their short mnemonic; "#" before
+# "{"/"$"/"@" is escaped; the rest of C0, DEL, C1 and U+2028/9 become \uXXXX;
+# everything else, non-ASCII included, stays raw.
 @pytest.mark.parametrize(
     "value,want",
     [
@@ -318,10 +315,9 @@ def test_shared_dict_anchor_interpolated_once():
 
 
 def test_interpolated_hash_key_unhashable_raises():
-    # A hash key that interpolates (through alias(), which preserves the
-    # looked-up value's own type instead of stringifying it) to something
-    # Python can't hash -- Ruby has no such restriction, so this is this
-    # port's own defensive check, not a Puppet-fidelity one.
+    # A hash key interpolating (through alias()) to something Python cannot hash: Ruby
+    # has no such restriction, so this is a defensive check of this port, not Puppet
+    # fidelity.
     def sub_lookup(name, invocation):
         return [1, 2] if name == "arr" else None
 

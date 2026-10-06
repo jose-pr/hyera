@@ -1,7 +1,6 @@
-"""``_psych``: Psych's scalar rules, BOM handling, and structure, as
-measured against real Ruby 4.0.7 / Psych 5.3.1 via a dedicated oracle probe.
-Parametrized over both loader backends where the C/pure distinction
-matters (only the tab-after-colon row differs)."""
+"""``_psych``: Psych's scalar rules, BOM handling and structure, checked against
+Ruby 4.0.7 / Psych 5.3.1, over both loader backends where they differ.
+"""
 
 import copy
 import math
@@ -275,11 +274,9 @@ def test_float_tag_invalid_value_raises(loader):
 
 @pytest.mark.parametrize("loader", _LOADERS)
 def test_implicit_float_lookalike_invalid_value_raises(loader):
-    # Distinct from the explicit !!float case above: a bare scalar that
-    # the FLOAT_RE regex accepts (a sign plus a bare "." plus an exponent,
-    # no digits at all) but Python's own float() still rejects after
-    # cleaning -- the auto-detection path through _tokenize, not
-    # _construct_float's tagged one.
+    # Unlike the explicit !!float case above: a bare scalar FLOAT_RE accepts (sign, "."
+    # and an exponent, no digits) but float() rejects after cleaning, reaching
+    # _tokenize's auto-detection path, not _construct_float's tagged one.
     with pytest.raises(BackendError, match=r'invalid value for Float\(\): "-\.e\+1"'):
         _load_with(loader, "k: -.e+1\n")
 
@@ -350,10 +347,9 @@ def test_binary(loader):
     assert _load_with(loader, "k: !!binary aGVsbG8=\n")["k"] == "hello"
     assert _load_with(loader, "k: !!binary /w==\n")["k"] == "\udcff"
     assert _load_with(loader, "k: !!binary '%%%'\n")["k"] == ""
-    # "%%%" above is silently stripped down to nothing by b64decode's own
-    # lenient (validate=False) mode -- never raises. A single valid-
-    # alphabet character with impossible padding does raise, exercising
-    # the except-and-treat-as-empty fallback for real.
+    # "%%%" is silently stripped to nothing by b64decode's lenient (validate=False)
+    # mode; a single valid-alphabet character with impossible padding does raise,
+    # exercising the treat-as-empty fallback.
     assert _load_with(loader, "k: !!binary a\n")["k"] == ""
 
 
@@ -472,14 +468,9 @@ def test_safe_load_disallowed_class_chain_free():
     assert e.__context__ is None
 
 
-# ---------------------------------------------------------------------------
-# ``_yaml_problem``: hand-built error shapes real PyYAML parsing never
-# raises in its current code paths (every real ``MarkedYAMLError`` seen from
-# ``yaml.load_all`` carries a ``problem`` alongside any mark), but which the
-# function's own docstring commits to handling defensively for *any*
-# ``yaml.YAMLError`` -- not just the handful of shapes a single PyYAML
-# version's scanner/parser happens to raise today.
-# ---------------------------------------------------------------------------
+# _yaml_problem: hand-built error shapes PyYAML parsing does not raise (every real
+# MarkedYAMLError carries a `problem`), which the function's docstring commits to
+# handle for any yaml.YAMLError.
 
 
 def _mark(line=4, column=7):
@@ -537,21 +528,14 @@ def test_yaml_backend_symbol_keys_become_strings():
     assert backend._as_data_hash(parsed, "p") == {"a": 1, "b": 2}
 
 
-# ---------------------------------------------------------------------------
-# hiera.yaml: BOM is stripped outright (unlike a data file), and symbol keys
+# hiera.yaml: a BOM is stripped outright (unlike a data file), and symbol keys
 # normalize the same way.
-# ---------------------------------------------------------------------------
 
 
 def test_hiera_yaml_bom_behaves_like_a_data_file_bom(tmp_path):
-    # `puppet lookup` reads hiera.yaml via `HieraConfig.create` ->
-    # `cached_file_data` -> `Puppet::Util::Yaml.safe_load(content, ...)`
-    # directly -- *not* through `safe_load_file`'s BOM-stripping file read
-    # -- so a BOM reaches YAML.safe_load exactly as it does for a data file
-    # (measured against real Puppet 8.10.0 in `config-hiera-yaml-bom`: a
-    # `<BOM>---\nversion: 5\n...` config errors identically either way).
-    # A `---` document marker right after the BOM (no leading blank line)
-    # therefore still errors for hiera.yaml too.
+    # `puppet lookup` reads hiera.yaml with `Puppet::Util::Yaml.safe_load(content,
+    # ...)`, not the BOM-stripping `safe_load_file`, so a BOM reaches YAML.safe_load as
+    # for a data file (Puppet 8.10.0, case config-hiera-yaml-bom).
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         "﻿---\nversion: 5\ndefaults: {data_hash: yaml_data}\n"
@@ -562,11 +546,9 @@ def test_hiera_yaml_bom_behaves_like_a_data_file_bom(tmp_path):
 
 
 def test_hiera_yaml_bom_without_document_marker_loads_only_the_first_key(tmp_path):
-    # No leading "---": the BOM-swapped-for-a-space character shifts only
-    # the first line's column, so a multi-key top-level mapping still
-    # parses as *one* document ending where the second key's indentation
-    # (column 0) no longer matches the first key's (column 1) -- the same
-    # quirk a data file has, reproduced faithfully rather than "fixed".
+    # No leading "---": the BOM-swapped-for-a-space shifts only the first line's column,
+    # so a multi-key mapping parses as one document ending where the second key's column
+    # 0 differs from the first's 1 (the quirk a data file has, kept faithful).
     config = tmp_path / "hiera.yaml"
     config.write_bytes(
         "﻿version: 5\ndefaults: {data_hash: yaml_data}\n".encode("utf-8")

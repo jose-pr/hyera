@@ -74,13 +74,9 @@ def test_server_facts_under_facts_and_variables(caplog):
 
 
 def test_duplicate_collision_message_warns_only_once(caplog):
-    # A variable colliding with both a fact (Step 3) and a same-named,
-    # same-valued server_fact (Step 4) produces the exact same collision
-    # text twice in one construction (the node parameter is untouched by
-    # the first collision, so its "old" value is still the same the
-    # second time, and here "new" matches too) -- the second one must be
-    # suppressed by the shared warn_state's own message-text dedup, the
-    # same mechanism variable_once uses per name.
+    # A variable colliding with a fact (Step 3) and a same-named, same-valued
+    # server_fact (Step 4) yields the same collision text twice in one construction; the
+    # second is suppressed by the shared warn_state's message-text dedup.
     with caplog.at_level(logging.WARNING):
         scope = Scope(variables={"x": 1}, facts={"x": 2}, server_facts={"x": 2})
     assert scope.lookup("x") == 1
@@ -89,10 +85,9 @@ def test_duplicate_collision_message_warns_only_once(caplog):
 
 
 def test_variable_once_caps_at_100_distinct_keys(caplog):
-    # Puppet's own cap (parser/scope.rb): once 100 distinct undefined
-    # variables have each warned once, a 101st new name is silently never
-    # tracked (and so never suppressed either) -- distinct from the
-    # per-name dedup test_lookupvar_strict_modes already covers.
+    # Puppet's cap (parser/scope.rb): once 100 distinct undefined variables have warned,
+    # a 101st new name is never tracked (nor suppressed), unlike the per-name dedup in
+    # test_lookupvar_strict_modes.
     warning = Scope(strict="warning")
     with caplog.at_level(logging.WARNING):
         for i in range(101):
