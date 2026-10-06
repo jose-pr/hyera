@@ -756,6 +756,17 @@ def test_data_hash_value_of_an_unknown_python_type_names_function_and_key(
         h.lookup("k")
 
 
+def test_a_tuple_from_a_data_hash_hook_reads_as_a_list(make_tree, backends, script):
+    root = make_tree(
+        {"hierarchy": [{"name": "s", "data_hash": "test_data_hash", "path": "a.yaml"}]},
+        files={"data/a.yaml": "x"},
+    )
+    script["data_hash"] = lambda path, options: {"k": ("a", ("b",))}
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == ["a", ["b"]]
+    assert h.lookup("k.0") == "a"
+
+
 @pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
 def test_an_exception_a_hook_raises_propagates_unchanged(
     make_tree, backends, script, kind

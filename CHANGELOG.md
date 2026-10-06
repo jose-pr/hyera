@@ -64,7 +64,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `lookup_key`, `data_dig` or `data_hash` hook that returns a `date`,
   `Decimal`, `bytes` or `set` raises `BackendError` (`HieraLookupError` for
   a `data_hash` entry) naming the function and the type, instead of a bare
-  `TypeError`; a tuple returned by `lookup_key` or `data_dig` reads as a list.
+  `TypeError`; a tuple returned by a hook reads as a list.
 - A tuple name matches `override` and `default_values_hash` through its
   dotted form, as the equivalent string does.
 - `get()` and `dig()` check `block` and `value_type`, and `getvar()` checks

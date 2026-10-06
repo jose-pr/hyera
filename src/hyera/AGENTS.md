@@ -893,7 +893,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `context.interpolate(value)` yourself; signal a miss with
   `context.not_found()`, never a sentinel return value. A hook's return
   value must be Puppet data (`None`, `bool`, `int`, `float`, `str`, and
-  `list`/`dict` of those; a `lookup_key`/`data_dig` hook may also return a
+  `list`/`dict` of those; a hook may also return a
   tuple, read as a list at any depth); any other type (`date`, `Decimal`,
   `bytes`, `set`, ...) raises `BackendError` naming the function, the
   location and the type. A `data_hash` hook returning such a value under a

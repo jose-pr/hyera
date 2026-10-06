@@ -604,6 +604,7 @@ class _DataHashProvider(_FunctionProvider):
                 return _MISSING
             value = data[root]
             validate_data_value(value, self.backend.name, label, root)
+            value = _tuples_to_lists(value)
             result = interpolate(value, invocation, allow_methods=True)
             return invocation.report_found(root, result)
 
