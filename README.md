@@ -864,6 +864,17 @@ for.
   stops JSON at 100; the bound keeps a hostile file from ending the
   interpreter, which libyaml's recursive composer does on Python 3.9.
   (id: `nesting-bound`)
+- **A few Ruby regex constructs are refused, and POSIX bracket classes are
+  ASCII-only.** A `Pattern`/`Regexp` type, a `convert_to`/`value_type`
+  expression or a `lookup_options` key using `\p{..}`, `\P{..}`, `\R`,
+  `\X`, `\G`, `\K`, `\g<..>`, `&&` or a nested class inside `[...]`, a
+  negated shorthand (`\D \W \S \H`) inside `[...]`, a nested repeat such as
+  `a**`, or (on Python 3.9 and 3.10) a possessive quantifier or an atomic
+  group, raises `HieraLookupError` naming the construct, where Ruby accepts
+  it. `[[:alpha:]]` and the other POSIX classes match ASCII letters only,
+  where Ruby's match Unicode. There is no match-time bound, as in Ruby: a
+  pattern with nested quantifiers can take exponential time on a long
+  subject. (id: `ruby-regex-constructs`)
 
 ## Development
 

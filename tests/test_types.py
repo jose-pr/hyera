@@ -1354,6 +1354,14 @@ def test_concurrent_parses_never_share_source_text(monkeypatch):
     }
 
 
+def test_ruby_regex_rejects_a_trailing_backslash():
+    from hyera._types.types import _ruby_regex
+
+    with pytest.raises(HieraLookupError) as info:
+        _ruby_regex("a\\")
+    assert str(info.value) == "too short escape sequence: /a\\/"
+
+
 def test_pattern_accepts_a_pattern_or_regexp_type_argument():
     assert str(parse_type("Pattern[Pattern[/a/]]")) == "Pattern[/a/]"
     assert str(parse_type("Pattern[Regexp[/a/], /b/]")) == "Pattern[/a/, /b/]"

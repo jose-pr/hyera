@@ -425,6 +425,113 @@ def test_isinstance_follows_puppet_rules(value, type_, expected):
     assert isinstance(value, type_) is expected
 
 
+# (Ruby regex source, subject, whether Ruby's ``=~`` matches), from Ruby 4.0.
+RUBY_REGEX_CASES = [
+    (r"\Aabc\z", "abc", True),
+    (r"\Aabc\z", "abc\n", False),
+    (r"\Aabc\Z", "abc\n", True),
+    (r"\Aabc\Z", "abc\n\n", False),
+    (r"\Ax\z", "x\n", False),
+    (r"^[\h:]+$", "aa:bb", True),
+    (r"^[\h:]+$", "xx", False),
+    (r"^\h+$", "dEaD", True),
+    (r"^\H+$", "xyz", True),
+    (r"^\H+$", "abc", False),
+    (r"^[[:alpha:]]+$", "abc", True),
+    (r"^[[:alpha:]]+$", "a]", False),
+    (r"^[[:digit:]]+$", "123", True),
+    (r"^[[:alnum:]_]+$", "a_1", True),
+    (r"^[[:upper:]][[:lower:]]+$", "Abc", True),
+    (r"^[[:space:]]+$", " \t", True),
+    (r"^[[:punct:]]+$", "!?", True),
+    (r"^[^[:digit:]]+$", "abc", True),
+    (r"^[^[:digit:]]+$", "a1", False),
+    (r"[\d\h]+", "12af", True),
+    (r"^\w+$", "café", False),
+    (r"^\d+$", "١٢", False),
+    (r"^\s+$", " \t\n", True),
+    (r"\bfoo\b", "a foo b", True),
+    (r"\bfoo\b", "afoob", False),
+    ("(?m)a.c", "a\nc", True),
+    ("a.c", "a\nc", False),
+    ("(?i)abc", "ABC", True),
+    ("(?i)é", "É", True),
+    ("a(?i)bc", "aBC", True),
+    ("a(?i)bc", "ABC", False),
+    ("x(?i)a|b", "B", False),
+    ("(?-i)a", "A", False),
+    ("(?i-m)a.b", "A\nB", False),
+    ("(?mi)a.b", "A\nB", True),
+    ("(?i:b)c", "BC", False),
+    ("(?x) a b # note (\n c", "abc", True),
+    ("^a$", "b\na\nc", True),
+    ("a$", "a\n", True),
+    ("(?<n>a)\\k<n>", "aa", True),
+    ("(?<n>a)\\k<n>", "ab", False),
+    ("(a)\\1", "aa", True),
+    ("(?<=a)b", "ab", True),
+    ("(?<!a)b", "ab", False),
+    ("a{,2}b", "b", True),
+    ("\\y", "y", True),
+    ("\\e", "\x1b", True),
+    ("\\/", "/", True),
+    ("\\u{41}", "A", True),
+    ("\\x41", "A", True),
+    ("(?#note)a", "a", True),
+]
+
+
+@pytest.mark.parametrize("source, subject, expected", RUBY_REGEX_CASES)
+def test_pattern_matches_as_ruby_does(source, subject, expected):
+    assert isinstance(subject, types.Pattern[source]) is expected
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        ("(", "end pattern with unmatched parenthesis: /(/"),
+        (")", "unmatched close parenthesis: /)/"),
+        ("a)", "unmatched close parenthesis: /a)/"),
+        ("[", "premature end of char-class: /[/"),
+        ("[b-a]", "empty range in char class: /[b-a]/"),
+        ("*a", "target of repeat operator is not specified: /*a/"),
+        ("(?z)", "undefined group option: /(?z)/"),
+    ],
+)
+def test_pattern_rejects_with_rubys_text(source, message):
+    with pytest.raises(HieraLookupError) as info:
+        types.Pattern[source]
+    assert str(info.value) == message
+
+
+@pytest.mark.parametrize(
+    "source, construct",
+    [
+        (r"\p{Alpha}+", r"\p"),
+        (r"\P{Alpha}", r"\P"),
+        (r"\R", r"\R"),
+        (r"\X", r"\X"),
+        (r"\G", r"\G"),
+        (r"a\Kb", r"\K"),
+        (r"(?<x>a)\g<x>", r"\g"),
+        ("[a-z&&[^aeiou]]+", "&&"),
+        ("[a[bc]]", "nested character class"),
+        (r"[\H]", r"\H in a character class"),
+        ("a**", "nested repeat"),
+    ],
+)
+def test_pattern_names_an_untranslatable_ruby_construct(source, construct):
+    with pytest.raises(HieraLookupError) as info:
+        types.Pattern[source]
+    assert construct in str(info.value)
+    assert source in str(info.value)
+
+
+def test_regexp_type_rejects_an_invalid_source():
+    with pytest.raises(HieraLookupError, match="unmatched parenthesis"):
+        types.Regexp["("]
+
+
 def _empty_hiera():
     from hyera import Hiera
 

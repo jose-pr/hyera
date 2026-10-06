@@ -101,6 +101,10 @@ DOC_ONLY = {
         "the oracle answers a document nested past the bound with a value or "
         "its own error text, which no case asserts a different outcome from"
     ),
+    "ruby-regex-constructs": (
+        "the harness cannot record a Ruby construct hyera refuses, and its "
+        "Unicode POSIX-class behaviour differs only for non-ASCII subjects"
+    ),
 }
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by

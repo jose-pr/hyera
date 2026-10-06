@@ -7,7 +7,6 @@ Ports Puppet's ``lookup_adapter.rb`` and the RichData check in
 ``data_provider.rb``.
 """
 
-import re
 import typing as _ty
 
 from ..exceptions import HieraLookupError
@@ -128,11 +127,7 @@ def compile_patterns(options):
     patterns = []
     for key, entry in options.items():
         if isinstance(key, str) and key.startswith("^"):
-            try:
-                pattern = _ruby_regex(key)
-            except re.error as e:
-                raise HieraLookupError("{}: /{}/".format(e.msg, key)) from None
-            patterns.append((pattern, entry))
+            patterns.append((_ruby_regex(key), entry))
         else:
             exact[key] = entry
     return CompiledOptions(exact=exact, patterns=tuple(patterns))

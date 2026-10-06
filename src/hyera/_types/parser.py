@@ -47,6 +47,7 @@ from .types import (
     Variant,
     _PNamedType,
     _num_str,
+    _ruby_regex,
     _type_instance,
 )
 
@@ -692,6 +693,7 @@ def _build_regexp(args):
     # `args` is never empty here (see `_build_array`'s own comment).
     a = args[0]
     if a[0] in ("regex", "string"):
+        _ruby_regex(a[1])
         return Regexp(a[1])
     if a[0] == "number":
         raise HieraLookupError("no implicit conversion of Integer into String")

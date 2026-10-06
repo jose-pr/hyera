@@ -1401,6 +1401,14 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `nesting-bound` — YAML and JSON documents (data, facts,
   `--scope` values) nested more than 500 levels deep raise `BackendError`
   ("nested too deeply").
+- **difference** `ruby-regex-constructs` — A `Pattern`/`Regexp` type or
+  `lookup_options` key using `\p{..}`, `\P{..}`, `\R`, `\X`, `\G`, `\K`,
+  `\g<..>`, `&&`, a nested `[...]`, `\D \W \S \H` inside `[...]`, a nested
+  repeat such as `a**`, or (Python 3.9 and 3.10) a possessive quantifier or
+  atomic group raises `HieraLookupError` naming the construct; POSIX bracket
+  classes are ASCII-only; no match-time bound exists, as in Ruby, so a
+  pattern with nested quantifiers can take exponential time on a long
+  subject.
 
 Not supported:
 
@@ -1523,7 +1531,10 @@ Not supported:
 - A `lookup_options` key is a **regex only when it starts with `^`**
   (Hiera 5's rule); anything else is matched literally, so a key containing
   `.` cannot shadow-match unrelated keys. Patterns use Ruby syntax
-  (`(?<name>…)`, `\A`, `\z`, `\h`/`\H` and a lookbehind all work), match by
+  (`(?<name>…)`, `\A`, `\z`, `\h`/`\H`, POSIX bracket classes, inline
+  `(?i)`/`(?m)`/`(?x)` flags and a lookbehind all work; `\w \d \s` are ASCII;
+  a construct with no Python translation raises `HieraLookupError` naming it,
+  see the `ruby-regex-constructs` difference), match by
   **searching** from the start of the key (`^app::` matches `app::ports`,
   not only `app::`), and are tried in the merged order — lower-priority
   levels' patterns first. An exact key match always wins over a pattern.

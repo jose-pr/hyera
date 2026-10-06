@@ -49,6 +49,34 @@ def test_ruby_only_syntax_is_translated(make_tree):
     assert h.lookup("lbkey") == ["a", "b"]
 
 
+def test_posix_class_and_inline_flag_patterns_apply(make_tree):
+    root = _two_level(
+        make_tree,
+        "app::settings: [a]\n"
+        "Other: [a]\n"
+        "lookup_options:\n"
+        "  '^[[:alpha:]]+::[[:alpha:]]+$': {merge: unique}\n"
+        "  '^(?i)other$': {merge: unique}\n",
+        "app::settings: [b]\nOther: [b]\n",
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("app::settings") == ["a", "b"]
+    assert h.lookup("Other") == ["a", "b"]
+
+
+def test_untranslatable_pattern_raises_a_lookup_error_naming_it(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={
+            "data/common.yaml": "bar: [1]\n"
+            "lookup_options: {'^\\p{Alpha}+$': {merge: unique}}\n"
+        },
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(HieraLookupError, match=r"\\p"):
+        h.lookup("bar")
+
+
 def test_invalid_pattern_raises(make_tree):
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
