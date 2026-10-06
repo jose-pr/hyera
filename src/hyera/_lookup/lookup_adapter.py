@@ -226,7 +226,7 @@ def convert_result(key, convert_to, value, invocation=None):
 
     try:
         return new_instance(type_, value, *rest)
-    except HieraLookupError as e:
+    except Exception as e:
         raise HieraLookupError(
             "The convert_to lookup_option for key '{}' raised error: {}".format(key, e)
         ) from e

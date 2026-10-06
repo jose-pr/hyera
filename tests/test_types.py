@@ -22,7 +22,6 @@ from hyera._types.mismatch import (
     _a_an,
     _size_text,
     assert_instance_of,
-    describe_mismatch,
 )
 from hyera._types.parser import _Parser, parse_type
 from hyera._types.types import (
@@ -360,7 +359,7 @@ def test_aliases_and_references():
 
 # -------------------------------------------------- type-model internals
 #
-# assignable()/_key()/__eq__()/__hash__()/normalize()/alias_expanded_str()
+# _key()/__eq__()/__hash__()
 # have no entry point of their own -- convert_to/value_type only ever call
 # instance()/new()/str() on a parsed type. This module ports Puppet's whole
 # type model (type_calculator.rb/type_formatter.rb), not only what hiera's
@@ -372,11 +371,6 @@ def test_aliases_and_references():
 def test_any_type_base_defaults():
     any_t = parse_type("Any")
     assert isinstance(any_t, Any) and type(any_t) is Any
-    assert any_t.assignable(parse_type("Integer")) is True
-    assert any_t.assignable(any_t) is True
-    assert any_t.normalize() is any_t
-    assert any_t.simple_name == "Any"
-    assert any_t.alias_expanded_str() == "Any"
     assert repr(any_t) == "Any"
     assert any_t._key() == ()
     assert hash(any_t) == hash(parse_type("Any"))
@@ -427,92 +421,20 @@ def test_type_key_equality_and_hash():
     assert rt_a._key() == ("ruby", "Symbol")
 
 
-def test_assignable_across_type_family():
-    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[1,5]")) is True
-    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[2,4]")) is True
-    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[0,5]")) is False
-    assert parse_type("Integer[1,5]").assignable(parse_type("Integer[1,6]")) is False
-    assert parse_type("Integer[1,5]").assignable(parse_type("String")) is False
-
-    assert parse_type("Float[1,5]").assignable(parse_type("Float[2,4]")) is True
-    assert parse_type("Float[1,5]").assignable(parse_type("Float[0,5]")) is False
-    assert parse_type("Float[1,5]").assignable(parse_type("Float[1,6]")) is False
-    assert parse_type("Float[1,5]").assignable(parse_type("Integer")) is False
-
-    assert parse_type("String[1,3]").assignable(infer("ab")) is True
-    assert parse_type("String[1,3]").assignable(infer("abcd")) is False
-    assert parse_type("String[1,3]").assignable(parse_type("String[2,4]")) is False
-    assert parse_type("String[1,3]").assignable(parse_type("String")) is False
-    assert parse_type("String").assignable(infer("a")) is True
-    literal = infer("a")
-    assert literal.assignable(infer("a")) is True
-    assert literal.assignable(infer("b")) is False
-    assert literal.assignable(parse_type("String")) is False
-    assert parse_type("String").assignable(parse_type("Integer")) is False
-
-    assert parse_type("Boolean[true]").assignable(parse_type("Boolean[true]")) is True
-    assert parse_type("Boolean[true]").assignable(parse_type("Boolean[false]")) is False
-    assert parse_type("Boolean[true]").assignable(parse_type("Integer")) is False
-    assert parse_type("Boolean").assignable(parse_type("Boolean[true]")) is True
-
-    assert (
-        parse_type("Variant[String,Integer]").assignable(parse_type("Integer")) is True
-    )
-    assert (
-        parse_type("Variant[String,Integer]").assignable(parse_type("Float")) is False
-    )
-
-    assert parse_type("Optional[Integer]").assignable(parse_type("Undef")) is True
-    assert parse_type("Optional[Integer]").assignable(parse_type("Integer")) is True
-    assert parse_type("Optional").assignable(parse_type("Undef")) is True
-    assert parse_type("NotUndef[Integer]").assignable(parse_type("Undef")) is False
-    assert parse_type("NotUndef[Integer]").assignable(parse_type("Integer")) is True
-    assert parse_type("NotUndef").assignable(parse_type("Integer")) is True
-
-    data_t = parse_type("Data")
-    assert data_t.assignable(data_t) is True
-    assert data_t.assignable(parse_type("Integer")) is True
-    # `Data`'s own Variant branch matches ScalarData, which (like most types
-    # in this ported model that never override `assignable()`) falls back to
-    # Any's own base implementation -- "any other Any at all" --
-    # rather than a real structural subtype check.
-    assert data_t.assignable(parse_type("Sensitive")) is True
-
-    assert parse_type("Undef").assignable(parse_type("Undef")) is True
-    assert parse_type("Undef").assignable(parse_type("Integer")) is False
-
+def test_bare_and_literal_optional_instances():
     # Bare NotUndef (no contained type argument at all) accepts any non-Undef
     # instance; bare Optional is only Undef.
     assert parse_type("Optional").instance(5) is False
     assert parse_type("Optional").instance(None) is True
     assert parse_type("NotUndef").instance(5) is True
-    assert parse_type("Optional").assignable(parse_type("Integer")) is True
 
     # A bareword contained type argument (`Optional[integer]`) is kept as a
-    # raw Python str, not parsed into a real type (`_literal_or_type`) --
-    # `_type_instance`/`_type_assignable`'s own string branch is what makes
-    # that literal comparable.
+    # raw Python str, not parsed into a real type (`_literal_or_type`).
     literal_opt = parse_type("Optional[integer]")
     assert literal_opt.instance("integer") is True
     assert literal_opt.instance("other") is False
-    assert literal_opt.assignable(parse_type("String")) is False
     assert literal_opt == parse_type("Optional[integer]")
     assert parse_type("Optional") == parse_type("Optional")
-
-
-def test_alias_normalize_and_expansion():
-    data_t = parse_type("Data")
-    assert str(data_t.normalize()) == str(data_t.resolved_type)
-
-    # An unguarded expansion inlines the alias's own body text...
-    assert (
-        data_t.alias_expanded_str()
-        == "Variant[ScalarData, Undef, Hash[String, Data], Array[Data]]"
-    )
-    # ...but a self-referencing alias (Data contains Data) stops recursing
-    # once its own name is already in the guard set, printing the bare name
-    # instead of looping forever.
-    assert data_t.alias_expanded_str({"Data"}) == "Data"
 
 
 def test_optional_notundef_literal_container_rendering():
@@ -909,18 +831,7 @@ def test_size_text_direct():
     assert _size_text(1, 3) == "between 1 and 3"
 
 
-def test_describe_mismatch_and_a_an_direct():
-    # describe_mismatch() takes two already-computed types directly (no
-    # value) -- exported in __all__ for callers holding two types, but
-    # nothing in this codebase currently calls it (every caller has a
-    # value and uses assert_instance_of instead); exercised directly.
-    assert describe_mismatch(
-        "Found value", parse_type("Integer"), parse_type("String")
-    ) == ("Found value expects an Integer value, got String")
-    assert describe_mismatch(
-        "Found value", parse_type("Optional[Integer]"), parse_type("String")
-    ) == ("Found value expects a value of type Undef or Integer, got String")
-
+def test_a_an_direct():
     # _a_an's own leading-quote skip (Puppet's a_an handles a quoted label,
     # even though nothing this subset renders through it is ever
     # quote-prefixed): a quote char is skipped, a real letter stops the
@@ -1556,6 +1467,80 @@ def test_new_checks_arguments_as_puppet_does(type_, args, message):
 def test_new_numeric_hash_that_is_not_named_arguments_is_just_a_bad_value():
     with pytest.raises(HieraLookupError, match="cannot be converted to Float"):
         new_instance(parse_type("Float"), {"from": 5, "x": 1})
+
+
+@pytest.mark.parametrize(
+    "type_, data",
+    [
+        ("Variant", 5),
+        ("Struct[{a=>Optional[Integer]}]", {}),
+        ("Struct", {}),
+    ],
+)
+def test_assert_reports_bare_forms_without_crashing(type_, data):
+    try:
+        assert_instance_of("Found value", parse_type(type_), data)
+    except HieraLookupError:
+        pass
+
+
+def test_struct_of_non_string_keys_reports_a_hash_type_mismatch():
+    t = parse_type("Struct[{a=>Integer, Optional[b]=>String}]")
+    with pytest.raises(HieraLookupError) as info:
+        assert_instance_of("Found value", t, {1: "a"})
+    assert str(info.value) == (
+        "Found value has wrong type, expects a Struct[{'a' => Integer, "
+        "Optional['b'] => String}] value, got Hash[Integer[1, 1], String]"
+    )
+    with pytest.raises(HieraLookupError, match="expects size to be between 1 and 2"):
+        assert_instance_of("Found value", t, {})
+
+
+def test_type_nesting_past_the_bound_is_a_lookup_error():
+    text = "Array[" * 400 + "Integer" + "]" * 400
+    with pytest.raises(HieraLookupError, match="nested more than 200 levels"):
+        parse_type(text)
+    assert str(parse_type("Array[" * 150 + "Integer" + "]" * 150)).count("Array") == 150
+
+
+def test_convert_result_wraps_every_error_of_a_conversion():
+    with pytest.raises(HieraLookupError) as info:
+        convert_result("k", "Numeric", "08")
+    assert str(info.value).startswith(
+        "The convert_to lookup_option for key 'k' raised error: "
+    )
+    with pytest.raises(HieraLookupError) as info:
+        convert_result("k", "Integer", float("inf"))
+    assert "raised error" in str(info.value)
+    with pytest.raises(HieraLookupError) as info:
+        convert_result("k", "Hash", [[[1, 2], 3]])
+    assert "raised error: unusable Hash key" in str(info.value)
+
+
+def test_convert_result_wraps_an_error_that_is_not_a_hiera_error(monkeypatch):
+    def broken(*args):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("hyera._lookup.lookup_adapter.new_instance", broken)
+    with pytest.raises(HieraLookupError) as info:
+        convert_result("k", "Integer", "5")
+    assert str(info.value) == (
+        "The convert_to lookup_option for key 'k' raised error: boom"
+    )
+    assert isinstance(info.value.__cause__, RuntimeError)
+
+
+def test_a_bad_pattern_in_value_type_is_a_lookup_error():
+    with pytest.raises(HieraLookupError, match="unmatched parenthesis"):
+        parse_type("Pattern[/(/]")
+
+
+def test_quotes_are_rendered_by_one_function():
+    assert str(parse_type("Enum['a\\b']")) == "Enum['a\\b']"
+    assert str(parse_type('Enum["a\\tb"]')) == 'Enum["a\\tb"]'
+    assert str(parse_type("Struct[{'a\\b' => Integer}]")) == (
+        "Struct[{'a\\b' => Integer}]"
+    )
 
 
 def test_ruby_regex_rejects_a_trailing_backslash():

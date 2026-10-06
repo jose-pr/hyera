@@ -6,7 +6,7 @@
 Ports the subset of ``type_mismatch_describer.rb`` and ``type_asserter.rb``
 hyera's supported type tiers exercise: path elements (entry/key of
 entry/index/variant), the Array/Hash/Struct/Tuple/Variant/Optional/
-Enum/Pattern describers, and ``describe_mismatch``/``assert_instance_of``.
+Enum/Pattern describers, and ``assert_instance_of``.
 Callable/signature describing is not ported: hiera asserts
 values, never function signatures.
 """
@@ -28,10 +28,11 @@ from .types import (
     TypeReference,
     Variant,
     _type_instance,
+    puppet_quote,
     infer_set,
 )
 
-__all__ = ["assert_instance_of", "describe_mismatch"]
+__all__ = ["assert_instance_of"]
 
 #: Types whose own formatter/short_name keeps one bare level of their
 #: contained type's name (``type_mismatch_describer.rb`` ``short_name``,
@@ -74,7 +75,11 @@ def _detailed(expected, actual):
     every case in this subset's goldens turns on: same Ruby/Python class."""
     if isinstance(expected, str):
         return False
-    return type(expected) is type(actual)
+    return (
+        type(expected) is type(actual)
+        or (isinstance(expected, Struct) and isinstance(actual, Hash))
+        or (isinstance(expected, Tuple) and isinstance(actual, Array))
+    )
 
 
 def _render_pair(expected, actual):
@@ -107,11 +112,13 @@ def _path_prefix(path):
 def _format_one(name, m):
     pos = _path_prefix(m.path)
     if m.kind == "missing_key":
-        return "{}{} expects a value for key {}".format(name, pos, _quote(m.key))
+        return "{}{} expects a value for key {}".format(name, pos, puppet_quote(m.key))
     if m.kind == "extra_key":
-        return "{}{} unrecognized key {}".format(name, pos, _quote(m.key))
+        return "{}{} unrecognized key {}".format(name, pos, puppet_quote(m.key))
     if m.kind == "unresolved":
-        return "{}{} references an unresolved type {}".format(name, pos, _quote(m.ref))
+        return "{}{} references an unresolved type {}".format(
+            name, pos, puppet_quote(m.ref)
+        )
     if m.kind == "size":
         return "{}{} expects size to be {}, got {}".format(
             name, pos, m.expected, m.actual
@@ -159,17 +166,13 @@ def _join_or(parts):
     return "{}, or {}".format(", ".join(uniq[:-1]), uniq[-1])
 
 
-def _quote(s):
-    return "'" + str(s).replace("\\", "\\\\").replace("'", "\\'") + "'"
-
-
 def _actual_literal(actual_type):
     """A ``PatternMismatch``'s "got" side is the value itself, quoted --
     never the type name (``string_PStringType`` never shows a value's own
     literal, but Puppet's ``PatternMismatch#message`` uses ``actual.value``
     directly)."""
     if isinstance(actual_type, String) and actual_type.literal is not None:
-        return _quote(actual_type.literal)
+        return puppet_quote(actual_type.literal)
     return short_name(actual_type)
 
 
@@ -246,6 +249,8 @@ def _variant(i):
 
 
 def _describe_variant(expected, value, path):
+    if not expected.types:
+        return [_Mismatch(path, "type", expected, infer_set(value))]
     per_branch = []
     for i, t in enumerate(expected.types):
         sub = _describe(t, value, path)
@@ -361,11 +366,11 @@ def _describe_hash(expected, value, path):
 
 
 def _entry(k):
-    return "entry {}".format(_quote(k))
+    return "entry {}".format(puppet_quote(k))
 
 
 def _key_of(k):
-    return "key of entry {}".format(_quote(k))
+    return "key of entry {}".format(puppet_quote(k))
 
 
 def _common_type(types):
@@ -380,6 +385,8 @@ def _common_type(types):
 def _describe_struct(expected, value, path):
     if not isinstance(value, dict):
         return [_Mismatch(path, "type", expected, infer_set(value))]
+    if expected.instance(value):
+        return []
     if not value or not all(isinstance(k, str) and k for k in value):
         # Not struct-shaped (empty, or a non-string key): Puppet compares
         # sizes, then reports the type mismatch against a plain Hash.
@@ -408,24 +415,6 @@ def _describe_struct(expected, value, path):
 
 
 # ---------------------------------------------------------------- public
-
-
-def describe_mismatch(name, expected, actual):
-    """``expected``/``actual`` are both already-computed type instances (no
-    value available), for callers holding two types directly. Renders one
-    top-level mismatch the same way :func:`assert_instance_of` renders a
-    leaf: for structural (index/entry/variant) detail, call
-    :func:`assert_instance_of` with the value instead, which is what every
-    caller in this codebase has."""
-    e_render, a_render = _render_pair(expected, actual)
-    if isinstance(expected, Optional) and expected.contained is not None:
-        e_render, _ = _render_pair(expected.contained, actual)
-        return "{} expects a value of type Undef or {}, got {}".format(
-            name, e_render, a_render
-        )
-    return "{} expects {} {} value, got {}".format(
-        name, _a_an(e_render), e_render, a_render
-    )
 
 
 def assert_instance_of(subject, expected, value, nil_ok=False):

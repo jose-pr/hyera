@@ -18,7 +18,7 @@ import math
 import re
 
 from ..exceptions import HieraLookupError
-from .types import Sensitive, infer_set
+from .types import Sensitive, infer_set, puppet_quote
 
 __all__ = ["convert", "puppet_quote"]
 
@@ -111,55 +111,6 @@ class _Format:
 
 _DEFAULT = {"Integer": _Format("%d"), "Float": _Format("%f")}
 _STRING_DEFAULT = _Format("%s")
-
-
-def puppet_double_quote(s):
-    out = ['"']
-    mapping = {
-        0x09: "\\t",
-        0x0A: "\\n",
-        0x0D: "\\r",
-        0x22: '\\"',
-        0x24: "\\$",
-        0x5C: "\\\\",
-    }
-    for c in s:
-        cp = ord(c)
-        if cp in mapping:
-            out.append(mapping[cp])
-        elif cp < 0x20:
-            out.append("\\u{{{:X}}}".format(cp))
-        else:
-            out.append(c)
-    out.append('"')
-    return "".join(out)
-
-
-def puppet_quote(s, enforce_double_quotes=False):
-    """Puppet's single-quoted string literal, falling back to double quotes
-    when ``s`` holds a control character (``string_converter.rb:862-925``)."""
-    if enforce_double_quotes:
-        return puppet_double_quote(s)
-    if any(ord(c) < 0x20 for c in s):
-        return puppet_double_quote(s)
-    out = ["'"]
-    escaped = False
-    for c in s:
-        cp = ord(c)
-        if escaped:
-            out.append("\\")
-            out.append(c)
-            escaped = False
-        elif cp == 0x27:
-            out.append("\\'")
-        elif cp == 0x5C:
-            escaped = True
-        else:
-            out.append(c)
-    if escaped:
-        out.append("\\")
-    out.append("'")
-    return "".join(out)
 
 
 def _ruby_float_inspect(f):

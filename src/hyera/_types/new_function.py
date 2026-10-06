@@ -477,7 +477,13 @@ def _new_hash(value, *args):
     # (Ruby's Array#to_h); anything else is a flat list paired up
     # sequentially (Ruby's Hash[*array]).
     if items and all(isinstance(e, (list, tuple)) and len(e) == 2 for e in items):
-        return {k: v for k, v in items}
-    if len(items) % 2 != 0:
+        pairs = [(k, v) for k, v in items]
+    elif len(items) % 2 != 0:
         raise HieraLookupError("odd number of arguments for Hash")
-    return {items[i]: items[i + 1] for i in range(0, len(items), 2)}
+    else:
+        pairs = [(items[i], items[i + 1]) for i in range(0, len(items), 2)]
+    try:
+        return dict(pairs)
+    except TypeError as e:
+        # Ruby allows an Array or Hash as a key; a Python dict does not.
+        raise HieraLookupError("unusable Hash key: {}".format(e)) from None

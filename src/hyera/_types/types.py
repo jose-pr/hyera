@@ -345,9 +345,53 @@ def _ruby_regex(source):
         raise HieraLookupError("{}: /{}/".format(text, source)) from None
 
 
-def _puppet_quote(value):
-    """Puppet's single-quoted string literal rendering (``puppet_quote``)."""
-    return "'" + str(value).replace("\\", "\\\\").replace("'", "\\'") + "'"
+def puppet_double_quote(s):
+    """Puppet's double-quoted string literal (``puppet_double_quote``)."""
+    out = ['"']
+    mapping = {
+        0x09: "\\t",
+        0x0A: "\\n",
+        0x0D: "\\r",
+        0x22: '\\"',
+        0x24: "\\$",
+        0x5C: "\\\\",
+    }
+    for c in s:
+        cp = ord(c)
+        if cp in mapping:
+            out.append(mapping[cp])
+        elif cp < 0x20:
+            out.append("\\u{{{:X}}}".format(cp))
+        else:
+            out.append(c)
+    out.append('"')
+    return "".join(out)
+
+
+def puppet_quote(s, enforce_double_quotes=False):
+    """Puppet's single-quoted string literal, falling back to double quotes
+    when ``s`` holds a control character (``string_converter.rb`` ``puppet_quote``)."""
+    s = str(s)
+    if enforce_double_quotes or any(ord(c) < 0x20 for c in s):
+        return puppet_double_quote(s)
+    out = ["'"]
+    escaped = False
+    for c in s:
+        cp = ord(c)
+        if escaped:
+            out.append("\\")
+            out.append(c)
+            escaped = False
+        elif cp == 0x27:
+            out.append("\\'")
+        elif cp == 0x5C:
+            escaped = True
+        else:
+            out.append(c)
+    if escaped:
+        out.append("\\")
+    out.append("'")
+    return "".join(out)
 
 
 def _num_str(value):
@@ -376,7 +420,7 @@ def _literal_str(value):
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, str):
-        return _puppet_quote(value)
+        return puppet_quote(value)
     if isinstance(value, float):
         return _num_str(value)
     return str(value)
@@ -423,16 +467,6 @@ class Any(metaclass=_Sealing):
         """Whether ``value`` is a Puppet instance of this type."""
         return True
 
-    def assignable(self, other: "Any") -> bool:
-        """Whether every instance of ``other`` is also an instance of this
-        type (Puppet's own type-assignability, used by ``generalize``)."""
-        return isinstance(other, Any)
-
-    def normalize(self) -> "Any":
-        """This type, or an equivalent, simplified one (overridden by
-        :class:`TypeAlias`, the only type this subset ever normalizes)."""
-        return self
-
     def generalize(self) -> "Any":
         """This type with any literal narrowing removed (e.g. a literal
         ``String`` loses its ``.literal``), Puppet's own ``generalize``."""
@@ -442,17 +476,6 @@ class Any(metaclass=_Sealing):
     def name(self) -> str:
         """This type's own Puppet name, with any parameters."""
         return self.TYPE_NAME
-
-    @property
-    def simple_name(self) -> str:
-        """This type's bare Puppet name, with no parameters."""
-        return self.TYPE_NAME
-
-    def alias_expanded_str(self) -> str:
-        """This type's own text, with every :class:`TypeAlias` it contains
-        expanded to its full body (overridden by :class:`TypeAlias` itself
-        and the few container types that can hold one)."""
-        return str(self)
 
     def __str__(self) -> str:
         return self.name
@@ -506,9 +529,6 @@ class Undef(Any):
     def instance(self, value):
         return value is None
 
-    def assignable(self, other):
-        return isinstance(other, Undef)
-
 
 class NotUndef(Any):
     __slots__ = ("contained",)
@@ -523,13 +543,6 @@ class NotUndef(Any):
         if self.contained is None:
             return True
         return _type_instance(self.contained, value)
-
-    def assignable(self, other):
-        if isinstance(other, Undef):
-            return False
-        if self.contained is None:
-            return True
-        return _type_assignable(self.contained, other)
 
     def _key(self):
         return (_key_of(self.contained),)
@@ -551,13 +564,6 @@ class Optional(Any):
         if self.contained is None:
             return False
         return _type_instance(self.contained, value)
-
-    def assignable(self, other):
-        if isinstance(other, Undef):
-            return True
-        if self.contained is None:
-            return True
-        return _type_assignable(self.contained, other)
 
     def _key(self):
         return (_key_of(self.contained),)
@@ -615,15 +621,6 @@ class Integer(Any):
             return False
         return True
 
-    def assignable(self, other):
-        if not isinstance(other, Integer):
-            return False
-        if self.from_ is not None and (other.from_ is None or other.from_ < self.from_):
-            return False
-        if self.to is not None and (other.to is None or other.to > self.to):
-            return False
-        return True
-
     def generalize(self):
         return Integer.DEFAULT
 
@@ -654,15 +651,6 @@ class Float(Any):
         if self.from_ is not None and value < self.from_:
             return False
         if self.to is not None and value > self.to:
-            return False
-        return True
-
-    def assignable(self, other):
-        if not isinstance(other, Float):
-            return False
-        if self.from_ is not None and (other.from_ is None or other.from_ < self.from_):
-            return False
-        if self.to is not None and (other.to is None or other.to > self.to):
             return False
         return True
 
@@ -710,24 +698,6 @@ class String(Any):
             return False
         return True
 
-    def assignable(self, other):
-        if not isinstance(other, String):
-            return False
-        if self.literal is not None:
-            return other.literal == self.literal
-        if self.size_from is None and self.size_to is None:
-            return True
-        if other.literal is not None:
-            n = len(other.literal)
-            lo, hi = n, n
-        else:
-            lo, hi = other.size_from, other.size_to
-        if self.size_from is not None and (lo is None or lo < self.size_from):
-            return False
-        if self.size_to is not None and (hi is None or hi > self.size_to):
-            return False
-        return True
-
     def generalize(self):
         return String.DEFAULT
 
@@ -758,11 +728,6 @@ class Boolean(Any):
         if not isinstance(value, bool):
             return False
         return self.value is None or value == self.value
-
-    def assignable(self, other):
-        if not isinstance(other, Boolean):
-            return False
-        return self.value is None or other.value == self.value
 
     def generalize(self):
         return BOOLEAN
@@ -1050,7 +1015,7 @@ class StructElement:
 
     def render_key(self):
         value_optional = _type_instance(self.value_type, None)
-        quoted = _puppet_quote(self.key)
+        quoted = puppet_quote(self.key)
         if self.optional:
             return quoted if value_optional else "Optional[{}]".format(quoted)
         return "NotUndef[{}]".format(quoted) if value_optional else quoted
@@ -1099,9 +1064,6 @@ class Variant(Any):
 
     def instance(self, value):
         return any(_type_instance(t, value) for t in self.types)
-
-    def assignable(self, other):
-        return any(_type_assignable(t, other) for t in self.types)
 
     def generalize(self):
         return Variant([generalize(t) for t in self.types])
@@ -1166,7 +1128,7 @@ class TypeReference(Any):
         return (self.text,)
 
     def __str__(self):
-        return "TypeReference[{}]".format(_puppet_quote(self.text))
+        return "TypeReference[{}]".format(puppet_quote(self.text))
 
 
 class _PNamedType(Any):
@@ -1215,7 +1177,7 @@ class Runtime(Any):
         return (self.runtime, self.runtime_name)
 
     def __str__(self):
-        return "Runtime[{}, {}]".format(self.runtime, _puppet_quote(self.runtime_name))
+        return "Runtime[{}, {}]".format(self.runtime, puppet_quote(self.runtime_name))
 
 
 class TypeAlias(Any):
@@ -1245,14 +1207,6 @@ class TypeAlias(Any):
     def instance(self, value):
         return _type_instance(self.resolved_type, value)
 
-    def assignable(self, other):
-        if other is self:
-            return True
-        return _type_assignable(self.resolved_type, other)
-
-    def normalize(self):
-        return self.resolved_type.normalize()
-
     @property
     def name(self):
         return self.alias_name
@@ -1262,32 +1216,6 @@ class TypeAlias(Any):
 
     def __str__(self):
         return self.alias_name
-
-    def alias_expanded_str(self, _guard=None):
-        guard = _guard or set()
-        if self.alias_name in guard:
-            return self.alias_name
-        guard = guard | {self.alias_name}
-        return _alias_expand(self.resolved_type, guard)
-
-
-def _alias_expand(t, guard):
-    if isinstance(t, TypeAlias):
-        return t.alias_expanded_str(guard)
-    if isinstance(t, Variant):
-        return "Variant[{}]".format(", ".join(_alias_expand(x, guard) for x in t.types))
-    if isinstance(t, Array) and t.element_type is not None:
-        parts = [_alias_expand(t.element_type, guard)]
-        parts += _render_size_args(t.size_from, t.size_to)
-        return "Array[{}]".format(", ".join(parts))
-    if isinstance(t, Hash) and (t.key_type is not None or t.value_type is not None):
-        parts = [
-            _alias_expand(t.key_type, guard) if t.key_type is not None else "Any",
-            _alias_expand(t.value_type, guard) if t.value_type is not None else "Any",
-        ]
-        parts += _render_size_args(t.size_from, t.size_to)
-        return "Hash[{}]".format(", ".join(parts))
-    return str(t)
 
 
 #: Puppet's five static-loader type aliases (``static_loader.rb:30-36``).
@@ -1346,9 +1274,9 @@ def _render_container(name, contained, show_literal=False):
     if contained is None or (name == "NotUndef" and type(contained) is Any):
         return name
     if show_literal and isinstance(contained, String) and contained.literal is not None:
-        return "{}[{}]".format(name, _puppet_quote(contained.literal))
+        return "{}[{}]".format(name, puppet_quote(contained.literal))
     if isinstance(contained, str):
-        return "{}[{}]".format(name, _puppet_quote(contained))
+        return "{}[{}]".format(name, puppet_quote(contained))
     return "{}[{}]".format(name, contained)
 
 
@@ -1367,12 +1295,6 @@ def _type_instance(t, value):
     if isinstance(t, str):
         return value == t
     return t.instance(value)
-
-
-def _type_assignable(t, other):
-    if isinstance(t, str):
-        return isinstance(other, String) and other.literal == t
-    return t.assignable(other)
 
 
 def infer(value):

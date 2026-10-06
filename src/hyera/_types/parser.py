@@ -151,6 +151,10 @@ _TOKEN_RE = re.compile(
 
 _KEYWORDS = {"true", "false", "undef", "default"}
 
+#: The deepest nesting of brackets a type expression may have; beyond it the
+#: parser would exhaust the interpreter's stack.
+_MAX_NESTING = 200
+
 
 class _Tok:
     __slots__ = ("kind", "text", "start", "end", "ws_before", "value")
@@ -227,6 +231,7 @@ class _Parser:
         self.text = text
         self.tokens = _tokenize(text)
         self.pos = 0
+        self.depth = 0
 
     def peek(self):
         return self.tokens[self.pos]
@@ -253,6 +258,18 @@ class _Parser:
     # -- expressions -----------------------------------------------------
 
     def parse_primary(self):
+        self.depth += 1
+        try:
+            if self.depth > _MAX_NESTING:
+                raise HieraLookupError(
+                    "The type expression is nested more than {} levels "
+                    "deep".format(_MAX_NESTING)
+                )
+            return self._parse_primary()
+        finally:
+            self.depth -= 1
+
+    def _parse_primary(self):
         tok = self.peek()
         if tok.kind == "qref":
             self.advance()

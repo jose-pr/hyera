@@ -122,6 +122,43 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Windows: a UNC datadir or pattern is walked by `glob`, a literal glob
   segment after `**` follows the filesystem's case rule like any other
   literal, and a backslash-absolute interpolated path is absolute.
+- Type objects follow Puppet 8.10 where they differed. `ScalarData` accepts
+  only an Integer, Float, String or Boolean (it also accepted an Array or Hash
+  of them). A `Struct` key is optional when its value type accepts undef, so
+  `Struct[{name => String, port => Optional[Integer]}]` accepts `{'name' =>
+  'x'}` (it required `port`), and `NotUndef[key]` makes a key required. A
+  `Tuple`'s trailing size is a minimum with the last type repeating
+  (`Tuple[String, 1]` accepts `['a', 'b']`; it was an exact size), and bare
+  `Tuple` is any array. Bare `Optional` accepts only undef, bare `Pattern` and
+  `Enum` accept any String, a trailing `true` in `Enum` makes it
+  case-insensitive, `Sensitive[T]` keeps only `T`'s generalized type, and NaN
+  is not a `Float`. `Integer[0x10]` is 16 and `Integer[010]` is 8, size bounds
+  default to 0, and `Variant` flattens.
+- Ruby regular expressions in `Pattern`, `Regexp` and `lookup_options` keys
+  are translated in one pass: `\z` no longer matches before a trailing
+  newline, `\h`, POSIX bracket classes, `(?m)` and `(?i)` (scoped to the rest
+  of its group) work, `\w \d \s` are ASCII, and a construct with no Python
+  form (`\p{..}`, `\R`, a nested class, ...) raises `HieraLookupError` naming
+  it instead of `re.error`.
+- `new()` and `convert_to`: `Integer`, `Float` and `Numeric` honour `abs` and
+  the `{from, radix, abs}` hash, read strings with Puppet's anchored patterns
+  (`'12\n'`, `'inf'`, `'1_000'` are refused) and check their argument count; a
+  `String` format must be exactly one directive, follows Ruby's `format` per
+  value type (negative `%x` is `..f01`) and raises Puppet's "Illegal format"
+  text for a directive the type does not take; a Hash prints as `{'a' => 1}`.
+  Previously a format that was not a directive, or an illegal one, was
+  silently ignored.
+- `hyera.types` subscripts keep the parameters of a nested type
+  (`Optional[Integer[1, 3]]` was `Optional[Integer]`), and type objects are
+  immutable and compare equal only to other type objects.
+- A failed `convert_to` conversion of any kind raises `HieraLookupError`
+  ("The convert_to lookup_option for key ... raised error"); a type
+  expression nested more than 200 levels, and an unusable `Hash` key, raise
+  it too.
+- Concurrent type parses no longer return another thread's source text.
+- A `Struct` mismatch against a hash with a non-string key reports a size or
+  type mismatch as Puppet does, and `Enum`/`Struct` members render with
+  Puppet's own quoting.
 
 ## [0.0.0] - 2026-10-01
 
