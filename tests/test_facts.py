@@ -22,6 +22,16 @@ def _write(tmp_path, name, text):
     return path
 
 
+@pytest.mark.parametrize("target", ["nosuch.yaml", ""])
+def test_load_facts_unreadable_path_raises_backend_error(tmp_path, target):
+    path = tmp_path / target
+    with pytest.raises(BackendError) as info:
+        load_facts(path)
+    assert info.value.path == str(path)
+    assert info.value.__cause__ is None
+    assert info.value.__context__ is None
+
+
 def test_load_facts_json(tmp_path):
     path = _write(
         tmp_path, "facts.json", '{"os": {"family": "Suse"}, "flag": true, "n": 3}'

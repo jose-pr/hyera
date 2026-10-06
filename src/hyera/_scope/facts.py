@@ -31,11 +31,18 @@ _NO_RESULT = object()
 
 
 def _read_bytes(path) -> bytes:
-    reader = getattr(path, "read_bytes", None)
-    if reader is not None:
-        return reader()
-    with open(os.fspath(path), "rb") as fh:
-        return fh.read()
+    problem = None
+    try:
+        reader = getattr(path, "read_bytes", None)
+        if reader is not None:
+            return reader()
+        with open(os.fspath(path), "rb") as fh:
+            return fh.read()
+    except OSError as e:
+        problem = e.strerror or str(e)
+    raise BackendError(
+        "Could not read the facts file {}: {}".format(path, problem), path=str(path)
+    )
 
 
 def _reject_symbols(value, label) -> None:
