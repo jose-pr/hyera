@@ -15,15 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from hyera._output.explain import (
-    Explainer,
-    _dump_value,
-    _Location,
-    _LocationRef,
-    _Node,
-    _ProviderRef,
-    _Top,
-)
+from hyera._output.explain import Explainer, _Location, _Node, _Top
+from hyera._output.explain_refs import _dump_value, _LocationRef, _ProviderRef
 
 _GOLDEN = json.loads(
     (

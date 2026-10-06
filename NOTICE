@@ -42,6 +42,7 @@ The files ported from Puppet are:
     src/hyera/_lookup/locations.py (from puppet/pops/lookup/data_hash_function_provider.rb)
     src/hyera/_lookup/providers.py (from puppet/pops/lookup/hiera_config.rb)
     src/hyera/_lookup/merge_strategy.py (from puppet/pops/merge_strategy.rb)
+    src/hyera/_output/explain_refs.py (from puppet/pops/lookup/explainer.rb, configured_data_provider.rb, hiera_config.rb)
     src/hyera/_output/explain.py (from puppet/pops/lookup/explainer.rb, configured_data_provider.rb)
     src/hyera/backends/__init__.py (from puppet/functions/yaml_data.rb)
     src/hyera/backends/_yaml.py (from puppet/functions/yaml_data.rb)

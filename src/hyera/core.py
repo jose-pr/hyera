@@ -32,10 +32,9 @@ from ._output.explain import (
     Explainer,
     ExplainResult,
     _DebugExplainer,
-    _ProviderRef,
     _debug_preamble,
-    _provider_ref,
 )
+from ._output.explain_refs import _ProviderRef, _provider_ref
 from ._config.config_v3 import _default_codedir
 from ._config.hiera_config import HieraLevel
 from ._lookup.function_provider import _EnvironmentContext

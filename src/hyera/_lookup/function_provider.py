@@ -19,7 +19,7 @@ import contextlib
 import os
 import typing as _ty
 
-from .._output.explain import _LocationRef
+from .._output.explain_refs import _LocationRef
 from .interpolation import interpolate
 from .invocation import Invocation
 from ..exceptions import BackendError, ConfigError
@@ -34,7 +34,7 @@ _NULL_CONTEXT = contextlib.nullcontext()
 
 
 def _location_ref(location) -> _LocationRef:
-    """A :class:`~hyera._output.explain._LocationRef` for one resolved location
+    """A :class:`~hyera._output.explain_refs._LocationRef` for one resolved location
     (``locations._Location``/``_location_resolver.ResolvedLocation`` -- both
     ``(original, location, is_uri, exist)``-shaped). The path form always
     renders with ``/`` separators, matching what Ruby's ``Pathname`` prints on

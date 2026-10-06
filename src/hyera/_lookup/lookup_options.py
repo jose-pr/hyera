@@ -21,7 +21,7 @@ from .._config.data_provider import (
     module_provider_for,
     usable_provider,
 )
-from .._output.explain import _provider_ref
+from .._output.explain_refs import _provider_ref
 
 #: Sentinel distinguishing "no location in this layer's own hierarchy
 #: declares ``lookup_options`` at all" from an explicit ``lookup_options: ~``
