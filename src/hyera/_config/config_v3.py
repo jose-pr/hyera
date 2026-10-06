@@ -22,12 +22,8 @@ from .._lookup.interpolation import _to_puppet_str
 from ..exceptions import ConfigError
 from .config_source import _ConfigSource, _config_error, _ruby_type_name, _type_error
 from .config_v5 import _msg
-from .hiera_config import (
-    V3_DEFAULT_CONFIG_HASH,
-    _build_level,
-    _v3_backend_class,
-    _warn_deprecated,
-)
+from .hiera_config import V3_DEFAULT_CONFIG_HASH, _warn_deprecated
+from .level_builder import _build_level, _v3_backend_class
 
 
 def _fill_v3_defaults(data: dict) -> None:

@@ -15,7 +15,8 @@ from ..exceptions import ConfigError
 from .config_source import _ConfigSource, _config_error, _ruby_type_name
 from .config_v5 import _msg
 from .config_v3 import _V3_NAME_RE_TEMPLATE, _find_line_matching, _v3_string_detail
-from .hiera_config import _build_level, _warn_deprecated
+from .hiera_config import _warn_deprecated
+from .level_builder import _build_level
 
 #: ``HieraConfigV4``'s own struct keys (``hiera_config.rb:489-507``), in
 #: schema-declaration order.
