@@ -28,12 +28,11 @@ from hyera._config.hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
     _default_codedir,
     _fill_v3_defaults,
-    _fill_v4_defaults,
     _find_line_matching,
     _v3_level_specs,
-    _validate_v4,
 )
 from hyera._config.config_source import _ConfigSource
+from hyera._config.config_v4 import _fill_v4_defaults, _validate_v4
 from hyera._lookup.invocation import Invocation
 from hyera.backends._psych import RubySymbol
 
