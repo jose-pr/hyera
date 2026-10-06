@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "173dc9aab4a7310fb0e15bf3613bfd27045e9ce717105fa9f6b48bcea6462261",
   "results": {
@@ -14,6 +22,7 @@
         "--explain",
         "gk"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -147,6 +156,7 @@
         "--explain",
         "mymod::arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -392,6 +402,7 @@
         "--explain-options",
         "mymod::arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [

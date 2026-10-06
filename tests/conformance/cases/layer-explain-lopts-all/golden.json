@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "5b60adaff29dacc7bdfd7e5584b654aea510a6bedbf2d6137bc3bf99fa820585",
   "results": {
@@ -14,6 +22,7 @@
         "--explain",
         "mymod::arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -338,6 +347,7 @@
         "--explain",
         "mymod::k"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -632,6 +642,7 @@
         "mymod::arr",
         "mymod::k"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1022,6 +1033,7 @@
         "--explain",
         "mymod::nokey"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1384,6 +1396,7 @@
         "--explain",
         "mymod::dflt"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1748,6 +1761,7 @@
         "--explain",
         "mymod::arr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The first element of the merge has wrong type, expects a Hash value, got Tuple"
     }
