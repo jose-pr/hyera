@@ -32,19 +32,31 @@ class RubySymbol:
     :param name: the symbol's name, without the leading ``:``.
     """
 
-    __slots__ = ("name",)
+    __slots__ = ("_name",)
 
     def __init__(self, name: str) -> None:
-        self.name: str = name
+        self._name: str = name
+
+    @property
+    def name(self) -> str:
+        """The symbol's name, without the leading ``:``."""
+        return self._name
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, RubySymbol) and self.name == other.name
+        if not isinstance(other, RubySymbol):
+            return NotImplemented
+        return self._name == other._name
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        if not isinstance(other, RubySymbol):
+            return NotImplemented
+        return self._name != other._name
 
     def __hash__(self) -> int:
-        return hash((RubySymbol, self.name))
+        return hash((RubySymbol, self._name))
+
+    def __reduce__(self) -> "tuple[type, tuple[str]]":
+        return (RubySymbol, (self._name,))
 
     def __repr__(self) -> str:
         return ":{}".format(self.name)

@@ -23,6 +23,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `repr(Hiera(...))` is one line naming the class, the base config and the
+  scope's environment (`Hiera(config='/etc/hiera.yaml', environment='production')`),
+  and never data or scope values.
+- `RubySymbol.name` is read-only, and comparing a `RubySymbol` with a
+  non-symbol returns `NotImplemented` instead of `False`; equality, hashing,
+  pickling and `copy` are otherwise unchanged.
 - `ConfigError`, `BackendError`, `InterpolationError` and `MergeError` are
   also `ValueError`, so a caller's `except ValueError` catches malformed
   config, data and interpolation text. Their text, `args`, pickling and

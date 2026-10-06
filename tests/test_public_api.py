@@ -525,3 +525,39 @@ def test_hiera_level_paths_are_strings(tmp_path):
     paths = level.paths(tmp_path, hyera.Scope())
     assert [type(p) for p in paths] == [str, str]
     assert [os.path.basename(p) for p in paths] == ["a.yaml", "b.yaml"]
+
+
+def test_hiera_repr_names_the_config_and_environment_and_nothing_else(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    scope = hyera.Scope(
+        variables={"secret_param": "s3cret-value"}, environment="staging"
+    )
+    h = hyera.Hiera(root / "hiera.yaml", scope=scope)
+    text = repr(h)
+    assert "\n" not in text
+    assert text == "Hiera(config={!r}, environment='staging')".format(
+        str((root / "hiera.yaml").absolute())
+    )
+    assert "s3cret-value" not in text
+    assert "secret_param" not in text
+    h("k")
+    assert repr(h) == text
+    assert repr(h.scoped(environment="other")).endswith("environment='other')")
+
+
+def test_hiera_repr_names_an_in_memory_config_by_its_kind():
+    h = hyera.Hiera({"version": 5, "hierarchy": []})
+    assert repr(h) == "Hiera(config='<dict>', environment='production')"
+    assert repr(hyera.Hiera(None)) == (
+        "Hiera(config='<default>', environment='production')"
+    )
+
+
+def test_hiera_repr_follows_a_subclass_name():
+    class Mine(hyera.Hiera):
+        pass
+
+    assert repr(Mine({"version": 5, "hierarchy": []})).startswith("Mine(config=")

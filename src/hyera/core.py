@@ -360,6 +360,15 @@ class Hiera:
             for name in _PLAIN_CACHES:
                 getattr(self, name).clear()
 
+    def __repr__(self) -> str:
+        """One line naming the class, the base config and the scope's
+        environment; never data, scope values or options."""
+        return "{}(config={!r}, environment={!r})".format(
+            type(self).__name__,
+            self._global.source.label,  # type: ignore[attr-defined]
+            self.scope.environment,
+        )
+
     def __getstate__(self) -> _ty.Dict[str, _ty.Any]:
         """Drop every cache and the lock they share -- a ``threading.Lock``
         is never picklable, and a freshly rebuilt, empty set of caches is a

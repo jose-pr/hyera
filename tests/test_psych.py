@@ -3,7 +3,9 @@ measured against real Ruby 4.0.7 / Psych 5.3.1 via a dedicated oracle probe.
 Parametrized over both loader backends where the C/pure distinction
 matters (only the tab-after-colon row differs)."""
 
+import copy
 import math
+import pickle
 
 import pytest
 import yaml
@@ -881,3 +883,41 @@ def test_key_collision_message_never_quotes_a_string_key():
 )
 def test_integers_beyond_the_interpreters_digit_limit_load(text, expected):
     assert safe_load("k: " + text + "\n")["k"] == expected
+
+
+def test_ruby_symbol_is_never_equal_to_a_plain_string():
+    assert RubySymbol("a") != "a"
+    assert "a" != RubySymbol("a")
+    assert not (RubySymbol("a") == "a")
+    assert RubySymbol("a").__eq__("a") is NotImplemented
+    assert RubySymbol("a").__ne__("a") is NotImplemented
+
+
+def test_ruby_symbol_is_a_dict_key_distinct_from_the_string():
+    table = {RubySymbol("a"): 1, "a": 2}
+    assert len(table) == 2
+    assert table[RubySymbol("a")] == 1
+    assert table["a"] == 2
+    assert hash(RubySymbol("a")) == hash(RubySymbol("a"))
+
+
+def test_ruby_symbol_name_is_read_only():
+    symbol = RubySymbol("a")
+    with pytest.raises(AttributeError):
+        symbol.name = "b"
+    with pytest.raises(AttributeError):
+        symbol.other = 1
+    assert symbol.name == "a"
+
+
+@pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
+def test_ruby_symbol_survives_pickle_and_copy(protocol):
+    symbol = RubySymbol("a b")
+    for clone in (
+        pickle.loads(pickle.dumps(symbol, protocol)),
+        copy.copy(symbol),
+        copy.deepcopy(symbol),
+    ):
+        assert clone == symbol
+        assert clone.name == "a b"
+        assert repr(clone) == ":a b"

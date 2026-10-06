@@ -63,6 +63,9 @@ since Hiera data is dynamic.
   (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
   elsewhere) — never the per-user `~/.puppetlabs/etc/code` default, and
   never discovered from `puppet.conf`.
+  `repr(h)` is one line, `Hiera(config='<label>', environment='<name>')`:
+  the config's absolute path (or `<dict>`, `<default>`, a stream's name or
+  `<stream>`) and the scope's environment, never data or scope values.
   `self.scope` is set before the config loads, so a hierarchy path template
   referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
   it from the first lookup onward. A missing or `null`/`false`
@@ -971,7 +974,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   strip (see the BOM gotcha, below). A YAML date/timestamp-shaped scalar
   raises `BackendError("Tried to load unspecified class: Date"/"...:
   Time")` — like Puppet, there is no lenient mode. A Ruby symbol
-  (`hyera.backends.RubySymbol(name)`, `__slots__`, not a `str` subclass)
+  (`hyera.backends.RubySymbol(name)`: immutable, `.name` read-only, equal
+  only to another `RubySymbol` of that name, never to a `str`)
   represents a `:symbol`/`!ruby/sym(bol)` scalar; only its use as a **key**
   is normalized to a plain string automatically (a symbol *value* survives
   as `RubySymbol` and is not a valid Puppet lookup value — see the
