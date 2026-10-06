@@ -30,10 +30,10 @@ from .hiera_config import (
     _read_v3,
     _read_v4,
     _validate_v3,
-    _validate_v5,
     _warn_deprecated,
 )
 from .config_source import _config_error, _config_version
+from .config_v5 import _validate_v5
 from .._lookup.navigation import LOOKUP_OPTIONS
 from ..exceptions import ConfigError, HieraError, _one_line
 
