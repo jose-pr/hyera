@@ -366,3 +366,103 @@ def test_error_carries_no_part_of_the_document(run, tmp_path):
         run(tmp_path)
     for text in _exception_texts(excinfo.value):
         assert _SECRET not in text
+
+
+# ---------------------------------------------------------------------------
+# The cheap nesting bound that lets ordinary YAML skip the event walk
+# ---------------------------------------------------------------------------
+
+
+def _measured_depth(text):
+    """Deepest collection nesting of the first document, from parse events
+    (None when the text is not parseable)."""
+    import yaml
+
+    depth = deepest = 0
+    try:
+        for event in yaml.parse(text, Loader=yaml.SafeLoader):
+            if isinstance(event, (yaml.SequenceStartEvent, yaml.MappingStartEvent)):
+                depth += 1
+                deepest = max(deepest, depth)
+            elif isinstance(event, (yaml.SequenceEndEvent, yaml.MappingEndEvent)):
+                depth -= 1
+            elif isinstance(event, yaml.DocumentEndEvent):
+                break
+    except yaml.YAMLError:
+        return None
+    return deepest
+
+
+def _adversarial_documents(rng):
+    n = rng.randint(1, 40)
+    step = rng.choice([1, 2, 3, 4])
+    yield "k: " + "[" * n + "]" * n
+    yield "k: " + "{a: " * n + "1" + "}" * n
+    yield "".join(" " * (step * i) + "k:\n" for i in range(n))
+    yield "".join(" " * (step * i) + "- k:\n" for i in range(n))
+    yield "- " * n + "x"
+    yield "? " * n + "x\n" + ": " * n + "y\n"
+    yield "- ? " * n + "x\n"
+    yield "".join(" " * (2 * i) + "k:\n" + " " * (2 * i) + "- \n" for i in range(n))
+    yield "a:\n" + "".join("- b:\n" if i % 2 else "  - c:\n" for i in range(n))
+    yield "k: '" + "[" * n + "'\n# " + "[" * n + "\nj: |\n  " + "{" * n + "\n"
+    yield "- - - [[[{a: [b]}]]]\n- - \n  - x\n"
+    yield "k:\r\n" + "".join(" " * (2 * i + 2) + "k:\r\n" for i in range(n))
+    yield "a:\r  b:\r    c: [d]\r" + "".join(
+        " " * (2 * i + 2) + "e:\r" for i in range(n)
+    )
+    yield "\ufeffa:\n  b:\n" + "    c:\n" * n
+    yield "a:\n\tb: [[c]]\n"
+    yield "---\n" + "- " * n + "x\n---\n" + "- " * (n + 5) + "y\n"
+
+
+def test_nesting_bound_never_undercounts():
+    from hyera.backends._psych import _nesting_bound
+
+    rng = random.Random("bound")
+    checked = 0
+    for _ in range(300):
+        documents = list(_adversarial_documents(rng))
+        documents += [_generate(rng, "yaml") for _ in range(40)]
+        for text in documents:
+            measured = _measured_depth(text.replace("\ufeff", " ", 1))
+            if measured is not None:
+                assert _nesting_bound(text) >= measured, repr(text[:200])
+                checked += 1
+    assert checked > 5000
+
+
+def test_limit_check_agrees_with_the_bound():
+    from hyera.backends._psych import _MAX_NESTING, _nesting_bound
+    from hyera.backends._psych import _within_nesting_limit
+
+    for blocks in (0, 100, 247, 248, 249, 250, 251, 400):
+        for flows in (0, 1, 3, 100, 499, 500, 501):
+            text = "- " * blocks + "x" + "[" * flows + "]" * flows
+            assert _within_nesting_limit(text) == (
+                _nesting_bound(text) <= _MAX_NESTING
+            ), (blocks, flows)
+
+
+def test_ordinary_block_documents_skip_the_event_walk(monkeypatch):
+    from hyera.backends import _psych
+
+    text = "".join(
+        "svc{0}:\n  name: h\n  ports:\n    - 80\n    - 443\n".format(i)
+        + ("  opts: [a, b]\n" if i % 10 == 0 else "")
+        for i in range(2000)
+    )
+
+    def boom(*_args):
+        raise AssertionError("the event walk ran")
+
+    monkeypatch.setattr(_psych, "_LOADER", boom)
+    assert _psych._scan_structure(text) is boom
+
+
+def test_repeated_anchor_names_are_still_found():
+    from hyera.backends._psych import _anchors_may_repeat
+
+    assert not _anchors_may_repeat("a: &x 1\nb: *x\n")
+    assert not _anchors_may_repeat("a: &x 1\nb: &y 2\n")
+    assert _anchors_may_repeat("a: &x 1\nb: &x 2\n")

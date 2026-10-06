@@ -613,6 +613,45 @@ _ANCHORED = frozenset(
 _DOCUMENT_END = yaml.events.DocumentEndEvent
 
 
+#: A run of line breaks, blanks and block indicators. A block collection
+#: starts after nothing but such a run on its line (indentation plus compact
+#: ``- ``, ``? ``, ``: `` entries), so its column is at most the longest run.
+_BLOCK_PREFIX_RE = re.compile("[ \t\r\n\x85  \\-?:]+")
+_ANCHOR_NAME_RE = re.compile("&[0-9A-Za-z_-]+")
+
+
+def _nesting_bound(text: str) -> int:
+    """An upper bound on the collection nesting of any document in ``text``,
+    from string operations alone.
+
+    Flow collections: each needs a ``[`` or ``{``. Block collections: a
+    child is at a deeper column, or at the same column only as the indentless
+    sequence of a mapping, so at most two per column, and no column exceeds
+    the longest block-prefix run. Quotes, comments, block scalars and later
+    documents can only add to the count.
+    """
+    longest = max(map(len, _BLOCK_PREFIX_RE.findall(text)), default=0)
+    return text.count("[") + text.count("{") + 2 * (longest + 1)
+
+
+def _within_nesting_limit(text: str) -> bool:
+    """``_nesting_bound(text) <= _MAX_NESTING``, without building the runs."""
+    room = (_MAX_NESTING - text.count("[") - text.count("{")) // 2
+    if room < 1:
+        return False
+    # The bound holds when no run is `room` characters long.
+    return re.search("[ \t\r\n\x85  \\-?:]{%d}" % room, text) is None
+
+
+def _anchors_may_repeat(text: str) -> bool:
+    """Whether some anchor name might be defined twice (an anchor starts with
+    ``&``; the name prefix is compared, so a repeat is never missed)."""
+    if text.count("&") < 2:
+        return False
+    names = _ANCHOR_NAME_RE.findall(text)
+    return len(set(names)) != len(names)
+
+
 def _scan_structure(text: str):
     """Walk the first document's parse events, which the parser produces
     without recursion, before anything recursive sees it.
@@ -621,13 +660,13 @@ def _scan_structure(text: str):
         anchor name is defined twice.
     :raises BackendError: nesting exceeds :data:`_MAX_NESTING`.
     """
-    # Each level needs at least one character, and an anchor needs an "&".
-    if len(text) <= _MAX_NESTING and "&" not in text:
+    anchors_repeat = _anchors_may_repeat(text)
+    if not anchors_repeat and _within_nesting_limit(text):
         return _LOADER
     depth = 0
     anchors = set()
     redefined = False
-    track_anchors = "&" in text
+    track_anchors = anchors_repeat
     scanner = _LOADER(text)
     get_event = scanner.get_event
     try:
