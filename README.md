@@ -700,7 +700,7 @@ locations and under globbed directories are seen by the next lookup.
 | Type expressions | Partial | a type alias other than `Data`/`RichData` is unsupported. (id: `convert-to-unsupported-type`) |
 | `yaml_data` | Supported | |
 | `json_data` | Supported | |
-| `hocon_data` | Partial | `include file("*.conf")` globs by default, where Puppet's never does; see [Backends](#backends). (id: `hocon-include-glob`) |
+| `hocon_data` | Partial | `include file("*.conf")` globs by default, where Puppet's never does, and pyhocon parses a few constructs differently; see [Backends](#backends) and Differences from Puppet. (id: `hocon-include-glob`) |
 | `eyaml_lookup_key` | Partial | PKCS7 only; other hiera-eyaml encryptors are not supported. (id: `eyaml-pkcs7-only`) |
 | `sops_data` | Supported | the one backend with no Puppet equivalent. (id: `sops-backend`) |
 | `puppet lookup` CLI flags | Partial | every flag except `--compile`/`--trusted` and the binary `--render-as` formats. (id: `environment-conf-compile-trusted-unsupported`) |
@@ -774,6 +774,18 @@ for.
   entry or in `defaults`) is available as a stricter, non-resolving
   alternative for every include form. Every other `include` form matches Puppet exactly
   (see [Backends](#backends)). (id: `hocon-include-glob`)
+- **`hocon_data` is parsed by pyhocon, not Ruby's hocon gem.** Quoted keys,
+  `null` inside a concatenation and unicode escapes match Puppet, but these
+  constructs differ (Puppet, then hyera): `list = [1]` then `list += 2`
+  gives `[1,2]`, then `2`; `enabled = True` is the string `"True"`, then
+  the boolean `true`; `label = true x` is `"true x"`, then `"Truex"`;
+  `mode = 010` is `8`, then `10`; `ratio = 1.0` is `1`, then `1.0`; a key
+  set first to an object and then to a scalar, a quoted-path key such as
+  `"x"."y" = 4`, the empty-string key `"" = 2` and a leading byte-order
+  mark load in Puppet and are parse errors in hyera; `[1,, 2]` and `+1`
+  are errors in Puppet and are accepted by hyera; a backslash-slash escape
+  and a unicode escape with non-hex digits are kept as written; an object's
+  keys come back in a different order. (id: `hocon-pyhocon-parser`)
 - **`eyaml_lookup_key` supports only the PKCS7 encryptor.** hiera-eyaml's
   other encryptors (GPG, and any third-party plugin) raise the same
   "cannot load such file" error real Puppet gives without that plugin's

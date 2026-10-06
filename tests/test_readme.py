@@ -48,6 +48,11 @@ DOC_ONLY = {
         "no case directory exercises a glob-shaped file(...) argument "
         "against the real oracle yet"
     ),
+    "hocon-pyhocon-parser": (
+        "the differences are pyhocon grammar behaviour, not one recorded "
+        "query; the conformance harness has no ordered or error-text "
+        "comparison for them"
+    ),
     "eyaml-pkcs7-only": (
         "the harness cannot exercise a GPG-encrypted eyaml value, since "
         "recording one would need a GPG keypair and a real Puppet install "

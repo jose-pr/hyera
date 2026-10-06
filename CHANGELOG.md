@@ -12,6 +12,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   when `sops` or `facter` exceeds its time limit. The child and every process
   it started are killed.
 - `SopsBackend(timeout=...)`, and `SOPS_TIMEOUT` in `hyera.backends.__all__`.
+- `options: {hocon_includes: false}` on a `hocon_data` hierarchy entry (or in
+  `defaults`) selects the stricter include mode; the bare `hocon_includes`
+  key the README described was never valid hiera.yaml.
 
 ### Fixed
 
@@ -29,6 +32,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Registering a backend name that a registered pattern already answers to, or
   a pattern that matches a registered name, raises `ValueError` naming both
   classes.
+- `hocon_data`: a quoted key such as `"ntp::servers"` loads without its quote
+  characters, so a class parameter can be written in a HOCON file;
+  `k = null x` returns the text `null x`; a backslash-u escape in a quoted
+  string is decoded.
+- `hocon_data`: a plain quoted include, a `required(file(...))` include and a
+  value-position include inside a file reached through `include file(...)`
+  follow the same rules as in the top-level file.
+- Importing `hyera` no longer imports `pyhocon` or replaces its include
+  methods; the guard is installed on hyera's private parser copy the first
+  time a HOCON document is parsed.
+- A malformed HOCON document no longer leaves pyhocon's exception, which
+  holds the whole text, chained to the `BackendError`.
 
 ## [0.0.0] - 2026-10-01
 
