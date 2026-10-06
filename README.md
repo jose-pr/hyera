@@ -863,7 +863,8 @@ cannot record a golden for.
   need not match Puppet's text.** hyera quotes a string that a YAML 1.1
   reader would take for a number, date or float (`1,000`, `2001-1-1`,
   `.Nan`), escapes the line breaks YAML adds to LF and CR, and never writes
-  anchors or aliases. (id: `render-yaml-equivalent-not-identical`)
+  anchors or aliases. `--explain --render-as yaml` writes the explain tree
+  with plain string keys. (id: `render-yaml-equivalent-not-identical`)
 - **`--render-as s` prints hashes in Ruby 3.2's AIO form** (`{"a"=>1}`), as
   Puppet 8's own packages do; Puppet on Ruby 3.4 or later renders
   `{"a" => 1}` (with spaces around `=>`) instead. There is no opt-in, since

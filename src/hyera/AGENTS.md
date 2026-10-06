@@ -1408,7 +1408,8 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   prints `Sensitive` values redacted, where Puppet prints the plaintext.
 - **difference** `render-yaml-equivalent-not-identical` — `--render-as yaml`
   reads back as the value looked up, but its quoting need not match
-  Puppet's text; no anchors or aliases are written.
+  Puppet's text; no anchors or aliases are written, and `--explain
+  --render-as yaml` writes the tree with plain string keys.
 - **difference** `aio-hash-rendering` — `--render-as s` prints hashes in
   Ruby 3.2's AIO form (`{"a"=>1}`), as Puppet 8's own packages do.
 - **difference** `scope-flag-sets-node-parameters` — `--scope
