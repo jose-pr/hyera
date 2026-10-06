@@ -24,8 +24,8 @@ object as ``hyera.Sensitive``.
 Internal code must never rely on ``isinstance(type_obj, <one of these
 classes>)`` to dispatch on a type object's kind -- these classes are never
 the type of a type object (the private classes in
-:mod:`hyera._types.types` are); that question now means "is this value of
-that Puppet type" instead. Internal dispatch still uses the private classes
+:mod:`hyera._types.types` are); that question means "is this value of
+that Puppet type" here. Internal dispatch still uses the private classes
 directly, unaffected by anything in this module.
 """
 
@@ -66,22 +66,15 @@ __all__ = [
     "TypeSpec",
 ]
 
-#: Anywhere a Puppet type is taken (``value_type`` on ``lookup``/``dig``/
-#: ``get``/``explain``/``__call__``, and a nested type argument in a
-#: subscript): a type object (what subscripting one of this module's
-#: classes returns, or :func:`hyera._types.parser.parse_type` itself), a
-#: bare class from this module (``Integer``, not ``Integer[1, 2]``), or a
-#: Puppet type-expression string (``"Integer[1, 2]"``) -- see
-#: :func:`hyera._types.parser.as_type`, which normalizes all three.
+#: Anywhere a Puppet type is taken (``value_type`` on ``lookup``/``dig``/``get``/``explain``/``__call__``, and a nested type
+#: argument in a subscript): a type object, a bare class from this module (``Integer``, not ``Integer[1, 2]``) or a Puppet
+#: type-expression string (``"Integer[1, 2]"``); :func:`hyera._types.parser.as_type` normalizes all three.
 TypeSpec = _ty.Union[str, type, _priv.Any]
 
 
 # ------------------------------------------------------------- arguments
-#
-# `__getitem__` turns its Python arguments into the parser's own argument
-# nodes (a type object stands for itself) and calls the same builders
-# `parse_type` uses, so `Integer[1, 2] == parse_type("Integer[1, 2]")` by
-# construction, with the same arity and error text.
+# `__getitem__` turns its Python arguments into the parser's argument nodes (a type object stands for itself) and calls
+# the builders `parse_type` uses, so `Integer[1, 2] == parse_type("Integer[1, 2]")`, with the same arity and error text.
 
 
 def _value_node(value: _ty.Any) -> tuple:
@@ -245,10 +238,8 @@ class _TypeMeta(type):
     ) -> "_TypeMeta":
         """Records the new class's own Puppet name (see ``_puppet_name``
         below) in the same step ``type.__new__`` builds it."""
-        # Every class in this module is named exactly after the Puppet type
-        # it represents, so the Python class name doubles as `_puppet_name`
-        # (the one exception, `hyera.Sensitive`, does not use this
-        # metaclass at all -- see the module docstring).
+        # Every class in this module is named after the Puppet type it represents, so the class name doubles as
+        # `_puppet_name` (the exception, `hyera.Sensitive`, does not use this metaclass: see the module docstring).
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         cls._puppet_name = name
         return cls
@@ -413,11 +404,7 @@ class RichData(metaclass=_TypeMeta):
     ``Object`` values. Not parameterizable."""
 
 
-#: The existing public value wrapper (:class:`hyera.Sensitive`) -- the same
-#: object, not a copy -- re-exported here so every public Puppet type is
-#: reachable from this module. It already answers ``isinstance`` and
-#: ``Sensitive(x)`` correctly without a metaclass (it is a real class whose
-#: real instances are wrapped values); ``Sensitive[T]`` (the *type*
-#: ``Sensitive[T]``, as opposed to the value ``Sensitive(x)``) is defined
-#: directly on it in :mod:`hyera._types.types`.
+#: The public value wrapper (:class:`hyera.Sensitive`), the same object, re-exported so every public Puppet type is
+#: reachable here. It answers ``isinstance`` and ``Sensitive(x)`` without a metaclass; the *type* ``Sensitive[T]`` is
+#: defined on it in :mod:`hyera._types.types`.
 Sensitive = _priv.Sensitive

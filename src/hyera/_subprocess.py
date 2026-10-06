@@ -42,10 +42,9 @@ def _resolve(program: str, refuse_batch: bool) -> str:
     if refuse_batch:
         _refuse_batch(program, exe)
     if not (os.path.isabs(exe) or exe.startswith(("/", "\\"))):
-        # shutil.which on Windows with Python 3.9 to 3.11 still searches the
-        # current directory and can return a path relative to it, even with
-        # NoDefaultCurrentDirectoryInExePath set. A leading separator
-        # without a drive is rooted, not cwd-relative, and is accepted.
+        # shutil.which on Windows with Python 3.9 to 3.11 still searches the current directory and can return a
+        # path relative to it, even with NoDefaultCurrentDirectoryInExePath set. A leading separator without a
+        # drive is rooted, not cwd-relative, and is accepted.
         raise BackendError(
             "refusing to run {} resolved to a relative path {!r} (from the "
             "current directory or a relative PATH entry); put an absolute "
@@ -246,11 +245,9 @@ def _wait(
     suffix: str,
 ) -> bytes:
     """Wait for *proc*; kill its tree on timeout or any other exception."""
-    # The timeout error is raised after the handler: a TimeoutExpired carries
-    # the child's partial stdout, and raising inside the handler would keep it
-    # reachable through __context__. Any other exception (an interrupt, an
-    # error in communicate) kills the child, which is in its own process
-    # group and would otherwise outlive the caller, and propagates unchanged.
+    # The timeout error is raised after the handler: a TimeoutExpired carries the child's partial stdout, which
+    # raising inside the handler would keep reachable through __context__. Any other exception kills the child
+    # (in its own process group, so it would outlive the caller) and propagates unchanged.
     timed_out = False
     try:
         stdout, stderr = proc.communicate(timeout=timeout)

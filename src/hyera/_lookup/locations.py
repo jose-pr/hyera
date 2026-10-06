@@ -209,7 +209,7 @@ class _LocationStore:
         (<path>): ...``; any other non-:class:`HieraError` exception is
         wrapped the same way, naming its type. An already-pathed
         ``BackendError`` (or any other :class:`HieraError`) propagates
-        unchanged. There is no directory check here any more: a location
+        unchanged. There is no directory check here: a location
         that is a directory is caught once, when it is resolved/materialized
         (:meth:`location_entry_for`/:meth:`materialize`/
         :meth:`require_not_dir`), never reaching this method at all --
