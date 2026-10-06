@@ -13,7 +13,7 @@ import contextlib
 import functools
 import re
 
-from .._digits import parse_decimal_int
+from .._digits import format_decimal_int, parse_decimal_int
 from ..exceptions import HieraLookupError
 
 
@@ -189,7 +189,15 @@ def sub_lookup(
                     raise HieraLookupError(
                         "Data Provider type mismatch: Got {} when a hash-like "
                         "object was expected to access value using '{}' from "
-                        "key '{}'".format(_ruby_class(value), segment, key)
+                        "key '{}'".format(
+                            _ruby_class(value),
+                            (
+                                format_decimal_int(segment)
+                                if isinstance(segment, int)
+                                else segment
+                            ),
+                            key,
+                        )
                     )
                 seg_type = type(segment)
                 found = _MISSING

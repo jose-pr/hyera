@@ -1955,3 +1955,40 @@ def test_python_m_hyera_lookup(flags_root):
     )
     assert proc.returncode == 0
     assert proc.stdout == b"one\n"
+
+
+@pytest.fixture
+def bigint_root(make_tree):
+    return make_tree(
+        {"hierarchy": [{"name": "common", "path": "common.yaml"}]},
+        files={"data/common.yaml": "big: 1" + "0" * 4999 + "\n"},
+        facts={"role": "web"},
+    )
+
+
+@pytest.mark.parametrize("fmt", ["s", "json", "yaml"])
+def test_integer_of_five_thousand_digits_renders_in_every_format(
+    fmt, bigint_root, capsys
+):
+    rc = main(_bigint_argv(bigint_root, "--render-as", fmt, "big"))
+    assert rc == 0
+    assert "1" + "0" * 4999 in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("fmt", ["s", "json", "yaml"])
+def test_explain_of_a_key_with_a_4301_digit_segment_in_every_format(
+    fmt, bigint_root, capsys
+):
+    key = "big." + "1" * 4301
+    rc = main(_bigint_argv(bigint_root, "--explain", "--render-as", fmt, key))
+    assert rc in (0, 1)
+    assert "1" * 4301 in capsys.readouterr().out
+
+
+def _bigint_argv(root, *extra):
+    return [
+        "--hiera_config",
+        str(root / "hiera.yaml"),
+        "--facts",
+        str(root / "facts.yaml"),
+    ] + list(extra)
