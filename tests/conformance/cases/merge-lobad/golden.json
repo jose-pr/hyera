@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "2e17f677b52c6b3a202011dd37b2c64b5280ebc63976388314e722021274fb55",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "b_unique_sort"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'sort_merged_arrays'"
     },
@@ -20,6 +29,7 @@
         "warning",
         "b_no_strategy"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
     },
@@ -29,6 +39,7 @@
         "warning",
         "b_deep_unknown"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'bogus'"
     },
@@ -38,6 +49,7 @@
         "warning",
         "b_reverse"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": {
@@ -53,6 +65,7 @@
         "warning",
         "b_unconstrained"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -69,6 +82,7 @@
         "warning",
         "b_bad_name"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: 'bogus'"
     },
@@ -78,6 +92,7 @@
         "warning",
         "b_empty_ko"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "knockout_prefix cannot be an empty string in deep_merge!"
     },
@@ -87,6 +102,7 @@
         "warning",
         "b_hash_opts"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
     },
@@ -96,6 +112,7 @@
         "warning",
         "b_first_opts"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -107,6 +124,7 @@
         "warning",
         "b_default"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -118,6 +136,7 @@
         "warning",
         "b_merge_key"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
     }

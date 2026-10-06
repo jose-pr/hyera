@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "0f41bfd912f7b9610142e64213e2a9c3380ec7b84f9004da6eaf2694bdc62a8a",
   "results": {
@@ -14,6 +22,7 @@
         "--explain",
         "mymod::arr"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
@@ -309,6 +318,7 @@
         "--explain",
         "mymod::dflt"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"
@@ -672,6 +682,7 @@
         "--explain",
         "plain::k"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -868,6 +879,7 @@
         "--explain",
         "nomod::k"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1064,6 +1076,7 @@
         "--explain-options",
         "mymod::arr"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got unqualified_in_module",
         "Module 'mymod': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mymod/data/common.yaml', must use keys qualified with the name of the module; got other::key"

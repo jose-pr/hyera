@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "729b4d5d826850836214b9e1f71f1adedec2c7fa9105c7093ce0a3712af413c1",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
       ],
@@ -23,6 +32,7 @@
         "warning",
         "h"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
       ],
@@ -41,6 +51,7 @@
         "hash",
         "h"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
       ],
@@ -60,6 +71,7 @@
         "deep",
         "h"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
       ],

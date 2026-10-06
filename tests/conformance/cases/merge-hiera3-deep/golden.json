@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "dbe033d76a7f863059d619aa524b098dc63082572b868156328fe5301c3f0741",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "o_uc_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": null,
@@ -26,6 +35,7 @@
         "warning",
         "o_uc_ow"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -39,6 +49,7 @@
         "warning",
         "o_uc_unpack"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -55,6 +66,7 @@
         "warning",
         "o_uc_ext"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -73,6 +85,7 @@
         "warning",
         "o_uc_pres"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -90,6 +103,7 @@
         "warning",
         "o_uc_pres_ko"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "overwrite_unmergeable must be true if knockout_prefix is specified in deep_merge!"
     },
@@ -99,6 +113,7 @@
         "warning",
         "o_uc_bogus"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -113,6 +128,7 @@
         "warning",
         "o_uc_empty_key"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, expects a Hash[String[1], Any] value, got Hash[Enum['', 'strategy'], Variant[String, Integer[1, 1]]]"
     },
@@ -122,6 +138,7 @@
         "warning",
         "o_uc_plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -136,6 +153,7 @@
         "warning",
         "o_rev_opts"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [

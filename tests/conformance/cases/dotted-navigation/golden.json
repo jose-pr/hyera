@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "f6be955869e7807bfdae4c7d755fc5764167175c766d2687b4d53e130da8d5b2",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "lst.+1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b"
     },
@@ -20,6 +29,7 @@
         "warning",
         "lst.01"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b"
     },
@@ -29,6 +39,7 @@
         "warning",
         "lst.:1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "a"
     },
@@ -38,6 +49,7 @@
         "warning",
         "h.00"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "zero"
     },
@@ -47,6 +59,7 @@
         "warning",
         "bk.1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "intkey"
     },
@@ -56,6 +69,7 @@
         "warning",
         "\" sp\".c"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "space"
     },
@@ -65,6 +79,7 @@
         "warning",
         "a.'b'"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": "nested"
@@ -76,6 +91,7 @@
         "warning",
         "a.b.'c'"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "nested"
     },
@@ -85,6 +101,7 @@
         "warning",
         "\"a.b\""
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": "dotted"
@@ -96,6 +113,7 @@
         "warning",
         "\"a.b\" . c"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dotted"
     },
@@ -105,6 +123,7 @@
         "warning",
         "v_quoted_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[one]"
     },
@@ -114,6 +133,7 @@
         "warning",
         "v_ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[RedHat]"
     },
@@ -123,6 +143,7 @@
         "warning",
         "fk.1"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "hash-int-key-vs-quoted-string-segment": {
@@ -131,6 +152,7 @@
         "warning",
         "h.\"0\""
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "f.x": {
@@ -139,6 +161,7 @@
         "warning",
         "f.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Float when a hash-like object was expected to access value using 'x' from key 'f.x'"
     },
@@ -148,6 +171,7 @@
         "warning",
         "t.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got TrueClass when a hash-like object was expected to access value using 'x' from key 't.x'"
     },
@@ -157,6 +181,7 @@
         "warning",
         "lst.\"1\""
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using '1' from key 'lst.\"1\"'"
     },
@@ -166,6 +191,7 @@
         "warning",
         "a.\"\""
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Syntax error in key: 'a.\"\"'"
     },
@@ -175,6 +201,7 @@
         "warning",
         "0.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "undefined method 'index' for an instance of Integer"
     },
@@ -184,6 +211,7 @@
         "warning",
         "v_syntax"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'v_syntax' failed: Syntax error in string: [%{facts..os}]"
     },
@@ -193,6 +221,7 @@
         "warning",
         "v_scope_syntax"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'v_scope_syntax' failed: Syntax error in string: [%{scope('facts..os')}]"
     },
@@ -202,6 +231,7 @@
         "warning",
         "v_introot"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'v_introot' failed: Scope variable name 0 is a Integer, not a string"
     },
@@ -211,6 +241,7 @@
         "warning",
         "v_str_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'v_str_int' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using '0' from key 'facts.os.family.0'"
     }

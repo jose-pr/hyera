@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "d912893a798f907c8f786585b8d5ba4879885f8dc5ccfcf155bff1c6add235de",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Psych::Set"
     },
@@ -20,6 +29,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: Unable to parse <case>/data/first.yaml): Tried to load unspecified class: Psych::Set"
     }

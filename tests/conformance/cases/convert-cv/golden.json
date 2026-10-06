@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3458ba830b4afeae796644b4c35c791e11d448c87bf2a2ad616edd1f149475ae",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "int_plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -20,6 +29,7 @@
         "warning",
         "int_hex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 31
     },
@@ -29,6 +39,7 @@
         "warning",
         "int_oct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 34
     },
@@ -38,6 +49,7 @@
         "warning",
         "int_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'int_bad' raised error: 'new' The string 'abc' cannot be converted to Integer"
     },
@@ -47,6 +59,7 @@
         "warning",
         "int_float"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 3
     },
@@ -56,6 +69,7 @@
         "warning",
         "int_radix"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'int_radix' raised error: 'new' The string 'ff' cannot be converted to Integer"
     },
@@ -65,6 +79,7 @@
         "warning",
         "int_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1
     },
@@ -74,6 +89,7 @@
         "warning",
         "flt"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 3.5
     },
@@ -83,6 +99,7 @@
         "warning",
         "flt_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'flt_bad' raised error: 'new_float' The string 'x' cannot be converted to Float"
     },
@@ -92,6 +109,7 @@
         "warning",
         "bool_yes"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -101,6 +119,7 @@
         "warning",
         "bool_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'bool_bad' raised error: 'new_boolean' The string 'maybe' cannot be converted to Boolean"
     },
@@ -110,6 +129,7 @@
         "warning",
         "bool_0"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": false
     },
@@ -119,6 +139,7 @@
         "warning",
         "bool_str0"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'bool_str0' raised error: 'new_boolean' The string '0' cannot be converted to Boolean"
     },
@@ -128,6 +149,7 @@
         "warning",
         "str_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "true"
     },
@@ -137,6 +159,7 @@
         "warning",
         "str_float"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "3.000000"
     },
@@ -146,6 +169,7 @@
         "warning",
         "str_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{'a' => 1}"
     },
@@ -155,6 +179,7 @@
         "warning",
         "str_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[1, 'b']"
     },
@@ -164,6 +189,7 @@
         "warning",
         "str_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -173,6 +199,7 @@
         "warning",
         "arr_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -186,6 +213,7 @@
         "warning",
         "arr_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         [
@@ -200,6 +228,7 @@
         "warning",
         "arr_wrap"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "abc"
@@ -211,6 +240,7 @@
         "warning",
         "arr_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         0,
@@ -226,6 +256,7 @@
         "warning",
         "hash_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -238,6 +269,7 @@
         "warning",
         "num"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 3.5
     },
@@ -247,6 +279,7 @@
         "warning",
         "num_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 7
     },
@@ -256,6 +289,7 @@
         "warning",
         "opt_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -265,6 +299,7 @@
         "warning",
         "var_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'var_int' raised error: Creation of new instance of type 'Variant[Integer, Float]' is not supported"
     },
@@ -274,6 +309,7 @@
         "warning",
         "badtype"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Invalid data type in lookup_options for key 'badtype' could not parse 'NoSuch[', error: 'Syntax error at end of input"
     },
@@ -283,6 +319,7 @@
         "warning",
         "unktype"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'unktype' raised error: Creation of new instance of type 'TypeReference['Frobnicate']' is not supported"
     },
@@ -292,6 +329,7 @@
         "warning",
         "sens"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -301,6 +339,7 @@
         "warning",
         "sens_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -310,6 +349,7 @@
         "warning",
         "semver"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1.2.3"
     },
@@ -319,6 +359,7 @@
         "warning",
         "tspan"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1-00:00:00.0"
     },
@@ -328,6 +369,7 @@
         "warning",
         "enum_t"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "a"
     },
@@ -337,6 +379,7 @@
         "warning",
         "lower_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Invalid data type in lookup_options for key 'lower_t' could not parse 'integer', error: 'The expression <integer> is not a valid type specification."
     },
@@ -346,6 +389,7 @@
         "warning",
         "tuple_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Converted value from Tuple[Integer, String].new() has wrong type, index 1 expects a String value, got Integer"
     },
@@ -355,6 +399,7 @@
         "warning",
         "str_fmt"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "ff"
     },
@@ -366,6 +411,7 @@
         "first",
         "int_plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -377,6 +423,7 @@
         "unique",
         "int_plain"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'int_plain' raised error: 'new' Value of type Array[String] cannot be converted to Integer"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "f91da4103a4217d8da0aa0f095f1865b34a61c73bd4ffe3f5d14573c96661d61",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location <case>/data/first.json', has wrong type, expects a Hash value, got Tuple"
     },
@@ -20,6 +29,7 @@
         "warning",
         "fromfirst"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location <case>/data/first.json', has wrong type, expects a Hash value, got Tuple"
     }

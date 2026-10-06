@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "bbce2179b7b2e48ad7fe019deb8132b2d185f1fac299071634c1a100f4153b67",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "secret"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -20,6 +29,7 @@
         "warning",
         "secret_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -29,6 +39,7 @@
         "warning",
         "mixedkeys"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "1": "one",
@@ -41,6 +52,7 @@
         "warning",
         "nan"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "NaN not allowed in JSON"
     },
@@ -50,6 +62,7 @@
         "warning",
         "inf"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Infinity not allowed in JSON"
     },
@@ -59,6 +72,7 @@
         "warning",
         "unicode"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "café ☃"
     }

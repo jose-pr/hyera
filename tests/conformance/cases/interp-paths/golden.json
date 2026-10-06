@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "2ad9f5245ee85ef804cf8bcfa99d8db4634177cf9aad8a5d6bbcc17e5467f9cf",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "p_ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -20,6 +29,7 @@
         "warning",
         "p_q"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -29,6 +39,7 @@
         "warning",
         "p_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -38,6 +49,7 @@
         "warning",
         "p_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -47,6 +59,7 @@
         "warning",
         "p_num"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -56,6 +69,7 @@
         "warning",
         "p_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -65,6 +79,7 @@
         "warning",
         "p_idx"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hit"
     },
@@ -74,6 +89,7 @@
         "warning",
         "p_common"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "c"
     }

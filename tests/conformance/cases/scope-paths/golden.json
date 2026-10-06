@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "c71b13be923e11bd3fadb03e2ea0eb0a8607e4c2887854bc8c15315501acc133",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k_node_empty"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -23,6 +32,7 @@
         "warning",
         "k_undef"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -35,6 +45,7 @@
         "warning",
         "k_virt_top"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -47,6 +58,7 @@
         "warning",
         "k_virtual"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -59,6 +71,7 @@
         "warning",
         "k_count"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -71,6 +84,7 @@
         "warning",
         "k_role_web"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -83,6 +97,7 @@
         "warning",
         "k_common"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],

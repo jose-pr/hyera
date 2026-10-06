@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3f2d0c30203c49c29a03f290f6820c9e6d5153568d7b7043c3216b74f68fd5c5",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'version' expects an Integer value, got Float"
     }

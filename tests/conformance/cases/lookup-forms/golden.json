@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "6e0dca35baaa492100893b1493124386f84582ef68e2cfa7070c9c4539c8b1a1",
   "results": {
@@ -12,6 +20,7 @@
         "nope",
         "common_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "common"
     },
@@ -23,6 +32,7 @@
         "fallback",
         "nope"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "fallback"
     },
@@ -34,6 +44,7 @@
         "String",
         "common_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "common"
     },
@@ -45,6 +56,7 @@
         "Integer",
         "common_key"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer value, got String"
     }

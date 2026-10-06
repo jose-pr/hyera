@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "cf8655ee7771550f9a195b25a9de3d88ca9e60ac40127f7d9562bd1112d0399b",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "dur"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "10s"
     },
@@ -20,6 +29,7 @@
         "warning",
         "x"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "10 s"
     },
@@ -29,6 +39,7 @@
         "warning",
         "mix"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "10s foo"
     },
@@ -38,6 +49,7 @@
         "warning",
         "d2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "5 minutes"
     },
@@ -47,6 +59,7 @@
         "warning",
         "n"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 10
     },
@@ -56,6 +69,7 @@
         "warning",
         "f"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1.5
     },
@@ -65,6 +79,7 @@
         "warning",
         "sz"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "10MB"
     },
@@ -74,6 +89,7 @@
         "warning",
         "nested.a"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "3 weeks"
     },
@@ -83,6 +99,7 @@
         "warning",
         "lst"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "1s",

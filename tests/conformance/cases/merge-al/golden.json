@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "021b49e15dc13bd5e10915da0ce52c146b311eb4a90d113049a45cd1acb9db36",
   "results": {
@@ -13,6 +21,7 @@
         "deep",
         "al_x"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": 3,
@@ -27,6 +36,7 @@
         "hash",
         "al_x"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": 3,
@@ -39,6 +49,7 @@
         "warning",
         "al_ref"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -53,6 +64,7 @@
         "unique",
         "al_u"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "p",
@@ -65,6 +77,7 @@
         "warning",
         "al_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v=[\"a\", \"b\"]"
     }

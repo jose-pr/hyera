@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3206f40989891a521a06b68993a82c36b03beb3a18b6194f5197cdf8894af15c",
   "results": {
@@ -13,6 +21,7 @@
         "production",
         "mymod::only_main"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "mval"
     },
@@ -24,6 +33,7 @@
         "production",
         "mymod::main_ref"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dval"
     },
@@ -35,6 +45,7 @@
         "production",
         "mymod::main_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dval"
     },
@@ -46,6 +57,7 @@
         "production",
         "mymod::only_default"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dval"
     },
@@ -57,6 +69,7 @@
         "production",
         "mymod::dh_ref"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "mval"
     },
@@ -68,6 +81,7 @@
         "production",
         "mymod::dh_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "mval"
     },
@@ -79,6 +93,7 @@
         "production",
         "mymod::dh_self"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dval"
     }

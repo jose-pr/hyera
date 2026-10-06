@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "d71ea8e78a1764ac1fb977aa05bbe174b894737e77c724c7600a25d33a4d8a4d",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k_boolkey"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'k_boolkey' failed: Value for key 'k_boolkey', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Hash[Boolean[true], Integer[1, 1], 1, 1]"
     },
@@ -20,6 +29,7 @@
         "warning",
         "k_nullkey"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'k_nullkey' failed: Value for key 'k_nullkey', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Hash[Undef, Integer[1, 1], 1, 1]"
     },
@@ -29,6 +39,7 @@
         "warning",
         "k_nested"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'k_nested' failed: Value for key 'k_nested', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Array[Hash[Boolean[false], String, 1, 1], 1, 1]"
     },
@@ -38,6 +49,7 @@
         "warning",
         "k_intkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "1": "one"
@@ -49,6 +61,7 @@
         "warning",
         "k_floatkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "1.5": "x"
@@ -60,6 +73,7 @@
         "warning",
         "k_ok"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "fine"
     }

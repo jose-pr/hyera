@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "a88b9e8609c03447c02ec0da5b97d39077ab2e343fff1577ff697e7a546a3ad1",
   "results": {
@@ -13,6 +21,7 @@
         "Integer",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer value, got String"
     },
@@ -26,6 +35,7 @@
         "x",
         "missing"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Default value has wrong type, expects an Integer value, got String"
     },
@@ -36,6 +46,7 @@
         "missing1",
         "k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "kv"
     },
@@ -46,6 +57,7 @@
         "missing1",
         "missing2"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Function lookup() did not find a value for any of the names ['missing1', 'missing2']"
     },
@@ -57,6 +69,7 @@
         "String",
         "nilk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a String value, got Undef"
     },
@@ -68,6 +81,7 @@
         "Optional[String]",
         "nilk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -79,6 +93,7 @@
         "dflt",
         "nilk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -90,6 +105,7 @@
         "first",
         "cv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 7
     },
@@ -101,6 +117,7 @@
         "dlo",
         "lookup_options"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dlo"
     },
@@ -112,6 +129,7 @@
         "Hash[String, Integer]",
         "hsi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -126,6 +144,7 @@
         "hash",
         "h"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "x": {
@@ -142,6 +161,7 @@
         "unique",
         "u"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,

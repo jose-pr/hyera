@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "27516c94db57f8365ed8f148f67196f4d2ea474d60ec709a76ad840f5cbecbae",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "from_default"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/hiera.yaml, line: 4)"
     },
@@ -20,6 +29,7 @@
         "warning",
         "from_main"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/hiera.yaml, line: 4)"
     }

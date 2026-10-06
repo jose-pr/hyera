@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "e6841257fe8ffdea940b0b7bc5af5ea6cec6458bab0e45a87ff900d9bd88db81",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "redhat"
     }

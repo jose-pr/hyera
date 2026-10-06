@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "23deb7e83039c5d07ae789ff172711079dbe84db61332846235ac7d467011340",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "i_oct8"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 15
     },
@@ -20,6 +29,7 @@
         "warning",
         "i_bin2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -29,6 +39,7 @@
         "warning",
         "i_hex16"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 255
     },
@@ -38,6 +49,7 @@
         "warning",
         "i_badradix"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_badradix' raised error: Illegal radix: 7, expected 2, 8, 10, 16, or default"
     },
@@ -47,6 +59,7 @@
         "warning",
         "i_ws"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_ws' raised error: 'new' The string ' 42 ' cannot be converted to Integer"
     },
@@ -56,6 +69,7 @@
         "warning",
         "i_signws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": -42
     },
@@ -65,6 +79,7 @@
         "warning",
         "i_neg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": -16
     },
@@ -74,6 +89,7 @@
         "warning",
         "i_fstr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_fstr' raised error: 'new' The string '3.7' cannot be converted to Integer"
     },
@@ -83,6 +99,7 @@
         "warning",
         "i_09"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_09' raised error: invalid value for Integer(): \"09\""
     },
@@ -92,6 +109,7 @@
         "warning",
         "i_arr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_arr' raised error: 'new' Value of type Array[Integer] cannot be converted to Integer"
     },
@@ -101,6 +119,7 @@
         "warning",
         "i_nil"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_nil' raised error: 'new' Value of type Undef cannot be converted to Integer"
     },
@@ -110,6 +129,7 @@
         "warning",
         "i_range"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'i_range' raised error: Converted value from Integer[0, 10].new() has wrong type, expects an Integer[0, 10] value, got Integer[42, 42]"
     },
@@ -119,6 +139,7 @@
         "warning",
         "i_already"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -128,6 +149,7 @@
         "warning",
         "q_int_bigneg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": -12345678901234567890
     },
@@ -137,6 +159,7 @@
         "warning",
         "q_int_plus"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 7
     },
@@ -146,6 +169,7 @@
         "warning",
         "q_int_octbad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_int_octbad' raised error: invalid value for Integer(): \"08\""
     },
@@ -155,6 +179,7 @@
         "warning",
         "f_exp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1000.0
     },
@@ -164,6 +189,7 @@
         "warning",
         "f_bin"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5.0
     },
@@ -173,6 +199,7 @@
         "warning",
         "f_hex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 16.0
     },
@@ -182,6 +209,7 @@
         "warning",
         "f_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 3.0
     },
@@ -191,6 +219,7 @@
         "warning",
         "f_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 0.0
     },
@@ -200,6 +229,7 @@
         "warning",
         "q_float_ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1.5
     },
@@ -209,6 +239,7 @@
         "warning",
         "n_hex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 31
     },
@@ -218,6 +249,7 @@
         "warning",
         "n_oct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 34
     },
@@ -227,6 +259,7 @@
         "warning",
         "n_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'n_bad' raised error: 'new_numeric' The string '1.2.3' cannot be converted to Numeric"
     },
@@ -236,6 +269,7 @@
         "warning",
         "n_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1
     },
@@ -245,6 +279,7 @@
         "warning",
         "q_num_space"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -254,6 +289,7 @@
         "warning",
         "b_Y"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -263,6 +299,7 @@
         "warning",
         "b_TRUE"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -272,6 +309,7 @@
         "warning",
         "b_float"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": false
     },
@@ -281,6 +319,7 @@
         "warning",
         "b_str1"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'b_str1' raised error: 'new_boolean' The string '1' cannot be converted to Boolean"
     },
@@ -290,6 +329,7 @@
         "warning",
         "b_arr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'b_arr' raised error: 'new_boolean' Value of type Array[Boolean] cannot be converted to Boolean"
     },
@@ -299,6 +339,7 @@
         "warning",
         "s_pi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "3.140000"
     },
@@ -308,6 +349,7 @@
         "warning",
         "s_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "42"
     },
@@ -317,6 +359,7 @@
         "warning",
         "s_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{'a' => [1, {'b' => 'c'}], 'd e' => undef}"
     },
@@ -326,6 +369,7 @@
         "warning",
         "s_strq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "it's"
     },
@@ -335,6 +379,7 @@
         "warning",
         "s_quote"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "plain"
     },
@@ -344,6 +389,7 @@
         "warning",
         "s_arr_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[[1, 2], 'x', 1.5, true, undef]"
     },
@@ -353,6 +399,7 @@
         "warning",
         "s_nilarr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[undef]"
     },
@@ -362,6 +409,7 @@
         "warning",
         "s_bool_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[false]"
     },
@@ -371,6 +419,7 @@
         "warning",
         "q_str_neg0"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "-0.000000"
     },
@@ -380,6 +429,7 @@
         "warning",
         "q_str_big"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1.0e20"
     },
@@ -389,6 +439,7 @@
         "warning",
         "q_str_unicode"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "['é', 'a\"b']"
     },
@@ -398,6 +449,7 @@
         "warning",
         "q_str_float_e"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "0.000000"
     },
@@ -407,6 +459,7 @@
         "warning",
         "q_str_esc"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"tab\\there\", \"nl\\nx\", 'q\\'uote']"
     },
@@ -416,6 +469,7 @@
         "warning",
         "s_fmt_d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "12"
     },
@@ -425,6 +479,7 @@
         "warning",
         "s_fmt_p"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "'x'"
     },
@@ -434,6 +489,7 @@
         "warning",
         "s_fmt_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "yes"
     },
@@ -443,6 +499,7 @@
         "warning",
         "s_fmt_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 's_fmt_bad' raised error: Illegal format 'Q' specified for value of Integer type - expected one of the characters 'dxXobBeEfgGaAspc'"
     },
@@ -452,6 +509,7 @@
         "warning",
         "s_float_s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "2.5"
     },
@@ -461,6 +519,7 @@
         "warning",
         "s_undef_fmt"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "undef"
     },
@@ -470,6 +529,7 @@
         "warning",
         "a_float"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'a_float' raised error: 'new_array' Value of type Float cannot be converted to Array"
     },
@@ -479,6 +539,7 @@
         "warning",
         "a_true"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'a_true' raised error: 'new_array' Value of type Boolean cannot be converted to Array"
     },
@@ -488,6 +549,7 @@
         "warning",
         "a_nil"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'a_nil' raised error: 'new_array' Value of type Undef cannot be converted to Array"
     },
@@ -497,6 +559,7 @@
         "warning",
         "a_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": []
     },
@@ -506,6 +569,7 @@
         "warning",
         "a_neg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'a_neg' raised error: 'new_array' Value of type Integer cannot be converted to Array"
     },
@@ -515,6 +579,7 @@
         "warning",
         "a_wrap_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -526,6 +591,7 @@
         "warning",
         "a_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -538,6 +604,7 @@
         "warning",
         "arr_already"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -549,6 +616,7 @@
         "warning",
         "h_flat"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -561,6 +629,7 @@
         "warning",
         "h_odd"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'h_odd' raised error: odd number of arguments for Hash"
     },
@@ -570,6 +639,7 @@
         "warning",
         "h_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": "b"
@@ -581,6 +651,7 @@
         "warning",
         "h_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {}
     },
@@ -590,6 +661,7 @@
         "warning",
         "h_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'h_int' raised error: odd number of arguments for Hash"
     },
@@ -599,6 +671,7 @@
         "warning",
         "o_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -608,6 +681,7 @@
         "warning",
         "nu_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -617,6 +691,7 @@
         "warning",
         "se_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -626,6 +701,7 @@
         "warning",
         "se_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'se_int' raised error: Converted value from Sensitive[Integer].new() has wrong type, expects a Sensitive[Integer] value, got Sensitive[String]"
     },
@@ -635,6 +711,7 @@
         "warning",
         "q_sens_sens"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -644,6 +721,7 @@
         "warning",
         "en_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'en_bad' raised error: Creation of new instance of type 'Enum['a', 'b']' is not supported"
     },
@@ -653,6 +731,7 @@
         "warning",
         "tu_ok"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -665,6 +744,7 @@
         "warning",
         "st_hash"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'st_hash' raised error: Converted value from Struct[{'a' => Integer}].new() has wrong type, entry 'a' expects an Integer value, got String"
     },
@@ -674,6 +754,7 @@
         "warning",
         "str_range"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'str_range' raised error: Converted value from String[1, 2].new() has wrong type, expects a String[1, 2] value, got String"
     },
@@ -683,6 +764,7 @@
         "warning",
         "ali_data"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -692,6 +774,7 @@
         "warning",
         "ali_std"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'ali_std' raised error: Creation of new instance of type 'TypeReference['Stdlib::Port']' is not supported"
     },
@@ -701,6 +784,7 @@
         "warning",
         "sc_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'sc_t' raised error: Creation of new instance of type 'Scalar' is not supported"
     },
@@ -710,6 +794,7 @@
         "warning",
         "any_t"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -719,6 +804,7 @@
         "warning",
         "undef_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'undef_t' raised error: Creation of new instance of type 'Undef' is not supported"
     },
@@ -728,6 +814,7 @@
         "warning",
         "bool_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'bool_t' raised error: Converted value from Boolean[true].new() has wrong type, expects a Boolean[true] value, got Boolean[false]"
     },
@@ -737,6 +824,7 @@
         "warning",
         "pat_t"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'pat_t' raised error: Creation of new instance of type 'Pattern[/^x/]' is not supported"
     },
@@ -746,6 +834,7 @@
         "warning",
         "re_t"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "(?-mix:^a)"
     },
@@ -755,6 +844,7 @@
         "warning",
         "q_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_int' raised error: 'new' parameter 'type' expects a Type value, got Integer"
     },
@@ -764,6 +854,7 @@
         "warning",
         "q_empty"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_empty' raised error: 'new' parameter 'type' expects a Type value, got Undef"
     },
@@ -773,6 +864,7 @@
         "warning",
         "q_hash"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_hash' raised error: 'new' parameter 'type' expects a Type value, got Struct"
     },
@@ -782,6 +874,7 @@
         "warning",
         "q_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "5"
     },
@@ -791,6 +884,7 @@
         "warning",
         "q_estr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Invalid data type in lookup_options for key 'q_estr' could not parse '', error: 'The expression <> is not a valid type specification."
     },
@@ -800,6 +894,7 @@
         "warning",
         "q_extra"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_extra' raised error: 'new' expects between 1 and 3 arguments, got 4"
     },
@@ -809,6 +904,7 @@
         "warning",
         "q_boolarg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_boolarg' raised error: 'new_boolean' expects 1 argument, got 2"
     },
@@ -818,6 +914,7 @@
         "warning",
         "q_arr_nested"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'q_arr_nested' raised error: 'new' parameter 'type' expects a Type value, got Tuple"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "04dbcece0b69c71608d51bead11d56e71994e01578b7eef7e4622ad0d0a23def",
   "results": {
@@ -12,6 +20,7 @@
         "--explain",
         "unknown_fn"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -98,6 +107,7 @@
         "--explain",
         "alias_emb"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -184,6 +194,7 @@
         "--explain",
         "s.x"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -276,6 +287,7 @@
         "--explain",
         "mismatch"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'mismatch' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's.x'"
     },
@@ -286,6 +298,7 @@
         "--explain",
         "self"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'self' failed: Lookup of key 'self' failed: Recursive lookup detected in [self]"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "822ae97266510338b6f3a21d995345dfbff87774e5dd3512c0dfa468ff30f7c7",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "One of data_hash, lookup_key, data_dig, or hiera3_backend must be defined in hierarchy 'common' (file: <case>/hiera.yaml)"
     }

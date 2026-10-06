@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "92e1c820a38cc3d8217637dda07c5ecad5bc374dec54e97fcef57e2c9ddc2756",
   "results": {
@@ -13,6 +21,7 @@
         "String",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -24,6 +33,7 @@
         "Integer",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer value, got String"
     },
@@ -35,6 +45,7 @@
         "Integer",
         "n"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -46,6 +57,7 @@
         "Integer[0,10]",
         "big"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer[0, 10] value, got Integer[11, 11]"
     },
@@ -57,6 +69,7 @@
         "Integer[default,10]",
         "big"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer[default, 10] value, got Integer[11, 11]"
     },
@@ -68,6 +81,7 @@
         "Integer[0]",
         "neg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer[0] value, got Integer[-3, -3]"
     },
@@ -79,6 +93,7 @@
         "Float",
         "f"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1.5
     },
@@ -90,6 +105,7 @@
         "Float[2.0]",
         "f"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Float[2.0] value, got Float[1.5, 1.5]"
     },
@@ -101,6 +117,7 @@
         "Float",
         "n"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Float value, got Integer"
     },
@@ -112,6 +129,7 @@
         "Numeric",
         "n"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -123,6 +141,7 @@
         "Numeric",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Numeric value, got String"
     },
@@ -134,6 +153,7 @@
         "Boolean",
         "b"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -145,6 +165,7 @@
         "Boolean",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Boolean value, got String"
     },
@@ -156,6 +177,7 @@
         "Optional[String]",
         "nilk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -167,6 +189,7 @@
         "String",
         "nilk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a String value, got Undef"
     },
@@ -178,6 +201,7 @@
         "Undef",
         "nilk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -189,6 +213,7 @@
         "Undef",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Undef value, got String"
     },
@@ -200,6 +225,7 @@
         "NotUndef",
         "nilk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a NotUndef value, got Undef"
     },
@@ -211,6 +237,7 @@
         "NotUndef[Integer]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer value, got String"
     },
@@ -222,6 +249,7 @@
         "Any",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -233,6 +261,7 @@
         "Scalar",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -244,6 +273,7 @@
         "Scalar",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Scalar value, got Tuple"
     },
@@ -255,6 +285,7 @@
         "ScalarData",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -266,6 +297,7 @@
         "String[1,2]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a String[1, 2] value, got String"
     },
@@ -277,6 +309,7 @@
         "String[5]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a String[5] value, got String"
     },
@@ -288,6 +321,7 @@
         "Enum['a','b']",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a match for Enum['a', 'b'], got 'str'"
     },
@@ -299,6 +333,7 @@
         "Enum[str]",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -310,6 +345,7 @@
         "Pattern[/^s/]",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -321,6 +357,7 @@
         "Pattern[/^x/, /^y/]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a match for Pattern[/^x/, /^y/], got 'str'"
     },
@@ -332,6 +369,7 @@
         "Variant[Integer, String]",
         "s"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -343,6 +381,7 @@
         "Variant[Integer, Float]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value of type Integer or Float, got String"
     },
@@ -354,6 +393,7 @@
         "Variant[Integer, Boolean, Float]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value of type Integer, Boolean, or Float, got String"
     },
@@ -365,6 +405,7 @@
         "Optional[Integer]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value of type Undef or Integer, got String"
     },
@@ -376,6 +417,7 @@
         "Optional[Enum[a,b]]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an undef value or a match for Enum['a', 'b'], got 'str'"
     },
@@ -387,6 +429,7 @@
         "Array[String]",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, index 1 expects a String value, got Integer"
     },
@@ -398,6 +441,7 @@
         "Array[String]",
         "strs"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -412,6 +456,7 @@
         "Array[Integer, 3]",
         "ints2"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be at least 3, got 2"
     },
@@ -423,6 +468,7 @@
         "Array[Integer, 1, 1]",
         "ints2"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be 1, got 2"
     },
@@ -434,6 +480,7 @@
         "Array",
         "ints2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -448,6 +495,7 @@
         "Array[String, 1]",
         "empty_a"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be at least 1, got 0"
     },
@@ -459,6 +507,7 @@
         "Array",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Array value, got String"
     },
@@ -470,6 +519,7 @@
         "Hash[String, Integer]",
         "hsi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -484,8 +534,9 @@
         "Hash[String, String]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "Found value has wrong type, entry 'a' expects a String value, got Integer"
+      "message": "Found value has wrong type, entry 'a' expects a String value, got Integer\nFound value has wrong type, entry 'b' expects a String value, got Integer"
     },
     "t44": {
       "argv": [
@@ -495,8 +546,9 @@
         "Hash[Integer, Integer]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "Found value has wrong type, key of entry 'a' expects an Integer value, got String"
+      "message": "Found value has wrong type, key of entry 'a' expects an Integer value, got String\nFound value has wrong type, key of entry 'b' expects an Integer value, got String"
     },
     "t45": {
       "argv": [
@@ -506,6 +558,7 @@
         "Hash[String, Integer, 3]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be at least 3, got 2"
     },
@@ -517,6 +570,7 @@
         "Hash[String, Integer]",
         "hmix"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, entry 'b' expects an Integer value, got String"
     },
@@ -528,6 +582,7 @@
         "Hash",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Hash value, got String"
     },
@@ -539,6 +594,7 @@
         "Tuple[String, Integer]",
         "mixed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -553,6 +609,7 @@
         "Tuple[String, String]",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, index 1 expects a String value, got Integer"
     },
@@ -564,6 +621,7 @@
         "Tuple[String]",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be 1, got 2"
     },
@@ -575,6 +633,7 @@
         "Tuple[String, Integer, String]",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects size to be 3, got 2"
     },
@@ -586,6 +645,7 @@
         "Struct[{a => Integer, b => Integer}]",
         "hsi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -600,6 +660,7 @@
         "Struct[{a => Integer}]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, unrecognized key 'b'"
     },
@@ -611,6 +672,7 @@
         "Struct[{a => Integer, b => Integer, c => String}]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value for key 'c'"
     },
@@ -622,6 +684,7 @@
         "Struct[{a => Integer, b => Integer, Optional[c] => String}]",
         "hsi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -636,6 +699,7 @@
         "Struct[{a => Integer, b => String}]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, entry 'b' expects a String value, got Integer"
     },
@@ -647,6 +711,7 @@
         "Hash[String, Array[Integer]]",
         "nested"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, entry 'a' index 1 expects an Integer value, got String"
     },
@@ -658,6 +723,7 @@
         "Hash[String, Hash[String, Array[Integer]]]",
         "deep"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, entry 'a' entry 'b' index 1 expects an Integer value, got Struct"
     },
@@ -669,6 +735,7 @@
         "Regexp",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Regexp value, got String"
     },
@@ -680,6 +747,7 @@
         "Sensitive",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Sensitive value, got String"
     },
@@ -691,6 +759,7 @@
         "Sensitive[String]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Sensitive[String] value, got String"
     },
@@ -702,6 +771,7 @@
         "NoSuch[",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Syntax error at end of input"
     },
@@ -713,6 +783,7 @@
         "integer",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The expression <integer> is not a valid type specification."
     },
@@ -724,6 +795,7 @@
         "Collection",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Collection value, got String"
     },
@@ -735,6 +807,7 @@
         "Default",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Default value, got String"
     },
@@ -746,6 +819,7 @@
         "Type",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Type value, got String"
     },
@@ -757,6 +831,7 @@
         "Timestamp",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Timestamp value, got String"
     },
@@ -768,6 +843,7 @@
         "SemVer",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a SemVer value, got String"
     },
@@ -779,6 +855,7 @@
         "Integer[10,0]",
         "n"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'from' must be less or equal to 'to'. Got (10, 0"
     },
@@ -790,6 +867,7 @@
         "Callable",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a Callable value, got String"
     },
@@ -801,6 +879,7 @@
         "Variant[Integer[0,10], Integer[20,30]]",
         "big"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value of type Integer[0, 10] or Integer[20, 30], got Integer[11, 11]"
     },
@@ -812,6 +891,7 @@
         "Variant[Enum['a'], Pattern[/^x/]]",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a match for Variant[Enum['a'], Pattern[/^x/]], got 'str'"
     },
@@ -823,6 +903,7 @@
         "Variant[Integer, String]",
         "b"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a value of type Integer or String, got Boolean"
     },
@@ -834,6 +915,7 @@
         "Integer",
         "f"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects an Integer value, got Float"
     },
@@ -845,6 +927,7 @@
         "Array[Integer]",
         "mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, index 0 expects an Integer value, got String"
     },
@@ -856,6 +939,7 @@
         "Struct[{a => Array[String]}]",
         "nested"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, entry 'a' index 0 expects a String value, got Integer"
     },
@@ -867,8 +951,9 @@
         "Variant[Hash[String, String], Array]",
         "hsi"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "Found value has wrong type, variant 0 entry 'a' expects a String value, got Integer"
+      "message": "Found value has wrong type, variant 0 entry 'a' expects a String value, got Integer\nFound value has wrong type, variant 0 entry 'b' expects a String value, got Integer\nFound value has wrong type, variant 1 expects an Array value, got Struct"
     },
     "t78": {
       "argv": [
@@ -878,6 +963,7 @@
         "Enum['a', 'b', 'c']",
         "s"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Found value has wrong type, expects a match for Enum['a', 'b', 'c'], got 'str'"
     }

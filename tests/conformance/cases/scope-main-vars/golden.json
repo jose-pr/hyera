@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "4f9bc9e7be959f1ddc90f00f220f16b5acf8fd6a856c2f701ff02f1229c658e0",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "v1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[main]"
     },
@@ -20,6 +29,7 @@
         "warning",
         "v2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[main]"
     },
@@ -29,6 +39,7 @@
         "warning",
         "v3"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -38,6 +49,7 @@
         "warning",
         "v4"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -47,6 +59,7 @@
         "warning",
         "v5"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'clientversion';"
       ],
@@ -59,6 +72,7 @@
         "warning",
         "v6"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'clientcert';"
       ],
@@ -71,6 +85,7 @@
         "warning",
         "v7"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[production]"
     }

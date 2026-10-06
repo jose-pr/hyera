@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "8eb050bee45d7f032b0a4fbaf09920da99807cfa5791158a070c88e709bad4ef",
   "results": {
@@ -11,8 +19,9 @@
         "warning",
         "v1"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "(./facts.yaml): Tried to load unspecified class: Date"
+      "message": "(./facts.yaml): Tried to load unspecified class: Date\nWrapped exception:\nTried to load unspecified class: Date"
     }
   }
 }

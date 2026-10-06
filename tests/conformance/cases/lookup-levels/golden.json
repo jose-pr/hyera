@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "378eb1e1f45bb6eb9a4baa5158d89600d7dd50308302e893b94dd5d580df5372",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "nil_first"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -20,6 +29,7 @@
         "warning",
         "db.port"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "db.host": {
@@ -28,6 +38,7 @@
         "warning",
         "db.host"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "h1"
     },
@@ -39,6 +50,7 @@
         "unique",
         "unique_single"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -52,6 +64,7 @@
         "unique",
         "unique_single_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -66,6 +79,7 @@
         "deep",
         "deep_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -83,6 +97,7 @@
         "hash",
         "hash_nonhash"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'hash_nonhash' failed: The first element of the merge has wrong type, expects a Hash value, got String"
     },
@@ -94,6 +109,7 @@
         "hash",
         "hash_single_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -105,6 +121,7 @@
         "unique",
         "unique_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -121,6 +138,7 @@
         "unique",
         "unique_hash"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'unique_hash' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     },
@@ -132,6 +150,7 @@
         "hash",
         "k_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": 3,
@@ -144,6 +163,7 @@
         "warning",
         "pfx::x"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -156,6 +176,7 @@
         "warning",
         "lo_root.a"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "y": 2,
@@ -168,6 +189,7 @@
         "warning",
         "conv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -179,6 +201,7 @@
         "first",
         "conv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -188,6 +211,7 @@
         "warning",
         "badmerge"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: 'bogus'"
     },
@@ -197,6 +221,7 @@
         "warning",
         "typo_opt"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'knockout_prfix'"
     },
@@ -209,6 +234,7 @@
         "--merge-hash-arrays",
         "mha"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -226,6 +252,7 @@
         "warning",
         "str_leaf.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'str_leaf.x'"
     },
@@ -235,6 +262,7 @@
         "warning",
         "list_leaf.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'list_leaf.x'"
     },
@@ -244,6 +272,7 @@
         "warning",
         "null_leaf.x"
       ],
+      "exit_status": 1,
       "status": "not_found"
     }
   }

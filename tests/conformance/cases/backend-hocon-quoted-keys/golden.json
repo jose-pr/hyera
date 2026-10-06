@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "d6142b749ea5fdd9d7a2bbec71e47e29dcd3eb959e271b9225b9a1a35c1a6ab0",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "ntp::servers"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -23,6 +32,7 @@
         "warning",
         "quoted.dotted"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "nested": {
@@ -31,6 +41,7 @@
         "warning",
         "nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "in::ner": 2
@@ -42,6 +53,7 @@
         "warning",
         "nullcat"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "null x"
     },
@@ -51,6 +63,7 @@
         "warning",
         "nullend"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x null"
     },
@@ -60,6 +73,7 @@
         "warning",
         "nullalone"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -69,6 +83,7 @@
         "warning",
         "escaped"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "caf é"
     }

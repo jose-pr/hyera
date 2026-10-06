@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "5fd358e82e8266699d7cd69796634e666c638a77e19101d232bec5185f7e67bd",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "v_env"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
         "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
@@ -24,6 +33,7 @@
         "warning",
         "v_facts_env"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
         "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
@@ -37,6 +47,7 @@
         "warning",
         "v_sv"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
         "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
@@ -50,6 +61,7 @@
         "warning",
         "v_sf_sv"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
         "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"
@@ -63,6 +75,7 @@
         "warning",
         "v_sf_env"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'fromfacts'",
         "The node parameter 'serverversion' for node 'golden.example.com' was already set to '1.0-fact'. It could not be set to '8.10.0'"

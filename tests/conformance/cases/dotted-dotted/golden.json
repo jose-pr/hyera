@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "ee996e4bf866c0b878d1141a1acb5c9a0081ee3f68b18317c1bf0650d4f70fda",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "db.host.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'db.host.x'"
     },
@@ -20,6 +29,7 @@
         "warning",
         "classes.foo"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'foo' from key 'classes.foo'"
     },
@@ -29,6 +39,7 @@
         "warning",
         "db.host"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "localhost"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "88892f79b829fe96e88b14347fa14b7eb1c1ffeceac462f922a377afe5e12dc0",
   "results": {
@@ -13,6 +21,7 @@
         "production",
         "mymod::both"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "m1"
@@ -26,6 +35,7 @@
         "production",
         "mymod::onlydefault"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "d1"
@@ -39,6 +49,7 @@
         "production",
         "mymod::dlo"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "d1",
@@ -53,6 +64,7 @@
         "production",
         "mymod::explicit"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1

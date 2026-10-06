@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "0dbc1ad6f3c75b9451bc176861893348c3f9953f1f154d98987505e5b0f66d24",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "secret"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'eyaml_lookup_key' expects 3 arguments, got 2"
     }

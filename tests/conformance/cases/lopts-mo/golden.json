@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "fd7d9a03ed0c0d306e270d74b41e0659d94e38ef11a3c69bd953b39f79b48c45",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "m_bogus_opt"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'bogus'"
     },
@@ -20,6 +29,7 @@
         "warning",
         "m_unique_ko"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
     },
@@ -29,6 +39,7 @@
         "warning",
         "m_nostrat"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
     },
@@ -38,6 +49,7 @@
         "warning",
         "m_unknown"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: 'bogus'"
     },
@@ -47,6 +59,7 @@
         "warning",
         "m_hashform"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "list": [
@@ -62,6 +75,7 @@
         "warning",
         "m_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": {
@@ -76,6 +90,7 @@
         "warning",
         "m_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -88,6 +103,7 @@
         "warning",
         "m_notdict"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -99,6 +115,7 @@
         "warning",
         "m_first_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -110,6 +127,7 @@
         "warning",
         "m_ko_hash"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
     },
@@ -119,6 +137,7 @@
         "warning",
         "m_null"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -130,6 +149,7 @@
         "warning",
         "m_empty"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: ''"
     }

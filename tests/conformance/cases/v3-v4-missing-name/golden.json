@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "307bad0fdd7ffe2521722735a488ebdc7b84f5b423527f6473f9939c0e4af59d",
   "results": {
@@ -11,11 +19,12 @@
         "warning",
         "k"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/environments/production/hiera.yaml: Use of 'hiera.yaml' version 4 is deprecated. It should be converted to version 5"
       ],
       "status": "error",
-      "message": "The Lookup Configuration at <case>/environments/production/hiera.yaml' has wrong type, entry 'hierarchy' index 0 expects a value for key 'name'"
+      "message": "The Lookup Configuration at <case>/environments/production/hiera.yaml' has wrong type, entry 'hierarchy' index 0 expects a value for key 'name'\nThe Lookup Configuration at <case>/environments/production/hiera.yaml' has wrong type, entry 'hierarchy' index 0 unrecognized key 'glob'"
     }
   }
 }

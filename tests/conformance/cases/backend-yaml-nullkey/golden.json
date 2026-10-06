@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "4e1c0cf4d94f09ee06fa5d0a157e27b46138049dec807086c104fa8304bba70b",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "p"
     }

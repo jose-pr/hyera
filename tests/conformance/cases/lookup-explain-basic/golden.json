@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "01d14e211b8edf5d6900df6c1749fc9e0ba0eea30030b3f858ba9c414cfedf60",
   "results": {
@@ -12,6 +20,7 @@
         "--explain",
         "greet"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -273,6 +282,7 @@
         "--explain",
         "h"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -612,6 +622,7 @@
         "--explain",
         "h.n.x"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -977,6 +988,7 @@
         "--explain",
         "arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1300,6 +1312,7 @@
         "--explain",
         "arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1618,6 +1631,7 @@
         "--explain",
         "h"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -1839,6 +1853,7 @@
         "--explain",
         "nope"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -2111,6 +2126,7 @@
         "--explain",
         "nope"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -2381,6 +2397,7 @@
         "nope",
         "greet"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -2734,6 +2751,7 @@
         "--explain",
         "num"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -3005,6 +3023,7 @@
         "--explain",
         "aliased"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -3397,6 +3416,7 @@
         "--explain",
         "looked"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [
@@ -3805,6 +3825,7 @@
         "--explain",
         "lookup_options"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "key": "lookup_options",
@@ -3822,6 +3843,7 @@
         "--explain-options",
         "arr"
       ],
+      "exit_status": 0,
       "status": "explained",
       "tree": {
         "branches": [

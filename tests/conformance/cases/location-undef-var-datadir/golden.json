@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "cca8705b301c5a39f8ed6639bdad30431956e56e1bbaf24d02eb1b48a6bfcf3f",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nosuchvar';"
       ],
@@ -23,6 +32,7 @@
         "error",
         "k"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'nosuchvar' (file: <case>/hiera.yaml, line: 4)"
     },
@@ -32,6 +42,7 @@
         "off",
         "k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "common"
     }

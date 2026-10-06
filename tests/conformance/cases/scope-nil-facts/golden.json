@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "4e373f6c2ae3297a2fdd7afbfa876cd09e315f531c34a857817cd9d1880c7b5d",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "v1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -20,6 +29,7 @@
         "error",
         "v1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -29,6 +39,7 @@
         "warning",
         "v2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -38,6 +49,7 @@
         "warning",
         "v3"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -47,6 +59,7 @@
         "warning",
         "v4"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{\"n\"=>\"\", \"h\"=>{\"k\"=>\"\"}, \"l\"=>[1, \"\"], \"os\"=>{\"family\"=>\"Debian\"}}",
       "raw_value": "{\"n\" => \"\", \"h\" => {\"k\" => \"\"}, \"l\" => [1, \"\"], \"os\" => {\"family\" => \"Debian\"}}"
@@ -57,6 +70,7 @@
         "warning",
         "v5"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     }

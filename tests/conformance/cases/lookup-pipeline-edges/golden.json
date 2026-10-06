@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3023308fff2835b564c38c8110e9715ede986a75eda0f5c6f381ea2bd96c550f",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "rk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -23,6 +32,7 @@
         "warning",
         "ref_lo"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v="
     },
@@ -32,6 +42,7 @@
         "warning",
         "ref_lox"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v="
     },
@@ -43,6 +54,7 @@
         "unique",
         "cvk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'cvk' raised error: 'new' Value of type Array[String] cannot be converted to Integer"
     },
@@ -54,6 +66,7 @@
         "first",
         "cvk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -65,6 +78,7 @@
         "deep",
         "cvk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     }

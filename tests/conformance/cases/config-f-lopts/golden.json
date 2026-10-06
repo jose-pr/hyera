@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "af7dc79faa361852f9bba95c74d405821ac56367c03dba217f59b97057a6ec3d",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "prof::list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -25,6 +34,7 @@
         "first",
         "prof::list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -36,6 +46,7 @@
         "warning",
         "cfg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -47,6 +58,7 @@
         "first",
         "cfg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -56,6 +68,7 @@
         "warning",
         "arrc"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -69,6 +82,7 @@
         "warning",
         "hashc"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         [
@@ -83,6 +97,7 @@
         "warning",
         "hexi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 16
     },
@@ -92,6 +107,7 @@
         "warning",
         "boolg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'boolg' raised error: 'new_boolean' The string 'garbage' cannot be converted to Boolean"
     },
@@ -101,6 +117,7 @@
         "warning",
         "dotted"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'dotted' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     },
@@ -110,6 +127,7 @@
         "warning",
         "dotted.sub"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'dotted.sub' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "da26c8cde944c7983b3c57861de9a03bc14f080e9ddb9b7a53f378e77635247f",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "common_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "common"
     },
@@ -20,6 +29,7 @@
         "warning",
         "from_count"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "zero-file"
     },
@@ -29,6 +39,7 @@
         "warning",
         "from_flag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "false-file"
     },
@@ -38,6 +49,7 @@
         "warning",
         "extra_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "extra"
     },
@@ -47,6 +59,7 @@
         "warning",
         "web_setting"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -56,6 +69,7 @@
         "warning",
         "mod_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "from-glob"
     },
@@ -65,6 +79,7 @@
         "warning",
         "db.port"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "nested": {
@@ -73,6 +88,7 @@
         "warning",
         "nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "list": [
@@ -90,6 +106,7 @@
         "warning",
         "env_probe"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "production"
     },
@@ -99,6 +116,7 @@
         "warning",
         "trusted_probe"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     }

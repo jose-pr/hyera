@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "6232c390b95519555aa90e35384c1fe9b93e2643e2baa52e6701a1319c337ee1",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "mymod::k"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/modules/mymod/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5",
         "hiera.yaml version 3 found at module root was ignored"

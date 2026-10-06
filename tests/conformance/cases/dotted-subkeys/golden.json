@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "8e9c21ae494cf01cb96b5ae01f544c7a1d047fd184944fb530b5623385267597",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "s.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 's.x'"
     },
@@ -20,6 +29,7 @@
         "warning",
         "n.x"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "nil-value": {
@@ -28,6 +38,7 @@
         "warning",
         "n"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -37,6 +48,7 @@
         "warning",
         "lst.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'lst.x'"
     },
@@ -46,6 +58,7 @@
         "warning",
         "lst.-1"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "list-out-of-range": {
@@ -54,6 +67,7 @@
         "warning",
         "lst.9"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "hash-int-key-as-string-segment": {
@@ -62,6 +76,7 @@
         "warning",
         "h.0"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "zero"
     },
@@ -71,6 +86,7 @@
         "warning",
         "i.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "undefined method 'include?' for an instance of Integer"
     },
@@ -80,6 +96,7 @@
         "warning",
         "\"a.b\".c"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dotted"
     },
@@ -89,6 +106,7 @@
         "warning",
         "a.b.c"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "nested"
     },
@@ -98,6 +116,7 @@
         "warning",
         "a . b . c"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "nested"
     }

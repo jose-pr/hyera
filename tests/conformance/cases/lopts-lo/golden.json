@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "2edf471cac82a21f5042f01d454e8d1341039bb517842edaa52b786c79fc4ded",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "app::ports"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         80,
@@ -23,6 +32,7 @@
         "warning",
         "a::b::list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -35,6 +45,7 @@
         "warning",
         "s::t::x"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -47,6 +58,7 @@
         "warning",
         "exact_k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "r",
@@ -59,6 +71,7 @@
         "warning",
         "nilk"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -68,6 +81,7 @@
         "warning",
         "onlynil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -79,6 +93,7 @@
         "unique",
         "nil_u"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         null,
@@ -93,6 +108,7 @@
         "hash",
         "nil_h"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'nil_h' failed: The first element of the merge has wrong type, expects a Hash value, got Undef"
     },
@@ -104,6 +120,7 @@
         "deep",
         "nil_d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1
@@ -115,6 +132,7 @@
         "warning",
         "db.port"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         2,
@@ -127,6 +145,7 @@
         "warning",
         "db"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": [
@@ -143,6 +162,7 @@
         "warning",
         "dotcv.port"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "5"
     },
@@ -152,6 +172,7 @@
         "warning",
         "dotfirst.wanted"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "lookup_options": {
@@ -160,6 +181,7 @@
         "warning",
         "lookup_options"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "lookup_options.exact_k": {
@@ -168,6 +190,7 @@
         "warning",
         "lookup_options.exact_k"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "rbkey": {
@@ -176,6 +199,7 @@
         "warning",
         "rbkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "e",

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "d199f85cc4b3d25019a76a3848e7cca28f441713cc309efb50b71d23749a7653",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "merge_after_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": 80,
@@ -23,6 +32,7 @@
         "warning",
         "merge_before_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": 8443,
@@ -35,6 +45,7 @@
         "warning",
         "merge_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": 80,
@@ -48,6 +59,7 @@
         "warning",
         "merge_twice"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": 9000,
@@ -61,6 +73,7 @@
         "warning",
         "quoted_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "port": 80,
@@ -73,6 +86,7 @@
         "warning",
         "str_tagged_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "<<": {
@@ -87,6 +101,7 @@
         "warning",
         "null_value"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "<<": null,
@@ -99,6 +114,7 @@
         "warning",
         "scalar_value"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "<<": 5,
@@ -111,6 +127,7 @@
         "warning",
         "list_with_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "<<": [
@@ -129,6 +146,7 @@
         "warning",
         "alias_to_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "<<": [

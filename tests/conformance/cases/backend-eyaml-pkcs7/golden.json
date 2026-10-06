@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "165b369f7a81139abd4ab47c658540186660e69a258389b607c2d041a620fd50",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "plain RedHat"
     },
@@ -20,6 +29,7 @@
         "warning",
         "secret"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "s3cr3t RedHat"
     },
@@ -29,6 +39,7 @@
         "warning",
         "arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "arr-secret",
@@ -41,6 +52,7 @@
         "warning",
         "hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": "hash-secret",
@@ -53,6 +65,7 @@
         "warning",
         "block"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "block-secret"
     },
@@ -62,6 +75,7 @@
         "warning",
         "mixed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "prefix mid suffix"
     },
@@ -71,6 +85,7 @@
         "warning",
         "hash.k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hash-secret"
     },
@@ -80,6 +95,7 @@
         "warning",
         "nope"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "int": {
@@ -88,6 +104,7 @@
         "warning",
         "int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 42
     },
@@ -97,6 +114,7 @@
         "warning",
         "bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -106,6 +124,7 @@
         "warning",
         "nullv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -115,6 +134,7 @@
         "warning",
         "nl"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "nl-secret"
     },
@@ -124,6 +144,7 @@
         "warning",
         "aliased"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -136,6 +157,7 @@
         "warning",
         "pct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100%"
     },
@@ -145,6 +167,7 @@
         "warning",
         "keyenc"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQAwDQYJKoZIhvcNAQEBBQAEggEAIpQynJgBxBA9Nmgrtcsu2QXQm7lBXqm4sdjP984iXvdxvs63AuC9a1DvZwxRd+LpV+RfjXtafalJgIuiJKAqShr36Afy2yD3Ivy2defRgWhyGE1cNy65hdOZjiIaKeBle7RZ1u0hkKy8Ifbnz9sSchcKGxj1FHfHOT6uSi0ZQKQM/KOU8S0a4T7ntv6uy0ZmOE0XlbeUEtz+ToC/BR0JsdAY6GL5BSJhXP9RSn93pf+58W2/JbJ8FBG9avs9M58k2jbgpxk/bWH8izqA6sScCtp2KFmdYx4aRNFDN9iHwsjwlKC9ryBKLWKdmjNrEGBnY/guabS30THkXcnQzG7ALTBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBD67z74JvTtvxlfEmNNdHOQgCADUDZX7EMNQmgFzqo/+Lov+dapxSH5BTuzoTH0x+Ghxg==]": "v"
@@ -156,6 +179,7 @@
         "warning",
         "gpg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "cannot load such file -- hiera/backend/eyaml/encryptors/gpg"
     },
@@ -165,6 +189,7 @@
         "warning",
         "foo"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "cannot load such file -- hiera/backend/eyaml/encryptors/foo"
     },
@@ -174,6 +199,7 @@
         "warning",
         "lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100%"
     },
@@ -183,6 +209,7 @@
         "warning",
         "noscheme"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100%"
     },
@@ -192,6 +219,7 @@
         "warning",
         "corrupt"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'corrupt' failed: hiera-eyaml backend error decrypting ENC[PKCS7,aGVsbG8=] when looking up corrupt in <case>/data/secrets.eyaml. Error was Could not parse the PKCS7: no start line (Expecting: PKCS7)"
     },
@@ -201,6 +229,7 @@
         "warning",
         "corrupt_prefixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'corrupt_prefixed' failed: hiera-eyaml backend error decrypting prefix ENC[PKCS7,aGVsbG8=] suffix when looking up corrupt_prefixed in <case>/data/secrets.eyaml. Error was Could not parse the PKCS7: no start line (Expecting: PKCS7)"
     },
@@ -210,6 +239,7 @@
         "warning",
         "twoline"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'twoline' failed: hiera-eyaml backend error decrypting ENC[PKCS7,abc def] when looking up twoline in <case>/data/secrets.eyaml. Error was Could not parse the PKCS7: no start line (Expecting: PKCS7)"
     },
@@ -219,6 +249,7 @@
         "warning",
         "sens"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "Sensitive [value redacted]"
     },
@@ -228,6 +259,7 @@
         "warning",
         "secret_merge"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "b": 2,
@@ -242,6 +274,7 @@
         "first",
         "secret_merge"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": "merge-secret"

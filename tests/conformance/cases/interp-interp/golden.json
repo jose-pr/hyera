@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3addd0ab4a40f3285aedf3e2933484ebd7e9d27c86a14bbe84ea2f9879769fee",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "lit_holder"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "%{facts.os.family}"
     },
@@ -20,6 +29,7 @@
         "warning",
         "s_var"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v=42"
     },
@@ -29,6 +39,7 @@
         "warning",
         "s_topvar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v=42"
     },
@@ -38,6 +49,7 @@
         "warning",
         "s_topfacts"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "v=RedHat"
     },
@@ -47,6 +59,7 @@
         "warning",
         "s_facts_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -56,6 +69,7 @@
         "warning",
         "s_facts_deep"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "9"
     },
@@ -65,6 +79,7 @@
         "warning",
         "s_ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[RedHat]"
     },
@@ -74,6 +89,7 @@
         "warning",
         "s_ws_topvar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[42]"
     },
@@ -83,6 +99,7 @@
         "warning",
         "s_ws_func"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[basev]"
     },
@@ -92,6 +109,7 @@
         "warning",
         "s_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -101,6 +119,7 @@
         "warning",
         "s_empty_colons"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -110,6 +129,7 @@
         "warning",
         "s_empty_dq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -119,6 +139,7 @@
         "warning",
         "s_empty_sq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -128,6 +149,7 @@
         "warning",
         "s_empty_ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -137,6 +159,7 @@
         "warning",
         "s_quoted_dq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "quoted"
     },
@@ -146,6 +169,7 @@
         "warning",
         "s_quoted_sq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "quoted"
     },
@@ -155,6 +179,7 @@
         "warning",
         "s_index"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "y"
     },
@@ -164,6 +189,7 @@
         "warning",
         "s_index_neg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -173,6 +199,7 @@
         "warning",
         "s_index_oob"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -182,6 +209,7 @@
         "warning",
         "s_str_walk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_str_walk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'facts.os.family.x'"
     },
@@ -191,6 +219,7 @@
         "warning",
         "s_arr_key"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_arr_key' failed: Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'foo' from key 'facts.arr.foo'"
     },
@@ -200,6 +229,7 @@
         "warning",
         "s_undef"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nosuchvar';"
       ],
@@ -212,6 +242,7 @@
         "warning",
         "s_undef_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -221,6 +252,7 @@
         "warning",
         "s_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "n=42"
     },
@@ -230,6 +262,7 @@
         "warning",
         "s_float"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "f=1.5"
     },
@@ -239,6 +272,7 @@
         "warning",
         "s_bigfloat"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "f=1.0e+20"
     },
@@ -248,6 +282,7 @@
         "warning",
         "s_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "z=0"
     },
@@ -257,6 +292,7 @@
         "warning",
         "s_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b=false"
     },
@@ -266,6 +302,7 @@
         "warning",
         "s_true"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b=true"
     },
@@ -275,6 +312,7 @@
         "warning",
         "s_emptystr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -284,6 +322,7 @@
         "warning",
         "s_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "a=[\"a\", \"b\"]"
     },
@@ -293,6 +332,7 @@
         "warning",
         "s_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "h={\"k\"=>\"v\", \"n\"=>1}",
       "raw_value": "h={\"k\" => \"v\", \"n\" => 1}"
@@ -303,6 +343,7 @@
         "warning",
         "s_facts_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b=false"
     },
@@ -312,6 +353,7 @@
         "warning",
         "s_facts_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "z=0"
     },
@@ -321,6 +363,7 @@
         "warning",
         "s_whole_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "42"
     },
@@ -330,6 +373,7 @@
         "warning",
         "s_whole_arr_scope"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"a\", \"b\"]"
     },
@@ -339,6 +383,7 @@
         "warning",
         "s_whole_arr_var"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"a\", \"b\"]"
     },
@@ -348,6 +393,7 @@
         "warning",
         "s_scope_fn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -357,6 +403,7 @@
         "warning",
         "s_scope_fn_dq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "42"
     },
@@ -366,6 +413,7 @@
         "warning",
         "s_scope_fn_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b=false"
     },
@@ -375,6 +423,7 @@
         "warning",
         "s_scope_fn_missing"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nosuchvar';"
       ],
@@ -387,6 +436,7 @@
         "warning",
         "s_hiera_fn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "basev"
     },
@@ -396,6 +446,7 @@
         "warning",
         "s_lookup_fn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x-basev-y"
     },
@@ -405,6 +456,7 @@
         "warning",
         "s_lookup_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1"
     },
@@ -414,6 +466,7 @@
         "warning",
         "s_lookup_int_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "p=1"
     },
@@ -423,6 +476,7 @@
         "warning",
         "s_lookup_bool_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "p=true"
     },
@@ -432,6 +486,7 @@
         "warning",
         "s_lookup_float_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "p=2.5"
     },
@@ -441,6 +496,7 @@
         "warning",
         "s_lookup_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"p\", \"q\"]"
     },
@@ -450,6 +506,7 @@
         "warning",
         "s_lookup_arr_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "a=[\"p\", \"q\"]"
     },
@@ -459,6 +516,7 @@
         "warning",
         "s_lookup_hash_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "h={\"k\"=>\"kv\", \"n\"=>2}",
       "raw_value": "h={\"k\" => \"kv\", \"n\" => 2}"
@@ -469,6 +527,7 @@
         "warning",
         "s_lookup_null_emb"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "n=[]"
     },
@@ -478,6 +537,7 @@
         "warning",
         "s_lookup_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "m=[]"
     },
@@ -487,6 +547,7 @@
         "warning",
         "s_lookup_missing_whole"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -496,6 +557,7 @@
         "warning",
         "s_lookup_dotted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "kv"
     },
@@ -505,6 +567,7 @@
         "warning",
         "s_lookup_quoted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dki"
     },
@@ -514,6 +577,7 @@
         "warning",
         "s_lookup_colons"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -523,6 +587,7 @@
         "warning",
         "s_lookup_lo"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -532,6 +597,7 @@
         "warning",
         "s_lookup_strwalk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_lookup_strwalk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'base.x'"
     },
@@ -541,6 +607,7 @@
         "warning",
         "s_alias_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "basev"
     },
@@ -550,6 +617,7 @@
         "warning",
         "s_alias_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "p",
@@ -562,6 +630,7 @@
         "warning",
         "s_alias_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": "kv",
@@ -574,6 +643,7 @@
         "warning",
         "s_alias_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1
     },
@@ -583,6 +653,7 @@
         "warning",
         "s_alias_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -592,6 +663,7 @@
         "warning",
         "s_alias_null"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -601,6 +673,7 @@
         "warning",
         "s_alias_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -610,6 +683,7 @@
         "warning",
         "s_alias_embedded"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
     },
@@ -619,6 +693,7 @@
         "warning",
         "s_alias_ws_inside"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "p",
@@ -631,6 +706,7 @@
         "warning",
         "s_alias_trailing_space"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
     },
@@ -640,6 +716,7 @@
         "warning",
         "s_alias_two"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
     },
@@ -649,6 +726,7 @@
         "warning",
         "s_alias_dotted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "kv"
     },
@@ -658,6 +736,7 @@
         "warning",
         "s_literal"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100% done"
     },
@@ -667,6 +746,7 @@
         "warning",
         "s_literal_escape"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "%{facts.os.family}"
     },
@@ -676,6 +756,7 @@
         "warning",
         "s_literal_dq"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "it's"
     },
@@ -685,6 +766,7 @@
         "warning",
         "s_literal_brace"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "%{"
     },
@@ -694,6 +776,7 @@
         "warning",
         "s_unknown_fn"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown interpolation method 'foo'"
     },
@@ -703,6 +786,7 @@
         "warning",
         "s_mixed_quotes"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_mixed_quotes' failed: Syntax error in string: [%{lookup('base\")}]"
     },
@@ -712,6 +796,7 @@
         "warning",
         "s_fn_ws_args"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_fn_ws_args' failed: Syntax error in string: [%{lookup( 'base' )}]"
     },
@@ -721,6 +806,7 @@
         "warning",
         "s_noquote_fn"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'lookup(base)';"
       ],
@@ -733,6 +819,7 @@
         "warning",
         "s_fn_empty_arg"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_fn_empty_arg' failed: Syntax error in string: [%{lookup('')}]"
     },
@@ -742,6 +829,7 @@
         "warning",
         "s_scope_tmpl"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -751,6 +839,7 @@
         "warning",
         "s_scope_tmpl_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -760,6 +849,7 @@
         "warning",
         "s_lookup_reinterp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -769,6 +859,7 @@
         "warning",
         "s_chain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "basev"
     },
@@ -778,6 +869,7 @@
         "warning",
         "s_recursive_a"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_recursive_a' failed: Lookup of key 's_recursive_b' failed: Lookup of key 's_recursive_a' failed: Recursive lookup detected in [s_recursive_a, s_recursive_b]"
     },
@@ -787,6 +879,7 @@
         "warning",
         "s_recursive_b"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_recursive_b' failed: Lookup of key 's_recursive_a' failed: Lookup of key 's_recursive_b' failed: Recursive lookup detected in [s_recursive_b, s_recursive_a]"
     },
@@ -796,6 +889,7 @@
         "warning",
         "s_self"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_self' failed: Lookup of key 's_self' failed: Recursive lookup detected in [s_self]"
     },
@@ -805,6 +899,7 @@
         "warning",
         "s_alias_self"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 's_alias_self' failed: Lookup of key 's_alias_self' failed: Recursive lookup detected in [s_alias_self]"
     },
@@ -814,6 +909,7 @@
         "warning",
         "s_multi"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat-42-basev-%"
     },
@@ -823,6 +919,7 @@
         "warning",
         "s_fn_then_var"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "basev42"
     },
@@ -832,6 +929,7 @@
         "warning",
         "key_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "RedHat_key": "v",
@@ -844,6 +942,7 @@
         "warning",
         "arr_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "RedHat",
@@ -861,6 +960,7 @@
         "warning",
         "alias_in_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         [
@@ -875,6 +975,7 @@
         "warning",
         "alias_in_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "x": {
@@ -889,6 +990,7 @@
         "warning",
         "via_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": "kv",
@@ -901,6 +1003,7 @@
         "warning",
         "via_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "inner": "RedHat"
@@ -912,6 +1015,7 @@
         "warning",
         "via_alias.k"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "kv"
     },
@@ -921,6 +1025,7 @@
         "warning",
         "via_interp.inner"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     }

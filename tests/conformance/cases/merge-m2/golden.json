@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "e75982c1e095b6b665e9aa27fead95ce4d7a005cacff5cace5e97616d89fd557",
   "results": {
@@ -13,6 +21,7 @@
         "unique",
         "u_hash_lower"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'u_hash_lower' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     },
@@ -24,6 +33,7 @@
         "unique",
         "u_two_hashes"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'u_two_hashes' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     },
@@ -35,6 +45,7 @@
         "deep",
         "d_dup_lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -51,6 +62,7 @@
         "deep",
         "d_top_dup_lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "b",
@@ -66,6 +78,7 @@
         "--sort-merged-arrays",
         "s_lower_only"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "m": [
@@ -84,6 +97,7 @@
         "--sort-merged-arrays",
         "s_higher_only_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "o": 1,
@@ -104,6 +118,7 @@
         "--sort-merged-arrays",
         "s_bool"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of FalseClass with true failed"
     },
@@ -117,6 +132,7 @@
         ".",
         "ko_regex_prefix"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -134,6 +150,7 @@
         "--",
         "ko_top_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -147,6 +164,7 @@
         "x+",
         "ko_ruby_regex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -163,6 +181,7 @@
         "hash",
         "h_both_arrays"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_both_arrays' failed: The first element of the merge has wrong type, expects a Hash value, got Tuple"
     }

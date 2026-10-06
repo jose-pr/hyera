@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "3b4e24d82682f6ea27823b244cacde81a00bb97555962791f98b945f33a6c70f",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "m_alias_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -23,6 +32,7 @@
         "warning",
         "m_nested_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "x": [
@@ -37,6 +47,7 @@
         "warning",
         "m_lit_pct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100% done"
     },
@@ -46,6 +57,7 @@
         "warning",
         "m_scope_dotted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -55,6 +67,7 @@
         "warning",
         "m_colon"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "C"
     },
@@ -64,6 +77,7 @@
         "warning",
         "m_embedded_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "n=5"
     },
@@ -73,6 +87,7 @@
         "warning",
         "m_alias_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": "v"
@@ -84,6 +99,7 @@
         "warning",
         "m_interp_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "C",
@@ -96,6 +112,7 @@
         "warning",
         "chain_b"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "%{hiera('plain')}"
     },
@@ -105,6 +122,7 @@
         "warning",
         "chain_a"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "P-5"
     },
@@ -116,6 +134,7 @@
         "deep",
         "dm"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -133,6 +152,7 @@
         "hash",
         "hm"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -147,6 +167,7 @@
         "unique",
         "um"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -164,6 +185,7 @@
         "--",
         "ko_val"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -181,6 +203,7 @@
         "--",
         "ko_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "h": {
@@ -200,6 +223,7 @@
         "--",
         "ko_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "h": {
@@ -216,6 +240,7 @@
         "--sort-merged-arrays",
         "sm"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -232,6 +257,7 @@
         "deep",
         "top_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "b",
@@ -244,6 +270,7 @@
         "warning",
         "conv_bad"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'conv_bad' raised error: 'new' The string 'abc' cannot be converted to Integer"
     },
@@ -253,6 +280,7 @@
         "warning",
         "conv_bool"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'conv_bool' raised error: 'new_boolean' The string 'garbage' cannot be converted to Boolean"
     },
@@ -262,6 +290,7 @@
         "warning",
         "conv_bool_yes"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -271,6 +300,7 @@
         "warning",
         "conv_hex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 31
     },
@@ -280,6 +310,7 @@
         "warning",
         "conv_unknown"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The convert_to lookup_option for key 'conv_unknown' raised error: Creation of new instance of type 'TypeReference['Foo']' is not supported"
     }

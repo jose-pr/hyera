@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "96f644372e7f8ae405978e00d1d53aec261868232ac88dce52f622fa3abc94a6",
   "results": {
@@ -11,6 +19,7 @@
         "error",
         "v_undef"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'no_such_var';"
     },
@@ -20,6 +29,7 @@
         "error",
         "v_scope_undef"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'no_such_var';"
     },
@@ -29,6 +39,7 @@
         "error",
         "v_calling_module"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'calling_module';"
     },
@@ -38,6 +49,7 @@
         "error",
         "v_clientcert"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'clientcert';"
     },
@@ -47,6 +59,7 @@
         "error",
         "v_module_name"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -56,6 +69,7 @@
         "error",
         "v_facts_undef"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -65,6 +79,7 @@
         "error",
         "v_trusted_certname"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -74,6 +89,7 @@
         "off",
         "v_undef"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -83,6 +99,7 @@
         "off",
         "v_scope_undef"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     }

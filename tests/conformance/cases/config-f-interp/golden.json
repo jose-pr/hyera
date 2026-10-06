@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "b12736ef594f241ed874fee0e144473c32d87004d752103eec7aa4181c2e3d79",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "lk_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "8080"
     },
@@ -20,6 +29,7 @@
         "warning",
         "lk_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"a\", \"b\"]"
     },
@@ -29,6 +39,7 @@
         "warning",
         "hiera_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "8080"
     },
@@ -38,6 +49,7 @@
         "warning",
         "alias_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -50,6 +62,7 @@
         "warning",
         "alias_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 8080
     },
@@ -59,6 +72,7 @@
         "warning",
         "lk_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -68,6 +82,7 @@
         "warning",
         "sc_missing"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nope';"
       ],
@@ -80,6 +95,7 @@
         "warning",
         "lit_escape"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "%{env}"
     },
@@ -89,6 +105,7 @@
         "warning",
         "spaces"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "prod"
     },
@@ -98,6 +115,7 @@
         "warning",
         "falsy_flag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "f=false"
     },
@@ -107,6 +125,7 @@
         "warning",
         "falsy_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "z=0"
     },
@@ -116,6 +135,7 @@
         "warning",
         "scope_flag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "s=false"
     },
@@ -125,6 +145,7 @@
         "warning",
         "unknown_fn"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown interpolation method 'foo'"
     },
@@ -134,6 +155,7 @@
         "warning",
         "empty_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "ab"
     },
@@ -143,6 +165,7 @@
         "warning",
         "keyinterp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "prod_k": "v"
@@ -154,6 +177,7 @@
         "warning",
         "nested_lookup"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1"
     },
@@ -163,6 +187,7 @@
         "warning",
         "dq_fn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "8080"
     },
@@ -172,6 +197,7 @@
         "warning",
         "dotted_fact"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -181,6 +207,7 @@
         "warning",
         "arr.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'arr.x'"
     },
@@ -190,6 +217,7 @@
         "warning",
         "port.x"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "undefined method 'include?' for an instance of Integer"
     },
@@ -199,6 +227,7 @@
         "warning",
         "arr.5"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "lookup_options": {
@@ -207,6 +236,7 @@
         "warning",
         "lookup_options"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "bare_missing": {
@@ -215,6 +245,7 @@
         "warning",
         "bare_missing"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nope';"
       ],
@@ -227,6 +258,7 @@
         "warning",
         "fact_sub_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -236,6 +268,7 @@
         "warning",
         "fact_sub_missing2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "276e88c1b114fbcddd677578d17dcc287ab7306fbcf438b346a22e51c7fa23d8",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "greeting"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hello web from common-site"
     },
@@ -20,6 +29,7 @@
         "warning",
         "ref_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "value=0"
     },
@@ -29,6 +39,7 @@
         "warning",
         "topscope"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "web"
     },
@@ -38,6 +49,7 @@
         "warning",
         "fact_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "42"
     },
@@ -47,6 +59,7 @@
         "warning",
         "empty_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "ab"
     },
@@ -56,6 +69,7 @@
         "warning",
         "literal_pct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "100% done"
     },
@@ -65,6 +79,7 @@
         "warning",
         "alias_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -77,6 +92,7 @@
         "warning",
         "ws"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "web"
     },
@@ -86,6 +102,7 @@
         "warning",
         "keyed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "web_key": "v"
@@ -97,6 +114,7 @@
         "warning",
         "quoted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "deep"
     },
@@ -106,6 +124,7 @@
         "warning",
         "embed_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -115,6 +134,7 @@
         "warning",
         "alias_missing"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -124,6 +144,7 @@
         "warning",
         "alone_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"a\", \"b\"]"
     },
@@ -133,6 +154,7 @@
         "warning",
         "rec"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'rec' failed: Lookup of key 'rec' failed: Recursive lookup detected in [rec]"
     },
@@ -142,6 +164,7 @@
         "warning",
         "unknown_fn"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown interpolation method 'foo'"
     },
@@ -151,6 +174,7 @@
         "warning",
         "alias_embedded"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "'alias' interpolation is only permitted if the expression is equal to the entire string"
     },
@@ -160,6 +184,7 @@
         "warning",
         "absent"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'absent';"
       ],
@@ -172,6 +197,7 @@
         "error",
         "absent"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'absent';"
     },
@@ -181,6 +207,7 @@
         "warning",
         "nope"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "h_interp": {
@@ -189,6 +216,7 @@
         "warning",
         "h_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x{\"k\"=>\"v\", \"n\"=>1}",
       "raw_value": "x{\"k\" => \"v\", \"n\" => 1}"

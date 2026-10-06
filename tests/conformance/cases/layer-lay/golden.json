@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "d42b1c5b73a5cc7c914e1498bb5d9626b7018ba5aa577379c9a5aaf7728f1d38",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "global"
     },
@@ -20,6 +29,7 @@
         "warning",
         "envkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "e"
     },
@@ -29,6 +39,7 @@
         "warning",
         "envos"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "rh"
     },
@@ -38,6 +49,7 @@
         "warning",
         "mm::onlymod"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -50,6 +62,7 @@
         "warning",
         "mm::envmod"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -62,6 +75,7 @@
         "warning",
         "unq"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "mm::darr": {
@@ -70,6 +84,7 @@
         "warning",
         "mm::darr"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -84,6 +99,7 @@
         "warning",
         "mm::dopt"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -99,6 +115,7 @@
         "warning",
         "mm::h"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -115,6 +132,7 @@
         "deep",
         "mm::h"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -131,6 +149,7 @@
         "warning",
         "mm::arr"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],
@@ -149,6 +168,7 @@
         "unique",
         "mm::darr"
       ],
+      "exit_status": 0,
       "warnings": [
         "Module 'mm': Value returned from data_hash function 'yaml_data', when using location <case>/environments/production/modules/mm/data/common.yaml', must use keys qualified with the name of the module; got unq"
       ],

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "85c3f1d501b9a66abbffb25b800dc999f0b9ca24f5e7efa0f93a70594dc6a11e",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'k' failed: Recursive lookup detected in [k, scope:tmpl]"
     },
@@ -20,6 +29,7 @@
         "warning",
         "h"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "42": "b"
@@ -31,6 +41,7 @@
         "warning",
         "fl"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1.0e+15|100000000000000.0"
     },
@@ -40,6 +51,7 @@
         "warning",
         "undef_ws"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'nosuch';"
       ],
@@ -52,6 +64,7 @@
         "warning",
         "colon_undef"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable '::nosuch';"
       ],
@@ -64,6 +77,7 @@
         "warning",
         "m5"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[42]"
     },
@@ -73,6 +87,7 @@
         "error",
         "undef_ws"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable 'nosuch';"
     },
@@ -82,6 +97,7 @@
         "error",
         "colon_undef"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Undefined variable '::nosuch';"
     },
@@ -91,6 +107,7 @@
         "error",
         "m1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -100,6 +117,7 @@
         "error",
         "m2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -109,6 +127,7 @@
         "error",
         "m3"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -118,6 +137,7 @@
         "error",
         "m4"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -127,6 +147,7 @@
         "error",
         "m6"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     }

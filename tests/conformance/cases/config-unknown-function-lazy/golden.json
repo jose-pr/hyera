@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "8646a2f6fd68e92644f66e2c206d4c68db421074458db3b54436246f3b787dba",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "k"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_list';"
       ],
@@ -23,6 +32,7 @@
         "warning",
         "not_anywhere"
       ],
+      "exit_status": 1,
       "warnings": [
         "Undefined variable 'no_such_list';"
       ],

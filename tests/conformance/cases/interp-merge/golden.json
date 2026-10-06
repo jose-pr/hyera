@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "944319bcdc76add2afc3bfbd125a9d50f6e35b9e5010cb040ae3050610ac8395",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "lo_target"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -23,6 +32,7 @@
         "warning",
         "lo_strat"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -35,6 +45,7 @@
         "warning",
         "lo_aliased"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -47,6 +58,7 @@
         "warning",
         "via_lo_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -59,6 +71,7 @@
         "warning",
         "via_lo_lookup"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x=[\"a\", \"b\"]"
     },
@@ -68,6 +81,7 @@
         "warning",
         "first_interp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"n1\"]"
     },
@@ -77,6 +91,7 @@
         "warning",
         "nested_first"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "inner": [
@@ -93,6 +108,7 @@
         "unique",
         "m_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "n1",
@@ -109,6 +125,7 @@
         "KO",
         "ko_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "z",
@@ -123,6 +140,7 @@
         "deep",
         "dm"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "b": 1,
@@ -135,6 +153,7 @@
         "warning",
         "lo_ref"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -144,6 +163,7 @@
         "warning",
         "lo_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -155,6 +175,7 @@
         "hash",
         "h_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": 3,
@@ -169,6 +190,7 @@
         "deep",
         "h_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "c": 3,

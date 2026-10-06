@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "de77b5636dd32f938adc9b78687aff82a057948b890a2dc758b5784a1697cc06",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "ntp::servers"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -25,6 +34,7 @@
         "warning",
         "app::name"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -37,6 +47,7 @@
         "warning",
         "greeting"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -49,6 +60,7 @@
         "warning",
         "lookup_greeting"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -61,6 +73,7 @@
         "warning",
         "alias_target"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -73,6 +86,7 @@
         "warning",
         "literal_pct"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -85,6 +99,7 @@
         "warning",
         "alias_list"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -99,6 +114,7 @@
         "warning",
         "nope::key"
       ],
+      "exit_status": 1,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -110,6 +126,7 @@
         "warning",
         "port_msg"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -122,6 +139,7 @@
         "warning",
         "db.port"
       ],
+      "exit_status": 1,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -135,6 +153,7 @@
         "unique",
         "classes"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],
@@ -153,6 +172,7 @@
         "hash",
         "db"
       ],
+      "exit_status": 0,
       "warnings": [
         "The node parameter 'environment' for node 'golden.example.com' was already set to 'production'. It could not be set to 'production'"
       ],

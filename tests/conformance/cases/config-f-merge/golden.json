@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "012121ba427fdb8063deb013118485342f206207a582004238c8588bcea047a1",
   "results": {
@@ -13,6 +21,7 @@
         "unique",
         "u"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -29,6 +38,7 @@
         "unique",
         "single"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "z",
@@ -43,6 +53,7 @@
         "hash",
         "d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "arr": [
@@ -68,6 +79,7 @@
         "deep",
         "d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "arr": [
@@ -97,6 +109,7 @@
         "--sort-merged-arrays",
         "d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "arr": [
@@ -126,6 +139,7 @@
         "--sort-merged-arrays",
         "single"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "z",
@@ -141,6 +155,7 @@
         "--merge-hash-arrays",
         "mh"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -160,6 +175,7 @@
         "deep",
         "mh"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -183,6 +199,7 @@
         "--",
         "d"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "arr": [

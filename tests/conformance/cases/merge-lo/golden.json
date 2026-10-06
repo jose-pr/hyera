@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "780436c0265e6c6a87305cc2ae8c94e057e41ce43d9dbf4cfe2d165ac2d9ac17",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "lo_unique"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -23,6 +32,7 @@
         "warning",
         "lo_deep_ko"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "drop": 2,
@@ -39,6 +49,7 @@
         "warning",
         "lo_hi_wins"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": {
@@ -53,6 +64,7 @@
         "warning",
         "lo_shallow"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "v",
@@ -65,6 +77,7 @@
         "warning",
         "lo_re_one"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -77,6 +90,7 @@
         "warning",
         "lo_re_exact"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "b": 2,
@@ -89,6 +103,7 @@
         "warning",
         "lo_deep_opts"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -110,6 +125,7 @@
         "warning",
         "lo_conv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -119,6 +135,7 @@
         "warning",
         "lo_dotted.port"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "b": 2,
@@ -131,6 +148,7 @@
         "warning",
         "lo_dotkey.port"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -144,6 +162,7 @@
         "first",
         "lo_conv"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5
     },
@@ -155,6 +174,7 @@
         "first",
         "lo_unique"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -168,6 +188,7 @@
         "deep",
         "lo_unique"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "b",

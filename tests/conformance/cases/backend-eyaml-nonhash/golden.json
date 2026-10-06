@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "bdb14cd2bc6726a334fe1a3e6b431936f5955719c9315614b2932fd53b393051",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/secrets.eyaml: file does not contain a valid yaml hash"
       ],
@@ -23,6 +32,7 @@
         "error",
         "plain"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: <case>/data/secrets.eyaml: file does not contain a valid yaml hash"
     }

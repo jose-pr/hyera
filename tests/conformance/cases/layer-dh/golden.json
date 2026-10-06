@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "f83cffedfa425305d790bf2796292087d8b6363d9e68aec56560bbda4f48674b",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "symkey"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -23,6 +32,7 @@
         "warning",
         ":symkey"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -34,6 +44,7 @@
         "warning",
         "symvalue"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -46,6 +57,7 @@
         "warning",
         "nested"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -62,6 +74,7 @@
         "warning",
         "nested.a"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -76,6 +89,7 @@
         "warning",
         "nested.a.b"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -87,6 +101,7 @@
         "warning",
         "onlysecond"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -99,6 +114,7 @@
         "warning",
         "anchor_ref"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -113,6 +129,7 @@
         "warning",
         "mergekey"
       ],
+      "exit_status": 0,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],
@@ -128,6 +145,7 @@
         "warning",
         "quoted.dot"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/data/empty.yaml: file does not contain a valid yaml hash"
       ],

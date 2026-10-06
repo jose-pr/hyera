@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "f1bd6ca2e7a0a3269763c8c4d36c8db02dae64f997d290a9b90e94fe6594ef36",
   "results": {
@@ -13,6 +21,7 @@
         "unique",
         "u_scalars"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -27,6 +36,7 @@
         "unique",
         "u_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -43,6 +53,7 @@
         "unique",
         "u_mixed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "x",
@@ -57,6 +68,7 @@
         "unique",
         "u_hash_in_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -75,6 +87,7 @@
         "unique",
         "u_hash_value"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -91,6 +104,7 @@
         "unique",
         "u_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         null,
@@ -105,6 +119,7 @@
         "unique",
         "u_single_dup"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -119,6 +134,7 @@
         "unique",
         "u_single_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -134,6 +150,7 @@
         "unique",
         "u_single_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "s"
@@ -147,6 +164,7 @@
         "unique",
         "u_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -160,6 +178,7 @@
         "unique",
         "u_all_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": []
     },
@@ -171,6 +190,7 @@
         "unique",
         "u_order"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "c",
@@ -186,6 +206,7 @@
         "unique",
         "u_bool_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -201,6 +222,7 @@
         "unique",
         "u_float_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -217,6 +239,7 @@
         "unique",
         "u_zero_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         0,
@@ -231,6 +254,7 @@
         "unique",
         "u_str_num"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "1",
@@ -245,6 +269,7 @@
         "hash",
         "h_basic"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "d": 4,
@@ -263,6 +288,7 @@
         "hash",
         "h_non_hash_lower"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_non_hash_lower' failed: The second element of the merge has wrong type, expects a Hash value, got String"
     },
@@ -274,6 +300,7 @@
         "hash",
         "h_non_hash_higher"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_non_hash_higher' failed: The first element of the merge has wrong type, expects a Hash value, got String"
     },
@@ -285,6 +312,7 @@
         "hash",
         "h_nil_higher"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_nil_higher' failed: The first element of the merge has wrong type, expects a Hash value, got Undef"
     },
@@ -296,6 +324,7 @@
         "hash",
         "h_single_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "str"
     },
@@ -307,6 +336,7 @@
         "hash",
         "h_single_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1,
@@ -321,6 +351,7 @@
         "hash",
         "h_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1
@@ -334,6 +365,7 @@
         "hash",
         "h_nil_values"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": null,
@@ -348,6 +380,7 @@
         "hash",
         "h_order"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "m": 1,
@@ -363,6 +396,7 @@
         "deep",
         "d_basic"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": {
@@ -387,6 +421,7 @@
         "deep",
         "d_top_arrays"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "c",
@@ -402,6 +437,7 @@
         "deep",
         "d_scalar_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -413,6 +449,7 @@
         "deep",
         "d_hash_vs_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": {
@@ -428,6 +465,7 @@
         "deep",
         "d_array_vs_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": [
@@ -443,6 +481,7 @@
         "deep",
         "d_array_vs_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": [
@@ -458,6 +497,7 @@
         "deep",
         "d_scalar_vs_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": 5
@@ -471,6 +511,7 @@
         "deep",
         "d_nil_higher"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": 1
@@ -484,6 +525,7 @@
         "deep",
         "d_nil_lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": 1
@@ -497,6 +539,7 @@
         "deep",
         "d_array_vs_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": [
@@ -512,6 +555,7 @@
         "deep",
         "d_false_lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": [
@@ -527,6 +571,7 @@
         "deep",
         "d_false_higher"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": false
@@ -540,6 +585,7 @@
         "deep",
         "d_top_nil_higher"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1
@@ -553,6 +599,7 @@
         "deep",
         "d_top_nil_lower"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1
@@ -566,6 +613,7 @@
         "deep",
         "d_top_hash_vs_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1
@@ -579,6 +627,7 @@
         "deep",
         "d_top_array_vs_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -592,6 +641,7 @@
         "deep",
         "d_top_array_vs_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         1
@@ -605,6 +655,7 @@
         "deep",
         "d_dup_in_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -621,6 +672,7 @@
         "deep",
         "d_dup_single"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -637,6 +689,7 @@
         "deep",
         "d_aoh"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -657,6 +710,7 @@
         "deep",
         "d_three"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -674,6 +728,7 @@
         "deep",
         "d_order"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "m": {
@@ -692,6 +747,7 @@
         "deep",
         "d_bool_int"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -709,6 +765,7 @@
         "deep",
         "d_empty_hash_higher"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": {
@@ -724,6 +781,7 @@
         "deep",
         "d_empty_str_higher"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": ""
@@ -737,6 +795,7 @@
         "deep",
         "d_str_vs_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": "str"
@@ -750,6 +809,7 @@
         "deep",
         "d_top_scalar_vs_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -763,6 +823,7 @@
         "--",
         "ko_hash_key"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "drop": 2,
@@ -781,6 +842,7 @@
         "--",
         "ko_hash_key_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "n": {
@@ -801,6 +863,7 @@
         "--",
         "ko_array_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -819,6 +882,7 @@
         "--",
         "ko_array_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "c",
@@ -835,6 +899,7 @@
         "--",
         "ko_lower_level"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -854,6 +919,7 @@
         "--",
         "ko_single_level"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -872,6 +938,7 @@
         "--",
         "ko_single_level_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "--a",
@@ -888,6 +955,7 @@
         "--",
         "ko_naked_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": []
@@ -903,6 +971,7 @@
         "--",
         "ko_naked_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": ""
@@ -918,6 +987,7 @@
         "--",
         "ko_prefixed_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": ""
@@ -933,6 +1003,7 @@
         "--",
         "ko_prefixed_scalar_vs_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": ""
@@ -948,6 +1019,7 @@
         "--",
         "ko_value_vs_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": ""
@@ -963,6 +1035,7 @@
         "--",
         "ko_int_array"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -980,6 +1053,7 @@
         "--",
         "ko_three"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -998,6 +1072,7 @@
         "--sort-merged-arrays",
         "s_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -1016,6 +1091,7 @@
         "--sort-merged-arrays",
         "s_single_level_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "c",
@@ -1031,6 +1107,7 @@
         "--sort-merged-arrays",
         "s_single_level_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -1048,6 +1125,7 @@
         "--sort-merged-arrays",
         "s_unmerged_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -1070,6 +1148,7 @@
         "--sort-merged-arrays",
         "s_mixed"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of Integer with String failed"
     },
@@ -1082,6 +1161,7 @@
         "--sort-merged-arrays",
         "s_hashes"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of Hash with Hash failed"
     },
@@ -1094,6 +1174,7 @@
         "--sort-merged-arrays",
         "s_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -1110,6 +1191,7 @@
         "--merge-hash-arrays",
         "mha_equal"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "r": [
@@ -1134,6 +1216,7 @@
         "--merge-hash-arrays",
         "mha_src_longer"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "r": [
@@ -1156,6 +1239,7 @@
         "--merge-hash-arrays",
         "mha_dest_longer"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "r": [
@@ -1178,6 +1262,7 @@
         "--merge-hash-arrays",
         "mha_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -1195,6 +1280,7 @@
         "--merge-hash-arrays",
         "mha_empty_src"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "r": [
@@ -1213,6 +1299,7 @@
         "--merge-hash-arrays",
         "mha_mixed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "r": [
@@ -1232,6 +1319,7 @@
         "warning",
         "dot_first.b"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "dot_hash": {
@@ -1242,6 +1330,7 @@
         "hash",
         "dot_hash.b"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "x": 1
@@ -1255,6 +1344,7 @@
         "unique",
         "dot_unique.l"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'dot_unique.l' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"
     },
@@ -1266,6 +1356,7 @@
         "deep",
         "dot_deep.b"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -1280,6 +1371,7 @@
         "warning",
         "f_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -1289,6 +1381,7 @@
         "warning",
         "f_nil_only"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -1300,6 +1393,7 @@
         "DFLT",
         "f_nil_only"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -1309,6 +1403,7 @@
         "warning",
         "f_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": false
     },
@@ -1320,6 +1415,7 @@
         "unique",
         "f_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         null,
@@ -1334,6 +1430,7 @@
         "deep",
         "f_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -1348,6 +1445,7 @@
         "--sort-merged-arrays",
         "ko_array_nested"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [

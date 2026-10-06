@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "867b54cfe0b6db0bb09bb760ab0ddf2493087524ffafae4ac7d912a693c722ae",
   "results": {
@@ -11,11 +19,12 @@
         "warning",
         "k"
       ],
+      "exit_status": 1,
       "warnings": [
         "<case>/hiera.yaml: Use of 'hiera.yaml' version 3 is deprecated. It should be converted to version 5"
       ],
       "status": "error",
-      "message": "Lookup of key 'lookup_options' failed:  The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'hierarchy' variant 0 expects a String value, got Tuple"
+      "message": "Lookup of key 'lookup_options' failed:  The Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'hierarchy' variant 0 expects a String value, got Tuple\nThe Lookup Configuration at <case>/hiera.yaml' has wrong type, entry 'hierarchy' variant 1 index 0 expects a String value, got Struct\nThe Lookup Configuration at <case>/hiera.yaml' has wrong type, unrecognized key 'defaults'"
     }
   }
 }

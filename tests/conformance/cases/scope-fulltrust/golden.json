@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "362a5e634562e259cbf7799fc7c64b7dc2460cc247e94359ddbb24266d222581",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "v_clientcert"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "web01.example.com"
     },
@@ -20,6 +29,7 @@
         "warning",
         "v_trusted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{\"authenticated\"=>\"local\", \"certname\"=>\"web01.example.com\", \"extensions\"=>{}, \"hostname\"=>\"web01\", \"domain\"=>\"example.com\", \"external\"=>{}}",
       "raw_value": "{\"authenticated\" => \"local\", \"certname\" => \"web01.example.com\", \"extensions\" => {}, \"hostname\" => \"web01\", \"domain\" => \"example.com\", \"external\" => {}}"
@@ -30,6 +40,7 @@
         "warning",
         "v_fqdn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "web01.example.com"
     }

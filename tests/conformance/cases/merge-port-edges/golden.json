@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "f091d47b4108d54cd4e0d30597fcb8c073b44d2c716fd15a747dda7bae3a641f",
   "results": {
@@ -15,6 +23,7 @@
         "--",
         "ko_alias"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "other": 1,
@@ -33,6 +42,7 @@
         "--",
         "ka3"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "other": 1,
@@ -53,6 +63,7 @@
         "--",
         "ka_top_only"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "other": 1,
@@ -71,6 +82,7 @@
         "--",
         "ko_arr_over_scalar"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": [
@@ -88,6 +100,7 @@
         "--",
         "ko_arr_over_scalar_top"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "b"
@@ -103,6 +116,7 @@
         "--",
         "ko_int_key_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "k": 1
@@ -116,6 +130,7 @@
         "deep",
         "ks_hash_over_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "a": 1,
@@ -130,6 +145,7 @@
         "deep",
         "ks_empty_hash_over_str"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "s"
     },
@@ -141,6 +157,7 @@
         "hash",
         "h_empty_arr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_empty_arr' failed: The first element of the merge has wrong type, expects a Hash value, got Array"
     },
@@ -152,6 +169,7 @@
         "hash",
         "h_int_key"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_int_key' failed: The first element of the merge has wrong type, expects a Hash[String, Data] value, got Hash[Integer[1, 1], String]"
     },
@@ -163,6 +181,7 @@
         "hash",
         "h_nested_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_nested_int' failed: The first element of the merge has wrong type, entry 'a' expects a Data value, got Hash"
     },
@@ -174,6 +193,7 @@
         "hash",
         "h_empty_hash_vs_str"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_empty_hash_vs_str' failed: The second element of the merge has wrong type, expects a Hash value, got String"
     },
@@ -185,6 +205,7 @@
         "hash",
         "h_float"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_float' failed: The first element of the merge has wrong type, expects a Hash value, got Float"
     },
@@ -196,6 +217,7 @@
         "hash",
         "h_bool"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'h_bool' failed: The first element of the merge has wrong type, expects a Hash value, got Boolean"
     },
@@ -207,6 +229,7 @@
         "unique",
         "u_empty_hash"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {},
@@ -221,6 +244,7 @@
         "unique",
         "u_hash_lower"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'u_hash_lower' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"
     },
@@ -232,6 +256,7 @@
         "unique",
         "u_nil_lower"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'u_nil_lower' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Undef"
     },
@@ -243,8 +268,9 @@
         "unique",
         "u_nondata_elem"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "Lookup of key 'u_nondata_elem' failed:  The second element of the merge has wrong type, variant 0 expects a Scalar value, got Tuple"
+      "message": "Lookup of key 'u_nondata_elem' failed:  The second element of the merge has wrong type, variant 0 expects a Scalar value, got Tuple\nThe second element of the merge has wrong type, variant 1 index 0 expects a Data value, got Hash"
     },
     "sort_nil": {
       "argv": [
@@ -255,6 +281,7 @@
         "--sort-merged-arrays",
         "sort_nil"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of Integer with nil failed"
     },
@@ -267,6 +294,7 @@
         "--sort-merged-arrays",
         "sort_float"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of String with 1.5 failed"
     },
@@ -279,6 +307,7 @@
         "--sort-merged-arrays",
         "sort_arr"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -302,6 +331,7 @@
         "--sort-merged-arrays",
         "sort_eq"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "comparison of Float with String failed"
     },
@@ -311,6 +341,7 @@
         "warning",
         "ko_single_empty"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -322,6 +353,7 @@
         "warning",
         "o_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: '5'"
     },
@@ -331,6 +363,7 @@
         "warning",
         "o_list"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: '[\"deep\"]'"
     },
@@ -340,6 +373,7 @@
         "warning",
         "o_strat_list"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Unknown merge strategy: '[\"deep\"]'"
     },
@@ -349,6 +383,7 @@
         "warning",
         "o_sort_str"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, entry 'sort_merged_arrays' expects a value of type Undef or Boolean, got String"
     },
@@ -358,6 +393,7 @@
         "warning",
         "o_ko_int"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, entry 'knockout_prefix' expects a value of type Undef or String, got Integer"
     },
@@ -367,8 +403,9 @@
         "warning",
         "o_two_unknown"
       ],
+      "exit_status": 1,
       "status": "error",
-      "message": "The merge options has wrong type, unrecognized key 'aa'"
+      "message": "The merge options has wrong type, unrecognized key 'aa'\nThe merge options has wrong type, unrecognized key 'bb'"
     },
     "o_first_extra": {
       "argv": [
@@ -376,6 +413,7 @@
         "warning",
         "o_first_extra"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The merge options has wrong type, unrecognized key 'knockout_prefix'"
     },
@@ -385,6 +423,7 @@
         "warning",
         "o_strat_nil"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "The hash given as 'merge' must contain the name of a strategy in string form for the key 'strategy'"
     },
@@ -394,6 +433,7 @@
         "warning",
         "o_deep_ko_nil"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [
@@ -412,6 +452,7 @@
         "**",
         "ko_double_star"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "l": [

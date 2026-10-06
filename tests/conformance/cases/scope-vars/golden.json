@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "12c6bdd9f27a9c46f2019f3b6f2debfd8538cd2dea376428131b02318625b586",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "v_env"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "production"
     },
@@ -20,6 +29,7 @@
         "warning",
         "v_facts_os_family"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -29,6 +39,7 @@
         "warning",
         "v_top_os_family"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -38,6 +49,7 @@
         "warning",
         "v_topq_os_family"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -47,6 +59,7 @@
         "warning",
         "v_scope_fn"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -56,6 +69,7 @@
         "warning",
         "v_scope_fn_q"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "RedHat"
     },
@@ -65,6 +79,7 @@
         "warning",
         "v_facts_bool_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "false"
     },
@@ -74,6 +89,7 @@
         "warning",
         "v_top_bool_false"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "false"
     },
@@ -83,6 +99,7 @@
         "warning",
         "v_top_bool_true"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "true"
     },
@@ -92,6 +109,7 @@
         "warning",
         "v_zero"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "0"
     },
@@ -101,6 +119,7 @@
         "warning",
         "v_num"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "5"
     },
@@ -110,6 +129,7 @@
         "warning",
         "v_float"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1.5"
     },
@@ -119,6 +139,7 @@
         "warning",
         "v_scope_num"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "5"
     },
@@ -128,6 +149,7 @@
         "warning",
         "v_scope_bool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "false"
     },
@@ -137,6 +159,7 @@
         "warning",
         "v_scope_list"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[\"web\", \"db\"]"
     },
@@ -146,6 +169,7 @@
         "warning",
         "v_list_embed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "r=[\"web\", \"db\"]"
     },
@@ -155,6 +179,7 @@
         "warning",
         "v_hash_embed"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "o={\"family\"=>\"RedHat\", \"release\"=>{\"major\"=>\"9\"}}",
       "raw_value": "o={\"family\" => \"RedHat\", \"release\" => {\"major\" => \"9\"}}"
@@ -165,6 +190,7 @@
         "warning",
         "v_trusted"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{\"authenticated\"=>\"local\", \"certname\"=>nil, \"extensions\"=>{}, \"hostname\"=>nil, \"domain\"=>nil, \"external\"=>{}}",
       "raw_value": "{\"authenticated\" => \"local\", \"certname\" => nil, \"extensions\" => {}, \"hostname\" => nil, \"domain\" => nil, \"external\" => {}}"
@@ -175,6 +201,7 @@
         "warning",
         "v_trusted_certname"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -184,6 +211,7 @@
         "warning",
         "v_serverversion"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "8.10.0"
     },
@@ -193,6 +221,7 @@
         "warning",
         "v_clientcert"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'clientcert';"
       ],
@@ -205,6 +234,7 @@
         "warning",
         "v_facts_clientcert"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -214,6 +244,7 @@
         "warning",
         "v_undef"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -226,6 +257,7 @@
         "warning",
         "v_scope_undef"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'no_such_var';"
       ],
@@ -238,6 +270,7 @@
         "warning",
         "v_facts_undef"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "xy"
     },
@@ -247,6 +280,7 @@
         "warning",
         "v_neg_idx"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -256,6 +290,7 @@
         "warning",
         "v_hash_numkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": ""
     },
@@ -265,6 +300,7 @@
         "warning",
         "v_list_idx"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "b"
     },
@@ -274,6 +310,7 @@
         "warning",
         "v_quoted_seg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "dv"
     },
@@ -283,6 +320,7 @@
         "warning",
         "v_flat_dotted"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'dotted';"
       ],
@@ -295,6 +333,7 @@
         "warning",
         "v_string_walk"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'v_string_walk' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'facts.os.family.x'"
     },
@@ -304,6 +343,7 @@
         "warning",
         "v_module_name"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "[]"
     },
@@ -313,6 +353,7 @@
         "warning",
         "v_calling_module"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'calling_module';"
       ],
@@ -325,6 +366,7 @@
         "warning",
         "v_calling_class"
       ],
+      "exit_status": 0,
       "warnings": [
         "Undefined variable 'calling_class';"
       ],
@@ -337,6 +379,7 @@
         "warning",
         "v_facts_whole_type"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "{\"os\"=>{\"family\"=>\"RedHat\", \"release\"=>{\"major\"=>\"9\"}}, \"is_virtual\"=>false, \"flag_true\"=>true, \"processors\"=>{\"count\"=>0}, \"roles\"=>[\"web\", \"db\"], \"num\"=>5, \"float\"=>1.5, \"nested\"=>{\"1\"=>\"one\", \"list\"=>[\"a\", \"b\", \"c\"]}, \"dotted.name\"=>\"dv\", \"kernel\"=>\"Linux\"}",
       "raw_value": "{\"os\" => {\"family\" => \"RedHat\", \"release\" => {\"major\" => \"9\"}}, \"is_virtual\" => false, \"flag_true\" => true, \"processors\" => {\"count\" => 0}, \"roles\" => [\"web\", \"db\"], \"num\" => 5, \"float\" => 1.5, \"nested\" => {\"1\" => \"one\", \"list\" => [\"a\", \"b\", \"c\"]}, \"dotted.name\" => \"dv\", \"kernel\" => \"Linux\"}"

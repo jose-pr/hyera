@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "56d6e139ea1b3fbdef4bb3a9dc1f7f572cde016c84905cb4b0e9868973a253a7",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "karr"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "no implicit conversion of String into Integer"
     },
@@ -20,6 +29,7 @@
         "warning",
         "kint"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "no implicit conversion of String into Integer"
     },
@@ -29,6 +39,7 @@
         "warning",
         "kbool"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "undefined method '[]' for true"
     },
@@ -38,6 +49,7 @@
         "warning",
         "pn1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a"
@@ -49,6 +61,7 @@
         "warning",
         "pa1"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "no implicit conversion of String into Integer"
     },
@@ -58,6 +71,7 @@
         "warning",
         "hxbeef"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -70,6 +84,7 @@
         "warning",
         "lbkey"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -82,6 +97,7 @@
         "warning",
         "kneg"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         "a",
@@ -94,6 +110,7 @@
         "warning",
         "lookup_options"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "nk.a": {
@@ -102,6 +119,7 @@
         "warning",
         "nk.a"
       ],
+      "exit_status": 1,
       "status": "not_found"
     },
     "ns.x": {
@@ -110,6 +128,7 @@
         "warning",
         "ns.x"
       ],
+      "exit_status": 1,
       "status": "not_found"
     }
   }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "7b8cc1b199cb2300ac515d2608c1a9ad99e63f5fbf7578c165b8fa269b5dfa83",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "a"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'lookup_options' failed: The first element of the merge has wrong type, expects a Hash value, got Tuple"
     }

@@ -1,7 +1,15 @@
 {
-  "format": 1,
+  "format": 2,
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
   "node": "golden.example.com",
   "inputs_sha256": "e8720cdc14a38b96c7c8d0611f848c99574a11eac2be6d1f0caa2e307772daf6",
   "results": {
@@ -11,6 +19,7 @@
         "warning",
         "plain"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "p"
     },
@@ -20,6 +29,7 @@
         "warning",
         "oct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 493
     },
@@ -29,6 +39,7 @@
         "warning",
         "hex"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 31
     },
@@ -38,6 +49,7 @@
         "warning",
         "under"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1000
     },
@@ -47,6 +59,7 @@
         "warning",
         "comma"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1000
     },
@@ -56,6 +69,7 @@
         "warning",
         "plusnum"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 12
     },
@@ -65,6 +79,7 @@
         "warning",
         "negoct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": -31
     },
@@ -74,6 +89,7 @@
         "warning",
         "fdot"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1.0
     },
@@ -83,6 +99,7 @@
         "warning",
         "fdotlead"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 0.5
     },
@@ -92,6 +109,7 @@
         "warning",
         "fexp"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1000.0
     },
@@ -101,6 +119,7 @@
         "warning",
         "funder"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 10.5
     },
@@ -110,6 +129,7 @@
         "warning",
         "plusinf"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Infinity not allowed in JSON"
     },
@@ -119,6 +139,7 @@
         "warning",
         "minusinf"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "-Infinity not allowed in JSON"
     },
@@ -128,6 +149,7 @@
         "warning",
         "notanumber"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "NaN not allowed in JSON"
     },
@@ -137,6 +159,7 @@
         "warning",
         "sexa"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 5400
     },
@@ -146,6 +169,7 @@
         "warning",
         "symv"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'symv' failed: Value for key 'symv', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
     },
@@ -155,6 +179,7 @@
         "warning",
         "symq"
       ],
+      "exit_status": 1,
       "status": "error",
       "message": "Lookup of key 'symq' failed: Value for key 'symq', in hash returned from data_hash function 'yaml_data', when using location <case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"
     },
@@ -164,6 +189,7 @@
         "warning",
         "untag1"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "bar"
     },
@@ -173,6 +199,7 @@
         "warning",
         "untag2"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 12
     },
@@ -182,6 +209,7 @@
         "warning",
         "strtag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "12"
     },
@@ -191,6 +219,7 @@
         "warning",
         "inttag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 12
     },
@@ -200,6 +229,7 @@
         "warning",
         "floattag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": 1.0
     },
@@ -209,6 +239,7 @@
         "warning",
         "booltag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -218,6 +249,7 @@
         "warning",
         "nulltag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -227,6 +259,7 @@
         "warning",
         "valuetag"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "x"
     },
@@ -236,6 +269,7 @@
         "warning",
         "binary"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "hello"
     },
@@ -245,6 +279,7 @@
         "warning",
         "omap"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": {
         "x": 1,
@@ -257,6 +292,7 @@
         "warning",
         "pairs"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": [
         {
@@ -273,6 +309,7 @@
         "warning",
         "rubystring"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "foo"
     },
@@ -282,6 +319,7 @@
         "warning",
         "boolyes"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": true
     },
@@ -291,6 +329,7 @@
         "warning",
         "booloff"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": false
     },
@@ -300,6 +339,7 @@
         "warning",
         "nullval"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": null
     },
@@ -309,6 +349,7 @@
         "warning",
         "lookalikeoct"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "0o17"
     },
@@ -318,6 +359,7 @@
         "warning",
         "lookalikefloat"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "1e3"
     },
@@ -327,6 +369,7 @@
         "warning",
         "strbool"
       ],
+      "exit_status": 0,
       "status": "found",
       "value": "true"
     }
