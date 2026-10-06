@@ -1137,3 +1137,54 @@ def test_concurrent_cold_start_does_not_leave_options_wrong(make_tree):
         if {k: h.lookup(k) for k in "ge"} != expect:
             stuck += 1
     assert stuck == 0
+
+
+def _many_level_tree(make_tree, levels):
+    hierarchy = [
+        {"name": "l%d" % i, "path": "l%d/%%{trusted.certname}.yaml" % i}
+        for i in range(levels - 1)
+    ] + [{"name": "common", "path": "common.yaml"}]
+    return make_tree(
+        {"hierarchy": hierarchy},
+        files={"data/common.yaml": "k: v\n", "data/l0/n1.yaml": "other: 1\n"},
+    )
+
+
+def test_warm_lookup_probes_each_location_once(make_tree, monkeypatch):
+    levels = 40
+    root = _many_level_tree(make_tree, levels)
+    h = Hiera(
+        str(root / "hiera.yaml"),
+        scope=Scope(trusted={"certname": "n1"}),
+        revalidate=True,
+    )
+    assert h.lookup("k") == "v"
+    probes = [0]
+    original = core.Hiera._require_not_dir
+
+    def counting(self, path, invocation):
+        probes[0] += 1
+        return original(self, path, invocation)
+
+    monkeypatch.setattr(core.Hiera, "_require_not_dir", counting)
+    assert h.lookup("k") == "v"
+    assert probes[0] == levels
+
+
+def test_ordinary_lookup_builds_no_explain_location_reference(make_tree, monkeypatch):
+    from hyera._lookup import function_provider
+
+    root = _many_level_tree(make_tree, 5)
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(trusted={"certname": "n1"}))
+    built = [0]
+    original = function_provider._location_ref
+
+    def counting(location):
+        built[0] += 1
+        return original(location)
+
+    monkeypatch.setattr(function_provider, "_location_ref", counting)
+    assert h.lookup("k") == "v"
+    assert built[0] == 0
+    h.explain("k")
+    assert built[0] > 0

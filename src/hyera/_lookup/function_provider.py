@@ -48,7 +48,7 @@ def _recording_location(invocation, location):
     """``invocation.recording("location", ...)`` for a real location, else
     the shared no-op -- factored out since all three provider kinds need it
     identically."""
-    if location is None:
+    if location is None or invocation.explainer is None:
         return _NULL_CONTEXT
     return invocation.recording("location", _location_ref(location))
 
@@ -475,6 +475,14 @@ class _FunctionProvider:
         #: ``Hiera.clear_cache()``'s counter when this provider was built.
         self.generation = generation
         self._contexts: dict = {}
+        self._kind_ok = False
+
+    def _require_kind_implemented(self) -> None:
+        """:func:`_check_kind_implemented` for this provider's backend, run
+        until it passes once (the answer never changes afterwards)."""
+        if not self._kind_ok:
+            _check_kind_implemented(self.backend, self.kind)
+            self._kind_ok = True
 
     def options_for(self, location) -> dict:
         """Puppet's ``options.merge('path'/'uri' => ...)``
@@ -551,7 +559,8 @@ class _DataHashProvider(_FunctionProvider):
             if location is not None and not location.exist:
                 invocation.report_location_not_found()
                 return _MISSING
-            _check_kind_implemented(self.backend, self.kind)
+            if not self._kind_ok:
+                self._require_kind_implemented()
             ctx = self._context(location)
             if location is not None and not location.is_uri:
                 # A real file. While `self._revalidate`, `Hiera._load_file`
@@ -600,7 +609,8 @@ class _DataHashProvider(_FunctionProvider):
                 data = ctx.data_hash
                 label = ctx.label
             if root not in data:
-                invocation.report_not_found(root)
+                if invocation.explainer is not None:
+                    invocation.report_not_found(root)
                 return _MISSING
             value = data[root]
             validate_data_value(value, self.backend.name, label, root)
@@ -608,13 +618,16 @@ class _DataHashProvider(_FunctionProvider):
             result = interpolate(value, invocation, allow_methods=True)
             return invocation.report_found(root, result)
 
+        # Without an explainer there is nothing to record per location, so
+        # the per-location wrapper is skipped.
+        visit = _at_location if invocation.explainer is None else at_location
         if merge.first_found:
             for location in locations:
-                found = at_location(location)
+                found = visit(location)
                 if found is not _MISSING:
                     return found
             return _MISSING
-        return merge.lookup(locations, at_location, invocation)
+        return merge.lookup(locations, visit, invocation)
 
 
 class _LookupKeyProvider(_FunctionProvider):
@@ -628,7 +641,7 @@ class _LookupKeyProvider(_FunctionProvider):
                 if location is not None and not location.exist:
                     invocation.report_location_not_found()
                     return _MISSING
-                _check_kind_implemented(self.backend, self.kind)
+                self._require_kind_implemented()
                 ctx = self._context(location)
                 kept = self._kept(ctx, root, invocation)
                 if kept is not None:
@@ -663,7 +676,7 @@ class _DataDigProvider(_FunctionProvider):
                 if location is not None and not location.exist:
                     invocation.report_location_not_found()
                     return _MISSING
-                _check_kind_implemented(self.backend, self.kind)
+                self._require_kind_implemented()
                 ctx = self._context(location)
                 kept = self._kept(ctx, cache_key, invocation)
                 if kept is not None:

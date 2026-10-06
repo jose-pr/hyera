@@ -1029,6 +1029,14 @@ class Hiera:
         """
         if not self._revalidate and entry.materialized is not None:
             return entry.materialized
+        # One lookup sees one snapshot: the memo shares the invocation's
+        # probe memo, so every level's provider reuses the first expansion.
+        memo = invocation._fs_memo if invocation is not None else None
+        memo_key = ("materialized", id(entry))
+        if memo is not None:
+            held = memo.get(memo_key)
+            if held is not None:
+                return held[1]
 
         levels = []
         for locations in entry.levels:
@@ -1051,6 +1059,8 @@ class Hiera:
         materialized = tuple(levels)
         if not self._revalidate:
             entry.materialized = materialized
+        elif memo is not None:
+            memo[memo_key] = (entry, materialized)
         return materialized
 
     def _glob_matches(self, root: str, pattern: str, invocation) -> tuple:
