@@ -5,7 +5,14 @@ import time
 
 import pytest
 
-from hyera import ConfigError, Hiera, InterpolationError, Scope, Sensitive
+from hyera import (
+    ConfigError,
+    Hiera,
+    HieraLookupError,
+    InterpolationError,
+    Scope,
+    Sensitive,
+)
 from hyera._lookup.interpolation import (
     _float_to_s,
     _ruby_inspect,
@@ -242,7 +249,7 @@ def test_explain_of_a_chain_beyond_the_stack_never_raises_recursion_error(make_t
 def test_a_value_type_nested_beyond_the_stack_raises_a_hiera_error(make_tree):
     h = _hiera(make_tree, "k: x\n")
     nested = "Array[" * 3000 + "String" + "]" * 3000
-    with pytest.raises(InterpolationError):
+    with pytest.raises(HieraLookupError):
         h.lookup("k", nested)
 
 
