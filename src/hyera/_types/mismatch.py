@@ -368,9 +368,30 @@ def _key_of(k):
     return "key of entry {}".format(_quote(k))
 
 
+def _common_type(types):
+    """One type for several: itself when they are all equal, else a Variant."""
+    unique = []
+    for t in types:
+        if t not in unique:
+            unique.append(t)
+    return unique[0] if len(unique) == 1 else Variant(unique)
+
+
 def _describe_struct(expected, value, path):
     if not isinstance(value, dict):
         return [_Mismatch(path, "type", expected, infer_set(value))]
+    if not value or not all(isinstance(k, str) and k for k in value):
+        # Not struct-shaped (empty, or a non-string key): Puppet compares
+        # sizes, then reports the type mismatch against a plain Hash.
+        required = sum(1 for e in expected.elements if not e.optional)
+        total = len(expected.elements)
+        if not required <= len(value) <= total:
+            return [_size_mismatch(path, required, total, len(value))]
+        hash_type = Hash(
+            _common_type(infer_set(k) for k in value),
+            _common_type(infer_set(v) for v in value.values()),
+        )
+        return [_Mismatch(path, "type", expected, hash_type)]
     keys = {e.key for e in expected.elements}
     descriptions = []
     for k in value:

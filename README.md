@@ -419,7 +419,10 @@ a Puppet type string (`Integer`, `Optional[Integer]`) or `[Type, *args]`
 (`[Integer, 16]`, `[String, '%x']`) and converts with Puppet's `new()`:
 Integer, Float, Numeric, String, Boolean, Array, Hash, Tuple, Struct,
 Optional, NotUndef and Sensitive (a redacting `hyera.Sensitive` wrapper). An
-invalid type or a failed conversion raises `hyera.HieraLookupError`.
+invalid type or a failed conversion raises `hyera.HieraLookupError`. A
+`String` format is one directive (`%d`, `%5.2f`, `%x`, `%p`, ...) with
+Puppet's per-type rules and its own "Illegal format" errors; a format that is
+not exactly one directive is an error, never ignored.
 
 ### Scope and facts
 
@@ -875,6 +878,11 @@ for.
   where Ruby's match Unicode. There is no match-time bound, as in Ruby: a
   pattern with nested quantifiers can take exponential time on a long
   subject. (id: `ruby-regex-constructs`)
+- **`String` formats cover one directive per value, not Puppet's container
+  options.** A format given as a type map (`{Integer => '%x'}`), the `#`
+  indenting flag on an Array or Hash, and a precision on `%a`/`%A` raise
+  `HieraLookupError`, as does converting a Binary, Timestamp, URI or Object
+  value; Puppet accepts all of them. (id: `string-format-subset`)
 
 ## Development
 

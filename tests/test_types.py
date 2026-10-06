@@ -1041,7 +1041,9 @@ def test_new_matches_golden(qid, spec, value, result):
 def test_new_unrecorded():
     with pytest.raises(HieraLookupError) as exc_info:
         _run_new([parse_type("Integer"), "default", True], "-5")
-    assert str(exc_info.value).startswith("'new' ")
+    assert str(exc_info.value) == (
+        "Illegal radix: default, expected 2, 8, 10, 16, or default"
+    )
 
     for spec in (
         [parse_type("String"), {"Integer": "%x"}],
@@ -1090,11 +1092,12 @@ def test_new_dispatch_integer_int_passthrough_and_empty_dict():
     from hyera._types.new_function import _dispatch
 
     assert _dispatch(parse_type("Integer"), 5, ()) == 5
-    # An empty dict: the named-args loop runs zero times (every non-empty
-    # dict's first key already raises "unrecognized key"), falling through
-    # to the generic "cannot be converted" error.
-    with pytest.raises(HieraLookupError, match="cannot be converted to Integer"):
+    # An empty dict is a named-arguments hash with no entry at all.
+    with pytest.raises(HieraLookupError) as exc_info:
         _dispatch(parse_type("Integer"), {}, ())
+    assert str(exc_info.value) == (
+        "Integer.new has wrong type, expects size to be between 1 and 3, got 0"
+    )
 
 
 def test_new_dispatch_float_and_numeric_from_int_and_unsupported_type():
@@ -1179,22 +1182,22 @@ def test_ruby_format_table():
     # float body, not the integer one.
     assert _string_convert(3, "%f") == "3.000000"
     # Float body: uppercase exponent + width/precision, "+" on a
-    # non-negative value, left-justify, and the "a"/"A"-style else branch
-    # (unsupported by this subset, falls back to repr()).
+    # non-negative value, left-justify, and the hex-float form.
     assert _string_convert(3.14159, "%10.2E") == "  3.14E+00"
     assert _string_convert(3.14159, "%+.2f") == "+3.14"
     assert _string_convert(3.14159, "%-10.2f") + "|" == "3.14      |"
-    assert _string_convert(3.14159, "%A") == "3.14159"
+    assert _string_convert(3.14159, "%A") == "0X1.921F9F01B866EP+1"
     # NaN/Infinity (Ruby Float#inspect, not Python's repr spelling).
     assert _string_convert(float("nan"), "%p") == "NaN"
     assert _string_convert(float("inf"), "%p") == "Infinity"
     assert _string_convert(float("-inf"), "%p") == "-Infinity"
-    # A string_formats value that does not parse as a %-directive at all
-    # falls back to the plain %s rendering, matching Puppet.
-    assert _string_convert(5, "%") == "5"
-    assert _string_convert(5, "nope") == "5"
-    # Sensitive redacts through every directive, not just the default one.
-    assert _string_convert(Sensitive("secret"), "%p") == "Sensitive [value redacted]"
+    # A string_formats value that is not one directive is refused.
+    for bad in ("%", "nope", "%d items"):
+        with pytest.raises(HieraLookupError, match="is not a valid format"):
+            _string_convert(5, bad)
+    # Sensitive redacts through every directive, as Ruby's inspect does.
+    assert _string_convert(Sensitive("secret"), "%p") == "#<Sensitive [value redacted]>"
+    assert _string_convert(Sensitive("secret"), "%s") == "Sensitive [value redacted]"
     # "%c": the integer's own character (Kernel#format's char directive).
     assert _string_convert(65, "%c") == "A"
     # Integer body width/padding: zero-padded, negative zero-padded (sign
@@ -1214,7 +1217,7 @@ def test_ruby_format_table():
     # falls back to plain str().
     from hyera.backends import RubySymbol
 
-    assert _string_convert(RubySymbol("x"), None) == ":x"
+    assert _string_convert(RubySymbol("x")) == ":x"
 
 
 def test_puppet_quote():
@@ -1352,6 +1355,207 @@ def test_concurrent_parses_never_share_source_text(monkeypatch):
         "a": "TypeReference['{}']".format(a_text),
         "b": "TypeReference['{}']".format(b_text),
     }
+
+
+# (value, format, Puppet 8.10's ``String.new`` output).
+STRING_FORMAT_ROWS = [
+    (0, "%+d", "+0"),
+    (1, "%5d", "    1"),
+    (1, "% d", " 1"),
+    (1, "%10s", "         1"),
+    (1, "%#s", '"1"'),
+    (1, "%.3d", "001"),
+    (-1, "%05d", "-0001"),
+    (-1, "%+d", "-1"),
+    (-1, "%x", "..f"),
+    (-1, "%o", "..7"),
+    (-1, "%b", "..1"),
+    (-1, "%#b", "0b..1"),
+    (255, "%x", "ff"),
+    (255, "%#x", "0xff"),
+    (255, "%o", "377"),
+    (255, "%#o", "0377"),
+    (255, "%b", "11111111"),
+    (255, "%.3d", "255"),
+    (255, "%.10x", "00000000ff"),
+    (-255, "%x", "..f01"),
+    (-255, "%X", "..F01"),
+    (-255, "%#x", "0x..f01"),
+    (-255, "%+x", "-ff"),
+    (65, "%c", "A"),
+    (65, "%5c", "    A"),
+    (1.0, "%A", "0X1P+0"),
+    (-1.5, "%d", "-1"),
+    (-1.5, "%e", "-1.500000e+00"),
+    (-1.5, "%E", "-1.500000E+00"),
+    (-1.5, "%f", "-1.500000"),
+    (-1.5, "%10.3f", "    -1.500"),
+    (-1.5, "%+.1f", "-1.5"),
+    (-1.5, "%010.2f", "-000001.50"),
+    (3.14159, "%.2f", "3.14"),
+    (1e20, "%e", "1.000000e+20"),
+    (1e20, "%g", "1e+20"),
+    (1e20, "%s", "1.0e+20"),
+    (1e-05, "%G", "1E-05"),
+    (1e16, "%s", "1.0e+16"),
+    (1000000000000000.0, "%s", "1.0e+15"),
+    (1000000000000000.0, "%p", "1.0e+15"),
+    (100.0, "%g", "100"),
+    (100.0, "%#g", "100.000"),
+    ("abc", "%10s", "       abc"),
+    ("abc", "%.2s", "ab"),
+    ("abc", "%u", "ABC"),
+    ("abc", "%C", "Abc"),
+    ("a'b", "%p", "'a\\'b'"),
+    ("a\nb", "%p", '"a\\nb"'),
+    ("Abc", "%d", "abc"),
+    (True, "%d", "1"),
+    (True, "%T", "True"),
+    (True, "%y", "yes"),
+    (True, "%#y", "y"),
+    (False, "%t", "false"),
+    (False, "%Y", "No"),
+    (None, "%d", "NaN"),
+    (None, "%s", ""),
+    (None, "%p", "undef"),
+    ([1, "a", None, True, 2.5], "%p", "[1, 'a', undef, true, 2.5]"),
+    ({"a": 1}, "%a", "[['a', 1]]"),
+    ({"a": 1}, "%p", "{'a' => 1}"),
+    ({"a": [1, {"b": None}]}, "%s", "{'a' => [1, {'b' => undef}]}"),
+    (5, "%d\n", "5\n"),
+]
+
+
+@pytest.mark.parametrize("value, fmt, expected", STRING_FORMAT_ROWS)
+def test_string_format_matches_puppet(value, fmt, expected):
+    assert _string_convert(value, fmt) == expected
+
+
+@pytest.mark.parametrize(
+    "value, fmt, message",
+    [
+        (5, "%z", "Illegal format 'z' specified for value of Integer type"),
+        (1.5, "%z", "Illegal format 'z' specified for value of Float type"),
+        ("a", "%z", "Illegal format 'z' specified for value of String type"),
+        ([1], "%d", "Illegal format 'd' specified for value of Array type"),
+        ({}, "%d", "Illegal format 'd' specified for value of Hash type"),
+        (5, "%d items", "The format '%d items' is not a valid format on the form"),
+        (5, "abc", "The format 'abc' is not a valid format on the form"),
+        (5, "%dd", "is not a valid format"),
+        (5, "%-5d|", "is not a valid format"),
+        (5, "%--5d", "The same flag can only be used once, got '%--5d'"),
+        (65, "%.3c", None),
+        (-1, "%c", "pack(U): value out of range"),
+    ],
+)
+def test_string_format_refuses_what_puppet_refuses(value, fmt, message):
+    if message is None:
+        assert _string_convert(value, fmt) == "A"
+        return
+    with pytest.raises(HieraLookupError) as info:
+        _string_convert(value, fmt)
+    assert message in str(info.value)
+
+
+def test_string_format_outside_the_subset_is_refused_not_ignored():
+    with pytest.raises(HieraLookupError, match="indenting"):
+        _string_convert([1], "%#a")
+    with pytest.raises(HieraLookupError, match="precision"):
+        _string_convert(1.5, "%.2a")
+    with pytest.raises(HieraLookupError, match="parameter 'string_formats'"):
+        _string_convert(5, {"Integer": "%x"})
+
+
+def test_string_of_a_hash_uses_puppets_own_separator():
+    assert _string_convert({"a": 1, "b": "c"}) == "{'a' => 1, 'b' => 'c'}"
+
+
+def test_string_new_arity_and_argument_types():
+    with pytest.raises(
+        HieraLookupError, match="expects between 1 and 2 arguments, got 3"
+    ):
+        new_instance(parse_type("String"), "x", "%s", "%s")
+    with pytest.raises(HieraLookupError, match="parameter 'string_formats' expects"):
+        new_instance(parse_type("String"), 5, None)
+
+
+@pytest.mark.parametrize(
+    "type_, value, args, expected",
+    [
+        ("Integer", "-11", (16, True), 17),
+        ("Integer", "-5", (10, True), 5),
+        ("Integer", -5, (10, True), 5),
+        ("Integer", {"from": "-5", "abs": True}, (), 5),
+        ("Integer", {"from": "10", "radix": 16}, (), 16),
+        ("Integer", "0x1F", (), 31),
+        ("Integer", "- 11", (), -11),
+        ("Float", "-5.5", (True,), 5.5),
+        ("Float", {"from": "-5.5", "abs": True}, (), 5.5),
+        ("Float", "0x1F", (), 31.0),
+        ("Float", "- 1.5", (), -1.5),
+        ("Numeric", -5, (True,), 5),
+        ("Numeric", "- 1.5", (), -1.5),
+        ("Numeric", "010", (), 8),
+        ("Numeric", "0x10", (), 16),
+    ],
+)
+def test_new_numbers_follow_puppet(type_, value, args, expected):
+    got = new_instance(parse_type(type_), value, *args)
+    assert got == expected and type(got) is type(expected)
+
+
+@pytest.mark.parametrize(
+    "type_, value",
+    [
+        ("Integer", "12\n"),
+        ("Integer", "١٢"),
+        ("Integer", "1_000"),
+        ("Float", "inf"),
+        ("Float", "nan"),
+        ("Float", "1_000.5"),
+        ("Float", "1.5 "),
+        ("Float", ".5"),
+        ("Float", "1."),
+        ("Float", "1.5e+3"),
+        ("Numeric", "1 "),
+        ("Numeric", "1_000"),
+    ],
+)
+def test_new_numbers_reject_strings_puppet_rejects(type_, value):
+    with pytest.raises(HieraLookupError, match="cannot be converted to"):
+        new_instance(parse_type(type_), value)
+
+
+@pytest.mark.parametrize(
+    "type_, args, message",
+    [
+        ("Integer", (10, True, 1), "'new' expects between 1 and 3 arguments, got 4"),
+        ("Float", (True, True), "'new_float' expects between 1 and 2 arguments, got 3"),
+        (
+            "Numeric",
+            (True, True),
+            "'new_numeric' expects between 1 and 2 arguments, got 3",
+        ),
+        ("Boolean", (True,), "'new_boolean' expects 1 argument, got 2"),
+        ("Sensitive", (1,), "'new_sensitive' expects 1 argument, got 2"),
+        ("Array", (True, True), "'new_array' expects between 1 and 2 arguments, got 3"),
+        (
+            "Array",
+            ("x",),
+            "'new_array' parameter 'wrap' expects a Boolean value, got String",
+        ),
+        ("Integer", (3,), "Illegal radix: 3, expected 2, 8, 10, 16, or default"),
+    ],
+)
+def test_new_checks_arguments_as_puppet_does(type_, args, message):
+    with pytest.raises(HieraLookupError) as info:
+        new_instance(parse_type(type_), "5", *args)
+    assert str(info.value) == message
+
+
+def test_new_numeric_hash_that_is_not_named_arguments_is_just_a_bad_value():
+    with pytest.raises(HieraLookupError, match="cannot be converted to Float"):
+        new_instance(parse_type("Float"), {"from": 5, "x": 1})
 
 
 def test_ruby_regex_rejects_a_trailing_backslash():

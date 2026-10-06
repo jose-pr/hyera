@@ -17,6 +17,7 @@ of them.
 import re
 
 from ..exceptions import HieraLookupError
+from .string_converter import UNSET as _NO_FORMAT
 from .string_converter import convert as _string_convert
 from .mismatch import assert_instance_of, short_name
 from .types import (
@@ -57,8 +58,24 @@ _OUR_UNSUPPORTED_NAMES = frozenset(
     ]
 )
 
-_LENIENT_INT_RE = re.compile(r"^[+-]?\s*(?:\d+|0[xX][0-9A-Fa-f]+|0[bB][01]+)$")
-_HEXBIN_RE = re.compile(r"^0[xX][0-9A-Fa-f]+$|^0[bB][01]+$")
+# Puppet's ``INTEGER_PATTERN_LENIENT`` and ``FLOAT_PATTERN`` (``types.rb``),
+# anchored as Ruby's ``\A...\z`` over ASCII digits and blanks.
+_WS = r"[ \t\n\r\f\v]*"
+_LENIENT_INT_RE = re.compile(
+    r"\A[+-]?" + _WS + r"(?:[0-9]+|0[xX][0-9A-Fa-f]+|0[bB][01]+)\Z"
+)
+_FLOAT_RE = re.compile(
+    r"\A[+-]?" + _WS + r"(?:(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE]-?[0-9]+)?"
+    r"|0[xX][0-9A-Fa-f]+|0[0-7]+|0[bB][01]+)\Z"
+)
+#: ``Puppet::Pops::Patterns::NUMERIC``: ``Numeric`` strings are read with it.
+_NUMERIC_RE = re.compile(
+    r"\A[ \t]*([-+]?)[ \t]*((0[xX][0-9A-Fa-f]+)|(0?[0-9]+)"
+    r"((?:\.[0-9]+)?(?:[eE]-?[0-9]+)?))[ \t]*\Z"
+)
+_RADICES = (2, 8, 10, 16)
+_BLANKS = " \t"
+_WHITESPACE = " \t\n\r\f\v"
 _BOOL_WORDS = {
     "true": True,
     "yes": True,
@@ -67,6 +84,7 @@ _BOOL_WORDS = {
     "no": False,
     "n": False,
 }
+_NO_RADIX = object()
 
 
 def new_instance(type_, value, *args):
@@ -98,12 +116,13 @@ def _dispatch(type_, value, args):
     if isinstance(type_, Boolean):
         return _new_boolean(value, *args)
     if isinstance(type_, SensitiveType):
-        return Sensitive(value)
+        if args:
+            _arity("new_sensitive", "1 argument", 1 + len(args))
+        return value if isinstance(value, Sensitive) else Sensitive(value)
     if isinstance(type_, (Tuple, Array)):
-        wrap = args[0] if args else False
-        return _new_array(value, wrap)
+        return _new_array(value, *args)
     if isinstance(type_, (Struct, Hash)):
-        return _new_hash(value)
+        return _new_hash(value, *args)
     if isinstance(type_, (Optional, NotUndef)):
         if type_.contained is None:
             _not_supported(type_)
@@ -131,6 +150,68 @@ def _not_supported(type_):
     )
 
 
+def _arity(function, expected, given):
+    raise HieraLookupError("'{}' expects {}, got {}".format(function, expected, given))
+
+
+def _is_nan(value):
+    return isinstance(value, float) and value != value
+
+
+def _ruby_text(value):
+    """How Ruby interpolates a value into an error message."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _cannot_convert(function, value, target):
+    if isinstance(value, str):
+        text = "The string '{}' cannot be converted to {}".format(value, target)
+    else:
+        text = "Value of type {} cannot be converted to {}".format(
+            infer_generic(value), target
+        )
+    return HieraLookupError("'{}' {}".format(function, text))
+
+
+def _is_named_arguments(value, args):
+    """Whether ``new()`` got the ``{from, abs}`` hash form of ``Float`` or
+    ``Numeric``: a hash with ``from`` and at most ``abs``, of the right types.
+    Any other hash is just a value that cannot be converted."""
+    return (
+        isinstance(value, dict)
+        and not args
+        and "from" in value
+        and set(value) <= {"from", "abs"}
+        and isinstance(value.get("abs", False), bool)
+        and _float_convertible(value["from"])
+    )
+
+
+def _named_arguments(function, target, hash_, allowed):
+    """The ``{from, ...}`` form of ``Integer``/``Float``/``Numeric``'s
+    ``new()``: returns the arguments in positional order."""
+    for key in hash_:
+        if key not in allowed:
+            raise HieraLookupError(
+                "{}.new has wrong type, unrecognized key '{}'".format(target, key)
+            )
+    if "from" not in hash_:
+        raise HieraLookupError(
+            "{}.new has wrong type, expects a value for key 'from'".format(target)
+        )
+    positional = [hash_["from"]]
+    for key in allowed[1:]:
+        if key in hash_ and hash_[key] is not None:
+            positional.append(hash_[key])
+        else:
+            positional.append(_NO_RADIX if key == "radix" else False)
+    return positional
+
+
 # ------------------------------------------------------------------ Integer
 
 
@@ -138,11 +219,11 @@ def _parse_int_auto(s, radix=None):
     """``s`` must already match ``_LENIENT_INT_RE`` -- callers check that
     (and, for Integer specifically, the radix) before calling this."""
     sign = ""
-    body = s
+    body = s.lstrip(_WHITESPACE)
     if body and body[0] in "+-":
         sign = body[0]
         body = body[1:]
-    body = body.lstrip()
+    body = body.lstrip(_WHITESPACE)
     if radix is not None:
         value = int(body, radix)
     elif body[:2].lower() == "0x":
@@ -156,111 +237,167 @@ def _parse_int_auto(s, radix=None):
     return -value if sign == "-" else value
 
 
+def _integer_convertible(value):
+    if isinstance(value, bool) or isinstance(value, int):
+        return True
+    if isinstance(value, float):
+        return not _is_nan(value)
+    return isinstance(value, str) and _LENIENT_INT_RE.match(value) is not None
+
+
+def _radix_error(radix):
+    return HieraLookupError(
+        "Illegal radix: {}, expected 2, 8, 10, 16, or default".format(_ruby_text(radix))
+    )
+
+
+def _integer_named_arguments(hash_):
+    """``Integer.new({from => ..., radix => ..., abs => ...})``: the
+    positional arguments, or Puppet's error for a hash that is not one."""
+    from .parser import parse_type
+
+    if "from" in hash_ and not _integer_convertible(hash_["from"]):
+        raise _cannot_convert("new", hash_["from"], "Integer")
+    radix = hash_.get("radix")
+    if radix is not None and not (
+        isinstance(radix, int) and not isinstance(radix, bool) and radix in _RADICES
+    ):
+        raise _radix_error(radix)
+    assert_instance_of("Integer.new", parse_type(_INTEGER_NAMED_ARGS), hash_)
+    return [
+        hash_["from"],
+        _NO_RADIX if radix is None else radix,
+        hash_.get("abs") or False,
+    ]
+
+
+_INTEGER_NAMED_ARGS = (
+    "Struct[{from => Variant[Numeric, Boolean, "
+    r"Pattern[/\A[+-]?\s*(?:[0-9]+|0[xX][0-9A-Fa-f]+|0[bB][01]+)\z/]], "
+    "Optional[radix] => Variant[Integer[2, 2], Integer[8, 8], Integer[10, 10], "
+    "Integer[16, 16]], Optional[abs] => Boolean}]"
+)
+
+
 def _new_integer(value, *args):
     if len(args) > 2:
-        raise HieraLookupError(
-            "'new' expects between 1 and 3 arguments, got {}".format(1 + len(args))
-        )
-    radix = args[0] if args else None
-    if radix is not None and (isinstance(radix, bool) or not isinstance(radix, int)):
-        # no signature/argument_mismatch accepts this shape;
-        # ours, not Puppet's own multi-line dispatch listing.
-        names = ", ".join(infer_generic(v).name for v in (value,) + tuple(args))
-        raise HieraLookupError("'new' does not accept the arguments ({})".format(names))
+        _arity("new", "between 1 and 3 arguments", 1 + len(args))
+    if isinstance(value, dict) and not args:
+        value, *args = _integer_named_arguments(value)
+    radix = args[0] if args else _NO_RADIX
+    absolute = args[1] if len(args) > 1 else False
+    radix_ok = radix is _NO_RADIX or (
+        isinstance(radix, int) and not isinstance(radix, bool) and radix in _RADICES
+    )
+    if not radix_ok:
+        raise _radix_error(radix)
+    if not isinstance(absolute, bool) or not _integer_convertible(value):
+        raise _cannot_convert("new", value, "Integer")
+    result = _integer_value(value, None if radix is _NO_RADIX else radix)
+    return abs(result) if absolute else result
+
+
+def _integer_value(value, radix):
     if isinstance(value, bool):
         return 1 if value else 0
     if isinstance(value, int):
         return value
     if isinstance(value, float):
+        if value in (float("inf"), float("-inf")):
+            raise HieraLookupError(_ruby_text(value).replace("inf", "Infinity"))
         return int(value)
-    if isinstance(value, str):
-        if radix is not None and radix not in (2, 8, 10, 16):
-            raise HieraLookupError(
-                "Illegal radix: {}, expected 2, 8, 10, 16, or default".format(radix)
-            )
-        if not _LENIENT_INT_RE.match(value):
-            raise HieraLookupError(
-                "'new' The string '{}' cannot be converted to Integer".format(value)
-            )
-        try:
-            result = _parse_int_auto(value, radix)
-        except ValueError:
-            raise HieraLookupError('invalid value for Integer(): "{}"'.format(value))
-        return result
-    if isinstance(value, dict):
-        # Puppet's named-args form ({from, radix, abs}); we accept none of
-        # its keys, so any key is "unrecognized" -- not otherwise ported.
-        for k in value:
-            raise HieraLookupError(
-                "Integer.new has wrong type, unrecognized key '{}'".format(k)
-            )
-    raise HieraLookupError(
-        "'new' Value of type {} cannot be converted to Integer".format(
-            infer_generic(value)
-        )
-    )
+    try:
+        return _parse_int_auto(value, radix)
+    except ValueError:
+        raise HieraLookupError('invalid value for Integer(): "{}"'.format(value))
 
 
 # -------------------------------------------------------------------- Float
 
 
+def _float_convertible(value):
+    if isinstance(value, (bool, int)):
+        return True
+    if isinstance(value, float):
+        return not _is_nan(value)
+    return isinstance(value, str) and _FLOAT_RE.match(value) is not None
+
+
 def _new_float(value, *args):
+    if len(args) > 1:
+        _arity("new_float", "between 1 and 2 arguments", 1 + len(args))
+    if _is_named_arguments(value, args):
+        value, *args = _named_arguments("new_float", "Float", value, ("from", "abs"))
+    absolute = args[0] if args else False
+    if not isinstance(absolute, bool) or not _float_convertible(value):
+        raise _cannot_convert("new_float", value, "Float")
+    result = _float_value(value)
+    return abs(result) if absolute else result
+
+
+def _float_value(value):
     if isinstance(value, bool):
         return 1.0 if value else 0.0
     if isinstance(value, (int, float)):
         return float(value)
-    if isinstance(value, str):
-        sign = ""
-        body = value
-        if body and body[0] in "+-":
-            sign = body[0]
-            body = body[1:]
-        body = body.strip()
-        if _HEXBIN_RE.match(body):
-            # _HEXBIN_RE only ever matches a "0x"/"0X"/"0b"/"0B" prefix
-            # followed by one or more valid digits for that base (`+`, not
-            # `*`), so int(body, base) can never raise here -- unlike the
-            # plain-decimal float() parse below, which has no such guard.
-            base = 16 if body[1] in "xX" else 2
-            v = float(int(body, base))
-            return -v if sign == "-" else v
-        try:
-            return float(sign + body)
-        except ValueError:
-            raise HieraLookupError(
-                "'new_float' The string '{}' cannot be converted to Float".format(value)
-            )
-    raise HieraLookupError(
-        "'new_float' Value of type {} cannot be converted to Float".format(
-            infer_generic(value)
-        )
-    )
+    body = value.lstrip(_WHITESPACE)
+    sign = ""
+    if body[:1] in ("+", "-"):
+        sign, body = body[0], body[1:].lstrip(_WHITESPACE)
+    if value[:1] == "0" and value[1:2] in ("b", "B"):
+        return float(int(value, 2))
+    if body[:2] in ("0b", "0B"):
+        raise HieraLookupError('invalid value for Float(): "{}"'.format(value))
+    if body[:2] in ("0x", "0X"):
+        number = float(int(body, 16))
+    else:
+        number = float(body)
+    return -number if sign == "-" else number
 
 
 # ------------------------------------------------------------------ Numeric
 
 
 def _new_numeric(value, *args):
+    if len(args) > 1:
+        _arity("new_numeric", "between 1 and 2 arguments", 1 + len(args))
+    if _is_named_arguments(value, args):
+        value, *args = _named_arguments(
+            "new_numeric", "Numeric", value, ("from", "abs")
+        )
+    absolute = args[0] if args else False
+    if not isinstance(absolute, bool) or not _float_convertible(value):
+        raise _cannot_convert("new_numeric", value, "Numeric")
+    result = _numeric_value(value)
+    return abs(result) if absolute and result is not None else result
+
+
+def _numeric_value(value):
     if isinstance(value, bool):
         return 1 if value else 0
     if isinstance(value, (int, float)):
         return value
-    if isinstance(value, str):
-        if _LENIENT_INT_RE.match(value):
-            return _parse_int_auto(value)
+    if value[:1] == "0" and value[1:2] in ("b", "B", "x", "X"):
         try:
-            return float(value.strip())
+            return int(value, 0)
         except ValueError:
-            raise HieraLookupError(
-                "'new_numeric' The string '{}' cannot be converted to Numeric".format(
-                    value
-                )
-            )
-    raise HieraLookupError(
-        "'new_numeric' Value of type {} cannot be converted to Numeric".format(
-            infer_generic(value)
-        )
-    )
+            raise HieraLookupError('invalid value for Integer(): "{}"'.format(value))
+    match = _NUMERIC_RE.match(value)
+    if not match:
+        return None
+    sign, number, _, integer, fraction = match.groups()
+    if fraction:
+        if int(integer) == 0 and re.match(r"\A\.?0*[eE]", fraction):
+            return None
+        result = float(number)
+        if result in (float("inf"), float("-inf")):
+            return None
+        return -result if sign == "-" else result
+    try:
+        result = _parse_int_auto(number)
+    except ValueError:
+        return None
+    return -result if sign == "-" else result
 
 
 # ------------------------------------------------------------------ Boolean
@@ -268,33 +405,25 @@ def _new_numeric(value, *args):
 
 def _new_boolean(value, *args):
     if args:
-        raise HieraLookupError(
-            "'new_boolean' expects 1 argument, got {}".format(1 + len(args))
-        )
+        _arity("new_boolean", "1 argument", 1 + len(args))
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float)) and not _is_nan(value):
         return value != 0
     if isinstance(value, str):
         w = value.lower()
         if w in _BOOL_WORDS:
             return _BOOL_WORDS[w]
-        raise HieraLookupError(
-            "'new_boolean' The string '{}' cannot be converted to Boolean".format(value)
-        )
-    raise HieraLookupError(
-        "'new_boolean' Value of type {} cannot be converted to Boolean".format(
-            infer_generic(value)
-        )
-    )
+    raise _cannot_convert("new_boolean", value, "Boolean")
 
 
 # -------------------------------------------------------------------- String
 
 
 def _new_string(value, *args):
-    fmt = args[0] if args else None
-    return _string_convert(value, fmt)
+    if len(args) > 1:
+        _arity("new_string", "between 1 and 2 arguments", 1 + len(args))
+    return _string_convert(value, args[0] if args else _NO_FORMAT)
 
 
 # --------------------------------------------------------- Array iteration
@@ -307,36 +436,46 @@ def _iterate_to_list(value, target_name):
         return list(value)
     if isinstance(value, dict):
         return [[k, v] for k, v in value.items()]
-    if isinstance(value, bool):
-        raise HieraLookupError(
-            "'new_{}' Value of type Boolean cannot be converted to {}".format(
-                target_name.lower(), target_name
-            )
-        )
-    if isinstance(value, int) and value >= 0:
+    # Array's own dispatch rejects through argument_mismatch ("'new_array'
+    # ..."); Hash's from_array raises plainly.
+    prefix = "'new_array' " if target_name == "Array" else ""
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
         return list(range(value))
     raise HieraLookupError(
-        "'new_{}' Value of type {} cannot be converted to {}".format(
-            target_name.lower(), infer_generic(value), target_name
+        "{}Value of type {} cannot be converted to {}".format(
+            prefix, infer_generic(value), target_name
         )
     )
 
 
-def _new_array(value, wrap=False):
+def _new_array(value, *args):
+    if len(args) > 1:
+        _arity("new_array", "between 1 and 2 arguments", 1 + len(args))
+    wrap = args[0] if args else False
+    if not isinstance(wrap, bool):
+        raise HieraLookupError(
+            "'new_array' parameter 'wrap' expects a Boolean value, got {}".format(
+                infer_set(wrap).name
+            )
+        )
+    if wrap:
+        return list(value) if isinstance(value, (list, tuple)) else [value]
     if isinstance(value, (list, tuple)):
         return list(value)
-    if wrap:
-        return [value]
     return _iterate_to_list(value, "Array")
 
 
-def _new_hash(value):
+def _new_hash(value, *args):
+    if args:
+        raise HieraLookupError(
+            "hiera does not support the build option of the Hash new() function"
+        )
     if isinstance(value, dict):
         return dict(value)
     items = _iterate_to_list(value, "Hash")
     # A list of already-paired [k, v] 2-element lists converts pair-wise
-    # (Ruby's Hash[*array] on an array-of-pairs); anything else is a flat
-    # list paired up sequentially.
+    # (Ruby's Array#to_h); anything else is a flat list paired up
+    # sequentially (Ruby's Hash[*array]).
     if items and all(isinstance(e, (list, tuple)) and len(e) == 2 for e in items):
         return {k: v for k, v in items}
     if len(items) % 2 != 0:

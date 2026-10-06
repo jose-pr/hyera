@@ -1409,6 +1409,10 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   classes are ASCII-only; no match-time bound exists, as in Ruby, so a
   pattern with nested quantifiers can take exponential time on a long
   subject.
+- **difference** `string-format-subset` — `String` formats cover one
+  directive per value: a type-map format, the `#` indenting flag on an
+  Array or Hash, and a precision on `%a`/`%A` raise `HieraLookupError`, as
+  does converting a Binary, Timestamp, URI or Object value.
 
 Not supported:
 
@@ -1654,6 +1658,14 @@ Not supported:
   `HieraLookupError("The convert_to lookup_option for key '<key>' raised
   error: <msg>")` instead — both with the underlying error chained as
   `__cause__`. See "Types" above for the types `new()` never supports.
+  `new()` checks its arguments as Puppet does: `Integer`'s optional `radix`
+  and `abs` (or the `{from, radix, abs}` hash), `Float`/`Numeric`'s `abs`
+  (or `{from, abs}`), the argument count per type, and number strings
+  against Puppet's anchored patterns (`'12\n'`, `'inf'`, `'1_000'` are
+  refused). A `String` format is exactly one `%<flags><width>.<prec><char>`
+  directive following Puppet's per-type tables (negative `%x` is `..f01`,
+  a Hash prints `{'a' => 1}`); anything else is the "not a valid format" or
+  "Illegal format '<c>' specified for value of <Type> type" error.
 - `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
   by default (see "Backends" above): `include file(...)` really reads the
   named file (cwd-relative or absolute), and a directive in value position

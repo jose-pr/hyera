@@ -101,6 +101,10 @@ DOC_ONLY = {
         "the oracle answers a document nested past the bound with a value or "
         "its own error text, which no case asserts a different outcome from"
     ),
+    "string-format-subset": (
+        "the harness records what Puppet formats; the refused forms are "
+        "inputs Puppet accepts and hyera rejects, which no golden can pin"
+    ),
     "ruby-regex-constructs": (
         "the harness cannot record a Ruby construct hyera refuses, and its "
         "Unicode POSIX-class behaviour differs only for non-ASCII subjects"

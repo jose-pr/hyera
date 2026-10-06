@@ -3,7 +3,7 @@
   "puppet_version": "8.10.0",
   "ruby_version": "4.0.7",
   "node": "golden.example.com",
-  "inputs_sha256": "c80e9d5fb53654d49c4a9eb1e56b4e6d9996040061a1f8deb6b0410d58e466f6",
+  "inputs_sha256": "3458ba830b4afeae796644b4c35c791e11d448c87bf2a2ad616edd1f149475ae",
   "results": {
     "int_plain": {
       "argv": [
@@ -147,8 +147,7 @@
         "str_hash"
       ],
       "status": "found",
-      "value": "{'a'=>1}",
-      "raw_value": "{'a' => 1}"
+      "value": "{'a' => 1}"
     },
     "str_arr": {
       "argv": [

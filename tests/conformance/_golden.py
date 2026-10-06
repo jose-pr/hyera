@@ -330,6 +330,26 @@ def _is_marker_valid(value) -> bool:
     return False
 
 
+#: A hash key quoted the way Puppet's own formatter quotes it; Ruby's
+#: ``Hash#inspect`` uses double quotes.
+_PUPPET_FORMATTED_HASH = re.compile(r"'[^']*' => ")
+
+
+def hash_inspect_problems(qid, result) -> "list[str]":
+    """Why a query may not set ``hash_inspect``: it rewrites Ruby's
+    ``Hash#inspect`` into the Ruby 3.2 form, so the recorded value must be
+    such output, never text Puppet's own formatter produced."""
+    raw = result.get("raw_value")
+    if result.get("status") != "found" or not isinstance(raw, str):
+        return []
+    if _PUPPET_FORMATTED_HASH.search(raw):
+        return [
+            "query {}: hash_inspect on a value Puppet's formatter produced "
+            "({!r}), not Ruby inspect output".format(qid, raw)
+        ]
+    return []
+
+
 def lint_case(case_dir: Path) -> "list[str]":
     """Every reason `case_dir` is not a valid, current, safe-to-ship case.
 
@@ -474,6 +494,12 @@ def lint_case(case_dir: Path) -> "list[str]":
         elif status == "explained":
             problems.append(
                 "query {}: a non-explain query never has status explained".format(qid)
+            )
+
+    for q in queries:
+        if q.get("hash_inspect"):
+            problems.extend(
+                hash_inspect_problems(query_id(q), results.get(query_id(q), {}))
             )
 
     for q in queries:

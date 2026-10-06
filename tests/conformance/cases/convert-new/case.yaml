@@ -62,7 +62,6 @@ queries:
   - key: s_pi
   - key: s_int
   - key: s_nested
-    hash_inspect: true
   - key: s_strq
   - key: s_quote
   - key: s_arr_nested

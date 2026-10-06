@@ -31,7 +31,6 @@ queries:
   - key: str_bool
   - key: str_float
   - key: str_hash
-    hash_inspect: true
   - key: str_arr
   - key: str_nil
   - key: arr_str
