@@ -24,8 +24,6 @@ from pathlib_next import Path
 
 from .hiera_config import (
     _build_hierarchies,
-    _config_error,
-    _config_version,
     _fill_v3_defaults,
     _fill_v5_defaults,
     _read_base_config,
@@ -35,6 +33,7 @@ from .hiera_config import (
     _validate_v5,
     _warn_deprecated,
 )
+from .config_source import _config_error, _config_version
 from .._lookup.navigation import LOOKUP_OPTIONS
 from ..exceptions import ConfigError, HieraError, _one_line
 

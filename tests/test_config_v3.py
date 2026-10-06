@@ -26,7 +26,6 @@ from pathlib_next import Path
 from hyera import Backend, ConfigError, Hiera, HieraError, KeyNotFoundError, Scope
 from hyera._config.hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
-    _ConfigSource,
     _default_codedir,
     _fill_v3_defaults,
     _fill_v4_defaults,
@@ -34,6 +33,7 @@ from hyera._config.hiera_config import (
     _v3_level_specs,
     _validate_v4,
 )
+from hyera._config.config_source import _ConfigSource
 from hyera._lookup.invocation import Invocation
 from hyera.backends._psych import RubySymbol
 
