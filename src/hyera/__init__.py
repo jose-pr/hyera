@@ -1,5 +1,7 @@
 """hyera: a Python implementation of Puppet Hiera data lookup."""
 
+from __future__ import annotations
+
 from .backends import (
     Backend,
     BackendError,

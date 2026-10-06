@@ -7,6 +7,8 @@ Ports ``application/lookup.rb``'s ``--facts`` handling and
 ``Puppet::Util::Yaml.safe_load``'s no-permitted-classes rule.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import typing as _ty

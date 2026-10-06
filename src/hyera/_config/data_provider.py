@@ -13,6 +13,8 @@ Follows Puppet's ``lookup_adapter.rb``, ``data_provider.rb``,
 rule, citing the line of each rule it mirrors.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import re

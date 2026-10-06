@@ -29,6 +29,8 @@ that Puppet type" instead. Internal dispatch still uses the private classes
 directly, unaffected by anything in this module.
 """
 
+from __future__ import annotations
+
 import re as _re
 import typing as _ty
 

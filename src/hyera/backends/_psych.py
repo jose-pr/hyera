@@ -13,6 +13,8 @@ Ground truth: ``psych-5.3.1/lib/psych/scalar_scanner.rb`` (``tokenize``),
 one-document, ``nil``-is-``false`` and ``symkeys_to_string`` rules.
 """
 
+from __future__ import annotations
+
 import base64
 import re
 

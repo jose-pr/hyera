@@ -6,6 +6,8 @@ stderr, an absolute never-a-batch-shim executable, and path/format
 handling specific to the ``sops`` CLI's own behaviour).
 """
 
+from __future__ import annotations
+
 import os
 import re
 import typing as _ty

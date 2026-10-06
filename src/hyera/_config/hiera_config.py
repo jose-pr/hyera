@@ -10,6 +10,8 @@ helpers it cites from ``issues.rb``, ``type_mismatch_describer.rb``,
 ``util/run_mode.rb`` and ``location_resolver.rb``.
 """
 
+from __future__ import annotations
+
 import copy
 import logging
 import os

@@ -1,5 +1,7 @@
 """Scope, facts and path-list handling for the command line."""
 
+from __future__ import annotations
+
 import os as _os
 import socket as _socket
 import typing as _ty

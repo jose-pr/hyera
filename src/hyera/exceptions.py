@@ -3,6 +3,8 @@
 # Modified by jose-pr. See NOTICE.
 """Exception hierarchy for hiera."""
 
+from __future__ import annotations
+
 import typing as _ty
 
 __all__ = [

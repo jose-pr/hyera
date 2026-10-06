@@ -12,6 +12,8 @@ its ``encryptors/pkcs7.rb`` and the lookup function its
 ``cryptography``.
 """
 
+from __future__ import annotations
+
 import base64
 import logging
 import os

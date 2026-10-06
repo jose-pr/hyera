@@ -13,6 +13,8 @@ Follows Puppet's ``pops/lookup/function_provider.rb``,
 ``configured_data_provider.rb``.
 """
 
+from __future__ import annotations
+
 import contextlib
 import os
 import typing as _ty

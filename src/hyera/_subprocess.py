@@ -1,5 +1,7 @@
 """The one place hyera runs an external program (``sops``, ``facter``)."""
 
+from __future__ import annotations
+
 import os
 import shutil
 import signal

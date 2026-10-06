@@ -6,6 +6,8 @@ module layers and composes them for a key (``lookup_adapter.rb:236-380``),
 and the per-``explain()`` memo that keeps a name-list lookup from searching
 a layer twice."""
 
+from __future__ import annotations
+
 from .invocation import Invocation
 from .lookup_adapter import (
     compile_patterns,

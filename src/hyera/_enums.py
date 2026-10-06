@@ -14,6 +14,8 @@ give the member's *value* on every supported Python: the 3.9 floor has no
 supported interpreter behave the same way.
 """
 
+from __future__ import annotations
+
 import enum as _enum
 import typing as _ty
 

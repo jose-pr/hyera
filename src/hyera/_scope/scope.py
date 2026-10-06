@@ -10,6 +10,8 @@ before any manifest evaluates (``parser/compiler.rb``'s ``set_node_parameters``,
 ``sanitize_fact``) and the variable-lookup rules of ``parser/scope.rb``.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import threading

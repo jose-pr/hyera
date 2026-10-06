@@ -14,6 +14,8 @@ matching Puppet's own ``location_resolver.rb`` and the location half of
 ``hiera_config.rb``.
 """
 
+from __future__ import annotations
+
 import functools
 import logging
 import os

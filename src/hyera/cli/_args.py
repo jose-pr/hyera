@@ -7,6 +7,8 @@ string forward-reference on the field would be Unknown. Imported only when
 ``duho`` is installed.
 """
 
+from __future__ import annotations
+
 import typing as _ty
 
 import duho

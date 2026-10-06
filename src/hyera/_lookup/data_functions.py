@@ -10,6 +10,8 @@ already-resolved value (``dig``/``get``) or the bound ``Scope``
 wrapping this module.
 """
 
+from __future__ import annotations
+
 import re
 
 from .interpolation import _ruby_inspect

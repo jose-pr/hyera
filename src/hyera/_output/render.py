@@ -9,6 +9,8 @@ backend. Registered purely for their side effect of subclassing ``Backend``
 ``Backend.new(fmt, kind="render")``.
 """
 
+from __future__ import annotations
+
 import json as _json
 import re as _re
 import uuid as _uuid

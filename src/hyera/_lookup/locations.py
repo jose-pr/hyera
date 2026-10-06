@@ -5,6 +5,8 @@
 and every view of it: one lock, the location, glob and file caches, and the
 intern table for the path strings they hold."""
 
+from __future__ import annotations
+
 import json
 import logging
 import os

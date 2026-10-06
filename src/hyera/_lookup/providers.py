@@ -5,6 +5,8 @@
 ``Hiera`` or ``scoped()`` view) and refreshed on every lookup while
 ``revalidate=True``."""
 
+from __future__ import annotations
+
 import functools
 
 from .function_provider import PROVIDER_CLASSES

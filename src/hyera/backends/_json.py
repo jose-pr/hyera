@@ -2,6 +2,8 @@
 NaN/Infinity and lone-surrogate rejection Python's own decoder accepts).
 """
 
+from __future__ import annotations
+
 import json
 import typing as _ty
 

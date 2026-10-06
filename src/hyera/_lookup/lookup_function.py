@@ -8,6 +8,8 @@ precedence, subjects, messages).
 :meth:`hyera.Hiera.lookup` is a thin method wrapping this module.
 """
 
+from __future__ import annotations
+
 import contextlib
 import typing as _ty
 from collections.abc import Mapping

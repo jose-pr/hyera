@@ -266,7 +266,7 @@ def test_docstring_fields_match_signatures():
             param_names = {p.name for p in params}
             has_returns = (
                 target.__name__ != "__init__"
-                and sig.return_annotation is not None
+                and sig.return_annotation not in (None, "None")
                 and sig.return_annotation is not inspect.Signature.empty
                 # A function that never returns (-> NoReturn) has no
                 # return value to document.

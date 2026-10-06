@@ -11,6 +11,8 @@ grammar actually uses: access expressions
 regex literals, and unary minus.
 """
 
+from __future__ import annotations
+
 import functools
 import re
 import typing as _ty

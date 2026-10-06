@@ -10,6 +10,8 @@ Ports Puppet's ``pops/merge_strategy.rb`` and the deep_merge gem's
 ``deep_merge_core.rb``.
 """
 
+from __future__ import annotations
+
 import collections.abc
 import contextlib
 import functools

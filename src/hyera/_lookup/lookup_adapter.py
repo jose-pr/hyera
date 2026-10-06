@@ -7,6 +7,8 @@ Ports Puppet's ``lookup_adapter.rb`` and the RichData check in
 ``data_provider.rb``.
 """
 
+from __future__ import annotations
+
 import typing as _ty
 
 from ..exceptions import HieraLookupError

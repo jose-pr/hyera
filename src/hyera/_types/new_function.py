@@ -14,6 +14,8 @@ deviation, not a bug, since Puppet itself does support new() for several
 of them.
 """
 
+from __future__ import annotations
+
 import re
 
 from ..exceptions import HieraLookupError

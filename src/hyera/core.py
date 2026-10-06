@@ -6,6 +6,8 @@
 # Modified by jose-pr. See NOTICE.
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
+from __future__ import annotations
+
 import logging
 import os
 import threading

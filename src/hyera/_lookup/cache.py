@@ -13,6 +13,8 @@ value.
 
 """
 
+from __future__ import annotations
+
 import collections
 import os
 import stat as _stat

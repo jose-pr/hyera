@@ -8,6 +8,8 @@ subclassing (``NAMES``, keyed by namespace) rather than an explicit call;
 lookup goes through :meth:`Backend.find`/:meth:`Backend.get`/:meth:`Backend.new`.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import re

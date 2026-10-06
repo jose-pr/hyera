@@ -14,6 +14,8 @@ precision on an Array or Hash), a precision on ``%a``/``%A``, and the Binary,
 Timestamp, URI and Object value types.
 """
 
+from __future__ import annotations
+
 import math
 import re
 

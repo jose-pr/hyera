@@ -1,5 +1,7 @@
 """Running one lookup: building the Hiera, resolving it, rendering the result."""
 
+from __future__ import annotations
+
 import os as _os
 import typing as _ty
 

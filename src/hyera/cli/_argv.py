@@ -1,5 +1,7 @@
 """Argument-vector preparation: the way Puppet's option parser consumes values."""
 
+from __future__ import annotations
+
 #: Long-spelling value options _puppet_argv joins with their following
 #: token (--opt value -> --opt=value), so a value that itself looks
 #: like an option (--knock-out-prefix --, --default -x) reaches

@@ -12,6 +12,8 @@ s|json|yaml does (hyera._output.render), written as UTF-8 bytes with LF
 line endings whatever the console/locale encoding.
 """
 
+from __future__ import annotations
+
 import logging as _logging
 import sys as _sys
 import typing as _ty

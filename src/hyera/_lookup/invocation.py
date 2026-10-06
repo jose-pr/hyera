@@ -10,6 +10,8 @@ sub-lookup callable, the recursion-detection name stack, and (``explainer``
 set) the recording hooks a lookup's explain tree is built through.
 """
 
+from __future__ import annotations
+
 import contextlib
 import contextvars
 import itertools

@@ -1,5 +1,7 @@
 """Writing the result to stdout."""
 
+from __future__ import annotations
+
 import io as _io
 import os as _os
 import sys as _sys

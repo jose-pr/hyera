@@ -9,9 +9,12 @@ Ports Puppet's ``sub_lookup.rb`` (``split_key``, ``sub_lookup``) and
 path's message text).
 """
 
+from __future__ import annotations
+
 import contextlib
 import functools
 import re
+import typing as _ty
 
 from .._digits import format_decimal_int, parse_decimal_int
 from ..exceptions import HieraLookupError
@@ -101,8 +104,8 @@ def _ruby_class(value: object) -> str:
 
 
 def split_key(
-    key: str, make_error: "Callable[[str], Exception]"
-) -> "List[Union[str, int]]":
+    key: str, make_error: _ty.Callable[[str], Exception]
+) -> _ty.List[_ty.Union[str, int]]:
     """Split a dotted lookup key into segments (``sub_lookup.rb:21-48``).
 
     A key with no quote or dot is returned untouched, as a single segment.
@@ -147,7 +150,10 @@ def split_key(
 
 
 def sub_lookup(
-    key: str, segments: "Sequence[Union[str, int]]", value: object, invocation=None
+    key: str,
+    segments: _ty.Sequence[_ty.Union[str, int]],
+    value: object,
+    invocation=None,
 ) -> object:
     """Walk ``segments`` into ``value`` (``sub_lookup.rb:62-93``).
 
@@ -215,7 +221,7 @@ def sub_lookup(
         return value
 
 
-def join_key(segments: "Sequence[Union[str, int]]") -> str:
+def join_key(segments: _ty.Sequence[_ty.Union[str, int]]) -> str:
     """Render ``[root, *segments]`` as Puppet's own dotted key text --
     the display-only inverse of :func:`split_key`, used wherever a name
     (including a ``hyera``-only tuple key path, which has no natural
@@ -252,7 +258,7 @@ def join_key(segments: "Sequence[Union[str, int]]") -> str:
     return ".".join(parts)
 
 
-def key_to_a(root, segments) -> "Tuple[Union[str, int], ...]":
+def key_to_a(root, segments) -> _ty.Tuple[_ty.Union[str, int], ...]:
     """A ``data_dig`` function's full key argument (``lookup_key.rb:76-83``):
     the root plus every sub-navigation segment, in order."""
     return (root,) + tuple(segments)
@@ -288,7 +294,7 @@ def undig(segments, value) -> object:
 
 
 @functools.lru_cache(maxsize=4096)
-def parse_lookup_key(key: str) -> "Tuple[str, Tuple[Union[str, int], ...]]":
+def parse_lookup_key(key: str) -> _ty.Tuple[str, _ty.Tuple[_ty.Union[str, int], ...]]:
     """Split a lookup key into its root and sub-navigation segments
     (``lookup_key.rb:13-22``).
 

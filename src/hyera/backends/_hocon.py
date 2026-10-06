@@ -5,6 +5,8 @@ directive rules and duration-as-text behaviour below) is measured against
 the oracle, not translated from Puppet source.
 """
 
+from __future__ import annotations
+
 import contextvars
 import importlib.util
 import io

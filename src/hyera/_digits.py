@@ -1,5 +1,7 @@
 """Decimal integer parsing that does not depend on the interpreter's digit limit."""
 
+from __future__ import annotations
+
 __all__ = ["format_decimal_int", "parse_decimal_int"]
 
 #: Python 3.11+ refuses ``int(str)`` above 4300 decimal digits; chunks stay

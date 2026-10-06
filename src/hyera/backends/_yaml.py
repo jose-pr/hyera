@@ -3,6 +3,8 @@
 # See NOTICE.
 """YAML (``yaml_data``) backend: Puppet's own Psych-compatible parsing."""
 
+from __future__ import annotations
+
 import logging
 import typing as _ty
 

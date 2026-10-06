@@ -17,6 +17,8 @@ Each class here is Puppet's own type-expression name (``Any``, ``Integer``,
 The classes stay private.
 """
 
+from __future__ import annotations
+
 import re
 import sys
 import typing as _ty

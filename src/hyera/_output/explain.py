@@ -15,6 +15,8 @@ itself (and the debug wrapper), so it has no engine imports at all beyond
 the one Ruby-rendering helper every value passes through.
 """
 
+from __future__ import annotations
+
 import copy
 import logging
 import typing as _ty

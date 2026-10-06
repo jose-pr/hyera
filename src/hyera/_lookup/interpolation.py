@@ -8,6 +8,8 @@ Ports Puppet's ``interpolation.rb``: a single left-to-right pass over each
 own result is interpolated again.
 """
 
+from __future__ import annotations
+
 import re
 from decimal import Decimal
 
