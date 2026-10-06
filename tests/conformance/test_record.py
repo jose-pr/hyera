@@ -5,7 +5,12 @@ actual run of it.
 
 from pathlib import Path
 
-from _golden import _format2_problems, missing_requirements
+from _golden import (
+    _format2_problems,
+    _leak_hits,
+    missing_requirements,
+    string_leaves,
+)
 from _ours import canonical, is_ordered, missing_warnings
 from record import _command, _error_text
 
@@ -92,3 +97,10 @@ def test_format_two_golden_without_exit_status_or_platform_is_flagged():
     assert any("exit_status" in p for p in problems)
     ok = {"platform": "x", "gems": {"hocon": "1"}, "results": {"q": {"exit_status": 0}}}
     assert _format2_problems(ok) == []
+
+
+def test_leak_scan_reads_text_not_json_escaping():
+    # An escaped newline after a colon is not a Windows drive prefix.
+    multi_line = {"message": "Wrapped exception:\nTried to load"}
+    assert _leak_hits(string_leaves(multi_line)) == []
+    assert _leak_hits(string_leaves({"m": ["see C:\\Users\\x"]})) != []

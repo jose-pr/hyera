@@ -44,6 +44,7 @@ from _golden import (
     normalize_tree_paths,
     query_id,
     read_golden,
+    string_leaves,
     write_golden,
 )
 
@@ -137,7 +138,7 @@ def _error_text(lines: list, case_dir: Path, root: str) -> str:
 
 
 def _leak_scan(obj, root: str, identities: "tuple") -> list:
-    text = obj if isinstance(obj, str) else json.dumps(obj)
+    text = string_leaves(obj)
     hits = [p.pattern for p in _LEAK_HOST_PATTERNS if p.search(text)]
     for ident in identities:
         if ident and len(ident) >= 4 and ident in text:

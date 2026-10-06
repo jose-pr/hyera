@@ -291,6 +291,21 @@ def _leak_hits(text: str) -> list:
     return [p.pattern for p in _LEAK_PATTERNS if p.search(text)]
 
 
+def string_leaves(obj) -> str:
+    """Every string in a JSON-like value (keys included), one per line, so a
+    leak scan reads the text itself and not its JSON escaping (an escaped
+    newline after a colon would read as a drive prefix)."""
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, dict):
+        return "\n".join(
+            string_leaves(k) + "\n" + string_leaves(v) for k, v in obj.items()
+        )
+    if isinstance(obj, (list, tuple)):
+        return "\n".join(string_leaves(v) for v in obj)
+    return ""
+
+
 def _pathlib_next_includes_hidden_by_default() -> bool:
     """Whether the installed pathlib_next's ``Path.glob`` defaults to
     matching dotfiles.
@@ -500,8 +515,7 @@ def lint_case(case_dir: Path) -> "list[str]":
     if extra:
         problems.append("golden.json has stray results for {}".format(extra))
 
-    golden_text = json.dumps(golden)
-    hits = _leak_hits(golden_text)
+    hits = _leak_hits(string_leaves(golden))
     if hits:
         problems.append("golden.json leaks host/path patterns: {}".format(hits))
 
