@@ -459,6 +459,23 @@ def test_header_lists_env_vars():
     assert not missing, missing
 
 
+def test_header_makes_no_statement_the_code_contradicts():
+    """Phrases the header once used for behaviour hyera does not have: a
+    ``key: ~`` that cannot be looked up, a RichData check "not ported", a
+    malformed path reference that "skips the level", a ``sources()`` that
+    needs a fresh ``Hiera`` after a file appears, and a ``Backend.strict``
+    "threaded through" later."""
+    header = " ".join(_header_text().split())
+    stale = (
+        "un-lookupable",
+        "RichData value check is not ported",
+        "malformed* reference still just skips the level",
+        "construct a fresh `Hiera` instance",
+        "is threaded through to backends",
+    )
+    assert [phrase for phrase in stale if phrase in header] == []
+
+
 def test_header_is_self_contained():
     """The header ships inside the wheel, where an installed consumer has
     no repo: no relative Markdown link, no private-working-tree path, no

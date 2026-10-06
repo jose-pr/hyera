@@ -92,7 +92,7 @@ since Hiera data is dynamic.
   `6` or other non-3/4/5 value as "This runtime does not support hiera.yaml
   version N"; `4` at the global layer as "cannot be used in the global
   layer"), or any violation of Puppet's schema for the resolved version —
-  with Puppet's own message and, where known, `.path` and `.line`. Data
+  with a message of hyera's own and, where known, `.path` and `.line`. Data
   files are read by lookups: a malformed or non-hash data file raises
   `BackendError` (`.path` names it) from the first lookup whose scope
   reaches it. Every lookup reads all data files of its scope first, to
@@ -391,8 +391,10 @@ since Hiera data is dynamic.
     original instance's, so nested calls compose. The original instance's
     own scope, and any other existing view, are never affected.
   - **`.sources()`** — resolve+load the ordered candidate source paths for
-    the bound scope (cached per scope value; construct a fresh `Hiera`
-    instance if the on-disk tree may have changed structurally).
+    the bound scope (cached per scope value). Under `revalidate=True` a
+    file or glob match added or removed since the last call is seen by the
+    next one; with `revalidate=False` the listing is kept until
+    `clear_cache()`.
   - **`.format(text)`** — interpolates `text` exactly as a data
     value is interpolated (Puppet's `Context#interpolate`): all five
     methods, whitespace inside `%{ }` ignored, literal braces untouched,
@@ -854,9 +856,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `hyera.Strict` member or the same plain string. `.strict`
   (read-only property, always a plain `str`) is the constructor's `strict=`
   when given, else the
-  call-time default (`"warning"` until the lookup scope's `strict`
-  setting is threaded through to backends) — read at call time, never
-  cached, since one backend instance is shared across scopes. `.name`
+  bound lookup scope's `strict` (`"warning"` with no scope) — read at call
+  time, never cached, since one backend instance is shared across scopes. `.name`
   defaults to the class's first registered name; `Backend.new` sets it to
   whatever name was actually asked for.
 - **`hyera.BackendKind`** (`FUNCTION`, `V3`, `FORMAT`, `RENDER`) — the four
@@ -940,8 +941,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
     Reading a file through it is what lets the engine keep the call's
     result across lookups.
   - `.environment_name` (the scope's `environment`, `"production"` when
-    unset) / `.module_name` (always `None` today — no provider kind yet
-    fills it in).
+    unset) / `.module_name` (always `None`; see
+    `lookup-context-module-name` under "Differences from Puppet").
 - **`default_backends()`** — the distinct classes registered in the
   `function` namespace, in definition order: `[YAMLBackend, JSONBackend,
   HOCONBackend, SopsBackend, EyamlBackend]`. `Hiera(backends=...)` takes
@@ -1151,7 +1152,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `Sensitive [value redacted]`) — the same renderer a bare `%{var}`/
   function-call result uses. `json` renders compact, insertion-ordered
   JSON (`ensure_ascii=False, allow_nan=False, separators=(",", ":")`); a
-  non-finite `float` raises `ValueError` with Puppet's own text (`NaN not
+  non-finite `float` raises `ValueError` (`NaN not
   allowed in JSON`, etc.); anything else not representable as Puppet data
   raises `TypeError("<type name> is not a Puppet data value")`. `yaml`
   renders text that reads back as the value rendered, under PyYAML and
@@ -1219,12 +1220,12 @@ Every class above is importable directly from `hyera` (e.g.
   own flag set. `.__call__()` runs the parsed command and returns the exit
   code. Fields, grouped:
   - *lookup*: `keys` (positional, zero or more — the first one found wins),
-    `merge` (`--merge first|unique|hash|deep`; any other value exits 2 with
-    Puppet's own text, validated by hand rather than via argparse choices),
+    `merge` (`--merge first|unique|hash|deep`; any other value exits 2,
+    validated by hand rather than via argparse choices),
     `knock_out_prefix`/`sort_merged_arrays`/`merge_hash_arrays`
     (`--knock-out-prefix`/`--sort-merged-arrays`/`--merge-hash-arrays`,
     only meaningful with `--merge deep`; any of the three without it exits
-    2 with Puppet's text), `value_type` (`--type`, a Puppet type string;
+    2), `value_type` (`--type`, a Puppet type string;
     parsed once, up front, so a syntax error exits 2 even when the key
     would otherwise just miss), `default` (`--default`), `explain`/
     `explain_options` (`--explain`/`--explain-options`).
@@ -1257,7 +1258,7 @@ Every class above is importable directly from `hyera` (e.g.
     lookup --render-as` prints; a `Sensitive`
     value redacts in every format, including `yaml` (Puppet's own YAML
     leaks the plaintext). A non-finite float under `--render-as json` exits
-    2 with Puppet's own text. Output is written
+    2. Output is written
     as UTF-8 bytes with LF line endings, regardless of the console or
     locale encoding, with a trailing newline
     added only if the rendered text lacks one (Ruby `puts` semantics); a
@@ -1266,10 +1267,10 @@ Every class above is importable directly from `hyera` (e.g.
     `main()` never reconfigures `sys.stdout`/`sys.stderr`.
   - `debug` (`--debug`/`-d`) — equivalent to `-vv`; see "Logging" below.
 
-  Removed outright, no alias: `--config`/`-c` (use `--hiera_config`),
-  `--deep` (use `--merge deep`), `--knockout-prefix` (use
-  `--knock-out-prefix`), `--compile`/`-c`, `--trusted` (Puppet's own is a
-  no-op in 8.10 anyway), and the `array`/`set` `--merge` aliases.
+  Not accepted: `--config`/`-c` (the flag is `--hiera_config`), `--deep`
+  (`--merge deep`), `--knockout-prefix` (`--knock-out-prefix`),
+  `--compile`/`-c`, `--trusted` (Puppet's own is a no-op in 8.10), and the
+  `array`/`set` `--merge` aliases.
 
   **Argument order, matching `puppet lookup`'s own `main`:** the deep-only
   guard, then `--merge` validation, then the no-keys check (`--explain-options`
@@ -1289,7 +1290,7 @@ Every class above is importable directly from `hyera` (e.g.
 
   Exit codes: `0` found (or `--default`/`--explain` printed), `1` the key
   was not found (a `KeyNotFoundError` and nothing else — nothing is
-  printed, matching Puppet's own silent miss), `2` every other
+  printed, as `puppet lookup` prints nothing for a miss), `2` every other
   error — a usage problem, an unknown (or empty) render format, an
   unreadable facts file, a `ConfigError`/`BackendError` (a
   `BackendTimeoutError` included), an unrenderable value, or stdout that
@@ -1305,8 +1306,8 @@ Every class above is importable directly from `hyera` (e.g.
   key 'K': …` if printing the found/default/explained value itself fails.
   The traceback is omitted unless `-v`, `-d`/`--debug` or
   `DUHO_TRACEBACK=1` is set.
-  `$server_facts` carries `serverversion` (the `puppet lookup` release
-  this CLI's flags mirror) and `environment` only — no host-identity keys.
+  `$server_facts` carries `serverversion` (`8.10.0`, the `puppet lookup` release
+  hyera is measured against) and `environment` only — no host-identity keys.
   Facts come only from `--facts`; this CLI never runs facter or reads
   stored facts, so an unattended lookup has no hidden subprocess and gives
   the same answer on every host.
@@ -1451,6 +1452,34 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `interpolation-key-shapes` — `%{::::x}` is an undefined
   variable (Puppet prints the fact), and a hash key that interpolates to an
   Array raises `InterpolationError` (Puppet keeps the Array as the key).
+- **difference** `error-exit-status` — Every error exits 2 where `puppet
+  lookup` exits 1 (a miss exits 1 in both), and hyera logs one `ERROR` line
+  where Puppet prints `Error: Could not run:` and the message.
+- **difference** `error-message-text` — Error message text is hyera's own
+  where it differs: the unknown-function error ends with `known: ...`, a
+  global-layer version 4 refusal has no `(file: ...)` suffix, and
+  `--explain` of a version 3 config with a relative `:datadir:` shows
+  absolute paths where Puppet shows them as written.
+- **difference** `schema-error-line-suffix` — Schema errors carry
+  `(line: N)`, which Puppet never prints, and report only the first
+  mismatch where Puppet lists all of them.
+- **difference** `puppet-crashes-hyera-answers` — `puppet lookup --type
+  Data k` (any type alias), an Integer key in `lookup_options` or module
+  data, and `Float.new("0")` crash Puppet 8.10; hyera returns a value,
+  ignores the key, and returns `0.0`.
+- **difference** `environment-trailing-slash` — `--environment
+  production/` is accepted by Puppet and rejected by hyera as an unknown
+  environment.
+- **difference** `dir-glob-ruby-quirks` — A brace group directly after `**`
+  is matched per directory entry in sorted order by Ruby (hyera expands it
+  first, in written order); Ruby keeps a doubled `/` in a result; a brace
+  that expands to an empty pattern also returns the base directory in
+  Ruby.
+- **difference** `glob-case-folded-spelling` — On a case-insensitive
+  filesystem a literal glob segment matched by case folding is returned in
+  the pattern's spelling; Ruby returns the on-disk spelling.
+- **difference** `lookup-context-module-name` — `LookupContext.module_name`
+  is always `None`; Puppet fills in the module whose data the hook reads.
 
 Not supported:
 
@@ -1469,9 +1498,9 @@ Not supported:
   text and an empty `--environment`.
 - The GPG eyaml encryption scheme — detected and reported as an
   unsupported plugin; only PKCS7 is implemented.
-- Type aliases (`Stdlib::*`, user-defined) and `Timespan`/`Timestamp`/
-  `SemVer` in `convert_to`/`value_type` — an explicit "unsupported type"
-  error (see "Types" above).
+- Type aliases (`Stdlib::*`, user-defined) in a type expression, and
+  `new()` for `Timespan`/`Timestamp`/`SemVer` in `convert_to` — an
+  explicit "unsupported type" error (see "Types" above).
 - Discovering `environmentpath`/`modulepath`/`codedir` from `puppet.conf`:
   they are explicit constructor and CLI arguments only.
 
@@ -1651,10 +1680,9 @@ Not supported:
   given**, or through `in`: only a genuine miss (an absent key, a `None`
   value walked no further, or an out-of-range/nonexistent segment) is
   silent.
-  In a hierarchy path specifically, a *malformed* reference still just
-  skips the level rather than raising (hierarchy paths do not follow
-  Puppet's location rules yet) — but a well-formed one that hits a type
-  mismatch raises there too, same as in a value.
+  A malformed reference in a hierarchy path raises `HieraLookupError`
+  "Syntax error in string" too, and so does a well-formed one that hits a
+  type mismatch, same as in a value.
 - References resolve against the bound `Scope`, so a value or path
   reference means the same thing everywhere: `%{environment}`/
   `%{trusted...}` are always defined (`Scope`'s own defaults, never a
@@ -1687,14 +1715,8 @@ Not supported:
 - A YAML **complex key** (`? [a, b]\n: 1`, or a Hash key) parses to a
   hashable tuple (recursively frozen), and a **symbol value** (`:foo`,
   `!ruby/symbol x`) parses to a `RubySymbol` — both load without error, but
-  neither is a valid Puppet lookup *value*, and `hyera` does not reject
-  them yet (Puppet's RichData value check is not ported yet); a value keyed
-  or shaped this way currently returns successfully instead of erroring
-  like Puppet.
-- **`None`/`null`/`~` as an actual data value is indistinguishable from "key
-  not found"** in the engine's own navigation — a known limitation, not yet
-  fixed; a data file legally
-  containing `key: ~` currently makes that key un-lookupable.
+  neither is a valid Puppet lookup *value*: looking up a key whose root
+  value holds one raises `HieraLookupError`, as in Puppet.
 - **`convert_to` is Puppet's `new()`.** A `str` first element of the
   `convert_to` spec is parsed as a Puppet type expression first; a parse
   failure raises `HieraLookupError("Invalid data type in lookup_options for

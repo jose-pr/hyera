@@ -6,20 +6,25 @@
 [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://jose-pr.github.io/hyera/)
 [![CI](https://img.shields.io/github/actions/workflow/status/jose-pr/hyera/test.yml)](https://github.com/jose-pr/hyera/actions/workflows/test.yml)
 
-**hyera** resolves [Puppet Hiera](https://www.puppet.com/docs/puppet/7/hiera.html)
+**hyera** resolves [Puppet Hiera](https://help.puppet.com/core/8/Content/PuppetCore/hiera_intro.htm)
 data the way Puppet 8's own `lookup` does: `pip install hyera`, `import hyera`,
 and run the `hyera` command. It reads a Hiera base config, walks the
 hierarchy for a given context, and fully resolves values -- `%{...}`
 interpolation, the `hiera`/`lookup`/`scope`/`literal`/`alias` functions, and
-array/hash/deep-hash merging included. See the
-[documentation site](https://jose-pr.github.io/hyera/) for the full guide,
-and [Differences from Puppet](#differences-from-puppet) for where hyera
-intentionally diverges.
+array/hash/deep-hash merging included.
+
+The reference is Puppet 8.10.0 as measured: for the same `hiera.yaml`, data
+and scope, a lookup finds, misses or fails where Puppet's does and returns
+the same value. Error message text, the command's output text and its exit
+statuses are hyera's own; where hyera deliberately differs, the list under
+[Differences from Puppet](#differences-from-puppet) says how. The
+[documentation site](https://jose-pr.github.io/hyera/) holds the API
+reference and the changelog.
 
 ## Features
 
-- **Hiera 5 configuration** -- full `hiera.yaml` version 5 schema validation,
-  with Puppet's own error messages.
+- **Hiera 5 configuration** -- full `hiera.yaml` version 5 schema validation.
+  a config Puppet rejects fails here too.
 - **Hiera 1-4 configs, too** -- a versionless or `version: 3` `hiera.yaml`
   (Hiera 1, 2 and 3's own dialect) and `version: 4` module/environment
   configs are read the way Puppet reads them.
@@ -35,9 +40,10 @@ intentionally diverges.
   redacting `Sensitive` wrapper.
 - **YAML, JSON and HOCON backends**, plus `eyaml_lookup_key` (PKCS7) and a
   `sops_data` backend Puppet itself does not have.
-- **A CLI that takes `puppet lookup`**'s own flags and `--render-as` output,
-  runnable as `hyera`, `python -m hyera`, or as an
-  MCP tool (`HYERA_MCP=stdio`).
+- **A CLI** that takes `puppet lookup`'s flags and renders the value as
+  `s`, `json` or `yaml`, runnable as `hyera`, `python -m hyera`, or as an
+  MCP tool (`HYERA_MCP=stdio`). Its exit statuses are its own: `1` for a
+  miss, `2` for an error.
 - **Bounded, revalidating caches** -- lookups reuse resolved locations and
   parsed data across calls, and pick up changed files without restarting.
 - **A typed exception hierarchy** -- every failure derives from
@@ -116,7 +122,7 @@ shows.
 | `hyera.types` | Public Puppet type objects (`Integer`, `Optional`, `Struct`, ...). | https://jose-pr.github.io/hyera/api/types/ |
 | `hyera.backends` | Data backends: a self-registering `Backend` registry. | https://jose-pr.github.io/hyera/api/backends/ |
 | `hyera.cli` | Command-line interface for hyera, built on duho. | https://jose-pr.github.io/hyera/api/cli/ |
-| `hyera` (command) / `python -m hyera` | Runs a lookup from the command line, mirroring `puppet lookup`'s own flags. | [#command-line](#command-line) |
+| `hyera` (command) / `python -m hyera` | Runs a lookup from the command line, taking `puppet lookup`'s flags. | [#command-line](#command-line) |
 
 ## Guide
 
@@ -568,15 +574,16 @@ hierarchy:
 Install the `cli` extra to get the command: `pip install "hyera[cli]"`
 (without it, `hyera`/`python -m hyera` print that hint and exit 2).
 
-`hyera` accepts `puppet lookup`'s own flags:
+`hyera` takes `puppet lookup`'s flags, apart from those listed as not
+supported under [Hiera coverage](#hiera-coverage):
 
 ```sh
 hyera [options] KEY [KEY ...]
 
-hyera --hiera_config hiera.yaml --facts facts.yaml --node web01.example.com ntp::servers
-hyera --merge deep --knock-out-prefix=-- --render-as json profile::settings
-hyera --explain ntp::servers
-python -m hyera --hiera_config hiera.yaml --facts facts.yaml ntp::servers
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --node web01.example.com ntp::servers
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --merge deep --knock-out-prefix=-- --render-as json users
+hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml --explain ntp::servers
+python -m hyera --hiera_config examples/hiera.yaml --facts examples/facts.yaml ntp::servers
 ```
 
 Options, grouped:
@@ -610,7 +617,15 @@ status means and what this CLI does not (yet) support.
 stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
 `hyera`, whose arguments are the command-line fields (`keys`, `hiera_config`,
 `facts`, `scope`, `merge`, ...) and whose result is what the command would
-print.
+print. An option value of exactly `--` (the knock-out prefix `--`) is passed
+through as the value, as on the command line.
+
+An MCP caller that controls the tool's arguments can do what a user at the
+command line can: read any file the process can read as a facts file or a
+`hiera.yaml` (an error message can name the keys of a YAML or JSON mapping
+it finds there, and shows whether a path exists), and read any hiera data on
+disk. A hierarchy level that names `sops_data` runs the `sops` binary.
+Expose the tool only to a caller you would trust with that access.
 
 ### Errors and exit codes
 
@@ -637,8 +652,9 @@ that closes the output early or a device that cannot be written (both
 silent: nothing on stderr) -- and `130` an interrupt (Ctrl-C), with no
 traceback. A `2` is reported as one stderr line
 (`-v`, `-d` or `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup`
-exits `1` for both a miss and an error, printing nothing for the error
-case; hyera's CLI tells the two apart.
+exits `1` for both a miss and an error, and prints `Error: Could not run:`
+and the message for an error; hyera's CLI tells the two apart, and its
+message text is its own (see [Differences from Puppet](#differences-from-puppet)).
 
 ### Caching
 
@@ -657,6 +673,14 @@ locations and under globbed directories are seen by the next lookup.
 `revalidate=False` keeps every file and glob listing as first read until
 `clear_cache()`. Neither mode re-reads `hiera.yaml` itself; construct a new
 `Hiera` to pick up a changed base config.
+
+A `lookup_key` or `data_dig` result is kept per top-level key. Under
+`revalidate=True` it is dropped when a file the hook read through
+`context.cached_file_data` changes (its inode, modification time or size),
+and a hook that read no file through it is called once per lookup, since
+hyera cannot know when its source changed. Under `revalidate=False` every
+result is kept until `clear_cache()`. A miss is never kept, and a hook's own
+`context.cache` is a separate store.
 
 ## Hiera coverage
 
@@ -688,7 +712,7 @@ locations and under globbed directories are seen by the next lookup.
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Hiera 3 and 4 configs | Supported | version 3 (or missing) resolved with Puppet's backend-major provider order; version 4 accepted in the environment/module layers only. |
-| `version` 1, 2 and others | Supported | 1 and 2 are Hiera 3's own dialect to Puppet, read the same way; any other version raises "This runtime does not support hiera.yaml version N". |
+| `version` 1, 2 and others | Not supported | a versionless file or `3` is read as Hiera 3; `1`, `2` and any other value except `4` (environment/module layers) and `5` raise "This runtime does not support hiera.yaml version N". |
 | Global/environment/module layers | Supported | `Hiera(..., environmentpath=, basemodulepath=, modulepath=)`. |
 | Interpolation variables (`%{x}`, `%{::x}`, `%{facts.x}`, `%{trusted.x}`) | Supported | |
 | Interpolation functions (`hiera`/`lookup`/`alias`/`scope`/`literal`) | Supported | |
@@ -733,11 +757,11 @@ locations and under globbed directories are seen by the next lookup.
 
 ## Differences from Puppet
 
-hyera aims to resolve exactly like `puppet lookup`. Every deliberate
-difference is listed here, tagged with a slug; each is also either a
-recorded conformance-harness deviation (checked against the real Puppet
-oracle) or a documented-only difference the harness cannot record a golden
-for.
+hyera aims to give the same lookup outcome and value as Puppet 8.10.0's
+`puppet lookup`. Every deliberate difference is listed here, tagged with a
+slug; each is also either a recorded conformance-harness deviation (checked
+against the real Puppet oracle) or a documented-only difference the harness
+cannot record a golden for.
 
 - **A missing hiera.yaml raises `ConfigError`, not Puppet's built-in
   fallback.** `Hiera(path)` raises when `path` does not exist, and the
@@ -904,6 +928,44 @@ for.
   interpolates to an Array (`%{alias('arr')}`) raises `InterpolationError`
   ("not hashable"), where Puppet keeps the Array as the key.
   (id: `interpolation-key-shapes`)
+- **Every error exits `2` where `puppet lookup` exits `1`, and the error
+  line is hyera's own.** A miss exits `1` in both. For any other error
+  `puppet lookup` exits `1` and prints `Error: Could not run:` and the
+  message; hyera exits `2` and logs one `ERROR` line. See
+  [Errors and exit codes](#errors-and-exit-codes). (id: `error-exit-status`)
+- **Error message text is hyera's own where it differs.** The same lookup
+  fails in both, but the wording need not match: hyera's unknown-function
+  error ends with `known: ...`, a hiera.yaml `version: 4` file in the
+  global layer is refused without Puppet's `(file: ...)` suffix, and
+  `--explain` of a version 3 config with a relative `:datadir:` shows
+  absolute paths where Puppet shows them as written. Match on the exception
+  class, not its text. (id: `error-message-text`)
+- **Schema errors carry `(line: N)` and report only the first mismatch.**
+  Puppet never prints a line number and, for a `hiera.yaml` with several
+  mismatches, lists them all; hyera stops at the first and names its line in
+  the message and in `ConfigError.line`. (id: `schema-error-line-suffix`)
+- **Some inputs that crash Puppet 8.10 work in hyera.** `puppet lookup
+  --type Data k` (or any type alias) fails in Puppet and returns the value
+  here; an Integer key in `lookup_options` or in module data fails every
+  Puppet lookup and is ignored by hyera; `Float.new("0")` crashes Puppet and
+  returns `0.0` here. (id: `puppet-crashes-hyera-answers`)
+- **`--environment` takes the name literally.** `--environment production/`
+  is accepted by Puppet and names no environment in hyera, which reports the
+  missing environment. (id: `environment-trailing-slash`)
+- **Three Ruby `Dir.glob` behaviours are not matched.** A brace group
+  directly after `**` is matched per directory entry in sorted order by
+  Ruby, where hyera expands it first and keeps the written order; Ruby keeps
+  a doubled `/` in a result (`a//f.yaml`), and hyera collapses it; a brace
+  that expands to an empty pattern (`{,a}`) also returns the base directory
+  in Ruby, and hyera returns only the other alternatives. (id: `dir-glob-ruby-quirks`)
+- **On a case-insensitive filesystem, a literal glob segment matched by case
+  folding is returned in the pattern's spelling**, where Ruby returns the
+  on-disk spelling (`Dir.glob('Sub/c.yaml')` finds `sub/c.yaml` on APFS).
+  Values are unaffected; `--explain` and `sources()` show the pattern's
+  spelling. (id: `glob-case-folded-spelling`)
+- **`LookupContext.module_name` is always `None`.** Puppet fills it with the
+  module whose data the hook is reading; a hook that needs it must derive it
+  from the key. (id: `lookup-context-module-name`)
 
 ## Development
 

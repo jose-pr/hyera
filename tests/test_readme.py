@@ -116,6 +116,37 @@ DOC_ONLY = {
         "the harness's golden schema cannot hold an Array as a hash key, and "
         "a key spelled with four colons is not in any recorded case"
     ),
+    "error-exit-status": (
+        "the harness asserts a lookup's outcome, never the exit status or "
+        "the stderr line of the command"
+    ),
+    "error-message-text": (
+        "the harness holds an error to its status, not its text, so no golden "
+        "asserts the wording"
+    ),
+    "schema-error-line-suffix": (
+        "the harness holds an error to its status, not its text, so a "
+        "line suffix or the count of mismatches reported is never compared"
+    ),
+    "puppet-crashes-hyera-answers": (
+        "a golden records Puppet's answer, and Puppet crashes on these "
+        "inputs, so there is no value for hyera's answer to be compared with"
+    ),
+    "environment-trailing-slash": (
+        "the harness names environments by their plain directory names"
+    ),
+    "dir-glob-ruby-quirks": (
+        "the recording host's Ruby and the harness's case trees do not "
+        "combine a brace group with ** or an empty brace alternative"
+    ),
+    "glob-case-folded-spelling": (
+        "the recording host and CI both run case-sensitive filesystems, so "
+        "no fixture can match a segment by case folding"
+    ),
+    "lookup-context-module-name": (
+        "a golden holds a lookup's value; the harness has no hook that "
+        "reports the context's module name"
+    ),
 }
 
 #: Any occurrence of the extras-bracket spelling not immediately preceded by
@@ -197,6 +228,32 @@ def test_readme_console_examples(monkeypatch, capsys):
             assert rc == 0
             out = capsys.readouterr().out
             assert out.rstrip("\n") == expected.rstrip("\n")
+            ran += 1
+    assert ran > 0
+
+
+def test_readme_sh_examples_run(monkeypatch, capsys):
+    """Every ``hyera ...`` / ``python -m hyera ...`` command line in a ``sh``
+    block runs from the repository root and exits 0, so each one names the
+    example config, its facts and a key the example data holds."""
+    pytest.importorskip("duho")
+    import hyera.cli
+
+    monkeypatch.chdir(ROOT)
+    text = README.read_text(encoding="utf-8")
+    ran = 0
+    for _line, body in _blocks(text, "sh"):
+        for cmd_line in body.splitlines():
+            if not cmd_line.startswith(("hyera --", "python -m hyera ")):
+                continue
+            args = shlex.split(cmd_line)
+            if args[0] == "python":
+                args = args[2:]
+            capsys.readouterr()
+            rc = hyera.cli.main(args[1:])
+            assert rc == 0, "{} exited {}: {}".format(
+                cmd_line, rc, capsys.readouterr().err
+            )
             ran += 1
     assert ran > 0
 

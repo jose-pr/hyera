@@ -1,7 +1,7 @@
 # hyera
 
 A small, dependency-light Python implementation of [Puppet
-Hiera](https://www.puppet.com/docs/puppet/7/hiera.html) hierarchical data
+Hiera](https://help.puppet.com/core/8/Content/PuppetCore/hiera_intro.htm) hierarchical data
 lookup. It reads a Hiera base config, walks the hierarchy for a given context,
 and fully resolves values — including `%{...}` interpolation and the
 `hiera`/`lookup`/`scope`/`literal`/`alias` functions — with optional array,
