@@ -14,11 +14,9 @@ from hocon_support import (  # noqa: F401
     BS,
 )
 
-# -- direct unit coverage: the include-resolution backstop and the
-# private-parser-copy machinery -- paths that are either a deliberate
-# defense-in-depth backstop (never meant to fire through any text the
-# scanner would produce) or process-global caching/build machinery,
-# neither reachable by feeding HOCON text through the public API.
+# direct unit coverage: the include-resolution backstop and the private parser copy
+# machinery, which are defense in depth or process-global caching that no HOCON text
+# reaches through the public API.
 
 
 def test_guarded_hocon_classmethod_raises_when_guard_is_set():
@@ -61,11 +59,9 @@ def test_install_hocon_include_guard_is_idempotent_for_an_explicit_module():
 
 
 def test_hocon_parser_returns_module_built_while_waiting_for_the_lock(monkeypatch):
-    # Simulates the double-checked-locking race the outer/inner
-    # `_HOCON_PARSER_MODULE is None` checks guard against: another thread
-    # finished building the module while this caller was waiting to
-    # acquire the lock, so the inner check must see it and return early
-    # instead of building a second copy.
+    # Simulates the double-checked-locking race: another thread built the module while
+    # this caller waited for the lock, so the inner `_HOCON_PARSER_MODULE is None`
+    # check must return early instead of building a second copy.
     sentinel = object()
 
     class _FakeLock:

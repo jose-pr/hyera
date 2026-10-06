@@ -190,12 +190,10 @@ def test_wrong_key_is_bad_decrypt(public_key, tmp_path):
 
 
 def test_decrypt_error_embeds_whole_value_not_just_the_token():
-    # hiera-eyaml's own eyaml_lookup_key.rb wraps a single rescue around
-    # parsing *and* decrypting the entire stored value, and interpolates
-    # its own pre-decrypt argument (the whole value) into the message --
-    # never just the one token that failed, even when surrounded by other
-    # text. Confirmed against the WSL hiera-eyaml 5.0.1 oracle (the
-    # backend-eyaml-pkcs7 conformance case's own corrupt_prefixed query).
+    # hiera-eyaml's eyaml_lookup_key.rb wraps one rescue around parsing and decrypting
+    # the whole stored value and interpolates the entire value into the message, not
+    # just the failing token (hiera-eyaml 5.0.1, backend-eyaml-pkcs7 case
+    # corrupt_prefixed).
     data = "prefix ENC[PKCS7,aGVsbG8=] suffix"
     with pytest.raises(BackendError) as exc:
         _decrypt(data)
@@ -205,13 +203,10 @@ def test_decrypt_error_embeds_whole_value_not_just_the_token():
 
 
 def test_bad_key_is_reported_before_the_ciphertext_is_ever_parsed(tmp_path):
-    # Ruby's own Pkcs7.decrypt loads and parses the private key before it
-    # ever touches the ciphertext (pkcs7.rb's `decrypt`): a malformed key
-    # and a malformed ciphertext together must report the key problem,
-    # never "Could not parse the PKCS7" -- confirmed against the WSL
-    # hiera-eyaml 5.0.1 oracle, whose text ends "Error was Neither PUB key
-    # nor PRIV key" (Ruby's OpenSSL binding; see the
-    # backend-eyaml-pkcs7-bad-key conformance case).
+    # Pkcs7.decrypt (pkcs7.rb) parses the private key before it touches the ciphertext:
+    # a malformed key with a malformed ciphertext reports the key problem, never "Could
+    # not parse the PKCS7" (hiera-eyaml 5.0.1, "Error was Neither PUB key nor PRIV
+    # key"; case backend-eyaml-pkcs7-bad-key).
     bad_key_path = tmp_path / "garbage.pem"
     bad_key_path.write_text("this is not a pem key at all\n", encoding="utf-8")
     with pytest.raises(
@@ -222,11 +217,9 @@ def test_bad_key_is_reported_before_the_ciphertext_is_ever_parsed(tmp_path):
 
 
 def test_private_key_parsed_once_per_decrypt_string_call(public_key, monkeypatch):
-    # hiera-eyaml's own Pkcs7.decrypt re-parses the key fresh for every
-    # single ENC[...] token (~50x the Python `cryptography` cost per parse,
-    # measured separately); this reuses one parse across every token in the
-    # same value instead, with no behavior change (a value's tokens all
-    # share the same configured key within one call).
+    # hiera-eyaml's Pkcs7.decrypt re-parses the key for every ENC[...] token (~50x the
+    # `cryptography` cost per parse); this reuses one parse across the tokens of a
+    # value, which share the configured key within one call.
     import hyera.backends._eyaml as eyaml_module
 
     calls = []
@@ -246,10 +239,8 @@ def test_private_key_parsed_once_per_decrypt_string_call(public_key, monkeypatch
 
 
 def test_private_key_not_cached_across_decrypt_string_calls(public_key, monkeypatch):
-    # The per-call reuse above must never become a cross-call cache: the
-    # configured key can change between separate lookups (e.g. a
-    # pkcs7_private_key_env_var whose value changes), so a second,
-    # independent decrypt_string call parses it again.
+    # The reuse above is per call, never a cache across calls: the configured key can
+    # change between lookups (a pkcs7_private_key_env_var), so each call parses again.
     import hyera.backends._eyaml as eyaml_module
 
     calls = []
@@ -293,10 +284,9 @@ def test_enc_across_newline_not_decrypted():
 
 
 def test_enc_token_with_whitespace_only_body_is_malformed():
-    # `_TOKEN_RE`'s body charclass allows a bare space/newline, so a body of
-    # only whitespace matches it -- but stripping that whitespace before
-    # re-matching against `_STRIPPED_RE` (which requires at least one real
-    # base64 character) leaves nothing, and that re-match fails.
+    # `_TOKEN_RE`'s body allows a bare space/newline, so a whitespace-only body matches;
+    # stripping it leaves nothing for `_STRIPPED_RE` (one real base64 character), which
+    # fails.
     with pytest.raises(
         BackendError, match="Could not parse the PKCS7: malformed token"
     ):

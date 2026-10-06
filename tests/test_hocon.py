@@ -210,13 +210,9 @@ def test_include_required_always_raises_present_or_missing(tmp_path, monkeypatch
 
 
 def test_include_file_globs_where_puppet_does_not(tmp_path, monkeypatch):
-    # ACCEPTED DIVERGENCE (hyera may do more than Puppet, never less):
-    # Puppet's
-    # `include file("*.conf")` never globs (oracle-measured: contributes
-    # nothing); pyhocon's own `file(...)` resolution does glob and include
-    # every match, which this mode leaves untouched. Pinned here so a
-    # future pyhocon upgrade that changes this is caught, not silently
-    # unnoticed.
+    # Accepted divergence (hyera may do more than Puppet, never less): Puppet's
+    # `include file("*.conf")` never globs and contributes nothing, while pyhocon's
+    # `file(...)` globs and includes every match; this mode leaves that alone.
     monkeypatch.chdir(tmp_path)
     (tmp_path / "inc.conf").write_bytes(b"fromfile = included\n")
     result = HOCONBackend().loads('include file("*.conf")\nplain = p\n')
@@ -252,13 +248,10 @@ def test_include_file_globs_where_puppet_does_not(tmp_path, monkeypatch):
 def test_include_value_position_is_literal_text_by_default(
     content, expected, pyhocon_tripwire, http_server
 ):
-    # Oracle-measured (WSL, 2026-09-29, real `puppet lookup`): `include`,
-    # in ANY of these forms, is never special outside statement position
-    # to Ruby -- it is ordinary text that HOCON's own string concatenation
-    # joins with its neighbours, quotes stripped exactly as any other
-    # quoted segment. Every one of these would otherwise resolve for real
-    # (or error) if treated as a directive; the tripwire/http_server prove
-    # none of that happens.
+    # Puppet (real `puppet lookup`): `include` in any of these forms is ordinary text
+    # outside statement position, joined with its neighbours by HOCON string
+    # concatenation with quotes stripped. The tripwire/http_server prove none of them
+    # is treated as a directive.
     _server, hits = http_server
     assert HOCONBackend().loads(content) == expected
     assert pyhocon_tripwire == []
@@ -283,13 +276,10 @@ def test_include_value_position_is_literal_text_by_default(
 def test_include_in_array_value_position_is_literal_text_by_default(
     content, expected, pyhocon_tripwire
 ):
-    # A key-position plain include contributes nothing (blanked) at the
-    # top level or inside an object, but the same directive inside a
-    # `[...]` array is a value, not a key -- Puppet keeps it as literal
-    # text (oracle-measured, real `puppet lookup`:
-    # `l=[include "inc.conf"]` -> `["include inc.conf"]`), and the
-    # default must not silently blank it into an empty/short array, nor
-    # resolve it as a real include, instead.
+    # A key-position plain include contributes nothing at the top level or inside an
+    # object, but inside a `[...]` array it is a value: Puppet keeps it as literal text
+    # (`l=[include "inc.conf"]` -> `["include inc.conf"]`), so the default must neither
+    # blank it nor resolve it.
     assert HOCONBackend().loads(content) == expected
     assert pyhocon_tripwire == []
 

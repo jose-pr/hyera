@@ -1,4 +1,6 @@
-"""``eyaml_lookup_key`` on malformed PKCS7 blobs: only ``BackendError``, and no plaintext in the error."""
+"""``eyaml_lookup_key`` on malformed PKCS7 blobs.
+
+Only ``BackendError`` may surface, and its message holds no plaintext."""
 
 import base64
 import os
@@ -25,22 +27,18 @@ from eyaml_support import (  # noqa: F401
 
 
 def _wrap_ci(env_body: bytes) -> bytes:
-    """Wrap raw ``EnvelopedData`` SEQUENCE content (``env_body``) in the
-    ``ContentInfo``/``[0] EXPLICIT`` shell :func:`_pkcs7_decrypt` expects,
-    without needing a full :func:`_envelope` (real RSA/AES) round trip --
-    for structural-malformation tests that raise before ever touching a
-    key or cipher."""
+    """Wrap raw ``EnvelopedData`` content in the ``ContentInfo`` shell
+    :func:`_pkcs7_decrypt` expects, without a real RSA/AES round trip."""
     env = _tlv(0x30, env_body)
     explicit = bytes([0xA0]) + _der_len(len(env)) + env
     return _tlv(0x30, _oid("1.2.840.113549.1.7.3") + explicit)
 
 
 def _valid_ktri(pubkey) -> bytes:
-    """A structurally valid ``KeyTransRecipientInfo`` (real RSA-encrypted
-    key, real ``rsaEncryption`` algorithm OID) for tests that need parsing
-    to get past the recipient-info checks before hitting a later
-    malformation -- the AES key itself is never used since these tests
-    always raise before decrypting any content."""
+    """A structurally valid ``KeyTransRecipientInfo`` (real RSA-encrypted key).
+
+    For tests that must get past the recipient-info checks; the AES key is never
+    used."""
     key = os.urandom(32)
     enc_key = pubkey.encrypt(key, padding.PKCS1v15())
     rid = _tlv(0x30, _tlv(0x30, b"") + _tlv(0x02, b"\x01"))
@@ -104,15 +102,12 @@ def test_malformed_unknown_content_algorithm(public_key):
 
 
 def test_malformed_never_raises_index_or_recursion_error(public_key):
-    """Mutation fuzzing (not property-based): every seeded random byte
-    flip/truncation of a real envelope must surface only as ``BackendError``
-    (or decrypt cleanly, if the mutation happened to land somewhere inert) --
-    never ``IndexError``/``RecursionError``/a hang.
+    """Seeded byte flips/truncations of a real envelope raise only ``BackendError``.
 
-    Each iteration is a real RSA decryption, so the default run is short;
-    set ``HYERA_FUZZ_ITERATIONS`` (e.g. 5000) for a long run after changing
-    the PKCS7 decoder. The seed is fixed, so a longer run extends the same
-    sequence."""
+    A mutation that lands somewhere inert may decrypt cleanly; never
+    ``IndexError``/``RecursionError``/a hang. Each iteration is a real RSA
+    decryption, so the default run is short: set ``HYERA_FUZZ_ITERATIONS`` (e.g.
+    5000) for a long run. The seed is fixed, so a longer run extends the sequence."""
     der = _envelope(b"bounds-probe", public_key)
     import os
     import random
@@ -135,12 +130,9 @@ def test_malformed_never_raises_index_or_recursion_error(public_key):
             pass
 
 
-# --- structural DER edge cases, hit directly through _pkcs7_decrypt --------
-#
-# Each of these builds just enough of a ContentInfo/EnvelopedData shell (via
-# `_wrap_ci`/`_valid_ktri`, or raw bytes for the reader-level cases) to reach
-# one specific structural check in the decoder and no further, so the
-# resulting `BackendError` message pins down exactly which check fired.
+# structural DER edge cases through _pkcs7_decrypt: each builds just enough of a
+# ContentInfo/EnvelopedData shell (`_wrap_ci`/`_valid_ktri`, or raw bytes) to reach
+# one structural check, so the BackendError message names the check that fired.
 
 
 def test_tag_with_no_length_byte(private_key):
@@ -186,11 +178,9 @@ def test_indefinite_length_content_runs_out_before_terminator(private_key):
 
 
 def test_deeply_nested_indefinite_length_rejected(private_key):
-    # Only nested indefinite-length constructed values recurse through
-    # `_read_tlv` itself (a definite-length SEQUENCE's children are walked
-    # by `_children` at a fixed, hand-picked depth instead), so this needs
-    # genuine nesting, not just many sibling elements, to push `depth` past
-    # `_MAX_DEPTH`.
+    # Only nested indefinite-length constructed values recurse through `_read_tlv`
+    # (definite-length children are walked by `_children` at fixed depth), so pushing
+    # `depth` past `_MAX_DEPTH` needs real nesting.
     node = _tlv(0x05, b"")  # innermost: a definite-length NULL
     for _ in range(40):
         node = bytes([0x30, 0x80]) + node + b"\x00\x00"

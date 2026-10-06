@@ -64,11 +64,9 @@ def _oid(dotted: str) -> bytes:
 
 @pytest.fixture(scope="module")
 def public_key():
-    # Derived from the fixture's own private key, not by parsing
-    # public_key.pkcs7.pem's certificate: that self-signed cert has a
-    # zero serial number (a real eyaml fixture property), which newer `cryptography` releases
-    # reject under `filterwarnings=error` as an RFC 5280 violation. The
-    # keypair is identical either way.
+    # Derived from the fixture's private key, not by parsing public_key.pkcs7.pem: that
+    # certificate has a zero serial number, which newer `cryptography` releases reject
+    # under `filterwarnings=error` as an RFC 5280 violation. The keypair is the same.
     with open(PRIVATE_KEY_PATH, "rb") as fh:
         private_key = serialization.load_pem_private_key(fh.read(), password=None)
     return private_key.public_key()

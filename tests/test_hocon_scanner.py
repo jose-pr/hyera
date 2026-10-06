@@ -9,25 +9,14 @@ from hocon_support import (  # noqa: F401
     pyhocon_tripwire,
 )
 
-# -- Adversarial forms: 17 inputs
-# where the text scanner missed a directive pyhocon's own grammar honours
-# caselessly, across a triple-quoted string, a comment, or a substitution.
-# All 17 form a regression suite for the opt-in guard (each raises). Under
-# the default, each one falls into one of
-# three buckets, confirmed against hyera's own code (not assumed) and
-# reasoned from the same case-sensitivity/position rules the tests
-# in test_hocon.py establish directly against the oracle:
-#   A. key position, case-mismatched keyword -> still raises unconditionally
-#      (case-mismatch handling never depends on `hocon_includes`; letting
-#      pyhocon's own *caseless* grammar run a real read here would be an
-#      unintended extra capability, not a documented one);
-#   B. key position, exactly lowercase "include file(...)" once the
-#      scanner correctly finds the true end of a string/comment/
-#      substitution -- resolves for real (a missing target contributes
-#      nothing, as in every other file() test in test_hocon.py);
-#   C. value position, any spelling/case -- defangs to literal text, same
-#      rule as the dedicated value-position tests in test_hocon.py.
-# -----------------------------------------------------------------------
+# Adversarial forms: 17 inputs where the text scanner missed a directive that
+# pyhocon's grammar honours caselessly (after a triple-quoted string, a comment or
+# a substitution). Each raises under the opt-in guard; under the default each falls
+# into one of three buckets:
+# A. key position, case-mismatched keyword: still raises, never a real read;
+# B. key position, lowercase `include file(...)`: resolves (a missing target
+#    contributes nothing, as in the file() tests of test_hocon.py);
+# C. value position, any case: defangs to literal text, as in test_hocon.py.
 
 
 _ADVERSARIAL_INCLUDE_FORMS = [
@@ -67,14 +56,10 @@ _ADVERSARIAL_INCLUDE_FORMS = [
 ]
 
 
-#: Bucket classification for the default half of this matrix. "D" is
-#: its own singleton (see the dedicated test below): the scanner correctly
-#: recognizes `include file(...)` here too (same as bucket B), but the
-#: unrelated `x\${` immediately before it is not actually valid HOCON to
-#: pyhocon regardless of includes at all -- confirmed directly (a bare
-#: `a = x\${` with no include anywhere nearby fails the exact same way,
-#: "Expected '}', found end of text") -- so the end-to-end outcome is
-#: still an error, just not because of anything include-related.
+# Bucket per adversarial case for the default half. "D" is a singleton (see the
+# test below): the scanner recognizes `include file(...)` as in bucket B, but the
+# preceding `x\${` is invalid HOCON on its own ("Expected '}', found end of
+# text"), so the outcome is an error unrelated to includes.
 _ADVERSARIAL_BUCKET = {
     "dotless-i-plain": "A",
     "dotless-i-file": "A",
@@ -129,10 +114,8 @@ _ADVERSARIAL_RESOLVES = [
 def test_adversarial_include_forms_neutralized_by_default(
     content, _line, label, tmp_path, monkeypatch, pyhocon_tripwire, http_server
 ):
-    # Buckets A (key position, case-mismatched -- still raises
-    # unconditionally) and C (value position, any case -- defangs to
-    # literal text): in both, pyhocon's own real include machinery must
-    # never run, so the tripwire applies here.
+    # Buckets A (case-mismatched key, still raises) and C (value position, defangs to
+    # text): pyhocon's include machinery must never run, so the tripwire applies.
     monkeypatch.chdir(tmp_path)
     bucket = _ADVERSARIAL_BUCKET[label]
     _server, hits = http_server
@@ -155,16 +138,10 @@ def test_adversarial_include_forms_neutralized_by_default(
 def test_adversarial_include_forms_resolve_by_default(
     content, _line, label, tmp_path, monkeypatch, http_server
 ):
-    # Bucket B: once the scanner correctly finds the true end of the
-    # preceding string/comment/substitution, this is a genuine, exactly
-    # lowercase `include file(...)` at key position -- the whole point of
-    # the default is to let it resolve for real, so no tripwire fixture
-    # here (a real `parse_file` call is expected and correct). The target
-    # is missing (this test never creates `inc.conf`), which silently
-    # contributes nothing (see test_include_file_missing_contributes_
-    # nothing_by_default) rather than raising -- confirming the include
-    # was recognized and handed to pyhocon, not simply ignored as inert
-    # text or blocked by a stray raise.
+    # Bucket B: a genuine lowercase `include file(...)` at key position resolves for
+    # real, so there is no tripwire. The target is missing (inc.conf is never created)
+    # and contributes nothing, without raising; that shows the include was recognized
+    # and handed to pyhocon, not ignored as text.
     monkeypatch.chdir(tmp_path)
     _server, hits = http_server
 
@@ -176,15 +153,10 @@ def test_adversarial_include_forms_resolve_by_default(
 def test_adversarial_escaped_substitution_form_still_errors_by_default(
     tmp_path, monkeypatch
 ):
-    # Bucket D (see _ADVERSARIAL_BUCKET): the scanner correctly recognizes
-    # `include file(...)` here (the same as every bucket-B case), but
-    # `a = x\${` right before it is not valid HOCON to pyhocon at all,
-    # with or without an include nearby -- confirmed directly against a
-    # bare `a = x\${\nb = "y"\n` with no include anywhere in it, which
-    # fails the exact same way ("Expected '}', found end of text"). Under
-    # the opt-in refusal this never surfaces, because the scanner always
-    # raises on `include` itself first; under the default it still ends
-    # in a BackendError, just for pyhocon's own, unrelated reason.
+    # Bucket D: the scanner recognizes `include file(...)` as in bucket B, but
+    # `a = x\${` before it is invalid HOCON with or without an include ("Expected '}',
+    # found end of text"). The opt-in refusal raises on `include` first; the default
+    # ends in a BackendError for pyhocon's own reason.
     content = [
         c
         for c, _l, label in _ADVERSARIAL_INCLUDE_FORMS
@@ -195,24 +167,16 @@ def test_adversarial_escaped_substitution_form_still_errors_by_default(
         HOCONBackend().loads(content)
 
 
-# -- scanner edge cases: unterminated tokens, substitutions, brackets ------
-#
-# These do not exercise the include rules themselves (covered in test_hocon.py); they
-# exercise the scanner's own bookkeeping -- finding the end of a string,
-# skipping a `${...}` substitution, and tracking `{`/`[` nesting -- in
-# situations an include-focused test never reaches (either because the
-# scanner would already have raised before getting there, or because
-# nothing include-shaped needs to be present at all).
+# scanner edge cases: unterminated tokens, substitutions, brackets. These exercise
+# the scanner's bookkeeping (end of a string, skipping `${...}`, `{`/`[` nesting),
+# not the include rules of test_hocon.py.
 
 
 @pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
 def test_unterminated_triple_quoted_string_reaches_end_of_text(hocon_includes):
-    # No closing `"""` anywhere in the text -- `_find_hocon_string_end`
-    # must stop at end-of-text rather than scanning past it looking for a
-    # terminator that will never appear. Invalid HOCON either way; this
-    # only proves the scanner itself terminates cleanly and the eventual
-    # pyhocon parse failure surfaces as a BackendError, not some scanner-
-    # internal error.
+    # No closing `"""` anywhere: `_find_hocon_string_end` must stop at end of text. The
+    # HOCON is invalid either way; the scanner terminates and pyhocon's failure
+    # surfaces as a BackendError.
     with pytest.raises(BackendError):
         HOCONBackend(hocon_includes=hocon_includes).loads('a = """abc\n')
 
@@ -221,12 +185,9 @@ def test_unterminated_triple_quoted_string_reaches_end_of_text(hocon_includes):
 def test_uppercase_include_without_directive_argument_is_ordinary_key(
     hocon_includes, pyhocon_tripwire
 ):
-    # `INCLUDE` case-matches the keyword caselessly, but nothing
-    # directive-shaped follows it (`= 1`, not a quoted string or a
-    # `name(...)` call) -- `_hocon_directive_follows` correctly says no,
-    # and both scanners fall through to treating this as an entirely
-    # ordinary key, in either mode. Puppet's own case-sensitive match would
-    # do the same (`INCLUDE` is simply not its `include` keyword either).
+    # `INCLUDE` matches the keyword caselessly, but nothing directive-shaped follows it
+    # (`= 1`): `_hocon_directive_follows` says no and both scanners treat it as an
+    # ordinary key in either mode, as Puppet's case-sensitive match would.
     result = HOCONBackend(hocon_includes=hocon_includes).loads(
         "INCLUDE = 1\nplain = p\n"
     )
@@ -238,10 +199,8 @@ def test_uppercase_include_without_directive_argument_is_ordinary_key(
 def test_substitution_reference_before_an_include_is_skipped(
     hocon_includes, pyhocon_tripwire
 ):
-    # A `${...}` substitution reference is skipped wholesale (up to its
-    # closing `}`) rather than scanned character by character -- this
-    # proves that skip runs at all, and that scanning is still correctly
-    # positioned to find a *real* include right after it.
+    # A `${...}` substitution is skipped wholesale up to its closing `}`; a real
+    # include right after it must still be found at the correct position.
     result = HOCONBackend(hocon_includes=hocon_includes).loads(
         'foo = 1\nx = ${foo}\ninclude "inc.conf"\nplain = p\n'
     )
@@ -262,11 +221,8 @@ def test_unclosed_substitution_reference_reaches_end_of_text(hocon_includes):
 def test_multiline_triple_quoted_plain_include_preserves_newlines(
     hocon_includes, pyhocon_tripwire
 ):
-    # A plain quoted include's target can itself be a triple-quoted string
-    # spanning multiple lines. Blanking it out (it "contributes nothing"
-    # in either mode) must skip over the embedded newlines instead of
-    # overwriting them with spaces, so line numbers after it still line up
-    # with the original text for any later pyhocon parse error.
+    # A plain quoted include's target may be a multi-line triple-quoted string; blanking
+    # it must keep the newlines so later pyhocon error line numbers still line up.
     result = HOCONBackend(hocon_includes=hocon_includes).loads(
         'include """a\nb"""\nplain = p\n'
     )
@@ -275,20 +231,15 @@ def test_multiline_triple_quoted_plain_include_preserves_newlines(
 
 
 def test_bare_value_position_include_without_argument_stays_literal():
-    # In value position, `include` with nothing directive-shaped after it
-    # (just end-of-line) is not defanged at all -- pyhocon's own unquoted-
-    # value grammar already treats it as an ordinary bareword, so there is
-    # nothing here that needs quoting to keep pyhocon's tokenizer from
-    # seeing a keyword.
+    # In value position, `include` with nothing directive-shaped after it is not
+    # defanged: pyhocon already treats it as an ordinary bareword.
     result = HOCONBackend().loads("msg = foo include\n")
     assert result == {"msg": "foo include"}
 
 
 def test_object_with_plain_include_scans_matching_close_brace(pyhocon_tripwire):
-    # The bracket-stack bookkeeping (`{`/`[` pushed, `}`/`]` popped) has to
-    # actually run and find a match on its stack -- a plain include that
-    # raises before ever reaching a closing bracket (as with the
-    # case-mismatched/space-before-paren forms above) never exercises this.
+    # The bracket stack (`{`/`[` pushed, `}`/`]` popped) must find a match; a plain
+    # include that raises before a closing bracket never exercises it.
     result = HOCONBackend(hocon_includes=False).loads(
         'o {\n include "inc.conf"\n}\nplain = p\n'
     )
@@ -298,10 +249,7 @@ def test_object_with_plain_include_scans_matching_close_brace(pyhocon_tripwire):
 
 @pytest.mark.parametrize("hocon_includes", [True, False], ids=["default", "refuse"])
 def test_unbalanced_closing_brace_does_not_crash_the_scanner(hocon_includes):
-    # A stray `}` with nothing open on the bracket stack -- the scanner
-    # must not pop from an empty stack; it just leaves the stack alone and
-    # keeps going. The text is not valid HOCON either way, so this only
-    # proves the scanner survives it and the malformed input still reaches
-    # pyhocon and comes back as an ordinary BackendError.
+    # A stray `}` with nothing open must leave the bracket stack alone; the malformed
+    # input still reaches pyhocon and comes back as a BackendError.
     with pytest.raises(BackendError):
         HOCONBackend(hocon_includes=hocon_includes).loads("}\n")

@@ -24,10 +24,8 @@ from eyaml_support import (  # noqa: F401
     public_key,
 )
 
-# --- hardening against adversarial input -------------------------------------
-# `.*ENC\[.*?\]` was cubic under Python's backtracking `re` for a value
-# that is mostly unterminated `ENC[` prefixes; `_has_encrypted_token` is a
-# linear line-at-a-time replacement.
+# hardening against adversarial input: `.*ENC\[.*?\]` is cubic under backtracking
+# `re` on a value of unterminated `ENC[` prefixes; `_has_encrypted_token` is linear.
 
 
 def test_no_token_present_returns_unchanged_fast():
@@ -213,18 +211,11 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key, private_
     base_der = bytearray(_envelope(b"x" * 64, public_key))
     with open(PRIVATE_KEY_PATH, "rb") as fh:
         key_pem = fh.read()
-    # A single-bit flip in the last ciphertext byte scrambles the whole
-    # final AES block once it goes through CBC decryption (ordinary block
-    # cipher diffusion), which almost always leaves invalid PKCS7 padding
-    # behind -- but `_envelope` picks a fresh random AES key and IV on
-    # every call, so which flip value actually does that is not fixed:
-    # about 1 in 256 draws the garbled block coincidentally still looks
-    # like a valid one-byte pad, `_pkcs7_decrypt` returns garbage instead
-    # of raising, and the failure only then surfaces higher up as a UTF-8
-    # decode error -- which this test does not expect, so it flakes.
-    # Search deterministically for a flip that reproduces the padding
-    # failure against *this* run's random key/IV, instead of trusting a
-    # single fixed guess (`^= 1`) to land on one.
+    # Flipping a bit in the last ciphertext byte scrambles the final AES block, which
+    # usually leaves invalid PKCS7 padding; `_envelope` draws a fresh key and IV per
+    # call, so about 1 in 256 flips still looks like a valid pad and surfaces as a
+    # UTF-8 error instead. Search for a flip that breaks the padding for this run's
+    # key and IV rather than a fixed `^= 1`.
     for flip in range(1, 256):
         der = bytearray(base_der)
         der[-1] ^= flip
@@ -235,10 +226,8 @@ def test_no_secrets_reachable_via_context_after_bad_padding(public_key, private_
                 break
     else:
         pytest.fail("no single-byte corruption reproduced a padding failure")
-    # Scrub this frame's own PEM copy before the assertion under test: once
-    # `_decrypt` raises, `_walk_for_secrets` inspects every frame on the
-    # exception's traceback, including this one, and `key_pem` would
-    # otherwise still be a live local holding "...PRIVATE KEY...".
+    # Scrub this frame's PEM copy first: when `_decrypt` raises, `_walk_for_secrets`
+    # inspects every traceback frame, and `key_pem` would still hold the private key.
     key_pem = b""
     with pytest.raises(BackendError, match="bad decrypt") as exc:
         _decrypt(_token(bytes(der)))
