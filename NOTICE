@@ -10,24 +10,42 @@ license is included at LICENSES/puppet-Apache-2.0.txt.
 
 The files ported from Puppet are:
 
-    src/hyera/core.py                    (from puppet/pops/lookup/data_hash_function_provider.rb, data_provider.rb)
-    src/hyera/_config/hiera_config.py    (from puppet/pops/lookup/hiera_config.rb)
+    src/hyera/core.py (from puppet/pops/lookup/data_hash_function_provider.rb, data_provider.rb, lookup_adapter.rb,
+         interpolation.rb, hiera_config.rb, location_resolver.rb, function_provider.rb,
+         configured_data_provider.rb, pops/lookup.rb, functions/dig.rb, get.rb, getvar.rb, util/run_mode.rb)
+    src/hyera/exceptions.py (from puppet/pops/lookup/invocation.rb, lookup_adapter.rb)
+    src/hyera/_config/hiera_config.py (from puppet/pops/lookup/hiera_config.rb, context.rb, location_resolver.rb,
+         pops/issues.rb, pops/types/type_mismatch_describer.rb, util/run_mode.rb)
     src/hyera/_config/location_resolver.py (from puppet/pops/lookup/location_resolver.rb, hiera_config.rb)
-    src/hyera/_lookup/interpolation.py   (from puppet/pops/lookup/interpolation.rb)
-    src/hyera/_lookup/navigation.py      (from puppet/pops/lookup/sub_lookup.rb, lookup_key.rb)
-    src/hyera/_lookup/lookup_adapter.py  (from puppet/pops/lookup/lookup_adapter.rb)
-    src/hyera/_lookup/merge_strategy.py  (from puppet/pops/merge_strategy.rb)
-    src/hyera/backends/__init__.py       (from puppet/functions/yaml_data.rb)
-    src/hyera/backends/_yaml.py          (from puppet/functions/yaml_data.rb)
-    src/hyera/backends/_psych.py         (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
-    src/hyera/_types/types.py            (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
-    src/hyera/_types/parser.py           (from puppet/pops/types/type_parser.rb)
-    src/hyera/_types/mismatch.py         (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)
+    src/hyera/_config/data_provider.py (from puppet/pops/lookup/lookup_adapter.rb, data_provider.rb,
+         module_data_provider.rb, environment_data_provider.rb, lookup_key.rb,
+         puppet.rb, node/environment.rb, module.rb)
+    src/hyera/_lookup/interpolation.py (from puppet/pops/lookup/interpolation.rb)
+    src/hyera/_lookup/navigation.py (from puppet/pops/lookup/sub_lookup.rb, lookup_key.rb)
+    src/hyera/_lookup/lookup_adapter.py (from puppet/pops/lookup/lookup_adapter.rb)
+    src/hyera/_lookup/lookup_options.py (from puppet/pops/lookup/lookup_adapter.rb, module_data_provider.rb)
+    src/hyera/_lookup/lookup_function.py (from puppet/functions/lookup.rb, pops/lookup.rb)
+    src/hyera/_lookup/invocation.py (from puppet/pops/lookup/invocation.rb, lookup_adapter.rb, hiera_config.rb, context.rb)
+    src/hyera/_lookup/function_provider.py (from puppet/pops/lookup/function_provider.rb, data_hash_function_provider.rb,
+         lookup_key_function_provider.rb, data_dig_function_provider.rb, context.rb,
+         data_provider.rb, configured_data_provider.rb)
+    src/hyera/_lookup/data_functions.py (from puppet/functions/dig.rb, get.rb, getvar.rb)
+    src/hyera/_lookup/cache.py (from puppet/pops/lookup/hiera_config.rb, context.rb)
+    src/hyera/_lookup/locations.py (from puppet/pops/lookup/data_hash_function_provider.rb)
+    src/hyera/_lookup/providers.py (from puppet/pops/lookup/hiera_config.rb)
+    src/hyera/_lookup/merge_strategy.py (from puppet/pops/merge_strategy.rb)
+    src/hyera/_output/explain.py (from puppet/pops/lookup/explainer.rb, configured_data_provider.rb)
+    src/hyera/backends/__init__.py (from puppet/functions/yaml_data.rb)
+    src/hyera/backends/_yaml.py (from puppet/functions/yaml_data.rb)
+    src/hyera/backends/_psych.py (from puppet/util/yaml.rb, pops/lookup/hiera_config.rb)
+    src/hyera/_types/types.py (from puppet/pops/types/types.rb, type_calculator.rb, type_formatter.rb, p_sensitive_type.rb)
+    src/hyera/_types/parser.py (from puppet/pops/types/type_parser.rb)
+    src/hyera/_types/mismatch.py (from puppet/pops/types/type_mismatch_describer.rb, type_asserter.rb)
     src/hyera/_types/string_converter.py (from puppet/pops/types/string_converter.rb)
-    src/hyera/_types/new_function.py     (from puppet/functions/new.rb)
-    src/hyera/_scope/scope.py            (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
-                                           context/trusted_information.rb, node/facts.rb)
-    src/hyera/_scope/facts.py            (from puppet/application/lookup.rb, util/yaml.rb)
+    src/hyera/_types/new_function.py (from puppet/functions/new.rb)
+    src/hyera/_scope/scope.py (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
+         context/trusted_information.rb, node/facts.rb)
+    src/hyera/_scope/facts.py (from puppet/application/lookup.rb, util/yaml.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
@@ -42,6 +60,21 @@ included at LICENSES/deep_merge-MIT.txt.
 The files ported from deep_merge are:
 
     src/hyera/_lookup/merge_strategy.py  (from deep_merge/lib/deep_merge/core.rb)
+
+Each was modified by jose-pr and carries a notice saying so.
+
+This project also ports selected code from hiera-eyaml, by Tom Poulton:
+
+    https://github.com/voxpupuli/hiera-eyaml
+
+hiera-eyaml is licensed under the MIT License. A copy of that license is
+included at LICENSES/hiera-eyaml-MIT.txt.
+
+The files ported from hiera-eyaml are:
+
+    src/hyera/backends/_eyaml.py  (from hiera-eyaml/lib/hiera/backend/eyaml/parser/encrypted_tokens.rb,
+                                        parser/parser.rb, encryptors/pkcs7.rb,
+                                        lib/puppet/functions/eyaml_lookup_key.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 

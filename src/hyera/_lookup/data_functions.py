@@ -1,10 +1,13 @@
+# Ported from Puppet 8 lib/puppet/functions/dig.rb, get.rb,
+# getvar.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Puppet's ``dig()``/``get()``/``getvar()`` functions, ported onto an
 already-resolved value (``dig``/``get``) or the bound ``Scope``
 (``getvar``): ``functions/dig.rb``, ``functions/get.rb``,
 ``functions/getvar.rb``.
 
-Original code. (see ``core.Hiera.dig``/``.get``/``.getvar``, the thin
-methods wrapping this module).
+:class:`~hyera.Hiera`'s ``dig``/``get``/``getvar`` are thin methods
+wrapping this module.
 """
 
 import re

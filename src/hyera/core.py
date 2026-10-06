@@ -1,5 +1,8 @@
 # Ported from Puppet 8 lib/puppet/pops/lookup/data_hash_function_provider.rb,
-# data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# data_provider.rb, lookup_adapter.rb, interpolation.rb, hiera_config.rb,
+# location_resolver.rb, function_provider.rb, configured_data_provider.rb,
+# lib/puppet/pops/lookup.rb, functions/{dig,get,getvar}.rb, util/run_mode.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0.
 # Modified by jose-pr. See NOTICE.
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 

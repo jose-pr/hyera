@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """One function provider per hierarchy level, built for one scope (one
 ``Hiera`` or ``scoped()`` view) and refreshed on every lookup while
 ``revalidate=True``."""

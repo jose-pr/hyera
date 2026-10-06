@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb,
+# context.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Scope-keyed caching: Puppet's scope-interpolation stability check.
 
 Ports the part of Puppet's ``pops/lookup/hiera_config.rb`` that decides
@@ -8,7 +11,6 @@ into building it (``ScopeLookupCollectingInvocation``/
 ``scope_interpolations_stable?``) instead of keying on the whole scope
 value.
 
-Original code: no upstream header, no ``NOTICE`` line.
 """
 
 import collections

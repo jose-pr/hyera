@@ -1,13 +1,16 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/explainer.rb,
+# configured_data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Puppet's explain tree (``pops/lookup/explainer.rb``) and its text
 rendering: the private ``Explainer``/node classes that record and dump a
 lookup's own trace, exactly as ``puppet lookup --explain``/``--render-as
 s|json`` project it, plus the ``DebugExplainer`` a lookup wraps it in to
 also log the same report at ``DEBUG``.
 
-Original code -- this is a from-scratch Python port of one Ruby file's
-class hierarchy (structurally close enough to cite line numbers against,
-in the module docstrings below, but never copied verbatim). Recording
-hooks live on ``_invocation.Invocation``; this module only holds the tree
+Ports ``explainer.rb``'s class hierarchy, close enough to cite line
+numbers against throughout this module, with ``configured_data_provider.rb``
+and ``pops/lookup.rb`` for the provider and lookup-name qualifiers.
+Recording hooks live on ``_invocation.Invocation``; this module only holds the tree
 itself (and the debug wrapper), so it has no engine imports at all beyond
 the one Ruby-rendering helper every value passes through.
 """

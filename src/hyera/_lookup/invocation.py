@@ -1,6 +1,11 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/invocation.rb,
+# lookup_adapter.rb, hiera_config.rb, context.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Invocation: per-lookup state for interpolation.
 
-Ports Puppet's ``pops/lookup/invocation.rb``: the bound scope, the current
+Ports Puppet's ``pops/lookup/invocation.rb`` (with the parts of
+``lookup_adapter.rb``, ``hiera_config.rb`` and ``context.rb`` it
+cites): the bound scope, the current
 sub-lookup callable, the recursion-detection name stack, and (``explainer``
 set) the recording hooks a lookup's explain tree is built through.
 """

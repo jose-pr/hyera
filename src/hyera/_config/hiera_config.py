@@ -1,9 +1,13 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb
+# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb, context.rb,
+# lib/puppet/pops/issues.rb, pops/types/type_mismatch_describer.rb,
+# lib/puppet/util/run_mode.rb, lib/puppet/pops/lookup/location_resolver.rb
 # (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
 # See NOTICE.
 """Hiera configuration: loading base config, building hierarchies and levels.
 
-Ports Puppet's ``pops/lookup/hiera_config.rb``.
+Ports Puppet's ``pops/lookup/hiera_config.rb``, with the messages and
+helpers it cites from ``issues.rb``, ``type_mismatch_describer.rb``,
+``util/run_mode.rb`` and ``location_resolver.rb``.
 """
 
 import copy

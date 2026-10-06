@@ -1,12 +1,16 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/function_provider.rb,
+# data_hash_function_provider.rb, lookup_key_function_provider.rb,
+# data_dig_function_provider.rb, context.rb, data_provider.rb,
+# configured_data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Function providers: dispatching a hierarchy level's ``data_hash``,
 ``lookup_key`` or ``data_dig`` function per key and per location, with a
 :class:`LookupContext` for the ``lookup_key``/``data_dig`` cases.
 
-Original code; ports the *design* of Puppet's
-``pops/lookup/function_provider.rb``, ``data_hash_function_provider.rb``,
-``lookup_key_function_provider.rb``, ``data_dig_function_provider.rb`` and
-``context.rb`` -- not translated line by line, so no "Ported from ..."
-header.
+Follows Puppet's ``pops/lookup/function_provider.rb``,
+``data_hash_function_provider.rb``, ``lookup_key_function_provider.rb``,
+``data_dig_function_provider.rb``, ``context.rb``, ``data_provider.rb`` and
+``configured_data_provider.rb``.
 """
 
 import contextlib

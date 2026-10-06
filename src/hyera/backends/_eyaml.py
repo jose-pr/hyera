@@ -1,13 +1,15 @@
+# Ported from hiera-eyaml lib/hiera/backend/eyaml/parser/encrypted_tokens.rb,
+# parser/parser.rb, encryptors/pkcs7.rb, lib/puppet/functions/eyaml_lookup_key.rb
+# (https://github.com/voxpupuli/hiera-eyaml), MIT. Modified by jose-pr.
+# See NOTICE.
 """``eyaml_lookup_key`` support: token scanning, PKCS7 key loading and a
 cert-free PKCS7 EnvelopedData decrypt over ``cryptography`` primitives.
 
-Original code: the token grammar mirrors
-hiera-eyaml's ``parser/encrypted_tokens.rb``/``parser/parser.rb`` and the
-PKCS7 handling mirrors ``encryptors/pkcs7.rb``, but neither is translated
-line by line -- both are re-implemented against Python's stdlib/`re`/
-`cryptography` idioms, so this file matches the upstream *behaviour*
-without being a structural port of it, and carries no "Ported from ..."
-header.
+The token grammar follows hiera-eyaml's
+``parser/encrypted_tokens.rb`` and ``parser/parser.rb``, the PKCS7 handling
+its ``encryptors/pkcs7.rb`` and the lookup function its
+``eyaml_lookup_key.rb``, re-expressed with Python's ``re`` and
+``cryptography``.
 """
 
 import base64

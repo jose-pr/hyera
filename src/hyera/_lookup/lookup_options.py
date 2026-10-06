@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb,
+# module_data_provider.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """How an instance gathers ``lookup_options`` from its global, environment and
 module layers and composes them for a key (``lookup_adapter.rb:236-380``),
 and the per-``explain()`` memo that keeps a name-list lookup from searching

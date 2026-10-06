@@ -1,9 +1,11 @@
+# Ported from Puppet 8 lib/puppet/functions/lookup.rb and
+# pops/lookup.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """The public ``lookup()`` call: Puppet's ``functions/lookup.rb`` dispatch
 (the five call forms) plus ``pops/lookup.rb``'s ``Lookup.lookup`` (name
 precedence, subjects, messages).
 
-Original code. (see ``core.Hiera.lookup``, which is the thin method
-wrapping this module).
+:meth:`hyera.Hiera.lookup` is a thin method wrapping this module.
 """
 
 import contextlib

@@ -1,12 +1,16 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/lookup_adapter.rb,
+# data_provider.rb, module_data_provider.rb, environment_data_provider.rb,
+# lookup_key.rb, lib/puppet.rb, node/environment.rb, module.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Layer discovery and per-layer config loading: the global, environment and
 module data providers behind Puppet's lookup provider stack
 (``lookup_adapter.rb``'s ``PROVIDER_STACK``), built on the single-config
-engine ``_hiera_config.py`` already provides.
+engine ``hiera_config.py`` already provides.
 
-Original code -- this module implements the *rules* described in Puppet's
-``lookup_adapter.rb``, ``data_provider.rb``, ``module_data_provider.rb``
-and ``environment_data_provider.rb``, not a line-by-line translation of
-any one of them.
+Follows Puppet's ``lookup_adapter.rb``, ``data_provider.rb``,
+``module_data_provider.rb`` and ``environment_data_provider.rb`` rule by
+rule, citing the line of each rule it mirrors.
 """
 
 import logging

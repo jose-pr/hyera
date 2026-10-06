@@ -1,3 +1,6 @@
+# Ported from Puppet 8 lib/puppet/pops/lookup/data_hash_function_provider.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Resolved hierarchy locations and parsed data files, shared by an instance
 and every view of it: one lock, the location, glob and file caches, and the
 intern table for the path strings they hold."""
