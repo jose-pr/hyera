@@ -21,6 +21,8 @@ from hyera._lookup.merge_strategy import (
     HashMergeStrategy,
     MergeStrategy,
     UniqueMergeStrategy,
+)
+from hyera._lookup.deep_merge import (
     _eql_key,
     _ruby_delete,
     _ruby_delete_if,
@@ -137,7 +139,8 @@ def test_ruby_equality():
 
 
 def test_is_data_puppet_type_name_and_ruby_inspect_fallbacks():
-    from hyera._lookup.merge_strategy import _is_data, _puppet_type_name, _ruby_inspect
+    from hyera._lookup.merge_strategy import _is_data, _puppet_type_name
+    from hyera._lookup.interpolation import _ruby_inspect
 
     marker = object()
     assert _is_data(marker) is False
@@ -146,7 +149,7 @@ def test_is_data_puppet_type_name_and_ruby_inspect_fallbacks():
 
 
 def test_ruby_class_name_eq_cmp_direct():
-    from hyera._lookup.merge_strategy import _ruby_class_name, _ruby_cmp, _ruby_eq
+    from hyera._lookup.deep_merge import _ruby_class_name, _ruby_cmp, _ruby_eq
 
     assert _ruby_class_name([1, 2]) == "Array"
     marker = object()
@@ -163,7 +166,7 @@ def test_ruby_class_name_eq_cmp_direct():
 
 
 def test_clear_or_nil_direct():
-    from hyera._lookup.merge_strategy import _clear_or_nil
+    from hyera._lookup.deep_merge import _clear_or_nil
 
     assert _clear_or_nil("x") == ""
     assert _clear_or_nil(object()) is None
@@ -219,7 +222,8 @@ def test_merge_strategy_base_is_abstract_and_first_found_never_rejects():
 
 
 def test_unique_value_problem_nested_array_item():
-    from hyera._lookup.merge_strategy import UniqueMergeStrategy, _ruby_class_name
+    from hyera._lookup.merge_strategy import UniqueMergeStrategy
+    from hyera._lookup.deep_merge import _ruby_class_name
 
     assert UniqueMergeStrategy.INSTANCE._value_problem([1, object()]) == (
         "expects a value of type Scalar or Array, got Array[object]"
@@ -575,7 +579,7 @@ def test_hidden_strategy_keys():
 
 
 def test_ruby_join_split():
-    from hyera._lookup.merge_strategy import _ruby_join, _ruby_split
+    from hyera._lookup.deep_merge import _ruby_join, _ruby_split
 
     assert _ruby_join(["a", "b"], ",") == "a,b"
     assert _ruby_join([["a", "b"], "c"], ",") == "a,b,c"  # nested, recursive

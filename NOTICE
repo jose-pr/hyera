@@ -71,7 +71,7 @@ included at LICENSES/deep_merge-MIT.txt.
 
 The files ported from deep_merge are:
 
-    src/hyera/_lookup/merge_strategy.py  (from deep_merge/lib/deep_merge/core.rb)
+    src/hyera/_lookup/deep_merge.py  (from deep_merge/lib/deep_merge/core.rb)
 
 Each was modified by jose-pr and carries a notice saying so.
 
