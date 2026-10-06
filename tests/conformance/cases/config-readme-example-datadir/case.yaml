@@ -1,5 +1,4 @@
 description: >-
   The README example with `data_dir` fixed to `datadir` still fails: its top-level `default_hierarchy` is only valid in the module layer.
-origin: spec-config/cases/readme_example_datadir
 queries:
   - key: k

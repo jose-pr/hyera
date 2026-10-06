@@ -1,6 +1,5 @@
 description: A higher-priority level's YAML data file has an unknown custom tag value
   alongside a lower-priority-only key.
-origin: spec-layers-backends/yamltag
 queries:
 - key: x
 - key: other

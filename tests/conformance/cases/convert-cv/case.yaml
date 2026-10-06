@@ -3,7 +3,6 @@ description: >-
   bad/float/bool), Float, Boolean, String, Array, Hash, Numeric, Optional,
   Variant, an unparsable and an unknown type, a lowercase type name, a
   Sensitive wrap, SemVer, Timespan, Enum, Tuple, and a String format arg.
-origin: spec-lookup-options-types/cv
 queries:
   - key: int_plain
   - key: int_hex

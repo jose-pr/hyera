@@ -2,7 +2,6 @@ description: >-
   An `eyaml_lookup_key` hierarchy entry must not silently fall back to the
   defaults' `data_hash: yaml_data` and read the .eyaml file as plain YAML;
   recorded with hiera-eyaml 5.0.1 present.
-origin: spec-layers-backends/eyaml_level
 queries:
   - key: k
   - key: plain

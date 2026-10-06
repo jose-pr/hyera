@@ -1,7 +1,6 @@
 description: 'YAML 1.1 scalar-resolution edge cases: octal, hex, sexagesimal, underscored
   ints, exponents, yes/no/on booleans, a bare ''y'', a tilde null, an integer hash
   key, a duplicate key.'
-origin: code-io-security/yamlcases/scalars
 queries:
 - key: alias_v
 - key: merged

@@ -1,7 +1,6 @@
 description: >-
   Merge strategies across a two-level hierarchy, driven both by explicit
   --merge flags and by lookup_options in the data.
-origin: tests/conformance/cases/merges
 queries:
   - key: vals
     merge: unique

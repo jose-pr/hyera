@@ -1,5 +1,4 @@
 description: >-
   `hierarchy:` must be an Array; a bare String is a Puppet config error, and ours now raises ConfigError too.
-origin: spec-config/cases/hierarchy_string
 queries:
   - key: k

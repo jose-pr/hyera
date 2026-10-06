@@ -1,5 +1,4 @@
 description: A HOCON file whose top-level value is a list.
-origin: code-io-security/othercases/hocon_toplist
 requires:
 - pyhocon
 queries:

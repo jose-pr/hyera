@@ -1,6 +1,5 @@
 description: >-
   A completely empty HOCON file.
-origin: code-io-security/othercases/hocon_empty
 requires: [pyhocon]
 queries:
   - key: 'plain'

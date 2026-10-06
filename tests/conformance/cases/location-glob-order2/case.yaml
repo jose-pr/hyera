@@ -2,6 +2,5 @@ description: >-
   Glob match ordering across a case difference (B.yaml, _x.yaml, a.yaml):
   hyera's own Ruby Dir.glob port sorts by byte order on every OS, matching
   Puppet's Linux servers.
-origin: spec-config/cases/glob_order2
 queries:
   - key: k

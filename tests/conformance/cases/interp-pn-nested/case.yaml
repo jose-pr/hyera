@@ -1,5 +1,4 @@
 description: A hierarchy location path referencing an undefined fact, with no fallback
   level.
-origin: spec-interpolation/pn_nested
 queries:
 - key: k

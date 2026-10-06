@@ -6,7 +6,6 @@ description: >-
   record.py's leak guard refuses to write into a golden), and $HOME is not
   reliably set on every CI runner (a Windows leg failed to parse the whole
   file when it wasn't, even for this unrelated `plain` key).
-origin: code-io-security/othercases/hocon_env
 requires: [pyhocon]
 queries:
   - key: 'plain'

@@ -1,6 +1,5 @@
 description: >-
   A hierarchy path using %{literal(...)} method-call syntax.
-origin: spec-config/cases/literal_method_in_path
 queries:
   - key: k
     error_match: method syntax is not allowed

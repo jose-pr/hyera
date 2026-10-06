@@ -1,6 +1,5 @@
 description: >-
   A JSON integer literal too large for a 64-bit int.
-origin: code-io-security/othercases/json_bigint
 queries:
   - key: 'big'
   - key: 'f'

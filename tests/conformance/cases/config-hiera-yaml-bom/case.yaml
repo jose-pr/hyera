@@ -3,6 +3,5 @@ description: >-
   marker; Puppet's file read strips a hiera.yaml BOM outright (unlike a
   data file, which keeps a literal BOM character for the YAML parser to
   see), so this loads fine.
-origin: critic-engineering/bom
 queries:
   - key: k

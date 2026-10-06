@@ -1,7 +1,6 @@
 description: >-
   A basic v3 config (symbol-keyed, single yaml backend) resolving through
   the real backend-major provider build.
-origin: spec-config/cases/v3
 queries:
   - key: k
   - key: only_common

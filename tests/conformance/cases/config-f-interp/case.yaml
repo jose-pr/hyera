@@ -1,6 +1,5 @@
 description: 'docs-accuracy: the README''s interpolation examples (lookup/hiera/alias/scope/literal,
   falsy facts, dotted facts, missing references).'
-origin: docs-accuracy/f_interp
 queries:
 - key: lk_int
 - key: lk_arr

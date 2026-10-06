@@ -1,6 +1,5 @@
 description: 'docs-accuracy: the README''s lookup_options examples (regex merge, convert_to,
   dotted key).'
-origin: docs-accuracy/f_lopts
 queries:
 - key: prof::list
   id: prof_list

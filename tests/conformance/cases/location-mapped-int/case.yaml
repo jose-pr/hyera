@@ -1,6 +1,5 @@
 description: >-
   mapped_paths over a non-iterable Integer collection var.
-origin: spec-config/cases/mapped_int
 queries:
   - key: k
     error_match: Integer

@@ -2,7 +2,6 @@ description: >-
   A nil fact, a nested nil fact value, and a nil list element all
   interpolate as the empty string without raising, even under --strict
   error.
-origin: spec-context-facts/vars
 queries:
   - key: v1
     id: v1

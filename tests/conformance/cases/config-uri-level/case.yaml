@@ -2,6 +2,5 @@ description: >-
   A hierarchy entry using `uri:` passes it to the entry's function as
   options["uri"]; a data_hash file function still rejects it (only path/
   paths/glob/globs/mapped_paths are accepted).
-origin: spec-layers-backends/uri_level
 queries:
   - key: k

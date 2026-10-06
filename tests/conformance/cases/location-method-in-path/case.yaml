@@ -1,7 +1,6 @@
 description: >-
   A hierarchy path using %{lookup(...)} method-call syntax, which Puppet
   rejects in this context ("method syntax is not allowed").
-origin: spec-config/cases/method_in_path
 queries:
   - key: k
     error_match: method syntax is not allowed

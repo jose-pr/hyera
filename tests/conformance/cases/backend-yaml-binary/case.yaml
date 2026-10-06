@@ -1,5 +1,4 @@
 description: A YAML !!binary scalar.
-origin: code-io-security/yamlcases/binary
 queries:
 - key: bin
 - key: plain

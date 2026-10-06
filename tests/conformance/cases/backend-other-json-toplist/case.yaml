@@ -1,5 +1,4 @@
 description: A JSON data file whose top-level value is an array, not an object.
-origin: code-io-security/othercases/json_toplist
 queries:
 - key: plain
 - key: fromfirst

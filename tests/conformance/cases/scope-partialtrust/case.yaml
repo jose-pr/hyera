@@ -1,5 +1,4 @@
 description: With only fqdn set (not hostname/domain/clientcert), 'fqdn' is not a
   bare top-scope variable -- Puppet requires all four before any of them apply.
-origin: spec-context-facts/partialtrust
 queries:
 - key: v_fqdn

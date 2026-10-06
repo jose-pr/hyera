@@ -1,7 +1,6 @@
 description: >-
   Control: a single level with two paths (paths: [x.yaml, y.yaml]) already
   matches Puppet's unique merge.
-origin: critic-puppet-coverage/u_onelevel
 queries:
   - key: k
     merge: unique

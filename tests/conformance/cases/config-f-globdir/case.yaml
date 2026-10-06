@@ -1,6 +1,5 @@
 description: 'docs-accuracy: a `glob:` location skips subdirectories (README''s globbing
   example).'
-origin: docs-accuracy/f_globdir
 queries:
 - key: a_key
 - key: b_key

@@ -1,5 +1,4 @@
 description: A YAML !!set collection.
-origin: code-io-security/yamlcases/set
 queries:
 - key: s
 - key: plain

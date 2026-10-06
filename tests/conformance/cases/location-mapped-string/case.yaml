@@ -1,6 +1,5 @@
 description: >-
   A mapped_paths collection variable (`roles`) that resolves to a plain
   String fact, not an Array: Puppet wraps it into a one-element list.
-origin: spec-config/cases/mapped_string
 queries:
   - key: k

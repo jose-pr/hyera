@@ -1,5 +1,4 @@
 description: >-
   A v5-shaped file with no `version:` key is version 3 to Puppet; its v5-shaped hierarchy/defaults fail v3 schema validation.
-origin: spec-config/cases/no_version
 queries:
   - key: k

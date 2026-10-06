@@ -1,6 +1,5 @@
 description: >-
   lookup_options is a plain string instead of a hash at the common level.
-origin: spec-lookup-options-types/lobad
 queries:
   - key: k
     error_match: "value of lookup_options must be a hash"

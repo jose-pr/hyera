@@ -2,7 +2,6 @@ description: puppet lookup's --type flag and multi-key name-list form (the parts
   spec-lookup-options-types/fn's DSL probe -- notice(lookup(...,Type)), notice(lookup([names]))
   -- that a plain `puppet lookup` CLI call can express; the default_values_hash/override/block
   forms cannot and are not harvested).
-origin: spec-lookup-options-types/fn
 queries:
 - key: s
   id: s_type_integer

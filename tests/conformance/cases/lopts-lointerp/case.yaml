@@ -1,7 +1,6 @@
 description: >-
   An alias/lookup() reference to a key that itself has a merge or
   convert_to lookup_options entry.
-origin: spec-lookup-options-types/lointerp
 queries:
   - key: ref_k
   - key: ref_n

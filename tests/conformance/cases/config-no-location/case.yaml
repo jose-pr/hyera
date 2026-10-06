@@ -1,5 +1,4 @@
 description: >-
   A hierarchy entry with no location key at all (no path/paths/glob/globs/mapped_paths) calls its data_hash function with no path, which Puppet's file functions reject.
-origin: spec-config/cases/no_location
 queries:
   - key: k

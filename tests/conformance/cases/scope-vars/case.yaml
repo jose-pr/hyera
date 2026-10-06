@@ -2,7 +2,6 @@ description: 'Puppet''s top-scope variable model: environment, fact access forms
   scope()/trusted/server_facts defaults, falsy values, undefined variables, dotted/indexed
   navigation, and class-only variables (module_name/calling_module/calling_class)
   outside any class context.'
-origin: spec-context-facts/vars
 queries:
 - key: v_env
 - key: v_facts_os_family

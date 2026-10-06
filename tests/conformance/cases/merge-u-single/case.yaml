@@ -1,6 +1,5 @@
 description: >-
   Control: two single-path levels already match Puppet's unique merge.
-origin: critic-puppet-coverage/u_single
 queries:
   - key: k
     merge: unique

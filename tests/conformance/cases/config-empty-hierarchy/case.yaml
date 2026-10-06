@@ -1,5 +1,4 @@
 description: >-
   An explicitly empty `hierarchy: []` has no levels to search.
-origin: spec-config/cases/empty_hierarchy
 queries:
   - key: k

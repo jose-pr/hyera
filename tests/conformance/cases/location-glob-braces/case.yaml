@@ -1,5 +1,4 @@
 description: >-
   A glob pattern with Ruby Dir.glob brace alternation ({first,second}.yaml).
-origin: spec-config/cases/glob_braces
 queries:
   - key: k

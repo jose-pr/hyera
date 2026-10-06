@@ -1,7 +1,6 @@
 description: Baseline interpolation probes over a small common.yaml/facts.yaml
   fixture -- literal/scope/hiera/lookup/alias functions, whitespace, recursion,
   hash keys and dotted sub-lookups into already-resolved values.
-origin: code-core/interp
 queries:
 - key: plain
 - key: s_false

@@ -2,6 +2,5 @@ description: >-
   A glob "*.yaml" over a directory containing a dotfile: hyera's own Ruby
   Dir.glob port never includes it, on every OS and independent of the
   installed pathlib_next patch (glob levels no longer delegate to it).
-origin: spec-config/cases/glob_hidden
 queries:
   - key: k

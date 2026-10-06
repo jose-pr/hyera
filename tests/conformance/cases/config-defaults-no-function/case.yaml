@@ -1,5 +1,4 @@
 description: >-
   `defaults:` with no data_hash/lookup_key/data_dig, and the level has none either, is a config error on both sides.
-origin: spec-config/cases/defaults_no_function
 queries:
   - key: k

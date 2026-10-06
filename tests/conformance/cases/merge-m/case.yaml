@@ -1,6 +1,5 @@
 description: >-
   Large per-strategy merge matrix: unique, hash and deep over scalars, arrays, hashes, nil/false, knockout, sort_merged_arrays, merge_hash_arrays, dotted alias/lookup interpolation and falsy short-circuiting.
-origin: spec-merge/fx/m
 queries:
   - key: "u_scalars"
     merge: unique

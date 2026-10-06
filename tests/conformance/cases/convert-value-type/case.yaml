@@ -2,7 +2,6 @@ description: >-
   Every value/type pair the review probed for --type / value_type assertion:
   scalar and container instance checks, size-constrained types, Variant and
   Optional, Enum and Pattern, Struct and Tuple, and the named-only tier.
-origin: spec-lookup-options-types/cv
 queries:
   - key: s
     id: t01

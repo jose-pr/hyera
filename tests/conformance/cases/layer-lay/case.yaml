@@ -1,9 +1,7 @@
 description: >-
-  Harvested review fixture (dimension spec-layers-backends, verification
-  copy): the layer stack with an OS-selected environment level, a module
+  The layer stack with an OS-selected environment level, a module
   pruning warning on an unqualified key, and module default_hierarchy
   arrays/hashes merged against the caller's merge.
-origin: verify-spec-layers-backends/lay
 queries:
   - key: top
   - key: envkey

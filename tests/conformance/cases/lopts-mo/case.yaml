@@ -4,7 +4,6 @@ description: >-
   form, a plain string, an interpolated strategy, a non-dict legacy form,
   a first-with-a-hash-wrapper, a hash-strategy knockout, a null merge
   value, and an empty-string merge value.
-origin: spec-lookup-options-types/mo
 queries:
   - key: m_bogus_opt
     error_match: "unrecognized key"

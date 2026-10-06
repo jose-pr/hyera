@@ -37,7 +37,7 @@ SUPPORTED_FORMATS = (1, 2)
 GEMS = ("deep_merge", "hiera-eyaml", "hocon", "json", "psych")
 
 #: Allowed top-level keys in a case.yaml.
-CASE_FIELDS = ("description", "origin", "puppet_args", "requires", "queries")
+CASE_FIELDS = ("description", "puppet_args", "requires", "queries")
 #: Allowed keys on one query entry.
 QUERY_FIELDS = (
     "key",
@@ -57,7 +57,7 @@ QUERY_FIELDS = (
 )
 #: The subset of QUERY_FIELDS that changes what is asked of Puppet. Editing
 #: anything else (divergence, deviation, ordered, error_match, error_class,
-#: description, origin, note) never invalidates a recording. `explain` is
+#: description, note) never invalidates a recording. `explain` is
 #: included only when a query actually sets it, so every pre-existing
 #: query's digest is unchanged by its addition.
 PUPPET_FIELDS = (
@@ -76,7 +76,7 @@ PUPPET_FIELDS = (
 #: oracle), so there is no third value.
 EXPLAIN_KINDS = ("data", "options")
 
-#: A canonical review-finding id, or ``new/<slug>``.
+#: A divergence id: ``<area>/<slug>``.
 _DIVERGENCE_ID_RE = re.compile(r"^[a-z0-9-]+/[a-z0-9._-]+$")
 #: Host/path fragments that must never reach a shipped golden.json.
 _LEAK_PATTERNS = (

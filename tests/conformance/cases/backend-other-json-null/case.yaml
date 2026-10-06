@@ -1,5 +1,4 @@
 description: A JSON object with an explicit null value.
-origin: code-io-security/othercases/json_null
 queries:
 - key: z
 - key: plain

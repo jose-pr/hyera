@@ -2,7 +2,6 @@ description: Facts provided as a flat JSON-shaped mapping (this fixture's own fa
   content, adapted to facts.yaml since record.py always reads facts.yaml -- Puppet's
   --facts file-format/extension flexibility itself is not expressible through this
   harness).
-origin: spec-context-facts/jsonfacts
 queries:
 - key: v_family
 - key: v_flag

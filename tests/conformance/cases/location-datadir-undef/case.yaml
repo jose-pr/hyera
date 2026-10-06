@@ -1,5 +1,4 @@
 description: >-
   An undefined top-scope variable inside a level's own "datadir" template.
-origin: critic-puppet-coverage/datadir_undef
 queries:
   - key: k

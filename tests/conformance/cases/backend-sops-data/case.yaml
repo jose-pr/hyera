@@ -4,7 +4,6 @@ description: >-
   inside the sops subprocess step (no sops binary, or no key access to a
   plain, unencrypted file) -- both are "error" and both messages contain
   "sops".
-origin: spec-layers-backends/alias_sops
 queries:
   - key: k
     error_match: sops

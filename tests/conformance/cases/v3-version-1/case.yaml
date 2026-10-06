@@ -2,6 +2,5 @@ description: >-
   An explicit `version: 1` hiera.yaml. Puppet 8 rejects
   versions other than 3, 4 and 5 with "This runtime does not
   support hiera.yaml version 1".
-origin: probes/h12probe
 queries:
   - key: k

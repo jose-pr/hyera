@@ -1,5 +1,4 @@
 description: An explicit null at a higher-priority level should be a found value (null),
   not treated as a miss that falls through to a lower level.
-origin: code-io-security/nullshadow
 queries:
 - key: k

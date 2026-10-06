@@ -2,7 +2,6 @@ description: >-
   A missing literal path (`missing.yaml`, never written to disk) is still a
   location Puppet's strategy reduce sees, not silently dropped from the
   hierarchy walk.
-origin: new/merge-port-missing-location
 queries:
   - key: "k"
     id: "k"

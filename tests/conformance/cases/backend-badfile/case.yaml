@@ -1,5 +1,4 @@
 description: The only hierarchy level's data file is a YAML list, not a hash (no fallback
   level exists).
-origin: code-core/badfile
 queries:
 - key: x

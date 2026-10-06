@@ -1,7 +1,6 @@
 description: >-
   A UTF-8 BOM followed directly by a `%YAML` directive is a parse
   error (the BOM-swapped-for-a-space character cannot start a token).
-origin: critic-engineering/bomy2
 queries:
   - key: k
     error_match: found character that cannot start any token

@@ -3,7 +3,6 @@ description: 'The full global/environment/module layer stack: a module-scoped ke
   then the environment layer, then the global layer; merges span all three layers;
   an unqualified key inside a module''s data and a key qualified to a different module
   are never module-scoped.'
-origin: spec-layers-backends/layers
 puppet_args:
 - --environment
 - production

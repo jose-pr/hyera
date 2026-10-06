@@ -1,7 +1,6 @@
 description: Non-string YAML hash keys (boolean, null, nested, integer, float) are
   not valid Puppet lookup values; Puppet rejects the whole key's value, ours accepts
   and JSON-stringifies the odd key.
-origin: critic-puppet-coverage/richdata
 queries:
 - key: k_boolkey
 - key: k_nullkey

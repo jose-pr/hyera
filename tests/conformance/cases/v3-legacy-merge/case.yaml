@@ -2,7 +2,6 @@ description: 'A v3 config (no version key, symbol-keyed :backends:/:yaml:/ :hier
   with merge_behavior: deeper. Puppet 8 is the reference, not the classic standalone
   hiera 3 CLI, which would merge this deeply; puppet lookup --merge hash is shallow
   regardless of merge_behavior.'
-origin: probes/h3probe
 queries:
 - key: k
 - key: h

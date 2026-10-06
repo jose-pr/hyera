@@ -3,7 +3,6 @@ description: >
   strategy-per-key sub-merge, a missing hierarchy candidate, dotted
   sub-keys, alias/lookup interpolation, a miss (single and name-list),
   a default, and --explain-options against a lookup_options entry.
-origin: spec-layers-backends/explain
 queries:
   - key: greet
     explain: data

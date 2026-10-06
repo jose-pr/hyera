@@ -1,6 +1,5 @@
 description: 'docs-accuracy: `default_hierarchy` at the global layer is a Puppet config
   error (module layer only).'
-origin: docs-accuracy/f_defhier
 queries:
 - key: k
 - key: only_default

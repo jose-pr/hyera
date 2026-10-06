@@ -1,6 +1,5 @@
 description: >-
   An integer literal too large for a 64-bit int.
-origin: code-io-security/yamlcases/bigint
 queries:
   - key: 'big'
   - key: 'plain'

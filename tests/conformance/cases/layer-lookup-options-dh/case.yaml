@@ -1,7 +1,6 @@
 description: lookup_options declared in a module's main hierarchy file applying to
   a key only ever defined in its default_hierarchy, and lookup_options declared inside
   a default_hierarchy file itself.
-origin: spec-lookup-options-types/dh
 puppet_args:
 - --environment
 - production

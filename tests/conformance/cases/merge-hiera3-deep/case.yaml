@@ -3,7 +3,6 @@ description: >-
   deep_merge's remaining options (preserve_unmergeables, overwrite_arrays,
   unpack_arrays, extend_existing_arrays, keep_array_duplicates,
   merge_nil_values), all lookup_options-driven.
-origin: new/merge-hiera3-deep
 queries:
   - key: "o_uc_nil"
     id: "o_uc_nil"

@@ -1,5 +1,4 @@
 description: '`data_hash: yaml` (a short alias) is not a Puppet function name; only
   `yaml_data` is.'
-origin: spec-config/cases/data_hash_alias
 queries:
 - key: k

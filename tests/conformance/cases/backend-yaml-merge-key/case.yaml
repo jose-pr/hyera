@@ -1,7 +1,6 @@
 description: >-
   A YAML merge key merges in document order, replacing what precedes it; a
   value that is not a mapping, or a list of mappings, leaves a literal "<<" key.
-origin: loaders/merge-key
 queries:
 - key: merge_after_key
 - key: merge_before_key

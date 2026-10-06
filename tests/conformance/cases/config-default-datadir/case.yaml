@@ -1,6 +1,5 @@
 description: >-
   With no datadir set anywhere, Puppet's v5 default is 'data' next to
   hiera.yaml; ours still falls back to a Hiera 3-shaped absolute path.
-origin: verify-tests/V8_defdd
 queries:
   - key: k

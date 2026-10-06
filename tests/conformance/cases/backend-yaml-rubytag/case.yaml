@@ -1,6 +1,5 @@
 description: >-
   A Ruby-object YAML tag (!ruby/object:Object).
-origin: code-io-security/yamlcases/rubytag
 queries:
   - key: 'r'
   - key: 'plain'

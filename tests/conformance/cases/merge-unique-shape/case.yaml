@@ -2,7 +2,6 @@ description: >-
   A two-path level followed by a single-path level: Puppet's unique merge
   dedupes within a level but keeps duplicates that only came from one
   multi-location level; a flat array is otherwise deduped and flattened.
-origin: critic-puppet-coverage/unique_shape
 queries:
   - key: k
     merge: unique

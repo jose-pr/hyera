@@ -10,7 +10,6 @@ description: >-
   translation corrupts it (see dotted-badkeys), so a fully single-quoted root
   is tested as a double-quoted one instead -- the grammar rule is identical
   either way.
-origin: code-io-security/subkeys
 queries:
   - key: lst.+1
     id: list-index-plus

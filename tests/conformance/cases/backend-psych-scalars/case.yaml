@@ -1,7 +1,6 @@
 description: 'Psych scalar-resolution rows that all load successfully, one query per
   top-level key, over one data file that also carries an unqueried `[a, b]: 1` complex
   key (proving it does not break parsing of its siblings).'
-origin: code-io-security/yamlcases/scalars
 queries:
 - key: plain
 - key: oct

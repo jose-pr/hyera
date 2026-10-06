@@ -1,5 +1,4 @@
 description: >-
   A Latin-1-encoded YAML file with a non-ASCII byte.
-origin: code-io-security/yamlcases/latin1
 queries:
   - key: 'plain'

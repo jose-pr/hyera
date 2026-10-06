@@ -1,6 +1,5 @@
 description: With fqdn/hostname/domain/clientcert all set, Puppet populates the full
   trusted hash and clientcert.
-origin: spec-context-facts/fulltrust
 queries:
 - key: v_clientcert
 - key: v_trusted

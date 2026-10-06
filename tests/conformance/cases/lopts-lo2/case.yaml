@@ -1,7 +1,6 @@
 description: >-
   A regex lookup_options entry from a lower-priority level competing with an
   exact-key entry from a higher-priority level.
-origin: spec-lookup-options-types/lo2
 queries:
   - key: exk
   - key: db.port

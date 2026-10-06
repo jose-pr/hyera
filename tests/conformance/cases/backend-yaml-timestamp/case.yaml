@@ -1,5 +1,4 @@
 description: A YAML ISO-8601 timestamp scalar.
-origin: code-io-security/yamlcases/timestamp
 queries:
 - key: t
 - key: plain

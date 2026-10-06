@@ -1,7 +1,6 @@
 description: A flat key literally named with a dot, an undefined variable through
   plain and scope() interpolation, and querying the reserved lookup_options pseudo-key
   directly.
-origin: code-core/misc
 queries:
 - key: lookup_options
 - key: dotted.key

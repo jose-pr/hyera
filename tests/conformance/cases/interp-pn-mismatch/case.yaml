@@ -1,4 +1,3 @@
 description: A hierarchy location path context-ref walking into a String with a subkey.
-origin: spec-interpolation/pn_mismatch
 queries:
 - key: k

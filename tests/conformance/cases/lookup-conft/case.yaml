@@ -1,7 +1,6 @@
 description: A global/environment/module hiera.yaml (layers not supported yet -- every
   query here is AdapterUnsupported), dotted root-key lookup, embedded hiera() in a
   value, and a knockout merge on a hash with a '--'-prefixed key.
-origin: code-core/conft
 queries:
 - key: port_msg
 - key: db.port

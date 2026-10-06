@@ -1,6 +1,5 @@
 description: >-
   A hierarchy "path" that names a directory rather than a file.
-origin: spec-config/cases/path_is_dir
 queries:
   - key: k
     error_match: Is a directory

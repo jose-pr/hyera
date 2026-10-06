@@ -2,7 +2,6 @@ description: >-
   HOCON durations and size strings stay literal text, as real Ruby
   hocon has no duration/size type at all; ordinary numbers still
   parse as numbers.
-origin: spec-layers-backends/hocon
 requires:
   - pyhocon
 queries:

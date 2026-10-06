@@ -1,5 +1,4 @@
 description: >-
   The README's documented example hiera.yaml (using `data_dir`) is rejected by Puppet outright.
-origin: spec-config/cases/readme_example
 queries:
   - key: k

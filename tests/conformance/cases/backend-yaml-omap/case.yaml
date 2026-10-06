@@ -1,5 +1,4 @@
 description: A YAML !!omap collection.
-origin: code-io-security/yamlcases/omap
 queries:
 - key: o
 - key: plain

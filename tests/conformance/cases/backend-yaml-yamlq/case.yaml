@@ -1,6 +1,5 @@
 description: A bare '=' YAML scalar value, which PyYAML's SafeLoader resolves as the
   special tag:yaml.org,2002:value tag instead of the plain string '='.
-origin: code-io-security/yamlq
 queries:
 - key: eq
 - key: plain

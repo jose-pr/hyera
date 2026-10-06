@@ -1,6 +1,5 @@
 description: >-
   A hierarchy path with a literal, non-interpolating brace segment
   (x{1}.yaml) that is also a real file on disk.
-origin: spec-config/cases/literal_braces_path
 queries:
   - key: k

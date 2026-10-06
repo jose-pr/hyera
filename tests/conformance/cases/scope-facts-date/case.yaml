@@ -1,7 +1,6 @@
 description: >-
   A date-shaped fact in the --facts file is rejected, matching Puppet's
   own facts-file loading rules (no lenient mode for a YAML date).
-origin: spec-context-facts/jsonfacts
 queries:
   - key: v1
     id: v1

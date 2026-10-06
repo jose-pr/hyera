@@ -1,7 +1,6 @@
 description: 'Hierarchy location path templates exercising the same interpolation
   forms as values: whitespace, a quoted dotted segment, falsy/zero facts, a top-scope-colon
   prefix, and list indexing.'
-origin: spec-interpolation/paths
 queries:
 - key: p_ws
 - key: p_q

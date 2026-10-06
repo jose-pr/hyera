@@ -1,7 +1,6 @@
 description: lookup_options with a dotted-fact pattern key and a dynamic merge strategy,
   alias() combined with lookup_options, and knockout/deep merges over interpolated
   values.
-origin: spec-interpolation/merge
 queries:
 - key: lo_target
 - key: lo_strat

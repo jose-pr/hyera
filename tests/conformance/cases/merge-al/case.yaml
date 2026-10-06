@@ -1,6 +1,5 @@
 description: >-
   alias()/hiera() results feeding into a merge, and a lookup_options-governed alias target.
-origin: spec-merge/fx/al
 queries:
   - key: "al_x"
     id: "al_x_deep"

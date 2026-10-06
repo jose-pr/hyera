@@ -2,7 +2,6 @@ description: >-
   `default_hierarchy` is only valid in the module layer; declaring it at the
   global layer is a config error in Puppet 8, silently swallowed by
   `puppet lookup`'s normal exit-1-no-output path (only --explain shows it).
-origin: tests/G_defhier
 queries:
   - key: from_default
     error_match: "only allowed in the module layer"

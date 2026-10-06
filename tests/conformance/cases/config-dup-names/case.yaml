@@ -1,5 +1,4 @@
 description: >-
   Two hierarchy levels sharing the same `name` is a Puppet config error.
-origin: spec-config/cases/dup_names
 queries:
   - key: k

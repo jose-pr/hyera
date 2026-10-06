@@ -1,5 +1,4 @@
 description: An unknown custom YAML tag (!foo bar).
-origin: code-io-security/yamlcases/customtag
 queries:
 - key: c
 - key: plain

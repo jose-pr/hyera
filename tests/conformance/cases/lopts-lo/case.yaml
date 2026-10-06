@@ -2,7 +2,6 @@ description: >-
   lookup_options resolution: regex patterns (anchored and named group),
   exact-key precedence, nil values under each merge strategy, a dotted
   literal key vs its root, and a lookup_options key that is itself queried.
-origin: spec-lookup-options-types/lo
 queries:
   - key: app::ports
   - key: a::b::list

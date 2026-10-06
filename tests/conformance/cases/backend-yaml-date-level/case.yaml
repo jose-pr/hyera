@@ -1,6 +1,5 @@
 description: A higher-priority level's YAML data file has a bare date scalar alongside
   an ordinary key.
-origin: spec-layers-backends/yamldate
 queries:
 - key: d
 - key: plain

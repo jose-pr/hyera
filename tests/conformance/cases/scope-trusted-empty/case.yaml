@@ -1,5 +1,4 @@
 description: In lookup-mode, trusted.certname interpolates as '' (not skipped), so
   a path template built from it still resolves.
-origin: spec-config/cases/trusted_empty
 queries:
 - key: k

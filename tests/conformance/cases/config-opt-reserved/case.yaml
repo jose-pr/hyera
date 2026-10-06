@@ -1,5 +1,4 @@
 description: >-
   A hierarchy entry's `options: {path: ...}` reuses a reserved location key; Puppet rejects it, ours passes it through unused.
-origin: spec-layers-backends/opt_reserved
 queries:
   - key: k

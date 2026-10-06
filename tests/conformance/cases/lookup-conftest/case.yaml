@@ -3,7 +3,6 @@ description: >-
   written as valid Hiera 5. Confirms the behaviours already matching Puppet
   that the unit suite exercised, plus the two the unit suite got backwards
   (a dotted lookup key, and a numeric value stringified through hiera()).
-origin: tests/B_conftest_v5
 queries:
   - key: ntp::servers
   - key: app::name

@@ -1,5 +1,4 @@
 description: A data file whose top-level YAML value is a bare scalar string.
-origin: code-io-security/yamlcases/topscalar
 queries:
 - key: plain
 - key: fromfirst

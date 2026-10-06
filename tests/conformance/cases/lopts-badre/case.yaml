@@ -1,7 +1,6 @@
 description: An invalid regex pattern in lookup_options ('^foo(', an unmatched paren)
   makes Puppet fail every lookup that would consult lookup_options at all, not just
   one matching that key.
-origin: critic-puppet-coverage/badre
 queries:
 - key: plain
 - key: other

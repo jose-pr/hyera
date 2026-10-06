@@ -3,7 +3,6 @@ description: >
   hierarchy entry, a module's default_hierarchy, a module with no
   hiera.yaml at all, and an unknown module -- plus --explain-options
   against the same module-scoped key.
-origin: spec-layers-backends/layers
 puppet_args:
   - --environment
   - production

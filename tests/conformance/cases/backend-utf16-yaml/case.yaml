@@ -1,4 +1,3 @@
 description: The only level's YAML data file is UTF-16 encoded.
-origin: critic-puppet-coverage/utf16_yaml
 queries:
 - key: k

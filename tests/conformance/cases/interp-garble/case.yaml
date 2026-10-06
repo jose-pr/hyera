@@ -1,6 +1,5 @@
 description: 'Chained interpolation forms: a var holding another %{} template, a chain
   through facts.tmpl, and a literal()-escaped chain.'
-origin: spec-interpolation/garble
 queries:
 - key: g1
 - key: g2

@@ -1,4 +1,3 @@
 description: A YAML complex (list) mapping key.
-origin: code-io-security/yamlcases/complexkey
 queries:
 - key: plain

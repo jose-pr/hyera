@@ -1,7 +1,6 @@
 description: >-
   A trusted fact with all three required keys (authenticated, certname,
   extensions) is resurrected as Puppet's $trusted hash, as-is.
-origin: spec-context-facts/trustfact
 queries:
   - key: v1
     id: v1

@@ -1,5 +1,4 @@
 description: 'docs-accuracy: `version: "5"` (a string) is a Puppet config error; version
   must be an Integer.'
-origin: docs-accuracy/f_verstr
 queries:
 - key: k

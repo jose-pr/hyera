@@ -1,6 +1,5 @@
 description: Falsy fact values (false, 0) through plain %{facts.x} and %{scope('facts.x')}
   forms.
-origin: spec-interpolation/falsy
 queries:
 - key: f1
 - key: f2

@@ -1,6 +1,5 @@
 description: >-
   A HOCON include directive pulling in a sibling file.
-origin: code-io-security/othercases/hocon_include
 requires: [pyhocon]
 queries:
   - key: 'plain'

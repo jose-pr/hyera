@@ -1,7 +1,6 @@
 description: >-
   A dotted key digging past a scalar or into a list with a non-integer
   segment; the plain nested dig for comparison.
-origin: standards-python/dotted
 queries:
   - key: db.host.x
     id: dig-past-scalar

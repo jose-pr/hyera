@@ -1,5 +1,4 @@
 description: >-
   A hierarchy path with whitespace inside %{ ... }.
-origin: spec-config/cases/spaces_in_interp
 queries:
   - key: k

@@ -1,5 +1,4 @@
 description: A higher-priority level's data file is a YAML list, not a hash; the lower-priority
   level should still resolve.
-origin: spec-layers-backends/nonhash_list
 queries:
 - key: k

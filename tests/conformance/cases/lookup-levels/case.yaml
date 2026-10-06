@@ -1,7 +1,6 @@
 description: lookup_options across levels (unique/deep/hash merges, bad merge names,
   a typo'd knockout option key), a null shadowing a lower level, and dotted navigation
   into a String/Array/null leaf.
-origin: code-core/levels
 queries:
 - key: nil_first
 - key: db.port

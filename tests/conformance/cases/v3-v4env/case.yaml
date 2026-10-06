@@ -1,7 +1,6 @@
 description: 'A Hiera version-4 config (version: 4, backend: yaml instead of data_hash)
   used as an environment-layer hiera.yaml, with an empty v5 global hiera.yaml contributing
   nothing.'
-origin: critic-puppet-coverage/v4env
 puppet_args:
 - --environment
 - production

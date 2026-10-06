@@ -1,6 +1,5 @@
 description: default_hierarchy declared at the global layer, a second instance of
   the same schema violation with a different fixture shape.
-origin: spec-merge/fx/dhglobal
 queries:
 - key: x
 - key: y

@@ -1,5 +1,4 @@
 description: A hierarchy location path using %{scope(...)} method syntax.
-origin: spec-interpolation/pm_scope
 queries:
 - key: k
   error_match: method syntax is not allowed

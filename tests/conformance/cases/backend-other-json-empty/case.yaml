@@ -1,6 +1,5 @@
 description: >-
   A completely empty JSON data file.
-origin: code-io-security/othercases/json_empty
 queries:
   - key: 'plain'
   - key: 'fromfirst'

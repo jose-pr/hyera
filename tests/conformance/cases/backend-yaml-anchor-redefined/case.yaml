@@ -1,7 +1,6 @@
 description: >-
   An anchor name defined twice in one document is legal: an alias refers to
   the latest definition before it.
-origin: loaders/anchor-redefined
 queries:
 - key: scalars
 - key: maps

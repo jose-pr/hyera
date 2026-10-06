@@ -1,5 +1,4 @@
 description: >-
   A hiera.yaml containing only `version: 5` still resolves via Puppet's built-in defaults and default hierarchy.
-origin: spec-config/cases/only_version
 queries:
   - key: k

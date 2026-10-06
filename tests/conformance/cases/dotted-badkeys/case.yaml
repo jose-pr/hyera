@@ -6,7 +6,6 @@ description: >-
   such a token through `wsl.exe`'s own Win32->Linux argv translation
   corrupts it into a broken `/bin/bash -c` invocation before Puppet ever
   runs -- a tooling limitation of this harness, not a Puppet behavior.
-origin: critic-puppet-coverage/badkeys
 queries:
   - key: a.b
     id: ab

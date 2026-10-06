@@ -1,5 +1,4 @@
 description: >-
   `defaults:` may only carry datadir/data_hash/lookup_key/data_dig; a `path` key there is a Puppet config error.
-origin: spec-config/cases/defaults_extra_key
 queries:
   - key: k

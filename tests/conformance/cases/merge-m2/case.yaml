@@ -1,6 +1,5 @@
 description: >-
   A second merge matrix: unique/deep type mismatches across levels, sort_merged_arrays edge cases, a dotted knockout-prefix regex, a Ruby-regex-looking knockout prefix, and hash merge over two hashes.
-origin: spec-merge/fx/m2
 queries:
   - key: "u_hash_lower"
     merge: unique

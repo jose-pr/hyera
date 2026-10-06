@@ -2,7 +2,6 @@ description: A module's default_hierarchy entries override datadir per-entry (de
   instead of data/); lookup_options declared inside a default_hierarchy file; a key
   present in both the main hierarchy and the default_hierarchy resolves from the main
   hierarchy only.
-origin: spec-merge/fx/dhmod
 puppet_args:
 - --environment
 - production

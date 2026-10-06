@@ -1,5 +1,4 @@
 description: A Ruby-symbol-style YAML value (:foo).
-origin: code-io-security/yamlcases/symval
 queries:
 - key: symval
 - key: plain

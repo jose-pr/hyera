@@ -3,7 +3,6 @@ description: >-
   knockout sharing objects across levels, hash/unique type-mismatch errors,
   sort_merged_arrays comparison errors, and lookup_options merge-option
   validation (bad strategy names/shapes, mistyped options).
-origin: new/merge-port-edges
 queries:
   - key: "ko_alias"
     id: "ko_alias"

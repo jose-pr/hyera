@@ -1,7 +1,6 @@
 description: 'The interpolation engine''s full form catalogue (97 keys): var/topvar/fact
   references, whitespace, empty forms, quoting, indexing, falsy values, scope()/hiera()/lookup()/alias()/literal()
   functions, recursion, and nested key/array/hash interpolation.'
-origin: interp
 queries:
 - key: lit_holder
 - key: s_var

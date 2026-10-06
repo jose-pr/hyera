@@ -1,5 +1,4 @@
 description: >-
   A hierarchy entry declaring both `data_hash` and `lookup_key` is a Puppet config error (only one function key allowed).
-origin: spec-config/cases/multi_function
 queries:
   - key: k

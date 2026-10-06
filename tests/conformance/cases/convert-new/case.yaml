@@ -3,7 +3,6 @@ description: >-
   whitespace/sign forms, Float/Numeric/Boolean lenient parsing, String
   formatting, Array/Hash iteration, parameterized and named types, and
   malformed convert_to shapes (a bare value, an empty/odd list, a hash).
-origin: spec-lookup-options-types/cv
 queries:
   - key: i_oct8
   - key: i_bin2

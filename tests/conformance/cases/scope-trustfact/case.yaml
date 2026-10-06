@@ -1,6 +1,5 @@
 description: >-
   A user-provided fact literally named 'trusted' does not override Puppet's own trusted hash.
-origin: spec-context-facts/trustfact
 queries:
   - key: 'v_trusted_certname'
   - key: 'v_facts_trusted'

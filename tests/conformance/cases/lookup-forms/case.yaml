@@ -1,7 +1,6 @@
 description: >-
   Puppet lookup's call forms our API does not expose yet: a name-list key
   (first found wins), a String default, and a --type assertion.
-origin: tests/conformance/cases/hierarchy
 queries:
   - key: [nope, common_key]
     id: nope|common_key

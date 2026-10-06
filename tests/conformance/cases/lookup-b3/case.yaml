@@ -1,7 +1,6 @@
 description: 'alias()/hiera()/literal() combined with merges: nested alias, chained
   hiera() calls, knockout/sort-merged-arrays over interpolated values, and best-effort
   convert_to (bad int, bad bool, hex, unknown type).'
-origin: code-core/b3
 queries:
 - key: m_alias_arr
 - key: m_nested_alias

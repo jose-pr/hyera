@@ -1,5 +1,4 @@
 description: >-
   A hierarchy entry declaring both `path` and `paths` is a Puppet config error (only one location key allowed).
-origin: spec-config/cases/multi_location
 queries:
   - key: k

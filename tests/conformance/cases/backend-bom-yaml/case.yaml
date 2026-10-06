@@ -1,5 +1,4 @@
 description: >-
   A UTF-8 BOM before the only level's YAML data.
-origin: critic-puppet-coverage/bom_yaml
 queries:
   - key: k

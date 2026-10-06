@@ -1,7 +1,6 @@
 description: >-
   A clientcert fact with no dot gives a trusted hostname equal to the
   certname and a nil (empty-string-rendered) domain.
-origin: spec-context-facts/fulltrust
 queries:
   - key: v1
     id: v1

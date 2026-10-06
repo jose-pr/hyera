@@ -8,7 +8,6 @@ description: >-
   see `dotted-badkeys`); `double-quoted-segment` below covers the same
   quoted-segment grammar rule with a quote style the harness can deliver
   intact.
-origin: code-io-security/subkeys
 queries:
   - key: s.x
     id: scalar-segment

@@ -1,6 +1,5 @@
 description: >-
   mapped_paths binds the item as a local-scope variable in Puppet; %{::role}
   in the template must still reach the top-scope fact, not the mapped item.
-origin: critic-puppet-coverage/mapped_local
 queries:
   - key: k

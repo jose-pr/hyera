@@ -1,6 +1,5 @@
 description: 'docs-accuracy: the README''s alias() examples (embedded alias rejected,
   boolean/scope substitution).'
-origin: docs-accuracy/f_alias
 queries:
 - key: a
   id: a_unique

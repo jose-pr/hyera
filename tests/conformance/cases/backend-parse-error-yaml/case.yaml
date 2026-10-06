@@ -1,7 +1,6 @@
 description: >-
   A data file with a malformed flow sequence fails to parse; the error names
   the file, line and column, on one line.
-origin: critic-engineering/err_yaml
 queries:
   - key: good
     error_class: BackendError

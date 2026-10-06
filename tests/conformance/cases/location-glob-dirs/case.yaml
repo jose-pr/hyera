@@ -1,5 +1,4 @@
 description: >-
   A glob "*" matches a directory entry alongside files.
-origin: spec-config/cases/glob_dirs
 queries:
   - key: k

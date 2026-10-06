@@ -1,5 +1,4 @@
 description: >-
   An empty hiera.yaml is not a YAML hash; Puppet warns and falls back to the Hiera 3 default config (then misses).
-origin: spec-config/cases/empty_config
 queries:
   - key: k

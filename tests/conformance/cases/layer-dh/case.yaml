@@ -1,7 +1,6 @@
 description: YAML-dialect edge cases (symbol keys, rich values, anchors, an unquoted
   vs. quoted dotted key) spread over two hierarchy levels, testing both the dialect
   divergences and level fallthrough/dotted navigation together.
-origin: spec-layers-backends/dh
 queries:
 - key: symkey
 - key: :symkey

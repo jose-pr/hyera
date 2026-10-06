@@ -1,7 +1,6 @@
 description: 'HOCON forms: string concatenation with a substitution, a dotted-path
   key expanding into nested objects, a quoted key with a literal dot, a list, two
   same-named objects merged, and a duration literal.'
-origin: spec-layers-backends/hocon
 requires:
 - pyhocon
 queries:

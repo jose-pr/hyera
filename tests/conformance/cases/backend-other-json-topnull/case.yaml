@@ -1,5 +1,4 @@
 description: A JSON data file whose top-level value is null.
-origin: code-io-security/othercases/json_topnull
 queries:
 - key: plain
 - key: fromfirst

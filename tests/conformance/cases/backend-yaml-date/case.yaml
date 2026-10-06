@@ -1,5 +1,4 @@
 description: A bare YAML date scalar (2024-01-15, no quotes).
-origin: code-io-security/yamlcases/date
 queries:
 - key: d
 - key: plain

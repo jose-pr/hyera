@@ -1,6 +1,5 @@
 description: A multi-document YAML file (--- separated); only the first document should
   be read.
-origin: code-io-security/yamlcases/multidoc
 queries:
 - key: plain
 - key: second

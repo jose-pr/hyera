@@ -1,7 +1,6 @@
 description: The undefined-variable strictness rule (--strict error/off) over
   the vars fixture -- the warning-strictness form of this same data is
   covered by interp-vars; this case fills the error and off channels.
-origin: spec-context-facts/vars
 queries:
 - key: v_undef
   id: v_undef-error

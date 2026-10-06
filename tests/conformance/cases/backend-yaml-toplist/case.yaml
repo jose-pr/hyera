@@ -1,5 +1,4 @@
 description: A data file whose top-level YAML value is a list, not a hash.
-origin: code-io-security/yamlcases/toplist
 queries:
 - key: plain
 - key: fromfirst

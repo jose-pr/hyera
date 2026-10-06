@@ -2,6 +2,5 @@ description: >-
   A lookup_options entry keyed by a literal dotted string ('db.port') must
   still match the key it names; a dotted lookup key digs into the first
   found root value only, with no fall-through to the next hierarchy level.
-origin: tests/D_twolevel
 queries:
   - key: db.port

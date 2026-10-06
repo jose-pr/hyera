@@ -2,7 +2,6 @@ description: >-
   Every convert_to type-expression spec the parser must accept or reject:
   parse and interpret errors, the five named-only edge cases, and the
   static-loader alias / unknown-name / whitespace forms.
-origin: spec-lookup-options-types/cv
 queries:
   - key: p00
     error_class: HieraLookupError

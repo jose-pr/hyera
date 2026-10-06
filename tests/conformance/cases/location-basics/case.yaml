@@ -2,7 +2,6 @@ description: >-
   Hierarchy resolution: falsy facts in path/paths location keys, a
   mapped_paths dotted collection variable, dotted lookup keys, interpolation
   inside nested values, and the scope Puppet injects (environment, trusted).
-origin: tests/conformance/cases/hierarchy
 queries:
   - key: common_key
   - key: from_count

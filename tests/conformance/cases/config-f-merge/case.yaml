@@ -1,6 +1,5 @@
 description: 'docs-accuracy: the README''s merge-strategy examples (unique, hash,
   deep, sort, knockout, merge_hash_arrays).'
-origin: docs-accuracy/f_merge
 queries:
 - key: u
   id: u_unique

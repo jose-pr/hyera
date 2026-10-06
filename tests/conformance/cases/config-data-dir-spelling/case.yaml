@@ -1,5 +1,4 @@
 description: >-
   `data_dir` (the underscored spelling documented as the Hiera 5 spelling) is not a Puppet key; only `datadir` is.
-origin: spec-config/cases/data_dir_spelling
 queries:
   - key: k

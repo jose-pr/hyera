@@ -1,5 +1,4 @@
 description: A data file whose top-level YAML value is the boolean false.
-origin: code-io-security/yamlcases/topfalse
 queries:
 - key: plain
 - key: fromfirst

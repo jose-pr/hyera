@@ -1,5 +1,4 @@
 description: 'docs-accuracy: a v5-shaped file with no `version:` key is version 3
   to Puppet.'
-origin: docs-accuracy/f_nover
 queries:
 - key: k

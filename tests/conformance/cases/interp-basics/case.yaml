@@ -3,7 +3,6 @@ description: >-
   cases, recorded under the library's --strict warning default; one
   query opts into Puppet 8's --strict error to record the undefined-variable
   divergence directly.
-origin: tests/conformance/cases/interpolation
 queries:
   - key: greeting
   - key: ref_zero

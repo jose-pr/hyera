@@ -1,6 +1,5 @@
 description: >-
   The same key matched by both an exact lookup_options entry and a regex
   pattern from the same level: Puppet checks the exact key before patterns.
-origin: spec-lookup-options-types/lo3
 queries:
   - key: kk

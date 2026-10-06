@@ -1,5 +1,4 @@
 description: >-
   `defaults:` must be a mapping; a list is a Puppet config error, and ours now raises ConfigError too.
-origin: spec-config/cases/defaults_list
 queries:
   - key: k

@@ -4,7 +4,6 @@ description: >-
   of that Hash with itself (dropping duplicates and applying a knockout
   prefix), and a knockout prefix matches at the start of any line of a
   String item.
-origin: "(hand-written)"
 queries:
   - key: k
     id: k_deep

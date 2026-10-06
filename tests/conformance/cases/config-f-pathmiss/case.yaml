@@ -1,5 +1,4 @@
 description: 'docs-accuracy: an unresolvable variable in a hierarchy path.'
-origin: docs-accuracy/f_pathmiss
 queries:
 - key: extra_key
 - key: other_key

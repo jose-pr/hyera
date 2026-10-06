@@ -1,6 +1,5 @@
 description: >-
   hiera.yaml version 4 is a valid module-layer version but cannot be used in the global layer.
-origin: spec-config/cases/v4
 queries:
   - key: k
     error_class: ConfigError

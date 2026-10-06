@@ -1,6 +1,5 @@
 description: 'lookup()/alias() result types: a whole-value Integer and Array through
   lookup(), an Array through alias().'
-origin: spec-context-facts/fntype
 queries:
 - key: v_lookup_num
 - key: v_lookup_list

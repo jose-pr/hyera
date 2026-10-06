@@ -1,5 +1,4 @@
 description: >-
   A hierarchy path containing an empty %{} interpolation.
-origin: spec-config/cases/empty_interp
 queries:
   - key: k

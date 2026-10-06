@@ -2,7 +2,6 @@ description: 'HOCON values the parser must not hand back as its own objects or r
   text: a quoted key holding "::" (a class parameter), a quoted key with a literal
   dot, a quoted key inside an object, null concatenated with text on either side,
   a lone null, and a backslash-u escape in a quoted string.'
-origin: tests/conformance/cases/backend-hocon-forms
 requires:
 - pyhocon
 queries:
