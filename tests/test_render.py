@@ -5,13 +5,14 @@ plain Python literal (no fixtures): rendering does not touch the
 filesystem.
 """
 
+import itertools
 import json
 
 import pytest
 import yaml
 
 from hyera import Sensitive
-from hyera.backends import Backend
+from hyera.backends import Backend, YAMLBackend
 
 
 def _render(fmt, value):
@@ -194,6 +195,138 @@ def test_render_yaml_round_trips():
     for s in _ROUND_TRIP_STRINGS:
         rendered = _render("yaml", {s: s})
         assert yaml.safe_load(rendered) == {s: s}
+
+
+_YAML_EDGE_STRINGS = [
+    "1,000",
+    "1,000.5",
+    "1,2,3",
+    "12,345,678",
+    "+1,000",
+    "2001-1-1",
+    "2001-01-01",
+    "2001-01-01 10:00:00 +0100",
+    "2001-01-01T10:00:00Z",
+    ".Nan",
+    ".NaN",
+    ".Inf",
+    "-.Inf",
+    "+.INF",
+    "+.5",
+    ".5",
+    "0.",
+    "1.",
+    "08",
+    "0888",
+    "0o17",
+    "0b101",
+    "0x1F",
+    "1_000",
+    "1e3",
+    "1.5e3",
+    "1:30",
+    "190:20:30",
+    "1:30.5",
+    "a\x85b",
+    "\x85",
+    "a b",
+    "a b",
+    "line\nbreak\x85",
+    "a\rb",
+    "a\tb",
+    " ",
+    "  lead",
+    "trail  ",
+    "a  b",
+    "a #b",
+    "a: b",
+    "? q",
+    "- x",
+    "! tag",
+    "& anchor",
+    "* alias",
+    "| pipe",
+    "> fold",
+    "%percent",
+    "`tick",
+    "﻿a",
+    "a￾b",
+    "~",
+    "null",
+    "Null",
+    "NULL",
+    "true",
+    "True",
+    "off",
+    "On",
+    "y",
+    "N",
+    "-",
+    "?",
+    ":",
+    "::",
+    ":x",
+    ":'x'",
+    "=",
+    "<<",
+]
+
+
+def _yaml_corpus():
+    """About 2,000 strings: the edge cases above and every string of up to
+    three characters over an alphabet of the characters Psych's scalar
+    scanner treats specially."""
+    corpus = list(_YAML_EDGE_STRINGS) + _ROUND_TRIP_STRINGS
+    alphabet = "01.,_:-+eExyn~# '\"\n\x85"
+    corpus.extend(
+        "".join(chars)
+        for size in (1, 2, 3)
+        for chars in itertools.product(alphabet, repeat=size)
+    )
+    return corpus
+
+
+def test_render_yaml_every_string_reads_back_through_the_psych_reader():
+    reader = YAMLBackend()
+    unread = []
+    for text in _yaml_corpus():
+        for value in (text, [text], {"k": text}, {text: 1}):
+            rendered = _render("yaml", value)
+            if reader.loads(rendered) != value:
+                unread.append((value, rendered))
+    assert unread == []
+
+
+def test_render_yaml_nested_values_read_back():
+    value = {
+        "s": ["1,000", "2001-1-1", ".Nan", "", "a b"],
+        "n": [None, True, False, 0, -3, 2.5],
+        "h": {"x": {"y": [[], {}, {"z": "yes"}]}},
+        "": "empty key",
+    }
+    assert YAMLBackend().loads(_render("yaml", value)) == value
+
+
+def test_render_yaml_shared_values_have_no_aliases():
+    shared = [1, 2]
+    text = _render("yaml", {"a": shared, "b": shared, "c": shared})
+    assert "&" not in text and "*" not in text
+    assert YAMLBackend().loads(text) == {"a": [1, 2], "b": [1, 2], "c": [1, 2]}
+
+
+def test_render_yaml_empty_string_key_is_a_simple_key():
+    assert _render("yaml", {"": 1}) == "---\n'': 1\n"
+
+
+@pytest.mark.parametrize("fmt", ["s", "json", "yaml"])
+@pytest.mark.parametrize("digits", [4300, 4301, 5000, 20000])
+def test_render_prints_an_integer_of_any_length(fmt, digits):
+    number = 10 ** (digits - 1) + 7
+    text = "1" + "0" * (digits - 2) + "7"
+    for value, expected in ((number, text), (-number, "-" + text)):
+        rendered = _render(fmt, {"k": value})
+        assert expected in rendered
+    assert _render(fmt, {number: 1}).count(text) == 1
 
 
 def test_render_json_rejects_non_data():

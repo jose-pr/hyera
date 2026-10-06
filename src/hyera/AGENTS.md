@@ -1154,9 +1154,11 @@ is a `Backend` subclass, found by name rather than passed around directly.
   non-finite `float` raises `ValueError` with Puppet's own text (`NaN not
   allowed in JSON`, etc.); anything else not representable as Puppet data
   raises `TypeError("<type name> is not a Puppet data value")`. `yaml`
-  renders byte-compatible with Psych's `to_yaml` for every measured shape
-  (`explicit_start=True, default_flow_style=False, sort_keys=False,
-  allow_unicode=True`); every render ends with exactly one trailing `\n`.
+  renders text that reads back as the value rendered, under PyYAML and
+  Psych alike (`explicit_start=True, default_flow_style=False,
+  sort_keys=False, allow_unicode=True`; a string Psych's scalar scanner
+  would read as another type is quoted, and no alias is written; an
+  integer of any length renders in full); every render ends with exactly one trailing `\n`.
 - Env: `sops` runs with the process environment, so its own `SOPS_*` and
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
@@ -1401,6 +1403,9 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   on Windows.
 - **difference** `render-yaml-sensitive-redacted` — `--render-as yaml`
   prints `Sensitive` values redacted, where Puppet prints the plaintext.
+- **difference** `render-yaml-equivalent-not-identical` — `--render-as yaml`
+  reads back as the value looked up, but its quoting need not match
+  Puppet's text; no anchors or aliases are written.
 - **difference** `aio-hash-rendering` — `--render-as s` prints hashes in
   Ruby 3.2's AIO form (`{"a"=>1}`), as Puppet 8's own packages do.
 - **difference** `scope-flag-sets-node-parameters` — `--scope

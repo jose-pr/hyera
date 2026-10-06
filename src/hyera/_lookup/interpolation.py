@@ -13,6 +13,7 @@ from decimal import Decimal
 
 from .navigation import _MISSING, _RUBY_STRIP_CHARS, _ruby_class, split_key, sub_lookup
 from .._types.types import Sensitive
+from .._digits import format_decimal_int
 from ..exceptions import ConfigError, HieraLookupError, InterpolationError, _issue_coded
 
 #: One ``%{...}`` occurrence (``interpolation.rb:51``'s
@@ -70,7 +71,7 @@ def _to_puppet_str(value) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
-        return str(value)
+        return format_decimal_int(value)
     if isinstance(value, float):
         return _float_to_s(value)
     if isinstance(value, (list, dict)):

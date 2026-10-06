@@ -64,6 +64,10 @@ DOC_ONLY = {
         "the harness's oracle capture never records a raw Sensitive "
         "plaintext, so there is nothing to compare a redaction against"
     ),
+    "render-yaml-equivalent-not-identical": (
+        "the harness compares parsed values, never the YAML text; a round-trip "
+        "test in tests/test_render.py covers the text"
+    ),
     "aio-hash-rendering": (
         "the harness normalizes the oracle's Ruby 4 hash-inspect form into "
         "the AIO form before comparing"

@@ -829,6 +829,11 @@ for.
 - **`--render-as yaml` prints `Sensitive` values redacted**, as the other
   formats do; Puppet prints the plaintext. There is no opt-in to print the
   plaintext here. (id: `render-yaml-sensitive-redacted`)
+- **`--render-as yaml` reads back as the value looked up, but its quoting
+  need not match Puppet's text.** hyera quotes a string that a YAML 1.1
+  reader would take for a number, date or float (`1,000`, `2001-1-1`,
+  `.Nan`), escapes the line breaks YAML adds to LF and CR, and never writes
+  anchors or aliases. (id: `render-yaml-equivalent-not-identical`)
 - **`--render-as s` prints hashes in Ruby 3.2's AIO form** (`{"a"=>1}`), as
   Puppet 8's own packages do; Puppet on Ruby 3.4 or later renders
   `{"a" => 1}` (with spaces around `=>`) instead. There is no opt-in, since
