@@ -1,8 +1,7 @@
 """Schema, digest and lint helpers shared by the recorder and the replay tests.
 
-Kept dependency-free apart from PyYAML so the replay runner imports it
-without needing Puppet, and the recorder imports it without needing hyera.
-Never import ``hyera`` from this module -- that seam is ``_ours.py`` only.
+Dependency-free apart from PyYAML, and never imports ``hyera`` (that seam is
+``_ours.py``).
 """
 
 import hashlib
@@ -55,11 +54,9 @@ QUERY_FIELDS = (
     "note",
     "explain",
 )
-#: The subset of QUERY_FIELDS that changes what is asked of Puppet. Editing
-#: anything else (divergence, deviation, ordered, error_match, error_class,
-#: description, note) never invalidates a recording. `explain` is
-#: included only when a query actually sets it, so every pre-existing
-#: query's digest is unchanged by its addition.
+# The subset of QUERY_FIELDS that changes what is asked of Puppet; editing any
+# other field never invalidates a recording. `explain` counts only when a query
+# sets it.
 PUPPET_FIELDS = (
     "id",
     "key",
@@ -70,10 +67,9 @@ PUPPET_FIELDS = (
     "hash_inspect",
     "explain",
 )
-#: Values a query's ``explain`` field may take: ``data`` -> ``--explain``,
-#: ``options`` -> ``--explain-options``. ``--explain --explain-options``
-#: prints exactly what ``--explain`` alone prints (measured against the
-#: oracle), so there is no third value.
+# Values a query's ``explain`` field may take: ``data`` -> ``--explain``,
+# ``options`` -> ``--explain-options``. Puppet prints the same for both flags
+# together, so there is no third value.
 EXPLAIN_KINDS = ("data", "options")
 
 #: A divergence id: ``<area>/<slug>``.
@@ -187,16 +183,10 @@ def input_digest(case_dir: Path) -> str:
         ],
     }
     h.update(json.dumps(asked, sort_keys=True).encode("utf-8") + b"\0")
-    # Sort by the relative POSIX path *string*, never by comparing Path
-    # objects directly: WindowsPath orders case-insensitively (lowercases
-    # before comparing) while PosixPath is case-sensitive, so a case
-    # naming its files with a mix of cases (location-glob-order2's
-    # B.yaml/_x.yaml/a.yaml, deliberately -- it tests Puppet's own
-    # byte-order glob sort) hashed its files in a different order on
-    # Windows than on Linux/macOS, so a golden recorded on Windows read
-    # "stale" in Linux/macOS CI even though not one byte had changed.
-    # Found 2026-09-29 via a CI-only failure that never reproduced on the
-    # Windows recording box.
+    # Sort by the relative POSIX path string, not Path objects: WindowsPath orders
+    # case-insensitively and PosixPath case-sensitively, so a case with mixed-case file
+    # names (location-glob-order2's B.yaml/_x.yaml/a.yaml, which tests Puppet's
+    # byte-order glob sort) would hash differently on Windows than on Linux/macOS.
     files = [p for p in case_dir.rglob("*") if p.is_file()]
     for path in sorted(files, key=lambda p: p.relative_to(case_dir).as_posix()):
         rel = path.relative_to(case_dir).as_posix()
@@ -307,16 +297,11 @@ def string_leaves(obj) -> str:
 
 
 def _pathlib_next_includes_hidden_by_default() -> bool:
-    """Whether the installed pathlib_next's ``Path.glob`` defaults to
-    matching dotfiles.
+    """Whether the installed pathlib_next's ``Path.glob`` defaults to matching dotfiles.
 
-    ``critic-engineering/glob-semantics-drift-with-pathlib-next-patch``:
-    the declared range ``pathlib_next>=0.9.0,<0.10`` covers two
-    behaviors -- ``include_hidden: bool = False`` through 0.9.2 (and the
-    floor, 0.9.0), ``= True`` from 0.9.11. A glob-over-a-dotfile golden's
-    outcome therefore depends on which patch is actually resolved, not
-    just on our own code, so its divergence marker is gated on this
-    runtime probe rather than applying unconditionally.
+    The declared range ``pathlib_next>=0.9.0,<0.10`` spans ``include_hidden = False``
+    (through 0.9.2) and ``True`` (from 0.9.11), so a glob-over-a-dotfile golden's
+    divergence marker is gated on this probe.
     """
     import inspect
 
@@ -326,10 +311,9 @@ def _pathlib_next_includes_hidden_by_default() -> bool:
     return bool(default)
 
 
-#: Named runtime facts a divergence dict's ``when`` key may reference,
-#: alongside (or instead of) the platform guard ``on``. Every predicate is
-#: a zero-argument callable returning a bool, evaluated fresh per test run
-#: (never cached: a re-install between runs must be picked up).
+# Named runtime facts a divergence dict's ``when`` key may reference, alongside or
+# instead of the platform guard ``on``. Each is a zero-argument callable returning
+# a bool, evaluated per test run and never cached.
 RUNTIME_PREDICATES = {
     "pathlib_next-includes-hidden": _pathlib_next_includes_hidden_by_default,
 }
@@ -341,11 +325,10 @@ def _is_marker_valid(value) -> bool:
     if isinstance(value, list):
         return bool(value) and all(_is_marker_valid(v) for v in value)
     if isinstance(value, dict):
-        # A bare `on:` (or `when:`) key is read back as the boolean True
-        # by PyYAML's YAML-1.1 resolver (the same "Norway problem" as
-        # unquoted off/on/yes elsewhere in a case.yaml) -- catch it here
-        # so a guard silently authored as `on: [...]` instead of
-        # `"on": [...]` fails loudly instead of never applying.
+        # A bare `on:` (or `when:`) key is read back as the boolean True by PyYAML's
+        # YAML 1.1 resolver (the "Norway problem"); catching it here makes a guard
+        # written as `on: [...]` instead of `"on": [...]` fail loudly instead of never
+        # applying.
         if set(value) - {"id", "on", "when"}:
             return False
         if not _DIVERGENCE_ID_RE.match(value.get("id", "")):

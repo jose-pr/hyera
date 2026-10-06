@@ -1,9 +1,6 @@
 """The only seam that knows hyera's Python API and CLI.
 
-Every conformance test reaches hyera through this module. A plan that
-changes the lookup API (``.get`` -> ``.lookup``), scope building, the
-strict option, an exception class, or the CLI edits this file in the same
-commit, removing the ``AdapterUnsupported`` branches it makes expressible.
+Every conformance test reaches hyera through this module.
 """
 
 import contextlib
@@ -104,7 +101,7 @@ def as_puppet_json(value):
 
 
 def is_ordered(query: dict) -> bool:
-    """Key order is part of a value unless the query opts out with ``ordered: false``."""
+    """Key order is part of a value unless the query sets ``ordered: false``."""
     return query.get("ordered", True)
 
 
@@ -211,10 +208,9 @@ def _build(case_dir, case: dict, query: dict, golden: dict):
     hiera = Hiera(
         str(case_dir / "hiera.yaml"),
         scope=scope,
-        # Mirrors the recorder's own empty isolation `--codedir`
-        # (`_iso_args`): a version 3 config's default per-backend
-        # datadir must never depend on this box's real Puppet
-        # codedir, so it always names a directory that never exists.
+        # Mirrors the recorder's empty isolation `--codedir` (`_iso_args`): a version 3
+        # config's default per-backend datadir must not depend on this box's Puppet
+        # codedir, so it names a directory that never exists.
         codedir=str(case_dir / "_no_codedir"),
         **_layer_kwargs(case_dir, args),
     )
@@ -239,39 +235,24 @@ def run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
 def _run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
     """Resolve one query through :class:`hyera.Hiera`, projected like Puppet.
 
-    A config-schema divergence (most of the ``config`` area) raises during
-    construction, not during ``.lookup()`` -- ``Hiera(...)`` is inside the
-    same try/except as the lookup call so a ``ConfigError`` there is
-    reported as ``{"status": "error", ...}`` exactly like one raised during
-    the lookup, instead of escaping as a raw pytest error on a case that
-    otherwise matches Puppet (both sides error).
+    ``Hiera(...)`` is inside the same try/except as the lookup, so a construction-time
+    ``ConfigError`` reports as ``{"status": "error", ...}`` like a lookup-time one.
 
-    ``as_puppet_json`` is deliberately in its OWN try/except, not folded into
-    the one above: several divergences (``code-io-security/dotted-subkey-raw-
-    exceptions``, ``spec-lookup-options-types/merge-errors-escape-as-
-    valueerror``, ``spec-merge/bad-merge-strategy-uncaught-valueerror``) are
-    *exactly* "hyera raises a raw, unwrapped exception (often ValueError)
-    where Puppet also errors" -- catching every ``ValueError`` from
-    ``hiera.lookup()`` itself would silently launder that divergence into a
-    clean status match (found as an XPASS(strict) regression the first time
-    this was tried: it turned three existing raw-exception divergences into
-    accidental passes). Only ``as_puppet_json``'s own ``ValueError`` (a
-    NaN/Infinity value, which fails Puppet's own ``--render-as json`` the
-    same way ``allow_nan=False`` does here) is a harness-projection concern,
-    not a hyera-behavior one, so only that call is guarded.
+    ``as_puppet_json`` has its own try/except: several divergences are exactly "hyera
+    raises a raw exception where Puppet also errors", and catching every
+    ``ValueError`` from ``hiera.lookup()`` would turn them into accidental passes.
+    Only ``as_puppet_json``'s ``ValueError`` (NaN/Infinity, which Puppet's
+    ``--render-as json`` also rejects) is a harness concern.
     """
     try:
         with _chdir(case_dir):
             hiera, key = _build(case_dir, case, query, golden)
             value = hiera.lookup(key, **_lookup_kwargs(query))
     except KeyNotFoundError as e:
-        # The recorder's own "not_found" heuristic (_NOT_FOUND in record.py)
-        # matches only Puppet's *singular* miss message ("the name"); a
-        # multi-name miss ("any of the names [...]") never matches it, so
-        # record.py files that outcome as a generic "error" with the
-        # --explain message instead. Mirror that split here rather than
-        # collapsing every KeyNotFoundError to "not_found", or a name-list
-        # query would never match its own golden.
+        # The recorder's "not_found" heuristic (_NOT_FOUND in record.py) matches only
+        # Puppet's singular miss message ("the name"); a multi-name miss ("any of the
+        # names [...]") is filed as a generic "error" with the --explain message. Mirror
+        # that split rather than mapping every KeyNotFoundError to "not_found".
         if isinstance(e.name, (list, tuple)) and len(e.name) != 1:
             return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
         return {"status": "not_found"}
@@ -338,12 +319,10 @@ def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:
     if rc == 0:
         return {"status": "found", "value": json.loads(text) if text.strip() else None}
     if rc == 1:
-        # Mirrors run_api's own name-list special case: record.py's
-        # "not_found" heuristic matches only Puppet's *singular* miss
-        # message ("the name"), so a multi-name miss ("any of the names
-        # [...]") was recorded as a generic "error" with the --explain
-        # message instead, even though both channels agree the lookup
-        # simply misses every name (rc 1 here, LookupError there).
+        # Mirrors run_api's name-list special case: a multi-name miss ("any of the names
+        # [...]") was recorded as a generic "error" with the --explain message, though
+        # both channels agree the lookup misses every name (rc 1 here, LookupError
+        # there).
         key = query.get("key")
         if isinstance(key, (list, tuple)) and len(key) != 1:
             return {"status": "error"}

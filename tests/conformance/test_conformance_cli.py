@@ -1,8 +1,7 @@
 """Replay the recorded Puppet goldens against hyera's CLI, in-process.
 
-``hyera.cli.main`` accepts ``puppet lookup``'s own flags, so every CLI
-query replays the same golden argv the API channel does. A per-query
-divergence marker still applies to both channels equally.
+Every CLI query replays the golden's own ``puppet lookup`` argv; divergence markers
+apply to both channels.
 """
 
 import difflib

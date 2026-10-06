@@ -1,17 +1,8 @@
 """Benchmark suite: per-call CPU cost of ``hyera`` lookups on a generated tree.
 
-Generates a Hiera 5 tree (five levels: a per-node path, a per-role path, a
-mapped ``apps`` level, a glob ``modules/*.yaml`` level, and ``common.yaml``)
-into a temporary directory, times the scenarios listed in
-``benchmarks/README.md`` against it, and prints one aligned line per metric.
-``--save`` also writes a JSON result file; the README gives its schema and
-how to compare two files.
-
-Only ``hyera``'s public API and its command line are used here, so this file
-runs unchanged across versions.
-
-Local numbers from this script are sanity checks only, never a performance
-claim -- see ``benchmarks/README.md``.
+Times the scenarios listed in ``benchmarks/README.md`` through hyera's public API
+and command line only; ``--save`` writes a JSON result file. Local numbers are
+sanity checks, never a performance claim.
 """
 
 import argparse
@@ -65,13 +56,9 @@ def _dump(path: Path, obj) -> None:
 def build_tree(root: Path, *, quick: bool = False) -> dict:
     """Write the benchmark hierarchy under ``root``.
 
-    Same shape as mkperf's fixture, with ``nodes/%{trusted.certname}.yaml``
-    in place of its ``%{certname}`` node level (Hiera 5 has no bare
-    ``certname`` fact; ``trusted.certname`` is what a real config would use)
-    and a value template inside every module file's keys following the same
-    substitution, so no scope variable is left permanently undefined. Sizes
-    are mkperf's full counts, or the much smaller ``_QUICK`` set; mkperf's
-    5000-entry ``big`` key is dropped (not needed by any metric here).
+    The node level is ``nodes/%{trusted.certname}.yaml`` (Hiera 5 has no bare
+    ``certname`` fact), with the same substitution in every module file's value
+    template. Sizes are the full counts or the smaller ``_QUICK`` set.
 
     Returns ``{"files": n, "reachable": m}`` -- 771/523 at full size.
     """

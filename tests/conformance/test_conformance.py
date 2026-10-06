@@ -1,15 +1,7 @@
 """Replay the recorded Puppet goldens against hyera's Python API.
 
-Needs no Puppet: every expectation comes from ``cases/<case>/golden.json``,
-written by ``record.py``. A query marked ``divergence:`` in ``case.yaml``
-is a known, explained difference and runs as a strict xfail, so fixing it
-turns the run red until the marker is removed (XPASS(strict) fails).
-
-What is asserted: a found value and an explain tree are compared with their
-key order; an error is asserted by its status only (``error_match`` and
-``error_class`` are extra checks a query may add, not a claim that messages
-match); every warning Puppet recorded must also be logged. A case that needs
-an optional extra skips only itself when the extra is missing.
+Needs no Puppet. A query marked ``divergence:`` runs as a strict xfail; errors are
+asserted by status only; every warning Puppet recorded must also be logged.
 """
 
 import difflib
