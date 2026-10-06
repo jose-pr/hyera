@@ -101,17 +101,17 @@ queries:
   - key: p35
     deviation:
       id: convert-to-unsupported-type
-      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      reason: "hyera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
       expect:
         status: error
-        message: "The convert_to lookup_option for key 'p35' raised error: hiera does not support new() for the Puppet type 'Regexp[/a/]'"
+        message: "The convert_to lookup_option for key 'p35' raised error: hyera does not support new() for the Puppet type 'Regexp[/a/]'"
   - key: p36
     deviation:
       id: convert-to-unsupported-type
-      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      reason: "hyera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
       expect:
         status: error
-        message: "The convert_to lookup_option for key 'p36' raised error: hiera does not support new() for the Puppet type 'Regexp[/a/]'"
+        message: "The convert_to lookup_option for key 'p36' raised error: hyera does not support new() for the Puppet type 'Regexp[/a/]'"
   - key: p37
     error_class: HieraLookupError
     error_match: "^\\s*Invalid\\ data\\ type\\ in\\ lookup_options\\ for\\ key\\ 'p37'\\ could\\ not\\ parse\\ 'Integer\\ \\[1\\]',\\ error:\\ 'The\\ expression\\ <Integer\\ \\[1\\]>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."

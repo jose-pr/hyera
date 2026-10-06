@@ -722,7 +722,7 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   (`Integer`/`Float`/`Numeric`/`String`/`Boolean`/`Array`/`Hash`/
   `Sensitive`/`Tuple`/`Struct`/`Optional`/`NotUndef`); converting to
   `SemVer`, `SemVerRange`, `Timespan`, `Timestamp`, `Regexp`, `Binary`,
-  `URI`, `Type` or `Object` always raises `HieraLookupError("hiera does not
+  `URI`, `Type` or `Object` always raises `HieraLookupError("hyera does not
   support new() for the Puppet type '<T>'")` — the
   `convert-to-unsupported-type` deviation, below. See "convert_to" under
   Gotchas for the two message forms a failed conversion raises.
@@ -1394,7 +1394,7 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   that Python's `re` module cannot compile raises an error; Ruby accepts
   it with a warning ("regular expression has redundant nested repeat
   operator").
-- **deviation** `convert-to-unsupported-type` — hiera implements Puppet's
+- **deviation** `convert-to-unsupported-type` — hyera implements Puppet's
   `new()` only for types whose values are plain data; converting to
   SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or
   Object raises.

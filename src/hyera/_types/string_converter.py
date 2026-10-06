@@ -245,7 +245,7 @@ def _sprintf_float(conv, flags, width, prec, value):
     if conv in "aA":
         if prec is not None:
             raise FormatError(
-                "hiera does not support a precision with the %{} format".format(conv)
+                "hyera does not support a precision with the %{} format".format(conv)
             )
         sign_less = _hex_float(abs(value), conv == "A")
         sign = (
@@ -463,7 +463,7 @@ def _container_format(f, type_name, allowed):
     f.check(type_name, allowed)
     if f.alt:
         raise FormatError(
-            "hiera does not support the # (indenting) flag in a format for an "
+            "hyera does not support the # (indenting) flag in a format for an "
             "{}: '{}'".format(type_name, f.orig)
         )
 

@@ -260,12 +260,12 @@ def test_parser_never_parameterized_and_unsupported_with_args():
         parse_type("Iterable[Integer]")
     assert (
         str(exc_info.value)
-        == "hiera does not support the Puppet type 'Iterable[Integer]'"
+        == "hyera does not support the Puppet type 'Iterable[Integer]'"
     )
 
     with pytest.raises(HieraLookupError) as exc_info:
         parse_type("SemVer[1,2]")
-    assert str(exc_info.value) == "hiera does not support the Puppet type 'SemVer[1,2]'"
+    assert str(exc_info.value) == "hyera does not support the Puppet type 'SemVer[1,2]'"
 
     ref = parse_type("Stdlib::Port[80]")
     assert isinstance(ref, TypeReference)
@@ -345,7 +345,7 @@ def test_aliases_and_references():
 
     with pytest.raises(HieraLookupError) as exc_info:
         parse_type("Iterable")
-    assert "hiera does not support the Puppet type 'Iterable'" == str(exc_info.value)
+    assert "hyera does not support the Puppet type 'Iterable'" == str(exc_info.value)
 
     # infer_set of a RubySymbol-named object renders Runtime[ruby, 'Symbol'].
     # The real class is *defined* in _psych and re-exported through
@@ -897,7 +897,7 @@ def _new_params():
             )
 
 
-#: hiera has no new() for these (Puppet does) -- ours is a
+#: hyera has no new() for these (Puppet does) -- ours is a
 #: deliberate deviation, never the golden's recorded (Puppet-real) outcome.
 _Q8_UNSUPPORTED_QIDS = {"semver", "tspan", "re_t"}
 
@@ -918,7 +918,7 @@ def test_new_matches_golden(qid, spec, value, result):
     if qid in _Q8_UNSUPPORTED_QIDS:
         with pytest.raises(HieraLookupError) as exc_info:
             _run_new(spec, value)
-        assert "hiera does not support new() for the Puppet type" in str(exc_info.value)
+        assert "hyera does not support new() for the Puppet type" in str(exc_info.value)
         return
 
     message = result.get("message", "")
@@ -1052,7 +1052,7 @@ def test_convert_result_messages():
     with pytest.raises(HieraLookupError) as exc_info:
         convert_result("k", "SemVer", "1.2.3")
     assert str(exc_info.value) == (
-        "The convert_to lookup_option for key 'k' raised error: hiera does "
+        "The convert_to lookup_option for key 'k' raised error: hyera does "
         "not support new() for the Puppet type 'SemVer'"
     )
     assert exc_info.value.__cause__ is not None

@@ -839,7 +839,7 @@ cannot record a golden for.
   difference. (id: `knockout-prefix-not-python-regex`)
 - **`convert_to` (Puppet's `new()`) does not support every type Puppet
   does.** SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI,
-  Type and Object all raise `hyera.HieraLookupError` ("hiera does not
+  Type and Object all raise `hyera.HieraLookupError` ("hyera does not
   support new() for the Puppet type '...'") instead of converting -- these
   are types whose values are not plain data. A type alias other than
   `Data`/`RichData` is also unsupported (`parse_type` resolves only the

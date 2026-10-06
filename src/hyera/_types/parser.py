@@ -433,7 +433,7 @@ def _interp_qref(node):
     name = text.lstrip(":").lower()
     if name in _UNSUPPORTED_NAMES:
         raise HieraLookupError(
-            "hiera does not support the Puppet type '{}'".format(text)
+            "hyera does not support the Puppet type '{}'".format(text)
         )
     if name in ALIASES:
         return ALIASES[name]
@@ -453,7 +453,7 @@ def _interp_access(node):
         )
     if name in _UNSUPPORTED_NAMES or name in NAMED_ONLY_TYPES:
         raise HieraLookupError(
-            "hiera does not support the Puppet type '{}'".format(source)
+            "hyera does not support the Puppet type '{}'".format(source)
         )
 
     builder = _ACCESS_BUILDERS.get(name)

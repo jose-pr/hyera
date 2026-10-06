@@ -93,7 +93,7 @@ _POSSESSIVE_NATIVE = sys.version_info >= (3, 11)
 
 def _unsupported(construct, source):
     return HieraLookupError(
-        "hiera does not support {} in the Ruby regular expression /{}/".format(
+        "hyera does not support {} in the Ruby regular expression /{}/".format(
             construct, source
         )
     )

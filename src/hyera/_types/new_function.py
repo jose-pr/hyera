@@ -9,7 +9,7 @@
 conversion runs, and the result is asserted against ``type_`` with the
 subject ``"Converted value from <type_>.new()"`` (``_types.mismatch``).
 Types outside this subset's new()-capable tier (SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type,
-Object) raise our own "hiera does not support new()" text -- a deliberate
+Object) raise our own "hyera does not support new()" text -- a deliberate
 deviation, not a bug, since Puppet itself does support new() for several
 of them.
 """
@@ -139,7 +139,7 @@ def _dispatch(type_, value, args):
         isinstance(type_, _PNamedType) and type_.TYPE_NAME in _OUR_UNSUPPORTED_NAMES
     ):
         raise HieraLookupError(
-            "hiera does not support new() for the Puppet type '{}'".format(type_)
+            "hyera does not support new() for the Puppet type '{}'".format(type_)
         )
     _not_supported(type_)
 
@@ -468,7 +468,7 @@ def _new_array(value, *args):
 def _new_hash(value, *args):
     if args:
         raise HieraLookupError(
-            "hiera does not support the build option of the Hash new() function"
+            "hyera does not support the build option of the Hash new() function"
         )
     if isinstance(value, dict):
         return dict(value)

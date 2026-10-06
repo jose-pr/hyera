@@ -141,10 +141,10 @@ queries:
   - key: re_t
     deviation:
       id: convert-to-unsupported-type
-      reason: "hiera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
+      reason: "hyera implements Puppet's new() only for types whose values are plain data; converting to SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type or Object raises."
       expect:
         status: error
-        message: "The convert_to lookup_option for key 're_t' raised error: hiera does not support new() for the Puppet type 'Regexp'"
+        message: "The convert_to lookup_option for key 're_t' raised error: hyera does not support new() for the Puppet type 'Regexp'"
   - key: q_int
     error_class: HieraLookupError
     error_match: "^\\s*The\\ convert_to\\ lookup_option\\ for\\ key\\ 'q_int'\\ raised\\ error:\\ 'new'\\ parameter\\ 'type'\\ expects\\ a\\ Type\\ value,\\ got\\ Integer"
