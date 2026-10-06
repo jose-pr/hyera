@@ -769,13 +769,11 @@ def test_v4_paths_and_extension(make_tree):
     assert h.lookup("mymod::k3") == "from_owndir"
 
 
-def test_v4_hocon_backend_default_extension_and_dispatch(make_tree, caplog):
+def test_v4_hocon_backend_default_extension_and_dispatch(make_tree):
     # backend: hocon is a data_hash/hocon_data level, and its default
     # extension is ".conf" (distinct from yaml/json's "." + name rule) --
-    # proven by the module-prefix warning naming both 'hocon_data' and the
-    # '.conf' path it read (pyhocon itself keeps the surrounding quotes on
-    # a quoted "mymod::k"-shaped key literally, so the value can never
-    # actually round-trip through the module-prefix check to be looked up).
+    # proven by the lookup finding the value in c.conf, written with the
+    # quoted "mymod::k" key a HOCON file needs for a module-prefixed name.
     pytest.importorskip("pyhocon")
     root = make_tree(
         {"hierarchy": []},
@@ -787,11 +785,7 @@ def test_v4_hocon_backend_default_extension_and_dispatch(make_tree, caplog):
         },
     )
     h = Hiera(str(root / "hiera.yaml"), modulepath=[root / "modules"])
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(KeyNotFoundError):
-            h.lookup("mymod::k")
-    assert "hocon_data" in caplog.text
-    assert "c.conf" in caplog.text
+    assert h.lookup("mymod::k") == "v"
 
 
 def test_v4_datadir_is_literal(make_tree):
