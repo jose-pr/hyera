@@ -4,7 +4,9 @@ the depth-first walker, and the datadir/config-root split -- the pieces
 ``pathlib_next.Path.glob`` call a glob hierarchy level used to delegate to.
 """
 
+import json
 import os
+import pathlib
 import subprocess
 import threading
 
@@ -13,6 +15,7 @@ import pytest
 from hyera._config.location_resolver import (
     _entry_is_dir,
     _expand_braces,
+    _fnmatch,
     _glob_one,
     _glob_root_and_pattern,
     _has_magic,
@@ -328,3 +331,161 @@ def test_wildcards_are_case_sensitive_on_every_os(tmp_path):
 )
 def test_glob_root_and_pattern(datadir, g, expected):
     assert _glob_root_and_pattern("/r", datadir, g) == expected
+
+
+# --- linear matching, bounded depth, character ranges -------------------
+
+
+class _CountingName(str):
+    """A name that counts how many characters the matcher reads from it and
+    how many substring searches it asks of it."""
+
+    reads = 0
+    finds = 0
+
+    def __getitem__(self, index):
+        type(self).reads += 1
+        return super().__getitem__(index)
+
+    def find(self, *args):
+        type(self).finds += 1
+        return super().find(*args)
+
+
+def test_many_stars_cost_is_bounded_by_pattern_times_name():
+    name = _CountingName("a" * 60)
+    _CountingName.reads = 0
+    pattern = "*a" * 12 + "?b.yaml"
+    assert _fnmatch(pattern, name) is False
+    assert _CountingName.reads <= len(name) * (len(pattern) + 1)
+
+
+def test_many_stars_over_plain_text_search_each_chunk_once():
+    name = _CountingName("a" * 60)
+    _CountingName.finds = 0
+    pattern = "*a" * 12 + "*b.yaml"
+    assert _segment_matcher(pattern)(name) is False
+    assert _CountingName.finds <= 13
+
+
+@pytest.mark.parametrize(
+    "seg, name, matches",
+    [
+        ("[z-a].yaml", "a.yaml", True),
+        ("[z-a].yaml", "z.yaml", True),
+        ("[z-a].yaml", "m.yaml", False),
+        ("[a-\\z].yaml", "b.yaml", True),
+        ("[a-\\z].yaml", "0.yaml", False),
+        ("[a-]", "-", True),
+        ("[]a]", "]", False),
+        ("[!]a]x", "bx", False),
+        ("a.yaml\\", "a.yaml", True),
+        ("a*\\", "abc", True),
+        (".*", ".", True),
+    ],
+)
+def test_bracket_and_escape_rules_follow_ruby(seg, name, matches):
+    assert _segment_matcher(seg)(name) is matches
+
+
+def test_deeply_nested_braces_expand_without_recursion():
+    depth = 3000
+    assert _expand_braces("{" * depth + "a" + "}" * depth) == ["a"]
+    assert _expand_braces("{" * depth + "a,b" + "}" * depth + ".yaml") == [
+        "a.yaml",
+        "b.yaml",
+    ]
+
+
+def test_brace_expansion_keeps_written_order_across_groups():
+    assert _expand_braces("{b,a}{2,1}") == ["b2", "b1", "a2", "a1"]
+    assert _expand_braces("{a{b,c},d}e") == ["abe", "ace", "de"]
+    assert _expand_braces("{a{b,c") == ["{a{b,c"]
+
+
+def test_deep_tree_is_walked_without_recursion(tmp_path, monkeypatch):
+    depth = 1500
+
+    class Entry:
+        def __init__(self, name, is_dir):
+            self.name, self._dir = name, is_dir
+
+        def is_symlink(self):
+            return False
+
+        def is_dir(self, follow_symlinks=True):
+            return self._dir
+
+        def stat(self, follow_symlinks=True):
+            return type("S", (), {"st_reparse_tag": 0})()
+
+    def scandir(path):
+        levels = str(path).replace("\\", "/").count("/d")
+        return [Entry("d", True)] if levels < depth else [Entry("x.yaml", False)]
+
+    monkeypatch.setattr(os, "scandir", scandir)
+    (match,) = glob("/virtual", "**/x.yaml")
+    assert match.replace("\\", "/") == "/virtual" + "/d" * depth + "/x.yaml"
+
+
+def test_literal_after_recursive_segment_follows_the_filesystem_case(tmp_path):
+    _write(tmp_path, "sub/c.yaml")
+    matches = glob(str(tmp_path), "**/C.yaml")
+    if os.path.exists(str(tmp_path / "SUB" / "C.YAML")):
+        assert _rel(tmp_path, matches) == ["sub/c.yaml"]
+    else:
+        assert matches == []
+
+
+# --- the recorded Ruby Dir.glob table ----------------------------------
+
+_TABLE = json.loads(
+    (pathlib.Path(__file__).parent / "data" / "dir_glob_table.json").read_text(
+        encoding="utf-8"
+    )
+)
+
+
+@pytest.fixture(scope="module")
+def ruby_tree(tmp_path_factory):
+    root = tmp_path_factory.mktemp("ruby_tree")
+    for rel in _TABLE["tree"]:
+        if rel.endswith("/"):
+            (root / rel).mkdir(parents=True, exist_ok=True)
+        else:
+            _write(root, rel)
+    return root
+
+
+# Rows whose answer depends on the operating system, not on the matcher: a
+# literal segment is an existence check, so a case-folding filesystem finds
+# "Sub/c.yaml", and Windows resolves "x/.", "x/..", "..." and a bare "\\" itself.
+_OS_DEPENDENT = {
+    "A.yaml",
+    "Sub/c.yaml",
+    "Sub/*.yaml",
+    "*/C.yaml",
+    "**/Sub/c.yaml",
+    "**/C.yaml",
+    "**/D.txt",
+    "*/.",
+    "*/..",
+    ".*/.",
+    ".*/..",
+    "...",
+    "\\\\",
+}
+
+
+@pytest.mark.parametrize(
+    "pattern, expected",
+    [pytest.param(p, e, id=p) for p, e in _TABLE["rows"]],
+)
+def test_glob_matches_the_recorded_ruby_listing(ruby_tree, pattern, expected):
+    if os.name == "nt" and pattern in _OS_DEPENDENT:
+        pytest.skip("answered by the Windows filesystem, not by the matcher")
+    got = [
+        m[len(str(ruby_tree)) + 1 :].replace(os.sep, "/")
+        for m in glob(str(ruby_tree), pattern)
+    ]
+    assert got == expected

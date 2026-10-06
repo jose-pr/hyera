@@ -165,42 +165,62 @@ def _entry_is_dir(entry: "os.DirEntry") -> bool:
         return False
 
 
-def _find_brace(pattern: str):
-    """The first unescaped, balanced ``{...}`` group in ``pattern``:
-    ``(start, end, commas)`` -- the indices of ``{`` and ``}`` and the
-    depth-0 unescaped comma positions between them -- or ``None`` if there
-    is no such group (an unmatched ``{`` included). ``\\`` skips the next
-    character throughout, so an escaped ``\\{``/``\\}``/``\\,`` is never
-    treated as a delimiter.
+def _parse_braces(pattern: str) -> list:
+    """``pattern`` as a node list: literal ``str`` chunks and brace groups,
+    each group a tuple of alternatives (themselves node lists). Follows Ruby's
+    ``ruby_brace_expand``: ``\\`` skips the next character, a ``}`` with no open
+    ``{`` is literal, and an unmatched ``{`` leaves everything from it onward
+    literal, nested groups included.
     """
+    # Each frame is [start index, alternatives so far, current nodes, chars].
+    frames = [[-1, [], [], []]]
+
+    def flush(frame):
+        if frame[3]:
+            frame[2].append("".join(frame[3]))
+            frame[3] = []
+
     n = len(pattern)
     i = 0
     while i < n:
         c = pattern[i]
-        if c == "\\" and i + 1 < n:
+        frame = frames[-1]
+        if c == "\\":
+            frame[3].append(pattern[i : i + 2])
             i += 2
             continue
         if c == "{":
-            depth = 1
-            commas = []
-            j = i + 1
-            while j < n:
-                cj = pattern[j]
-                if cj == "\\" and j + 1 < n:
-                    j += 2
-                    continue
-                if cj == "{":
-                    depth += 1
-                elif cj == "}":
-                    depth -= 1
-                    if depth == 0:
-                        return i, j, commas
-                elif cj == "," and depth == 1:
-                    commas.append(j)
-                j += 1
-            return None  # unmatched '{'
+            flush(frame)
+            frames.append([i, [], [], []])
+        elif c == "}" and len(frames) > 1:
+            flush(frame)
+            frame[1].append(frame[2])
+            frames.pop()
+            parent = frames[-1]
+            flush(parent)
+            parent[2].append(tuple(frame[1]))
+        elif c == "," and len(frames) > 1:
+            flush(frame)
+            frame[1].append(frame[2])
+            frame[2] = []
+        else:
+            frame[3].append(c)
         i += 1
-    return None
+
+    if len(frames) > 1:
+        root = frames[0]
+        flush(root)
+        root[2].append(pattern[frames[1][0] :])
+        return root[2]
+    flush(frames[0])
+    return frames[0][2]
+
+
+def _link(nodes: list, tail):
+    """``nodes`` as a linked list ``(node, next)`` ending in ``tail``."""
+    for node in reversed(nodes):
+        tail = (node, tail)
+    return tail
 
 
 def _expand_braces(pattern: str) -> "_ty.List[str]":
@@ -210,18 +230,27 @@ def _expand_braces(pattern: str) -> "_ty.List[str]":
     a later sibling group both expand). A pattern with no unescaped,
     balanced ``{...}`` group -- including an unmatched ``{`` -- expands to
     itself, escapes and all: :func:`_has_magic`/:func:`_segment_matcher`
-    are what later interpret ``\\``.
+    are what later interpret ``\\``. Iterative, so nesting depth is bounded
+    by memory, not the interpreter's recursion limit.
     """
-    found = _find_brace(pattern)
-    if found is None:
+    if "{" not in pattern:
         return [pattern]
-    start, end, commas = found
-    prefix, suffix = pattern[:start], pattern[end + 1 :]
-    bounds = [start + 1] + [c + 1 for c in commas]
-    ends = commas + [end]
     results = []
-    for b, e in zip(bounds, ends):
-        results.extend(_expand_braces(prefix + pattern[b:e] + suffix))
+    work = [("", _link(_parse_braces(pattern), None))]
+    while work:
+        prefix, rest = work.pop()
+        parts = [prefix]
+        while rest is not None:
+            node, rest = rest
+            if isinstance(node, str):
+                parts.append(node)
+                continue
+            prefix = "".join(parts)
+            for alternative in reversed(node):
+                work.append((prefix, _link(alternative, rest)))
+            break
+        else:
+            results.append("".join(parts))
     return results
 
 
@@ -242,13 +271,14 @@ def _has_magic(seg: str) -> bool:
 
 def _unescape(seg: str) -> str:
     """A literal segment's real filename: drop one ``\\`` before each
-    escaped character."""
+    escaped character, and a trailing lone ``\\``."""
     out = []
     i, n = 0, len(seg)
     while i < n:
         c = seg[i]
-        if c == "\\" and i + 1 < n:
-            out.append(seg[i + 1])
+        if c == "\\":
+            if i + 1 < n:
+                out.append(seg[i + 1])
             i += 2
         else:
             out.append(c)
@@ -256,77 +286,137 @@ def _unescape(seg: str) -> str:
     return "".join(out)
 
 
-def _translate(seg: str):
-    """``seg`` as an unanchored regex fragment matching Ruby ``File.fnmatch``
-    (``*`` -> any run, ``?`` -> one character, ``[...]`` a class, ``\\x`` a
-    literal ``x``), or ``None`` when the segment can never match anything: an
-    unclosed ``[``, or a ``]`` immediately after ``[``/``[!``/``[^`` (an
-    empty class -- unlike POSIX glob, a leading ``]`` is never read as an
-    ordinary class member here).
+def _bracket(pat: str, p: int, name: str, s: int):
+    """Ruby ``fnmatch``'s bracket class: ``pat[p:]`` follows a ``[``; return
+    the index after the closing ``]`` when ``name[s]`` is in the class, else
+    ``None``. An unclosed class, or one whose ``]`` comes first, never
+    matches. A range matches its two endpoints and every character between
+    them, so a reversed range ``[z-a]`` matches only ``z`` and ``a``.
     """
-    out = []
-    i, n = 0, len(seg)
-    while i < n:
-        c = seg[i]
-        if c == "\\" and i + 1 < n:
-            out.append(re.escape(seg[i + 1]))
-            i += 2
-        elif c == "*":
-            out.append(".*")
-            i += 1
-        elif c == "?":
-            out.append(".")
-            i += 1
-        elif c == "[":
-            j = i + 1
-            negate = False
-            if j < n and seg[j] in "!^":
-                negate = True
-                j += 1
-            if j < n and seg[j] == "]":
-                return None  # empty class: never matches
-            members = []
-            closed = False
-            while j < n:
-                cj = seg[j]
-                if cj == "\\" and j + 1 < n:
-                    members.append(re.escape(seg[j + 1]))
-                    j += 2
-                    continue
-                if cj == "]":
-                    closed = True
-                    j += 1
-                    break
-                if j + 2 < n and seg[j + 1] == "-" and seg[j + 2] != "]":
-                    members.append(re.escape(cj) + "-" + re.escape(seg[j + 2]))
-                    j += 3
-                    continue
-                members.append(re.escape(cj))
-                j += 1
-            if not closed:
-                return None  # unclosed '[': never matches
-            out.append("[{}{}]".format("^" if negate else "", "".join(members)))
-            i = j
+    n = len(pat)
+    if p >= n:
+        return None
+    negate = False
+    if pat[p] in "!^":
+        negate = True
+        p += 1
+    c = name[s]
+    ok = False
+    while p < n and pat[p] != "]":
+        t1 = p + 1 if pat[p] == "\\" else p
+        if t1 >= n:
+            return None
+        p = t1 + 1
+        if p < n and pat[p] == "-" and (p + 1 >= n or pat[p + 1] != "]"):
+            t2 = p + 1
+            if t2 < n and pat[t2] == "\\":
+                t2 += 1
+            if t2 >= n:
+                return None
+            p = t2 + 1
+            if not ok:
+                lo, hi = pat[t1], pat[t2]
+                ok = c == lo or c == hi or lo <= c <= hi
         else:
-            out.append(re.escape(c))
-            i += 1
-    return "".join(out)
+            if p >= n:
+                return None
+            if not ok:
+                ok = c == pat[t1]
+    if p >= n:
+        return None
+    return None if ok == negate else p + 1
+
+
+def _fnmatch(pat: str, name: str) -> bool:
+    """Ruby ``File.fnmatch`` of one path segment, without ``FNM_DOTMATCH``:
+    ``*``, ``?``, ``[...]`` and ``\\`` escapes, and a leading ``.`` in ``name``
+    needs a literal ``.`` at the start of ``pat``. A two-pointer match that
+    remembers only the latest ``*``, so the cost is bounded by
+    ``len(pat) * len(name)`` however many stars ``pat`` has.
+    """
+    plen, slen = len(pat), len(name)
+    q = 1 if pat.startswith("\\") else 0
+    if slen and name[0] == "." and pat[q : q + 1] != ".":
+        return False
+    p = s = 0
+    star_p = star_s = -1
+    while True:
+        c = pat[p] if p < plen else ""
+        if c == "*":
+            while p < plen and pat[p] == "*":
+                p += 1
+            q = p + 1 if p < plen and pat[p] == "\\" else p
+            if q >= plen:
+                return True
+            if s >= slen:
+                return False
+            star_p, star_s = p, s
+            continue
+        if c == "?":
+            if s >= slen:
+                return False
+            p += 1
+            s += 1
+            continue
+        if c == "[":
+            if s >= slen:
+                return False
+            t = _bracket(pat, p + 1, name, s)
+            if t is not None:
+                p = t
+                s += 1
+                continue
+        else:
+            if c == "\\":
+                p += 1
+            if s >= slen:
+                return p >= plen
+            if p < plen and pat[p] == name[s]:
+                p += 1
+                s += 1
+                continue
+        if star_p < 0:
+            return False
+        p = star_p
+        star_s += 1
+        s = star_s
+
+
+def _literal_chunks_matcher(seg: str):
+    """The matcher for a ``seg`` with no ``?``, ``[`` or ``\\``: the text
+    between its stars is found with ``str`` methods, left to right, which is
+    exactly what :func:`_fnmatch` computes, at C speed."""
+    first, *middle, last = seg.split("*")
+    middle = [m for m in middle if m]
+    dot_ok = seg.startswith(".")
+    floor = len(first) + len(last)
+
+    def match(name: str) -> bool:
+        if not dot_ok and name.startswith("."):
+            return False
+        if len(name) < floor or not name.startswith(first):
+            return False
+        end = len(name) - len(last)
+        if not name.endswith(last):
+            return False
+        pos = len(first)
+        for chunk in middle:
+            k = name.find(chunk, pos, end)
+            if k < 0:
+                return False
+            pos = k + len(chunk)
+        return True
+
+    return match
 
 
 @functools.lru_cache(maxsize=256)
 def _segment_matcher(seg: str):
-    """A ``name -> bool`` matcher for one path segment pattern ``seg``. A
-    name starting with ``.`` matches only when ``seg`` itself starts with a
-    literal ``.`` (bare ``.`` or an escaped ``\\.``) -- Ruby's dotfile rule,
-    applied regardless of which wildcard actually reaches the leading
-    character.
-    """
-    frag = _translate(seg)
-    if frag is None:
-        return lambda name: False
-    dotfile_ok = seg.startswith(".") or seg.startswith("\\.")
-    rx = re.compile(frag if dotfile_ok else r"(?!\.)" + frag)
-    return lambda name: rx.fullmatch(name) is not None
+    """A ``name -> bool`` matcher for one path segment pattern ``seg``: Ruby's
+    ``File.fnmatch`` (see :func:`_fnmatch`), including its dotfile rule."""
+    if "*" in seg and not any(c in seg for c in "?[\\"):
+        return _literal_chunks_matcher(seg)
+    return functools.partial(_fnmatch, seg)
 
 
 def _prepare_segments(pattern: str):
@@ -358,9 +448,21 @@ def _prepare_segments(pattern: str):
     return segments
 
 
+class _DotEntry:
+    """The current directory as a listing entry: Ruby offers ``.`` to a
+    wildcard segment that starts with a literal ``.``, ``readdir`` never lists
+    it."""
+
+    name = "."
+
+
 def _segment_matches(kind, value, name: str) -> bool:
     if kind == "literal":
-        return name == value
+        # A literal is an existence check through the OS, so it follows the
+        # filesystem's case rule; only wildcards are always case-sensitive.
+        return name == value or (
+            _WINDOWS and os.path.normcase(name) == os.path.normcase(value)
+        )
     if kind == "magic":
         return value(name)
     return False
@@ -374,7 +476,7 @@ def _glob_one(
     (:func:`_prepare_segments`), so ``**``'s "zero or more directories" and
     an ordinary wildcard share one filesystem pass. A pattern ending in
     ``/`` matches only directories, which Puppet rejects, so it is always
-    ``[]``.
+    ``[]``. The walk keeps its own stack, so tree depth is bounded by memory.
 
     ``on_scandir``, when given, is called with every directory path whose
     entries the walk consults, whether it lists them or tests a literal
@@ -397,13 +499,16 @@ def _glob_one(
     if n == 0:
         return []
     results = []
-
-    def walk(path, active):
+    # (path, segment indices reached, whether a wildcard led here)
+    stack = [(root, (0,), False)]
+    while stack:
+        path, active, by_wildcard = stack.pop()
         if n in active:
             results.append(path)
         pending = [i for i in active if i < n]
         if not pending:
-            return
+            continue
+        children = []
         if on_scandir is not None:
             on_scandir(path)
         if all(segments[i][0] == "literal" for i in pending):
@@ -424,13 +529,22 @@ def _glob_one(
                 ):
                     nxt.update(i + 1 for i in mid_idxs)
                 if nxt:
-                    walk(child, nxt)
-            return
+                    children.append((child, tuple(sorted(nxt)), by_wildcard))
+            stack.extend(reversed(children))
+            continue
         try:
-            entries = sorted(os.scandir(path), key=lambda e: os.fsencode(e.name))
+            entries = list(os.scandir(path))
         except OSError as e:
             _LOGGER.debug("Skipping %s: %s", path, e)
-            return
+            continue
+        # Ruby offers "." only below literal segments and never beside a "**".
+        if (
+            not by_wildcard
+            and not any(segments[i][0] == "recursive" for i in pending)
+            and any(segments[i][0] == "magic" and segments[i][1](".") for i in pending)
+        ):
+            entries.append(_DotEntry())
+        entries.sort(key=lambda e: os.fsencode(e.name))
         for entry in entries:
             nxt = set()
             for i in pending:
@@ -448,9 +562,10 @@ def _glob_one(
                 elif _segment_matches(kind, value, entry.name):
                     nxt.add(i + 1)
             if nxt:
-                walk(os.path.join(path, entry.name), nxt)
-
-    walk(root, {0})
+                children.append(
+                    (os.path.join(path, entry.name), tuple(sorted(nxt)), True)
+                )
+        stack.extend(reversed(children))
     return results
 
 
