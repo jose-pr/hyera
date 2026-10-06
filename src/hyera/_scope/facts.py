@@ -9,8 +9,6 @@ Ports ``application/lookup.rb``'s ``--facts`` handling and
 
 import json
 import os
-import shutil
-import subprocess
 import typing as _ty
 
 from ..backends import _psych as _psych
