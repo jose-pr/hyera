@@ -720,6 +720,7 @@ locations and under globbed directories are seen by the next lookup.
 | `puppet.conf` discovery | Not supported | |
 | Type aliases other than `Data`/`RichData`; `new()` for SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type, Object | Not supported | |
 | `hiera()`/`hiera_array()`/`hiera_hash()`/`hiera_include()` as methods | Not supported | use `.lookup()` -- see the mapping table under [Lookups](#lookups). |
+| The types `Iterable`, `Iterator`, `Init` and `Unit` in a type expression | Not supported | a `value_type` or `convert_to` naming one raises `HieraLookupError`. |
 
 ## Differences from Puppet
 

@@ -187,8 +187,9 @@ def _describe(expected, value, path):
     if isinstance(expected, Optional):
         if value is None:
             return []
-        inner = expected.contained if expected.contained is not None else ANY
-        sub = _describe(inner, value, path)
+        if expected.contained is None:
+            return [_Mismatch(path, "type", expected, infer_set(value))]
+        sub = _describe(expected.contained, value, path)
         if not sub:
             return []
         m = sub[0]
@@ -295,15 +296,14 @@ def _size_mismatch(path, from_, to_, actual_n):
 
 
 def _size_text(from_, to_):
-    if from_ is None and to_ is None:
-        return "unlimited"
-    if to_ is None or from_ == to_:
-        if to_ is None:
-            return "at least {}".format(from_)
-        return str(from_)
-    if from_ is None:
+    low = from_ or 0
+    if to_ is None:
+        return "unlimited" if low == 0 else "at least {}".format(low)
+    if low == to_:
+        return str(low)
+    if low == 0:
         return "at most {}".format(to_)
-    return "between {} and {}".format(from_, to_)
+    return "between {} and {}".format(low, to_)
 
 
 def _describe_array(expected, value, path):
@@ -326,7 +326,7 @@ def _describe_tuple(expected, value, path):
         return [_Mismatch(path, "type", expected, infer_set(value))]
     lo, hi = expected._bounds()
     n = len(value)
-    if n < lo or n > hi:
+    if n < lo or (hi is not None and n > hi):
         return [_size_mismatch(path, lo, hi, n)]
     descriptions = []
     for idx, v in enumerate(value):

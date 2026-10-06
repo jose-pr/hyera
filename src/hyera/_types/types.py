@@ -224,7 +224,7 @@ class Optional(Any):
         if value is None:
             return True
         if self.contained is None:
-            return True
+            return False
         return _type_instance(self.contained, value)
 
     def assignable(self, other):
@@ -241,36 +241,31 @@ class Optional(Any):
         return _render_container("Optional", self.contained, show_literal=True)
 
 
+def _is_nan(value):
+    return isinstance(value, float) and value != value
+
+
 class Scalar(Any):
     TYPE_NAME = "Scalar"
 
     def instance(self, value):
-        return isinstance(value, (bool, int, float, str)) or isinstance(
-            value, re.Pattern
-        )
+        return isinstance(value, (bool, int, float, str, re.Pattern))
 
 
 class ScalarData(Scalar):
     TYPE_NAME = "ScalarData"
 
     def instance(self, value):
-        if isinstance(value, (bool, int, float, str)):
-            return True
-        if isinstance(value, list):
-            return all(ScalarData.instance(self, v) for v in value)
-        if isinstance(value, dict):
-            return all(
-                isinstance(k, str) and ScalarData.instance(self, v)
-                for k, v in value.items()
-            )
-        return False
+        return isinstance(value, (bool, int, float, str))
 
 
 class Numeric(Any):
     TYPE_NAME = "Numeric"
 
     def instance(self, value):
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if isinstance(value, bool) or _is_nan(value):
+            return False
+        return isinstance(value, (int, float))
 
 
 class Integer(Any):
@@ -324,7 +319,7 @@ class Float(Any):
     DEFAULT = None  # set below
 
     def instance(self, value):
-        if not isinstance(value, float):
+        if not isinstance(value, float) or value != value:
             return False
         if self.from_ is not None and value < self.from_:
             return False
@@ -475,37 +470,55 @@ class Pattern(Any):
     TYPE_NAME = "Pattern"
 
     def __init__(self, sources):
-        self.sources = list(sources)
+        self.sources = list(dict.fromkeys(sources))
         self._compiled = [_ruby_regex(s) for s in self.sources]
 
     def instance(self, value):
         if not isinstance(value, str):
             return False
+        if not self._compiled:
+            return True
         return any(p.search(value) for p in self._compiled)
 
     def _key(self):
         return tuple(self.sources)
 
     def __str__(self):
+        if not self.sources:
+            return "Pattern"
         return "Pattern[{}]".format(", ".join("/{}/".format(s) for s in self.sources))
+
+
+_ASCII_FOLD = {c: c + 32 for c in range(ord("A"), ord("Z") + 1)}
 
 
 class Enum(Any):
     TYPE_NAME = "Enum"
 
-    def __init__(self, values):
-        self.values = list(values)
+    def __init__(self, values, case_insensitive=False):
+        self.values = list(dict.fromkeys(values))
+        self.case_insensitive = bool(case_insensitive)
 
     def instance(self, value):
         if not isinstance(value, str):
             return False
-        return any(value == v for v in self.values if isinstance(v, str))
+        if not self.values:
+            return True
+        if self.case_insensitive:
+            folded = value.translate(_ASCII_FOLD)
+            return any(v.translate(_ASCII_FOLD) == folded for v in self.values)
+        return value in self.values
 
     def _key(self):
-        return tuple(self.values)
+        return (tuple(self.values), self.case_insensitive)
 
     def __str__(self):
-        return "Enum[{}]".format(", ".join(_literal_str(v) for v in self.values))
+        if not self.values:
+            return "Enum"
+        parts = [_literal_str(v) for v in self.values]
+        if self.case_insensitive:
+            parts.append("true")
+        return "Enum[{}]".format(", ".join(parts))
 
 
 class Collection(Any):
@@ -566,6 +579,8 @@ class Array(Any):
         return (_key_of(self.element_type), self.size_from, self.size_to)
 
     def __str__(self):
+        if self.size_from == 0 and self.size_to == 0:
+            return "Array[0, 0]"
         if (
             self.element_type is None
             and self.size_from is None
@@ -615,6 +630,8 @@ class Hash(Any):
         )
 
     def __str__(self):
+        if self.size_from == 0 and self.size_to == 0:
+            return "Hash[0, 0]"
         if (
             self.key_type is None
             and self.value_type is None
@@ -639,19 +656,19 @@ class Tuple(Any):
         self.size_to = size_to
 
     def _bounds(self):
+        """The accepted element counts ``(min, max)``; ``max`` is ``None``
+        when unbounded (no types at all, or a size with only a minimum)."""
         n = len(self.types)
         if self.size_from is None and self.size_to is None:
-            return n, n
-        lo = self.size_from if self.size_from is not None else n
-        hi = self.size_to if self.size_to is not None else lo
-        return lo, hi
+            return (n, n) if n else (0, None)
+        return (self.size_from or 0), self.size_to
 
     def instance(self, value):
         if not isinstance(value, (list, tuple)):
             return False
         lo, hi = self._bounds()
         n = len(value)
-        if n < lo or n > hi:
+        if n < lo or (hi is not None and n > hi):
             return False
         for i, v in enumerate(value):
             t = (
@@ -670,12 +687,18 @@ class Tuple(Any):
         return (tuple(_key_of(t) for t in self.types), self.size_from, self.size_to)
 
     def __str__(self):
+        if not self.types:
+            return "Tuple"
         parts = [str(t) for t in self.types]
         parts += _render_size_args(self.size_from, self.size_to)
         return "Tuple[{}]".format(", ".join(parts))
 
 
 class StructElement:
+    """One ``Struct`` entry. ``optional`` is the key's own optionality: a
+    key written ``Optional[k]``, or a plain key whose value type accepts
+    undef (``NotUndef[k]`` forces it required)."""
+
     __slots__ = ("key", "optional", "value_type")
 
     def __init__(self, key, optional, value_type):
@@ -684,9 +707,11 @@ class StructElement:
         self.value_type = value_type
 
     def render_key(self):
+        value_optional = _type_instance(self.value_type, None)
+        quoted = _puppet_quote(self.key)
         if self.optional:
-            return "Optional[{}]".format(_puppet_quote(self.key))
-        return _puppet_quote(self.key)
+            return quoted if value_optional else "Optional[{}]".format(quoted)
+        return "NotUndef[{}]".format(quoted) if value_optional else quoted
 
 
 class Struct(Any):
@@ -714,6 +739,8 @@ class Struct(Any):
         return tuple((e.key, e.optional, _key_of(e.value_type)) for e in self.elements)
 
     def __str__(self):
+        if not self.elements:
+            return "Struct"
         parts = [
             "{} => {}".format(e.render_key(), str(e.value_type)) for e in self.elements
         ]
@@ -739,6 +766,8 @@ class Variant(Any):
         return tuple(_key_of(t) for t in self.types)
 
     def __str__(self):
+        if not self.types:
+            return "Variant"
         return "Variant[{}]".format(", ".join(str(t) for t in self.types))
 
 
@@ -1027,7 +1056,9 @@ def infer_set(value):
     and Hash get the precise Tuple/Struct shape used for mismatch
     reporting (``infer_set_Array``/``infer_set_Hash``)."""
     if isinstance(value, (list, tuple)):
-        return Tuple([infer_set(v) for v in value]) if value else Tuple([])
+        if not value:
+            return Array(None, 0, 0)
+        return Tuple([infer_set(v) for v in value])
     if isinstance(value, dict):
         if value and all(isinstance(k, str) and k for k in value):
             return Struct(

@@ -360,3 +360,87 @@ def test_sensitive_call_stays_the_value_wrapper():
     assert isinstance(v, types.Sensitive)
     assert v.unwrap() == "secret"
     assert str(v) == "Sensitive [value redacted]"
+
+
+# ------------------------------------------------ Puppet 8 instance rules
+
+NAN = float("nan")
+
+PUPPET_INSTANCE_CASES = [
+    # A Struct key is optional when its value type accepts undef.
+    (
+        {"name": "x"},
+        types.Struct[{"name": types.String, "port": types.Optional[types.Integer]}],
+        True,
+    ),
+    ({}, types.Struct[{"a": types.Any}], True),
+    ({}, types.Struct[{"a": types.Undef}], True),
+    ({}, types.Struct[{"a": types.Integer}], False),
+    (
+        {},
+        types.Struct[{types.NotUndef["a"]: types.Optional[types.Integer]}],
+        False,
+    ),
+    (
+        {"a": None},
+        types.Struct[{types.NotUndef["a"]: types.Optional[types.Integer]}],
+        True,
+    ),
+    # A Tuple's last bound is a minimum; the last type repeats.
+    (["a", "b"], types.Tuple[types.String, 1], True),
+    ([1, "a"], types.Tuple[types.Integer, types.String, 1], True),
+    ([1, 2, 3], types.Tuple[types.Integer, 2], True),
+    ([], types.Tuple[types.Integer, 1], False),
+    ([1, 2], types.Tuple[types.Integer, 1, 2], True),
+    ([1, 2, 3], types.Tuple[types.Integer, 1, 2], False),
+    ([1, "a", 3], types.Tuple, True),
+    ([], types.Tuple, True),
+    ([1], types.Tuple[types.Integer], True),
+    ([1, 2], types.Tuple[types.Integer], False),
+    # ScalarData holds scalars only.
+    ([1, 2], types.ScalarData, False),
+    ({"a": 1}, types.ScalarData, False),
+    ("a", types.ScalarData, True),
+    (1.5, types.ScalarData, True),
+    # Bare Optional is only undef; bare Pattern and Enum accept any String.
+    (None, types.Optional, True),
+    (5, types.Optional, False),
+    ("anything", types.Pattern, True),
+    (5, types.Pattern, False),
+    ("anything", types.Enum, True),
+    # A trailing boolean in Enum is the case-insensitive flag.
+    ("A", types.Enum["a", "b", True], True),
+    ("A", types.Enum["a", "b", False], False),
+    ("A", types.Enum["a", "b"], False),
+    # NaN is not a Float.
+    (NAN, types.Float, False),
+    (NAN, types.Numeric, False),
+    (NAN, types.Float[1.0, 3.0], False),
+    (1.5, types.Float, True),
+]
+
+
+@pytest.mark.parametrize("value, type_, expected", PUPPET_INSTANCE_CASES)
+def test_isinstance_follows_puppet_rules(value, type_, expected):
+    assert isinstance(value, type_) is expected
+
+
+def _empty_hiera():
+    from hyera import Hiera
+
+    return Hiera({"version": 5, "hierarchy": []})
+
+
+def test_lookup_value_type_struct_with_optional_value_accepts_missing_key():
+    t = types.Struct[{"name": types.String, "port": types.Optional[types.Integer]}]
+    assert _empty_hiera().lookup("k", t, None, {"name": "x"}) == {"name": "x"}
+
+
+def test_lookup_value_type_tuple_with_minimum_accepts_longer_array():
+    got = _empty_hiera().lookup("k", types.Tuple[types.String, 1], None, ["a", "b"])
+    assert got == ["a", "b"]
+
+
+def test_lookup_value_type_scalar_data_rejects_array():
+    with pytest.raises(HieraLookupError):
+        _empty_hiera().lookup("k", types.ScalarData, None, [1, 2])

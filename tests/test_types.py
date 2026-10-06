@@ -182,30 +182,15 @@ def test_parser_not_a_type_spec_errors():
         "-5",
         "Integer [1]",
         "Struct[String]",
-        "Enum[1]",
-        "Enum[[1,2]]",
-        "Pattern[1]",
-        "Regexp[1,2]",
-        "Regexp[1]",
-        "Collection[1,2,3]",
-        "Tuple[String,default,3]",
-        "Tuple[String,1,default]",
-        # Every element is a size bound (popped off), leaving no element
-        # types to build a Tuple from.
-        "Tuple[1,2]",
         # "undef" is a valid primary expression (a literal value), just
         # never a valid *type* expression.
         "Optional[undef]",
-        # An empty (`[]`) and a trailing-comma array literal, both as an
-        # access argument -- neither is a valid Enum value.
-        "Enum[[]]",
-        "Enum[[1,2,]]",
+        # A non-type first argument with no second one.
+        "Array[0]",
+        "Array[default]",
         # Array's own three-size-argument form (no element type given at
         # all, just size args directly) is still capped at two.
         "Array[1,2,3]",
-        # A Struct key that is neither a bareword/quoted string nor
-        # `Optional[<string>]`.
-        "Struct[{5=>String}]",
         # An "access" key whose base name IS "optional" but whose own
         # argument isn't a bareword/quoted string.
         "Struct[{Optional[Integer]=>String}]",
@@ -221,7 +206,7 @@ def test_parser_builder_arg_count_errors():
     cases = [
         (
             "Array[Integer,1,2,3]",
-            "Invalid number of type parameters specified: Array requires 0 to 3, 4 provided",
+            "Invalid number of type parameters specified: Array requires 1 to 3, 4 provided",
         ),
         (
             "Hash[String=>Integer]",
@@ -235,7 +220,10 @@ def test_parser_builder_arg_count_errors():
             "Optional[Integer,String]",
             "Invalid number of type parameters specified: Optional requires 1, 2 provided",
         ),
-        ("Boolean[true,false]", "'new_boolean' expects 1 argument, got 2"),
+        (
+            "Boolean[true,false]",
+            "Invalid number of type parameters specified: Boolean requires 1, 2 provided",
+        ),
         (
             "Float[1,2,3]",
             "Invalid number of type parameters specified: Float requires 1 or 2, 3 provided",
@@ -254,13 +242,10 @@ def test_parser_builder_arg_count_errors():
             parse_type(spec)
         assert str(exc_info.value) == message, spec
 
-    # `_fmt_num`'s float-with-an-integer-value branch: Float bounds stay
-    # floats (unlike Integer's, which are always plain ints), so the
-    # "from > to" range-check message needs its own formatting to print
-    # "5"/"1" rather than "5.0"/"1.0".
+    # Float bounds stay floats, and the "from > to" message prints them so.
     with pytest.raises(HieraLookupError) as exc_info:
         parse_type("Float[5.0,1.0]")
-    assert str(exc_info.value) == "'from' must be less or equal to 'to'. Got (5, 1"
+    assert str(exc_info.value) == "'from' must be less or equal to 'to'. Got (5.0, 1.0"
 
 
 def test_parser_never_parameterized_and_unsupported_with_args():
@@ -294,7 +279,7 @@ def test_parser_literals_and_collections():
     assert str(parse_type("Array[Integer]")) == "Array[Integer]"
     assert str(parse_type("Array[String,]")) == "Array[String]"
     assert str(parse_type("Hash[String,Integer,]")) == "Hash[String, Integer]"
-    assert str(parse_type("Struct[{}]")) == "Struct[{}]"
+    assert str(parse_type("Struct[{}]")) == "Struct"
     assert str(parse_type("Struct[{Optional[c] => String, d => Integer}]")) == (
         "Struct[{Optional['c'] => String, 'd' => Integer}]"
     )
@@ -302,13 +287,12 @@ def test_parser_literals_and_collections():
     # access-argument-list trailing comma covered above).
     assert str(parse_type("Struct[{a=>String,}]")) == "Struct[{'a' => String}]"
 
-    # `default` as an explicit size bound (distinct from omitting the
-    # argument entirely).
-    assert str(parse_type("Array[Integer,default,3]")) == "Array[Integer, default, 3]"
+    # `default` as an explicit lower size bound is 0.
+    assert str(parse_type("Array[Integer,default,3]")) == "Array[Integer, 0, 3]"
     assert str(parse_type("Hash[String,Integer,default,3]")) == (
-        "Hash[String, Integer, default, 3]"
+        "Hash[String, Integer, 0, 3]"
     )
-    assert str(parse_type("Collection[default,3]")) == "Collection[default, 3]"
+    assert str(parse_type("Collection[default,3]")) == "Collection[0, 3]"
     assert str(parse_type("Collection[1,default]")) == "Collection[1]"
 
     # Unary minus.
@@ -497,10 +481,10 @@ def test_assignable_across_type_family():
     assert parse_type("Undef").assignable(parse_type("Undef")) is True
     assert parse_type("Undef").assignable(parse_type("Integer")) is False
 
-    # Bare Optional/NotUndef (no contained type argument at all -- distinct
-    # from `Optional[Integer]`) accept any non-Undef instance/assignable
-    # target, per their own `contained is None` fast path.
-    assert parse_type("Optional").instance(5) is True
+    # Bare NotUndef (no contained type argument at all) accepts any non-Undef
+    # instance; bare Optional is only Undef.
+    assert parse_type("Optional").instance(5) is False
+    assert parse_type("Optional").instance(None) is True
     assert parse_type("NotUndef").instance(5) is True
     assert parse_type("Optional").assignable(parse_type("Integer")) is True
 
@@ -608,12 +592,12 @@ def test_infer_edge_cases():
     with pytest.raises(TypeError, match="no Puppet type for"):
         infer(object())
 
-    assert str(infer_set([])) == "Tuple[]"
-    assert str(infer_set({})) == "Hash[Any, Any, 0, 0]"
+    assert str(infer_set([])) == "Array[0, 0]"
+    assert str(infer_set({})) == "Hash[0, 0]"
 
     assert str(infer([1, 1.0]).generalize()) == "Array[Variant[Integer, Float]]"
     assert str(infer(re.compile("^a"))) == "Regexp[/^a/]"
-    assert str(infer([])) == "Array[Any, 0, 0]"
+    assert str(infer([])) == "Array[0, 0]"
 
     class RubySymbol:
         pass
@@ -808,11 +792,11 @@ def test_describe_evidence_more_branches():
     assert err(parse_type("NotUndef"), None) == (
         "Found value has wrong type, expects a NotUndef value, got Undef"
     )
-    # A bare NotUndef/Optional (no contained type) never rejects a non-Undef
-    # value, whatever it is.
+    # A bare NotUndef (no contained type) never rejects a non-Undef value,
+    # whatever it is; a bare Optional accepts only undef.
     marker = object()
     assert assert_instance_of("Found value", parse_type("NotUndef"), marker) is marker
-    assert assert_instance_of("Found value", parse_type("Optional"), marker) is marker
+    assert "expects an Optional value, got Integer" in err(parse_type("Optional"), 5)
 
     # A type alias whose own `.instance()` fails collapses to one mismatch
     # on the alias itself (never the branches' own structural detail).
@@ -1243,3 +1227,133 @@ def test_puppet_quote():
     assert _puppet_quote("a\\b") == "'a\\b'"
     # A trailing, unpaired backslash still closes the quote correctly.
     assert _puppet_quote("trail\\") == "'trail\\'"
+
+
+# Puppet 8.10's own rendering of each parsed text (recorded from
+# ``puppet lookup``'s type formatter).
+PUPPET_PARSE_TEXT = [
+    ("Enum", "Enum"),
+    ("Pattern", "Pattern"),
+    ("Tuple", "Tuple"),
+    ("Struct", "Struct"),
+    ("Struct[{}]", "Struct"),
+    ("Variant", "Variant"),
+    ("Integer[0x10, 0x20]", "Integer[16, 32]"),
+    ("Integer[010]", "Integer[8]"),
+    ("Integer[--1]", "Integer[1]"),
+    ("String[default,10]", "String[0, 10]"),
+    ("String[-1]", "String[0]"),
+    ("Array[String, default, 3]", "Array[String, 0, 3]"),
+    ("Hash[String, Integer, default, 3]", "Hash[String, Integer, 0, 3]"),
+    ("Collection[default, 2]", "Collection[0, 2]"),
+    ("Array[Any]", "Array"),
+    ("Hash[Any,Any]", "Hash"),
+    ("Enum['a', 'b', false]", "Enum['a', 'b']"),
+    ("Enum['a', 'b', true]", "Enum['a', 'b', true]"),
+    ("Enum[a,a]", "Enum['a']"),
+    ("Tuple[String, Integer, 1, default]", "Tuple[String, Integer, 1]"),
+    ("Tuple[String, default]", "Tuple[String, 0]"),
+    ("Tuple[String, default, 3]", "Tuple[String, 0, 3]"),
+    ("Tuple[1,2]", "Tuple"),
+    ("Tuple[1]", "Tuple"),
+    ("Struct[{NotUndef[a]=>Integer}]", "Struct[{'a' => Integer}]"),
+    (
+        "Struct[{Optional[a]=>Optional[Integer]}]",
+        "Struct[{'a' => Optional[Integer]}]",
+    ),
+    ("Struct[{a=>Integer, a=>String}]", "Struct[{'a' => String}]"),
+    ("Variant[String]", "String"),
+    ("Variant[String, String]", "String"),
+    ("Variant[Variant[String,Integer], Float]", "Variant[String, Integer, Float]"),
+]
+
+
+@pytest.mark.parametrize("text, expected", PUPPET_PARSE_TEXT)
+def test_parse_renders_as_puppet_does(text, expected):
+    assert str(parse_type(text)) == expected
+
+
+@pytest.mark.parametrize(
+    "text, message",
+    [
+        ("Enum[1]", "Enum parameters must be identifiers or strings"),
+        ("Enum[true]", "Enum requires 1 or more, 0 provided"),
+        ("Enum[A]", "Enum parameters must be identifiers or strings"),
+        ("Enum[a, b, true, c]", "Enum parameters must be identifiers or strings"),
+        ("Enum[true, a]", "Enum parameters must be identifiers or strings"),
+        ("Enum[undef]", "Enum parameters must be identifiers or strings"),
+        ("Enum[[1,2]]", "Enum parameters must be identifiers or strings"),
+        ("Enum[[]]", "Enum parameters must be identifiers or strings"),
+        ("Enum[[1,2,]]", "Enum parameters must be identifiers or strings"),
+        ("Boolean[true,false]", "Boolean requires 1, 2 provided"),
+        ("Collection[1,2,3]", "Collection requires 1 to 2, 3 provided"),
+        ("Array[String,1,2,3]", "Array requires 1 to 3, 4 provided"),
+        (
+            "Pattern[1]",
+            "Only String, Regexp, Pattern-Type, and Regexp-Type are allowed",
+        ),
+        ("String[1.5]", "not a valid type specification"),
+        ("Struct[{'' => Integer}]", "Struct element key cannot be an empty String"),
+        ("Struct[{1=>Integer}]", "Illegal Struct member key type"),
+        ("Struct[{a=>Integer},{b=>String}]", "Struct requires 1, 2 provided"),
+        ("ScalarData[1]", "Not a parameterized type <ScalarData>"),
+        ("RichData[1]", "Not a parameterized type <RichData>"),
+        ("Puppet::LookupKey[1]", "Not a parameterized type <Puppet::LookupKey>"),
+        ("Float[2.0,1.0]", "Got (2.0, 1.0"),
+        ("Float[0.1, 1.0e-5]", "Got (0.1, 1.0e-05"),
+        ("Float[1e400]", "NUMBER token does not contain a valid number, 1e400"),
+    ],
+)
+def test_parse_rejects_with_puppets_text(text, message):
+    with pytest.raises(HieraLookupError) as info:
+        parse_type(text)
+    assert message in str(info.value)
+
+
+def test_concurrent_parses_never_share_source_text(monkeypatch):
+    """Thread A is parsed up to the point its tree is built, then thread B
+    parses a different text to completion; A must still report its own text."""
+    import threading
+
+    from hyera._types import parser as parser_module
+
+    a_text, b_text = "Aaaaaaaaa1[1]", "Bbbbbbbbbbbbbbbb2[2]"
+    a_built, b_done = threading.Event(), threading.Event()
+    original = parser_module._Parser.parse_primary
+    depth = threading.local()
+
+    def parse_primary(self):
+        depth.n = getattr(depth, "n", 0) + 1
+        try:
+            return original(self)
+        finally:
+            depth.n -= 1
+            if depth.n == 0 and self.text == a_text:
+                a_built.set()
+                b_done.wait(5)
+
+    monkeypatch.setattr(parser_module._Parser, "parse_primary", parse_primary)
+    results = {}
+
+    def parse_a():
+        results["a"] = str(parse_type(a_text))
+
+    def parse_b():
+        a_built.wait(5)
+        results["b"] = str(parse_type(b_text))
+        b_done.set()
+
+    threads = [threading.Thread(target=parse_a), threading.Thread(target=parse_b)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert results == {
+        "a": "TypeReference['{}']".format(a_text),
+        "b": "TypeReference['{}']".format(b_text),
+    }
+
+
+def test_pattern_accepts_a_pattern_or_regexp_type_argument():
+    assert str(parse_type("Pattern[Pattern[/a/]]")) == "Pattern[/a/]"
+    assert str(parse_type("Pattern[Regexp[/a/], /b/]")) == "Pattern[/a/, /b/]"

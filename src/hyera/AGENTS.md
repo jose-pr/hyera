@@ -748,10 +748,15 @@ by how it is used:
   `NotUndef`'s own contained argument when it is a plain `str`, which stays
   a literal match the way Puppet's own grammar treats a bareword/quoted
   string there). `Struct[{...}]` takes exactly one `dict`; a key is a plain
-  `str` (required) or `Optional["k"]`/`NotUndef["k"]` (built from this same
-  module, used directly as the dict key) for an optional one — Puppet's own
-  struct-key grammar has no `NotUndef[...]` key form, so `NotUndef["k"]`
-  there is a synonym for the plain, required key `"k"`. A `Pattern`/
+  `str` (optional exactly when its value type accepts undef, as in Puppet),
+  `Optional["k"]` (always optional) or `NotUndef["k"]` (always required),
+  the last two built from this same module and used directly as the dict
+  key. A `Tuple`'s trailing size arguments are a minimum (`Tuple[String,
+  1]` is one or more) or a minimum and maximum, and its last type repeats;
+  a bare `Tuple` is any array. `Enum`'s trailing `True` makes it
+  case-insensitive; bare `Enum` and bare `Pattern` accept any `str`; bare
+  `Optional` accepts only `None`; `ScalarData` is the four scalars only.
+  A `Pattern`/
   `Regexp` source containing a literal `/` has no escape that survives the
   text round-trip these classes build on; pass the pre-built type object
   instead (not reachable from this module) if that ever matters.

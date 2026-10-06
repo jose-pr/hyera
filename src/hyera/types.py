@@ -199,12 +199,7 @@ def _struct_key_text(key: _ty.Any) -> str:
     if isinstance(key, _priv.Optional) and isinstance(key.contained, str):
         return "Optional[{}]".format(_lit_str(key.contained))
     if isinstance(key, _priv.NotUndef) and isinstance(key.contained, str):
-        # Puppet's own struct-key grammar (`_struct_key` in
-        # `_types.parser`) has no `NotUndef[...]` key form -- only a plain
-        # string (required) or `Optional[...]` (optional). A `NotUndef["k"]`
-        # key is accepted here as a synonym for the plain, required form:
-        # "not optional" is already what a required key means.
-        return _lit_str(key.contained)
+        return "NotUndef[{}]".format(_lit_str(key.contained))
     raise TypeError(
         "a Struct key must be a str, Optional[str] or NotUndef[str], "
         "not {!r}".format(key)
