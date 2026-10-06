@@ -7,6 +7,7 @@ the oracle, not translated from Puppet source.
 
 import contextvars
 import importlib.util
+import io
 import logging
 import re
 import threading
@@ -528,8 +529,6 @@ _HOCON_INCLUDE_GUARD: "contextvars.ContextVar[frozenset]" = contextvars.ContextV
     "_hocon_include_guard", default=frozenset()
 )
 
-_HOCON_GUARD_INSTALLED = False
-
 
 def _guarded_hocon_classmethod(original, label):
     """Wrap a pyhocon include-resolution classmethod's underlying function
@@ -551,48 +550,24 @@ def _guarded_hocon_classmethod(original, label):
     return classmethod(_guarded)
 
 
-def _install_hocon_include_guard(module=None) -> None:
-    """Make an include-resolving module's own entry points --
+def _install_hocon_include_guard(module) -> None:
+    """Make a parser module copy's own include entry points --
     ``ConfigFactory.parse_file``, ``ConfigFactory.parse_URL`` and
     ``ConfigParser.resolve_package_path``, the three methods its
-    ``include`` machinery actually calls to read a file or fetch a URL --
-    raise :class:`BackendError` while their label is a member of
+    ``include`` machinery calls to read a file or fetch a URL -- raise
+    :class:`BackendError` while their label is a member of
     :data:`_HOCON_INCLUDE_GUARD`'s current value, and run exactly as
-    pyhocon shipped them at every other time.
+    pyhocon shipped them at every other time. Idempotent per module.
 
-    ``module=None`` (the default) targets the **shared** ``pyhocon``
-    package (``import pyhocon.config_parser``) -- the only place a caller
-    who imports ``pyhocon`` directly (not through :class:`HOCONBackend`)
-    reaches its include machinery from. Installed once: eagerly at import
-    time if pyhocon is already importable (before any other code -- a
-    test fixture included -- gets a chance to monkeypatch these same
-    three methods first), and again, idempotently, from
-    :meth:`HOCONBackend.loads` for the rarer case where pyhocon only
-    becomes importable afterwards.
+    Only the private copy built by :func:`_hocon_parser` is ever passed
+    here: it has its own ``ConfigFactory``/``ConfigParser`` classes, distinct
+    from the shared ``pyhocon.config_parser``'s, and is the only module
+    :meth:`HOCONBackend.loads` parses through. The shared module is never
+    touched.
 
-    A caller may also pass the **private** ``_hocon_parser()`` module
-    copy explicitly. This matters: that copy's ``exec_module`` gives it
-    its own, distinct ``ConfigFactory``/``ConfigParser`` classes -- not
-    the shared module's (verified 2026-09-29:
-    ``_hocon_parser().ConfigFactory is not
-    pyhocon.config_parser.ConfigFactory``) -- and :meth:`HOCONBackend.loads`
-    parses through that private copy, not the shared one. Patching only
-    the shared module (as this function used to) left the
-    fail-closed backstop below installed but inert for every real
-    :class:`HOCONBackend` call: the wrapped shared-module methods were
-    simply never on the call path. :func:`_hocon_parser` now calls this
-    a second time, with its own ``mod``, to close that gap -- pre-existing
-    (since the private copy was added), found and fixed
-    while hardening the more permissive default, which makes the
-    backstop's guarantee matter more, not less.
-
-    The wrapping itself is a permanent, process-wide monkeypatch on
-    whichever module is targeted -- there is no per-call hook to attach to
-    instead -- but the raising it adds is gated by a
-    :class:`contextvars.ContextVar`, which is context-local (per
-    thread/task): only the ``loads()`` call that set the guard ever sees it
-    fire, and every other pyhocon caller in the same process, at any point
-    before, during or after that call, keeps pyhocon's normal behavior.
+    The raising is gated by a :class:`contextvars.ContextVar`, which is
+    context-local (per thread/task): only the ``loads()`` call that set it
+    sees it fire.
 
     This is a fail-closed backstop for :func:`_allow_hocon_includes`/
     :func:`_refuse_hocon_includes`: if that text scanner ever has a gap
@@ -600,15 +575,9 @@ def _install_hocon_include_guard(module=None) -> None:
     still cannot read a file or reach the network for a form the active
     mode does not intend to resolve for real -- it raises instead.
     """
-    global _HOCON_GUARD_INSTALLED
-    if module is None:
-        if _HOCON_GUARD_INSTALLED:
-            return
-        from pyhocon.config_parser import ConfigFactory, ConfigParser
-    else:
-        if getattr(module, "_hocon_include_guard_installed", False):
-            return
-        ConfigFactory, ConfigParser = module.ConfigFactory, module.ConfigParser
+    if getattr(module, "_hocon_include_guard_installed", False):
+        return
+    ConfigFactory, ConfigParser = module.ConfigFactory, module.ConfigParser
 
     for cls, attr, label in (
         (ConfigFactory, "parse_file", "file include"),
@@ -624,33 +593,7 @@ def _install_hocon_include_guard(module=None) -> None:
         original = current.__func__ if hasattr(current, "__func__") else current
         setattr(cls, attr, _guarded_hocon_classmethod(original, label))
 
-    if module is None:
-        _HOCON_GUARD_INSTALLED = True
-    else:
-        module._hocon_include_guard_installed = True
-    _HOCON_GUARD_INSTALLED = True
-
-
-def _try_install_hocon_include_guard() -> None:
-    """Best-effort wrapper around :func:`_install_hocon_include_guard` for
-    module import time: pyhocon being present but broken in some way this
-    guard's own probing cannot anticipate must never crash importing
-    ``hyera`` itself -- :meth:`HOCONBackend.check_available` (and
-    :meth:`HOCONBackend.loads`, which calls
-    :func:`_install_hocon_include_guard` again, unguarded, once pyhocon has
-    already been imported successfully) cover the missing/broken case for
-    real.
-    """
-    try:
-        _install_hocon_include_guard()
-    except Exception:
-        pass
-
-
-# Installed eagerly, at import time, if pyhocon is already importable -- so
-# the guard is in place before any test fixture (or other code) gets a
-# chance to monkeypatch these same three methods for its own purposes.
-_try_install_hocon_include_guard()
+    module._hocon_include_guard_installed = True
 
 
 def _unquote_key(key):
@@ -688,11 +631,17 @@ class _HoconFileCodecsShim:
     resolves. Builtin ``open`` in text mode with the same ``encoding``
     reads identically for pyhocon's own use here (a whole-file text read,
     no codec-specific behavior pyhocon relies on).
+
+    The text read is the included file's, so it goes through
+    :func:`_allow_hocon_includes` before pyhocon parses it: the include
+    rules hold in a file at any depth, not only in the top-level text.
     """
 
     @staticmethod
     def open(filename, mode="r", encoding=None, **kwargs):
-        return open(filename, mode, encoding=encoding, **kwargs)
+        with open(filename, mode, encoding=encoding, **kwargs) as fd:
+            text = fd.read()
+        return io.StringIO(_allow_hocon_includes(text))
 
 
 class _HoconLoggerShim:
@@ -896,7 +845,6 @@ class HOCONBackend(Backend):
                 "hocon_data backend could not import 'pyhocon' ({}: {}); "
                 'pip install "hyera[hocon]"'.format(type(e).__name__, e)
             ) from None
-        _install_hocon_include_guard()
         if self.hocon_includes:
             text = _allow_hocon_includes(text)
             # `file(...)` is deliberately NOT guarded here -- letting it

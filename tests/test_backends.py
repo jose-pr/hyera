@@ -403,19 +403,6 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
         HOCONBackend().loads("k = v")
 
 
-def test_hocon_include_guard_import_time_failure_is_swallowed(monkeypatch):
-    # `_try_install_hocon_include_guard` is what module import runs eagerly
-    # (best-effort, so a pyhocon that is present but broken in some way the
-    # guard's own probing cannot anticipate never crashes importing
-    # `hyera`); exercise its swallow directly rather than reloading the
-    # whole module (which would re-run every backend's self-registration).
-    def _boom(module=None):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(backends._hocon, "_install_hocon_include_guard", _boom)
-    backends._hocon._try_install_hocon_include_guard()  # must not raise
-
-
 # ---------------------------------------------------------------------------
 # DotenvBackend: reachable only through SopsBackend (see tests/test_sops.py
 # for the recorded-pair tests against real sops output); this covers its

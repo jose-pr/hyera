@@ -30,6 +30,8 @@ default). An ``http_server`` proves no network request is ever made.
 import importlib
 import http.server
 import io
+import os
+import subprocess
 import sys
 import threading
 import types
@@ -914,3 +916,95 @@ def test_unicode_escape_stays_literal_where_the_text_is_not_an_escape():
     assert b.loads('e = "' + BS + 'u00zz"') == {"e": BS + "u00zz"}
     assert b.loads('e = "' + BS + 'ud83d"') == {"e": BS + "ud83d"}
     assert b.loads('# "' + BS + 'u00e9"\ne = 1') == {"e": 1}
+
+
+# -- the include rules hold in a file reached through include file() ------
+
+
+@pytest.fixture
+def secret_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "secret.txt").write_bytes(b"root = leaked\n")
+    return tmp_path
+
+
+def _load_through_file_include(directory, inner_text):
+    (directory / "outer.conf").write_bytes(inner_text.encode("utf-8"))
+    return HOCONBackend().loads('include file("outer.conf")\n')
+
+
+def test_plain_quoted_include_in_an_included_file_contributes_nothing(secret_dir):
+    result = _load_through_file_include(secret_dir, 'include "secret.txt"\nouter = 1\n')
+    assert result == {"outer": 1}
+
+
+def test_plain_quoted_include_two_files_deep_contributes_nothing(secret_dir):
+    (secret_dir / "mid.conf").write_bytes(b'include "secret.txt"\nmid = 2\n')
+    result = _load_through_file_include(
+        secret_dir, 'include file("mid.conf")\nouter = 1\n'
+    )
+    assert result == {"mid": 2, "outer": 1}
+
+
+def test_required_include_in_an_included_file_raises(secret_dir):
+    with pytest.raises(BackendError, match="not supported"):
+        _load_through_file_include(
+            secret_dir, 'include required(file("secret.txt"))\nouter = 4\n'
+        )
+
+
+def test_caseless_include_in_an_included_file_raises(secret_dir):
+    with pytest.raises(BackendError, match="not supported"):
+        _load_through_file_include(
+            secret_dir, 'INCLUDE FILE("secret.txt")\nouter = 2\n'
+        )
+
+
+def test_value_position_include_in_an_included_file_is_literal_text(secret_dir):
+    result = _load_through_file_include(
+        secret_dir, 'v = include file("secret.txt")\nouter = 3\n'
+    )
+    assert result == {"v": "include file(secret.txt)", "outer": 3}
+
+
+def test_unicode_escape_in_an_included_file_is_decoded(secret_dir):
+    result = _load_through_file_include(
+        secret_dir, 'e = "' + BS + 'u00e9"\nouter = 5\n'
+    )
+    assert result == {"e": "é", "outer": 5}
+
+
+# -- hyera neither imports nor patches pyhocon until a document is parsed --
+
+
+def _run_python(code):
+    src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": src},
+        timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout.strip()
+
+
+def test_import_hyera_does_not_import_pyhocon():
+    pytest.importorskip("pyhocon")
+    out = _run_python("import sys, hyera; print('pyhocon' in sys.modules)")
+    assert out == "False"
+
+
+def test_parsing_leaves_the_shared_pyhocon_module_unpatched():
+    pytest.importorskip("pyhocon")
+    out = _run_python(
+        "from hyera.backends import HOCONBackend\n"
+        "HOCONBackend().loads('k = v')\n"
+        "import pyhocon.config_parser as cp\n"
+        "attrs = [(cp.ConfigFactory, 'parse_file'), (cp.ConfigFactory, 'parse_URL'),\n"
+        "         (cp.ConfigParser, 'resolve_package_path')]\n"
+        "print([getattr(c.__dict__[a], '__func__', c.__dict__[a]).__module__\n"
+        "       for c, a in attrs])\n"
+    )
+    assert out == str(["pyhocon.config_parser"] * 3)
