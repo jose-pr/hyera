@@ -1,7 +1,7 @@
 """hyera's own Ruby ``Dir.glob`` port: brace expansion, the segment matcher,
 the depth-first walker, and the datadir/config-root split -- the pieces
-`_location_resolver.glob` is built from, replacing the guarded
-``pathlib_next.Path.glob`` call a glob hierarchy level used to delegate to.
+``hyera._config.dir_glob.glob`` is built from. A glob hierarchy level never
+delegates to ``pathlib_next.Path.glob``.
 """
 
 import json
