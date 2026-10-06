@@ -1,7 +1,6 @@
-# Ported from Puppet 8 lib/puppet/parser/compiler.rb, parser/scope.rb,
-# node.rb, context/trusted_information.rb, node/facts.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/parser/compiler.rb, parser/scope.rb, node.rb,
+# context/trusted_information.rb, node/facts.rb (https://github.com/puppetlabs/puppet),
+# Apache-2.0. Modified by jose-pr. See NOTICE.
 """Scope: Puppet's top scope, as a value object.
 
 Ports the node-parameter/fact/trusted-data build Puppet's compiler runs
@@ -49,10 +48,8 @@ class Strict(_StrEnum):
     """An undefined variable raises :class:`~hyera.InterpolationError`."""
 
 
-#: Plain strings, not :class:`Strict` members: interpolated into the
-#: ``ValueError`` below, whose text must stay exactly what it was before
-#: this enum existed (``repr()`` of a member would show ``<Strict.OFF:
-#: 'off'>``, not ``'off'``).
+#: Plain strings, not :class:`Strict` members: interpolated into the ``ValueError`` below, whose text
+#: shows ``'off'``, not ``repr()`` of a member (``<Strict.OFF: 'off'>``).
 _STRICT_VALUES = ("off", "warning", "error")
 #: Names a Hiera 5 lookup may never bind directly (Puppet's privileged
 #: ``setvar`` targets; only ``set_node_parameters`` itself may set them).
@@ -75,11 +72,8 @@ class _WarnState:
         self._messages = set()
 
     def __getstate__(self):
-        # A threading.Lock cannot be pickled/deepcopied; a copy starts with
-        # a fresh, unlocked one (harmless -- dedup state itself still
-        # carries over, and a lock is never held across a copy/pickle
-        # boundary anyway). Keeps `Hiera` and its scoped views (holding a
-        # `Scope`, holding this) picklable and deep-copyable, as documented.
+        # A threading.Lock cannot be pickled/deepcopied; a copy starts with a fresh, unlocked one (the dedup
+        # state carries over). Keeps `Hiera` and its scoped views, which hold a `Scope`, picklable and deep-copyable.
         with self._lock:
             return {
                 "_variable_keys": set(self._variable_keys),
@@ -243,16 +237,9 @@ class Scope:
                 params[name] = value
         params["environment"] = resolved_env
 
-        # Step 4: the *given* server_facts merge into params without
-        # overriding, same as facts. $environment is forced into the
-        # exposed $server_facts hash afterwards, last, so it always wins
-        # there -- but it is never itself re-merged into params through
-        # this collision-checked path: $environment already has its own
-        # authoritative resolution (step 2) and storage (step 6), and
-        # re-merging the same, already-resolved value here would warn a
-        # spurious "already set to 'production'. It could not be set to
-        # 'production'" on every construction, even with no server_facts
-        # given at all.
+        # Step 4: the given server_facts merge into params without overriding, as facts do. $environment is
+        # forced into the exposed $server_facts hash last, so it wins there, but is not re-merged into params:
+        # steps 2 and 6 resolve it, and re-merging would warn a spurious "already set to 'production'".
         for name, value in server_facts_checked.items():
             if name in params:
                 _warn_collision(warn_state, name, node_name, params[name], value)
