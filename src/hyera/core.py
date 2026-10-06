@@ -58,6 +58,7 @@ from ._lookup.lookup_adapter import (
     validate_lookup_options,
 )
 from ._lookup.lookup_function import (
+    check_call,
     depth_error,
     lookup as _lookup_call,
     parse_call,
@@ -2211,8 +2212,9 @@ class Hiera:
         with the subject "Found value". Needs at least one key, the first a
         ``str``, else ``TypeError``.
 
-        :param keys: the root key, then each key/index to dig into the
-            result -- used exactly as given, never dotted-string parsed.
+        :param keys: the root key -- a lookup key, parsed as ``.lookup()``
+            parses one (``dig("a.b", 0)`` looks up ``a.b``) -- then each
+            key/index to dig into the result, used exactly as given.
         :param value_type: a type object, a ``hyera.types`` class, or a
             Puppet type expression string, asserted against the final
             result.
@@ -2221,14 +2223,15 @@ class Hiera:
             the hierarchy itself missed it.
         :param override: consulted for the root key before the hierarchy.
         :returns: the dug-out value, or ``None`` on a root miss.
-        :raises TypeError: fewer than one key was given, or the first is
-            not a ``str``.
+        :raises TypeError: fewer than one key was given, the first is not a
+            ``str``, or ``value_type`` is not a type spec.
         :raises HieraLookupError: a key after the first does not fit the
             value found there (a non-``int`` against a ``list``, or any key
             against a non-collection).
         """
         if not keys or not isinstance(keys[0], str):
             raise TypeError("dig() needs at least one key, the first a str")
+        parsed_type = check_call("dig", value_type, None)
         root = self.lookup(
             keys[0],
             None,
@@ -2239,8 +2242,8 @@ class Hiera:
         )
         with recursion_bound():
             result = _data_functions.dig(root, keys[1:])
-            if value_type is not None:
-                assert_instance_of("Found value", as_type(value_type), result)
+            if parsed_type is not None:
+                assert_instance_of("Found value", parsed_type, result)
         return result
 
     def get(
@@ -2289,7 +2292,8 @@ class Hiera:
             the hierarchy itself missed it.
         :param override: consulted for the root key before the hierarchy.
         :returns: the dug-out value, or ``default_value``.
-        :raises TypeError: ``dotted`` is not a ``str``.
+        :raises TypeError: ``dotted`` is not a ``str``, ``block`` is not
+            callable, or ``value_type`` is not a type spec.
         :raises HieraLookupError: ``dotted`` is empty or malformed, or a
             navigation error was reached with no ``block``.
         """
@@ -2297,6 +2301,7 @@ class Hiera:
             raise TypeError(
                 "get() dotted key must be a str, not {}".format(type(dotted).__name__)
             )
+        parsed_type = check_call("get", value_type, block)
         if dotted == "":
             raise HieraLookupError("Syntax error in dotted-navigation string")
         segments = split_key(
@@ -2333,8 +2338,8 @@ class Hiera:
             result, subject = _data_functions.get_segments(
                 root_value, segments[1:], default_value, block
             )
-            if value_type is not None:
-                assert_instance_of(subject, as_type(value_type), result)
+            if parsed_type is not None:
+                assert_instance_of(subject, parsed_type, result)
         return result
 
     def getvar(
@@ -2361,10 +2366,18 @@ class Hiera:
             after the variable cannot be dug out; its return value is used
             instead of raising.
         :returns: the dug-out value, or ``default_value``.
+        :raises TypeError: ``dotted`` is not a ``str``, or ``block`` is not
+            callable.
         :raises HieraLookupError: ``dotted`` does not start with a valid
             variable name, or a navigation error was reached with no
             ``block``.
         """
+        if not isinstance(dotted, str):
+            raise TypeError(
+                "getvar(): dotted must be a str, not {}".format(type(dotted).__name__)
+            )
+        if block is not None and not callable(block):
+            raise TypeError("getvar(): block must be callable")
         with recursion_bound():
             return unshare(
                 _data_functions.getvar(self.scope, dotted, default_value, block)

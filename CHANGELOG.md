@@ -56,6 +56,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   lose duplicates and honour `knockout_prefix`. A `knockout_prefix` also
   removes a String array item that has the prefix at the start of any line.
 - `merge=` accepts any `Mapping` with `str` keys, not only a `dict`.
+- A chain of `%{lookup()}` or `%{alias()}` interpolations that is not cyclic
+  but outruns the interpreter's recursion limit, and a value or type
+  expression nested past it, raise `InterpolationError` naming the keys
+  instead of a raw `RecursionError`. A chain now resolves to about 80 hops
+  (Puppet: 100), up from 50.
+- A tuple name matches `override` and `default_values_hash` through its
+  dotted form, as the equivalent string does.
+- `get()` and `dig()` check `block` and `value_type`, and `getvar()` checks
+  `dotted` and `block`, before resolving anything; each raises `TypeError`.
+- A `data_dig` hook asked for a path with a negative index is a miss, not an
+  `IndexError`; a segment that follows non-ASCII whitespace before its digits
+  is no longer read as an index.
+- Text with many unclosed `%{` is scanned in linear time (40,000 of them took
+  13 seconds).
 - `hyera.backends.SOPS_TIMEOUT = n` changes the `sops` timeout; it was
   documented but read from a private copy.
 - `sops` and `facter` run with their standard input closed instead of the

@@ -48,6 +48,20 @@ def depth_error(exc: RecursionError) -> InterpolationError:
     )
 
 
+def check_call(fn_name, value_type, block):
+    """Validate the arguments ``get()``/``dig()`` share with ``lookup()``
+    before anything is resolved: ``block`` must be callable and
+    ``value_type`` a type spec. Returns the parsed type (or ``None``)."""
+    try:
+        with recursion_bound():
+            parsed_type = as_type(value_type)
+    except TypeError as e:
+        raise TypeError("{}(): value_type {}".format(fn_name, e)) from None
+    if block is not None and not callable(block):
+        raise TypeError("{}(): block must be callable".format(fn_name))
+    return parsed_type
+
+
 @contextlib.contextmanager
 def recursion_bound():
     """Turn a ``RecursionError`` into :class:`~hyera.InterpolationError`

@@ -248,7 +248,9 @@ since Hiera data is dynamic.
     does — same root key, same `lookup_options`, same merge, same
     sub-lookup errors — including a path a quoted string cannot spell (a
     segment holding both quote kinds); its `KeyNotFoundError`/explain/debug
-    text renders the same dotted form. `h["a", "b"]` still means
+    text renders the same dotted form, and `override`/`default_values_hash`
+    match it through that form too (`("hsi", "a")` finds the entry
+    `"hsi.a"`). `h["a", "b"]` still means
     `(name, value_type)`, unaffected: a tuple *subscript* keeps unpacking
     into positional arguments (below), so a path there is
     `h[("a.b", "c"),]`. `value_type`: a Puppet type expression string
@@ -296,7 +298,9 @@ since Hiera data is dynamic.
     `iter(h)` raises `TypeError`: a `Hiera` is not a sequence, even though
     it defines `__getitem__`.
   - **`.dig(*keys, value_type=None, merge=None, default_values_hash=None, override=None)`**
-    — Puppet's `dig()`: looks up `keys[0]` via `.lookup()`
+    — Puppet's `dig()`: looks up `keys[0]` via `.lookup()` — it is a lookup
+    key, parsed as one (`dig("h.x", "p")` looks up `h.x`), while every later
+    key is used exactly as given
     (`merge`/`default_values_hash`/`override` apply to that root lookup,
     exactly as they would to `.lookup()` itself), then digs the rest of
     `keys` out of it Ruby `Hash#dig`/`Array#dig`-style. A miss on
@@ -310,8 +314,8 @@ since Hiera data is dynamic.
     counts from the end; out of range is `None`); a `dict` key matches
     only a key of the identical kind (`True` is never `1`, `1` is never
     `1.0`). `value_type`, when given, asserts the final result with the
-    subject "Found value". Needs at least one key, the first a `str`, else
-    `TypeError`.
+    subject "Found value" and is checked before the lookup runs. Needs at
+    least one key, the first a `str`, else `TypeError`.
   - **`.get(dotted, default_value=None, block=None, *, value_type=None, merge=None, default_values_hash=None, override=None)`**
     — Puppet's `get()`: `dotted` is a single dotted-navigation *string*
     (`"a.b.0"`). The root segment resolves like `.lookup()` (an `int` root
@@ -322,8 +326,10 @@ since Hiera data is dynamic.
     reaches `block(error)` when a block is given, else raises. `dotted`
     must be a non-empty `str` (there is no whole-data value to return),
     else `HieraLookupError("Syntax error in dotted-navigation string")`,
-    the same error a malformed one raises; a non-`str` `dotted` raises
-    `TypeError` instead. `value_type` asserts the final result with the
+    the same error a malformed one raises; a non-`str` `dotted`, a
+    `block` that is not callable and a `value_type` that is not a type
+    spec raise `TypeError` ("get(): block must be callable") before
+    anything is resolved. `value_type` asserts the final result with the
     subject that says where it came from ("Found value", "Default value"
     or "Value returned from block").
   - **`.getvar(dotted, default_value=None, block=None)`** — Puppet's
@@ -334,7 +340,8 @@ since Hiera data is dynamic.
     string does not start with a valid variable name")`. An undefined
     variable returns `default_value` regardless of the bound scope's
     `strict` — never raises for that alone. A list/dict result is a copy,
-    never the scope's own object.
+    never the scope's own object. A non-`str` `dotted` or a `block` that
+    is not callable raises `TypeError`.
   - **`.explain(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, explain_options=False)`**
     — what `puppet lookup --explain`/`--explain-options` shows: takes
     exactly `.lookup()`'s own signature and dispatcher (the same five call
@@ -1468,7 +1475,13 @@ Not supported:
   `a`; a variable whose value refers to itself; a chain `a` -> `b` -> `a`)
   raises `InterpolationError` "Recursive lookup detected in [a, b]" (the
   keys/scope-references visited, in the order first reached) instead of
-  Python's own `RecursionError`.
+  Python's own `RecursionError`. A chain that is not cyclic but runs past
+  the interpreter's recursion limit (about 80 `%{lookup()}`/`%{alias()}`
+  hops on Python 3.9 and 3.14; Puppet resolves 100), or a value or type
+  expression nested beyond it, raises `InterpolationError` too, naming the
+  keys being resolved; every public entry point (`lookup`, `explain`, `get`,
+  `dig`, `getvar`, `format`) converts it. hyera never changes the
+  interpreter's recursion limit.
 - A value that reuses a YAML anchor (`&x`/`*x`) shares that node wherever it
   appears in one lookup's returned value, exactly as the parsed file does:
   mutating one occurrence in place changes every occurrence that shares it.

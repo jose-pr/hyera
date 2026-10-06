@@ -2,6 +2,8 @@
 ``getvar()`` functions (``functions/dig.rb``, ``get.rb``, ``getvar.rb``),
 ported onto an already-looked-up value or the bound scope."""
 
+import re
+
 import pytest
 
 from hyera import Hiera, HieraLookupError, Scope
@@ -47,6 +49,13 @@ def test_dig_walks_keys_as_given(fn):
     assert h.dig("nope") is None  # missing root
     assert h.dig("mixed", -1) == 1
     assert h.dig("hdot", "a.b") == 1  # a key containing "." is one key
+
+
+def test_dig_parses_its_first_key_as_a_lookup_key(fn):
+    h = fn
+    assert h.dig("h.x", "p") == 1
+    assert h.dig("h.x", "p") == h.dig("h", "x", "p")
+    assert h.dig("hdot", "a.b") == 1
 
 
 def test_dig_errors(fn):
@@ -147,3 +156,21 @@ def test_getvar_reads_scope(fn):
         match="'getvar' The given string does not start with a valid variable name",
     ):
         h.getvar("facts-x")
+
+
+@pytest.mark.parametrize(
+    "call, message",
+    [
+        (lambda h: h.get("mixed.0", block=5), "get(): block must be callable"),
+        (lambda h: h.get("nope", block=5), "get(): block must be callable"),
+        (lambda h: h.get("k", value_type=5), "get(): value_type"),
+        (lambda h: h.get("0", value_type=5), "get(): value_type"),
+        (lambda h: h.dig("nope", value_type=5), "dig(): value_type"),
+        (lambda h: h.getvar("facts.x", block=5), "getvar(): block must be callable"),
+        (lambda h: h.getvar(None), "getvar(): dotted must be a str, not NoneType"),
+        (lambda h: h.getvar(5), "getvar(): dotted must be a str, not int"),
+    ],
+)
+def test_get_dig_and_getvar_validate_arguments_before_resolving(fn, call, message):
+    with pytest.raises(TypeError, match=re.escape(message)):
+        call(fn)
