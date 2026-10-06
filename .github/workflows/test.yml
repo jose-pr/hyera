@@ -145,10 +145,9 @@ jobs:
       - name: Run tests
         run: python -m pytest -q -rs
 
-  # Branch coverage, reported for reading -- not a gate (PYTHON.md does not
-  # ask for one by default; the mutation run is this project's acceptance
-  # evidence instead). continue-on-error so a coverage-tool break never
-  # blocks the rest of the run.
+  # Branch coverage, reported for reading -- not a gate.
+  # continue-on-error so a coverage-tool break never blocks the rest of the
+  # run.
   coverage:
     name: Coverage report (not a gate)
     runs-on: ubuntu-latest

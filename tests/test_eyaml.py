@@ -77,8 +77,7 @@ def _oid(dotted: str) -> bytes:
 def public_key():
     # Derived from the fixture's own private key, not by parsing
     # public_key.pkcs7.pem's certificate: that self-signed cert has a
-    # zero serial number (a real eyaml fixture property -- see the
-    # parent plan's Known Facts), which newer `cryptography` releases
+    # zero serial number (a real eyaml fixture property), which newer `cryptography` releases
     # reject under `filterwarnings=error` as an RFC 5280 violation. The
     # keypair is identical either way.
     with open(PRIVATE_KEY_PATH, "rb") as fh:

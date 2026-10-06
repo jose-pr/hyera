@@ -283,8 +283,8 @@ def test_include_required_always_raises_present_or_missing(tmp_path, monkeypatch
 
 
 def test_include_file_globs_where_puppet_does_not(tmp_path, monkeypatch):
-    # ACCEPTED DIVERGENCE (hyera may do more than Puppet, never less),
-    # filed as `hocon-file-include-globs-where-puppet-does-not`: Puppet's
+    # ACCEPTED DIVERGENCE (hyera may do more than Puppet, never less):
+    # Puppet's
     # `include file("*.conf")` never globs (oracle-measured: contributes
     # nothing); pyhocon's own `file(...)` resolution does glob and include
     # every match, which this mode leaves untouched. Pinned here so a
@@ -457,7 +457,7 @@ def test_include_form_raises_when_refused(
     assert hits == []
 
 
-# -- Adversarial forms found by a later hardening pass: 17 inputs
+# -- Adversarial forms: 17 inputs
 # where the text scanner missed a directive pyhocon's own grammar honours
 # caselessly, across a triple-quoted string, a comment, or a substitution.
 # All 17 stay a regression suite for the opt-in guard (still raise, exactly

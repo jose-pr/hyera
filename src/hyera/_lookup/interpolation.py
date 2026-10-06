@@ -150,8 +150,7 @@ def _float_to_s(f: float) -> str:
     -4..14 (and 15 when the shortest round-trip digits run past the point),
     ``<d>.<digits>e±NN`` otherwise; ``NaN``/``Infinity``/``-Infinity`` for
     the non-finite cases. Measured against Ruby 4.0.7 over 8,291 floats
-    spanning exponents -30..39 and 1-17 significant digits (see the parent
-    plan's Known Facts) -- Python's own ``repr()`` already agrees with Ruby
+    spanning exponents -30..39 and 1-17 significant digits -- Python's own ``repr()`` already agrees with Ruby
     in the fixed-notation range, so this only has to pick which range
     applies and reformat the scientific case.
     """

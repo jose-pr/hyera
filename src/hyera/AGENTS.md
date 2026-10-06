@@ -1047,8 +1047,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
     `BackendError`, matching Puppet's own parse/method errors (Ruby hocon
     implements none of them). One accepted divergence: Puppet's `include
     file("*.conf")` never globs (contributes nothing); pyhocon's own
-    resolution does and includes every match
-    (`hocon-file-include-globs-where-puppet-does-not`).
+    resolution does and includes every match.
   - **`False` (opt-in restriction, the pre-fidelity behaviour):** every
     form but a plain quoted include raises, `include file(...)` included.
 

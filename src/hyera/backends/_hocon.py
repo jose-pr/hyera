@@ -348,8 +348,7 @@ def _allow_hocon_includes(text: str) -> str:
     One measured, accepted divergence: Puppet's ``include file("*.conf")``
     never globs (documented "contributes nothing"); pyhocon's own
     resolution *does* glob and includes any match -- kept as a documented
-    extension (hyera may do more than Puppet, never less), filed as
-    ``hocon-file-include-globs-where-puppet-does-not``.
+    extension (hyera may do more than Puppet, never less).
 
     A :func:`_install_hocon_include_guard`-installed backstop still
     applies for the forms this mode does not intend to resolve for real

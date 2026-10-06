@@ -44,8 +44,8 @@ def provider_for(
     (:func:`resolved_locations_for`) on every call, so a repeated
     lookup on the same view/scope still sees a changed, added or
     removed location -- rebuilding the whole provider (re-interpolating
-    its ``options``) would cost more than this plan's own benchmarks
-    show that revalidation needs to.
+    its ``options``) costs more than revalidating the locations
+    alone.
 
     ``base_path`` -- the owning layer's own root -- disambiguates a
     level index across layers (the global hierarchy and every

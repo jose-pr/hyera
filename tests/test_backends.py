@@ -427,8 +427,8 @@ def test_hocon_missing_dependency_names_extra(monkeypatch):
 # for the recorded-pair tests against real sops output); this covers its
 # error path directly.
 #
-# There is no IniBackend: a security review found go-ini's own
-# `"""..."""` writer output ambiguous -- a decrypted
+# There is no IniBackend: go-ini's own
+# `"""..."""` writer output is ambiguous -- a decrypted
 # value can inject a key or replace a whole other section, and no ini-text
 # parser can tell those bytes apart from a genuine file -- so
 # SopsBackend.data_hash always decrypts `ini` as sops's own `--output-type

@@ -57,10 +57,10 @@ _MAX_DEPTH = 32
 #: on the request this file exists to serve, versus Ruby's ~4ms at 10x that
 #: length). This is the same *presence* test, done a line at a time in
 #: linear time with no regex at all: exactly equivalent to the original
-#: search on every input (verified against 200k random strings in the
-#: reviewing session), since neither ever crosses a line boundary between
-#: the ``ENC[`` and its ``]`` (``_TOKEN_RE``'s own body charclass excludes
-#: bare newlines between distinct tokens the same way).
+#: search on every input (checked against 200k random strings), since
+#: neither ever crosses a line boundary between the ``ENC[`` and its ``]``
+#: (``_TOKEN_RE``'s own body charclass excludes bare newlines between
+#: distinct tokens the same way).
 
 
 def _has_encrypted_token(data: str) -> bool:
