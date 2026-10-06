@@ -270,6 +270,12 @@ class Invocation:
         self._name_stack.append(name)
         try:
             yield
+        except RecursionError as exc:
+            # The innermost guard sees the deepest stack; the entry point
+            # that finally catches the error names it.
+            if not hasattr(exc, "_hyera_keys"):
+                exc._hyera_keys = tuple(self._name_stack)
+            raise
         finally:
             self._name_stack.pop()
 

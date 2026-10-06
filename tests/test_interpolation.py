@@ -197,6 +197,48 @@ def test_recursive_lookup_raises_interpolation_error(make_tree):
         h.lookup("rec")
 
 
+def _chain(length, method="lookup"):
+    """k0 -> k1 -> ... -> k<length>, each an interpolation of the next."""
+    lines = ["k%d: \"%%{%s('k%d')}\"" % (i, method, i + 1) for i in range(length)]
+    lines.append("k%d: end" % length)
+    return "\n".join(lines) + "\n"
+
+
+_ENTRY_POINTS = {
+    "lookup": lambda h: h.lookup("k0"),
+    "call": lambda h: h("k0"),
+    "getitem": lambda h: h["k0"],
+    "contains": lambda h: "k0" in h,
+    "dig": lambda h: h.dig("k0"),
+    "get": lambda h: h.get("k0"),
+    "format": lambda h: h.format("%{lookup('k0')}"),
+}
+
+
+@pytest.mark.parametrize("method", ["lookup", "alias"])
+@pytest.mark.parametrize("entry", sorted(_ENTRY_POINTS))
+def test_a_chain_beyond_the_stack_raises_interpolation_error(make_tree, method, entry):
+    h = _hiera(make_tree, _chain(300, method))
+    with pytest.raises(InterpolationError, match="k0"):
+        _ENTRY_POINTS[entry](h)
+
+
+def test_explain_of_a_chain_beyond_the_stack_never_raises_recursion_error(make_tree):
+    h = _hiera(make_tree, _chain(300))
+    try:
+        result = h.explain("k0")
+    except InterpolationError:
+        return
+    assert isinstance(result.error, InterpolationError)
+
+
+def test_a_value_type_nested_beyond_the_stack_raises_a_hiera_error(make_tree):
+    h = _hiera(make_tree, "k: x\n")
+    nested = "Array[" * 3000 + "String" + "]" * 3000
+    with pytest.raises(InterpolationError):
+        h.lookup("k", nested)
+
+
 def test_cli_recursion_exits_2(make_tree, caplog):
     root = make_tree(
         {"hierarchy": [{"name": "c", "path": "common.yaml"}]},

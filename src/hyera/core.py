@@ -51,7 +51,13 @@ from ._lookup.lookup_adapter import (
     validate_data_value,
     validate_lookup_options,
 )
-from ._lookup.lookup_function import lookup as _lookup_call, nested_lookup, parse_call
+from ._lookup.lookup_function import (
+    depth_error,
+    lookup as _lookup_call,
+    nested_lookup,
+    parse_call,
+    recursion_bound,
+)
 from ._lookup.merge_strategy import MergeStrategy
 from ._lookup.navigation import (
     _MISSING,
@@ -580,7 +586,8 @@ class Hiera:
         strict_token = _STRICT.set(scope.strict)
         try:
             inv = Invocation(scope, self._sub_lookup)
-            return interpolate(text, inv)
+            with recursion_bound():
+                return interpolate(text, inv)
         finally:
             _STRICT.reset(strict_token)
 
@@ -2107,7 +2114,8 @@ class Hiera:
             default_values=call.default_values_hash,
             explainer=_debug_explainer(),
         )
-        return _lookup_call(call, invocation, self._search_and_merge)
+        with recursion_bound():
+            return _lookup_call(call, invocation, self._search_and_merge)
 
     __call__ = lookup
 
@@ -2196,9 +2204,10 @@ class Hiera:
             default_values_hash=default_values_hash,
             override=override,
         )
-        result = _data_functions.dig(root, keys[1:])
-        if value_type is not None:
-            assert_instance_of("Found value", as_type(value_type), result)
+        with recursion_bound():
+            result = _data_functions.dig(root, keys[1:])
+            if value_type is not None:
+                assert_instance_of("Found value", as_type(value_type), result)
         return result
 
     def get(
@@ -2285,12 +2294,14 @@ class Hiera:
                 # again by a second `parse_lookup_key` pass.
                 return self._search_and_merge(name, inv, m, parsed=(_root, ()))
 
-            root_value = _lookup_call(call, invocation, search)
-        result, subject = _data_functions.get_segments(
-            root_value, segments[1:], default_value, block
-        )
-        if value_type is not None:
-            assert_instance_of(subject, as_type(value_type), result)
+            with recursion_bound():
+                root_value = _lookup_call(call, invocation, search)
+        with recursion_bound():
+            result, subject = _data_functions.get_segments(
+                root_value, segments[1:], default_value, block
+            )
+            if value_type is not None:
+                assert_instance_of(subject, as_type(value_type), result)
         return result
 
     def getvar(
@@ -2321,7 +2332,10 @@ class Hiera:
             variable name, or a navigation error was reached with no
             ``block``.
         """
-        return unshare(_data_functions.getvar(self.scope, dotted, default_value, block))
+        with recursion_bound():
+            return unshare(
+                _data_functions.getvar(self.scope, dotted, default_value, block)
+            )
 
     def explain(
         self,
@@ -2416,6 +2430,8 @@ class Hiera:
                 )
             else:
                 _lookup_call(call, invocation, self._search_and_merge)
+        except RecursionError as exc:
+            raise depth_error(exc) from None
         except BackendError:
             # A data file that cannot be read or parsed is a data/
             # infrastructure problem, not one of Puppet's own reportable
