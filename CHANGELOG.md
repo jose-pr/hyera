@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- An API reference page for `hyera.exceptions`.
 - `BackendTimeoutError`, a `BackendError` that is also a `TimeoutError`, raised
   when `sops` or `facter` exceeds its time limit. The child and every process
   it started are killed.
