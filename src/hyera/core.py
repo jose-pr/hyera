@@ -19,7 +19,6 @@ from ._config.data_provider import (
     global_only_for,
     module_name_of,
     module_provider_for,
-    prune_module_data,
     split_path_setting,
     usable_provider,
 )
@@ -43,10 +42,11 @@ from ._config.hiera_config import (
     _read_v4,
     _validate_v5,
 )
-from ._lookup.function_provider import PROVIDER_CLASSES, _EnvironmentContext
+from ._lookup.function_provider import _EnvironmentContext
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._lookup.locations import _LocationStore
+from ._lookup.providers import provider_for
 from ._lookup.lookup_adapter import (
     convert_result,
     extract_lookup_options_for_key,
@@ -101,16 +101,6 @@ _PathSpec = _ty.Union[
 #: :meth:`Hiera._lookup_layers`; ``environment``/``module`` contribute
 #: :data:`~hyera._lookup.navigation._MISSING` when no usable config exists there.
 _LAYERS = ("global", "environment", "module")
-
-
-def _no_option_lookup(key, invocation):
-    """The ``lookup`` callable for a hierarchy level's ``options``
-    :class:`~hyera._lookup.invocation.Invocation`. Unreachable in practice: options
-    interpolate with ``allow_methods=False``, which rejects every method
-    call (``%{hiera()}``/``%{lookup()}``/``%{alias()}``) -- the only way a
-    sub-lookup would ever be attempted -- before it could reach this
-    callable."""
-    raise RuntimeError("hierarchy options never perform a sub-lookup")
 
 
 #: Cache attributes that take the shared lock themselves in ``clear()``.
@@ -494,131 +484,6 @@ class Hiera:
         # failure at construction instead.
         environment_for(self, self.scope.environment)
 
-    def _resolved_locations_for(
-        self, hierarchy, index, base_path, scope, tag, invocation
-    ):
-        """The current, materialized locations for one hierarchy level
-        (``hierarchy[index]``), or ``None`` for a location-less entry --
-        used by both :meth:`_build_provider` (the first build) and
-        :meth:`_provider_for` (a ``revalidate=True`` refresh of an
-        already-cached provider)."""
-        store = self._store
-        entry = store.location_entry_for(hierarchy, base_path, scope, tag, invocation)
-        resolved = store.materialize(entry, invocation)[index]
-        return None if resolved is None else list(resolved)
-
-    def _provider_for(
-        self, tag, base_path, index, hierarchy, scope, invocation, module_name=None
-    ):
-        """The :class:`~hyera._lookup.function_provider._FunctionProvider` for one
-        hierarchy level, bound to ``scope`` -- built once per ``(tag,
-        base_path, index)`` on this instance/view and cached in
-        ``self._providers`` (never shared with another view; see
-        :meth:`_view`). While ``revalidate=True``, an already-cached
-        provider has its ``.locations`` refreshed in place
-        (:meth:`_resolved_locations_for`) on every call, so a repeated
-        lookup on the same view/scope still sees a changed, added or
-        removed location -- rebuilding the whole provider (re-interpolating
-        its ``options``) would cost more than this plan's own benchmarks
-        show that revalidation needs to.
-
-        ``base_path`` -- the owning layer's own root -- disambiguates a
-        level index across layers (the global hierarchy and every
-        environment's/module's own each start indexing from 0) the same way
-        :meth:`_LocationStore.location_entry_for`'s own cache key already does; ``tag``
-        additionally tells a module's ``default_hierarchy`` apart from its
-        main one, since both share the same root. ``module_name`` -- set
-        only for a level in a module's own hierarchy -- makes a
-        ``data_hash`` result go through :func:`~hyera._config.data_provider.
-        prune_module_data` (Puppet's module-data namespace rule); it plays
-        no part in the cache key, since a level's owning module never
-        changes once built.
-        """
-        key = (tag, base_path, id(hierarchy), index)
-        provider = self._providers.get(key)
-        generation = self._generation[0]
-        if provider is not None and provider.generation != generation:
-            provider = None
-        if provider is None:
-            provider = self._build_provider(
-                hierarchy,
-                index,
-                scope,
-                base_path,
-                tag,
-                invocation,
-                module_name,
-                generation,
-            )
-            self._providers[key] = provider
-        elif self._revalidate:
-            provider.locations = self._resolved_locations_for(
-                hierarchy, index, base_path, scope, tag, invocation
-            )
-        return provider
-
-    def _build_provider(
-        self,
-        hierarchy,
-        index,
-        scope,
-        base_path,
-        tag,
-        invocation,
-        module_name=None,
-        generation=0,
-    ):
-        """Build one level's provider for ``scope``: interpolate its
-        ``options`` (strict mode, no method calls -- ``hiera_config.rb:691``,
-        the same call ``_location_resolver`` makes for ``datadir``) and take
-        its resolved locations from :meth:`_resolved_locations_for` (shared,
-        referenced-variable-keyed, resolved for the whole hierarchy at
-        once -- Puppet's own single ``scope_interpolations_stable?`` check
-        per rebuild). Raises, and caches nothing, on a failure in either
-        step.
-        """
-        level = hierarchy[index]
-        raw_options = level.options or {}
-        options = (
-            interpolate(
-                raw_options,
-                Invocation(scope, _no_option_lookup, lenient=False),
-                allow_methods=False,
-            )
-            if raw_options
-            else {}
-        )
-        locations = self._resolved_locations_for(
-            hierarchy, index, base_path, scope, tag, invocation
-        )
-        provider_cls = PROVIDER_CLASSES[level.kind]
-        return provider_cls(
-            level.name,
-            level.backend,
-            options,
-            locations,
-            self._environment_context,
-            scope.environment,
-            load_file=self._store.load_file,
-            module_name=module_name,
-            prune=self._pruned_module_data if module_name is not None else None,
-            revalidate=self._revalidate,
-            generation=generation,
-        )
-
-    def _pruned_module_data(self, module_name, data, function_name, path):
-        if path is None:
-            return prune_module_data(data, module_name, function_name, path)
-        key = (module_name, function_name, path)
-        cached = self._pruned_cache.get(key)
-        # The pruned hash is valid for the very parsed hash it came from: a
-        # re-read produces a new object.
-        if cached is not None and cached[0] is data:
-            return cached[1]
-        pruned = prune_module_data(data, module_name, function_name, path)
-        self._pruned_cache[key] = (data, pruned)
-        return pruned
-
     def _lookup_levels(
         self,
         root,
@@ -666,8 +531,8 @@ class Hiera:
 
         def at_level(entry):
             index, level = entry
-            provider = self._provider_for(
-                tag, base_path, index, hierarchy, scope, invocation, module_name
+            provider = provider_for(
+                self, tag, base_path, index, hierarchy, scope, invocation, module_name
             )
             if (
                 self._is_default_config
@@ -1044,8 +909,8 @@ class Hiera:
         for index, level in enumerate(hierarchy):
             if level.kind != "data_hash":
                 continue
-            provider = self._provider_for(
-                tag, base_path, index, hierarchy, scope, invocation
+            provider = provider_for(
+                self, tag, base_path, index, hierarchy, scope, invocation
             )
             locations = provider.locations
             if locations is None:

@@ -13,8 +13,6 @@ import contextlib
 import os
 import typing as _ty
 
-from pathlib_next import Path
-
 from .._output.explain import _LocationRef
 from .interpolation import interpolate, unshare
 from .invocation import Invocation
