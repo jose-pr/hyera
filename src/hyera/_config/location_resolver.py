@@ -45,12 +45,13 @@ class ResolvedLocation(_ty.NamedTuple):
     ``exist=False`` candidates are kept (never silently omitted) so a future
     ``explain`` can show them; callers that only want real files filter on
     ``.exist``. A ``uri`` location is always ``exist=True`` (Puppet never
-    fetches or stats it -- a provider decides what it means) and ``location``
-    is a plain ``str``, not a :class:`~pathlib_next.Path`.
+    fetches or stats it -- a provider decides what it means). ``location`` is
+    a plain ``str``: the joined path exactly as written (a trailing ``/`` or
+    an inner ``//`` kept), or the normalized URI.
     """
 
     original: str
-    location: "_ty.Union[Path, str]"
+    location: str
     is_uri: bool
     exist: bool
 
@@ -75,61 +76,126 @@ def _win_slash(s: str) -> str:
     return s.replace("\\", "/") if _WINDOWS else s
 
 
-#: A Windows drive-letter anchor (``C:/...``); combined with a leading ``/``
-#: or ``//`` (UNC), this is what "rooted" means for :func:`_pathname_plus`
-#: and the glob root/pattern split.
-_DRIVE_RE = re.compile(r"^[A-Za-z]:/")
+def _native(path: str) -> str:
+    """``path`` with the host's separator, every other character untouched
+    (a trailing ``/`` or an inner ``//`` stays)."""
+    return path.replace("/", os.sep) if _WINDOWS else path
+
+
+#: A Windows drive-letter anchor (``C:/...``) and a UNC share anchor
+#: (``//server/share``). Both are anchors only on Windows; anywhere else
+#: ``c:/a.yaml`` is an ordinary relative path and ``//x`` an ordinary rooted one.
+_DRIVE_RE = re.compile(r"[A-Za-z]:/")
+_UNC_RE = re.compile(r"//[^/]+/[^/]+(?=/|$)")
+
+
+def _anchor_of(s: str) -> str:
+    """The leading Windows anchor of ``s`` (``C:`` or ``//server/share``), or
+    ``""`` when there is none, always off Windows."""
+    if not _WINDOWS:
+        return ""
+    unc = _UNC_RE.match(s)
+    if unc:
+        return unc.group()
+    return s[:2] if _DRIVE_RE.match(s) else ""
 
 
 def _is_rooted(s: str) -> bool:
-    return s.startswith("/") or bool(_DRIVE_RE.match(s))
+    return s.startswith("/") or bool(_anchor_of(s))
 
 
 def _split_anchor(s: str):
     """Split a ``/``-separated string into its leading anchor (``/``,
-    ``//``, ``C:/`` or ``""``) and its non-empty components."""
-    if s.startswith("//"):
-        anchor, rest = "//", s[2:]
+    ``C:/``, ``//server/share/`` or ``""``) and its non-empty components."""
+    anchor = _anchor_of(s)
+    if anchor:
+        rest, anchor = s[len(anchor) :], anchor + "/"
     elif s.startswith("/"):
-        anchor, rest = "/", s[1:]
-    elif _DRIVE_RE.match(s):
-        anchor, rest = s[:3], s[3:]
+        rest, anchor = s, "/"
     else:
-        anchor, rest = "", s
+        rest = s
     return anchor, [p for p in rest.split("/") if p != ""]
 
 
+def _basename(path: str) -> str:
+    """Ruby ``File.basename``: the last component, ignoring trailing ``/``;
+    ``/`` for a path of slashes only, ``""`` for the empty path."""
+    if not path:
+        return ""
+    stripped = path.rstrip("/")
+    return stripped[stripped.rfind("/") + 1 :] if stripped else "/"
+
+
+def _chop_basename(path: str):
+    """``pathname.rb``'s ``chop_basename``: ``(prefix, basename)`` with the
+    prefix keeping its trailing separators, or ``None`` when ``path`` has no
+    component left (empty, or only slashes)."""
+    base = _basename(path)
+    if base in ("", "/"):
+        return None
+    return path[: path.rindex(base)], base
+
+
+def _plus(path1: str, path2: str) -> str:
+    """``pathname.rb``'s ``plus``: ``path2`` joined onto ``path1`` lexically."""
+    prefix2 = path2
+    indexes, names = [], []
+    while True:
+        chopped = _chop_basename(prefix2)
+        if chopped is None:
+            break
+        prefix2, name = chopped
+        indexes.append(len(prefix2))
+        names.append(name)
+    if prefix2 != "":
+        return path2
+    indexes.reverse()
+    names.reverse()
+    first, count = 0, len(names)
+
+    prefix1 = path1
+    while True:
+        while first < count and names[first] == ".":
+            first += 1
+        chopped = _chop_basename(prefix1)
+        if chopped is None:
+            break
+        prefix1, name1 = chopped
+        if name1 == ".":
+            continue
+        if name1 == ".." or first >= count or names[first] != "..":
+            prefix1 += name1
+            break
+        first += 1
+
+    has_base = _chop_basename(prefix1) is not None
+    if not has_base and _basename(prefix1) == "/":
+        has_base = True
+        while first < count and names[first] == "..":
+            first += 1
+    if first < count:
+        suffix = path2[indexes[first] :]
+        if has_base and not prefix1.endswith("/"):
+            return prefix1 + "/" + suffix
+        return prefix1 + suffix
+    return prefix1 if has_base else "."
+
+
 def _pathname_plus(base: str, rel: str) -> str:
-    """Ruby ``Pathname#+``: join ``rel`` onto ``base`` lexically (``..``
-    removes a preceding real component of ``base``, never touches the
-    filesystem, and is dropped once a rooted ``base`` is exhausted but kept
-    for a relative one). A rooted ``rel`` (leading ``/``, or on Windows a
-    drive/UNC anchor) is returned unchanged. Everything in ``rel`` after its
-    leading ``.``/``..`` handling is appended verbatim, so an inner ``..`` or
-    ``//`` in ``rel`` survives untouched.
+    """Ruby ``Pathname#+``: join ``rel`` onto ``base`` lexically, never
+    touching the filesystem. ``..`` removes a preceding real component of
+    ``base``, is dropped once a rooted ``base`` is exhausted and kept for a
+    relative one; a rooted ``rel`` is returned unchanged; everything after
+    the leading ``.``/``..`` handling in ``rel`` is appended verbatim, so an
+    inner ``..``, ``//`` or trailing ``/`` survives. A Windows drive or UNC
+    anchor on ``base`` is set aside and put back in front of the result.
     """
     if _is_rooted(rel):
         return rel
-    anchor, base_parts = _split_anchor(base)
-    parts = [p for p in base_parts if p != "."]
-
-    rel_parts = rel.split("/")
-    i = 0
-    while i < len(rel_parts) and rel_parts[i] in (".", ""):
-        i += 1
-    rel_parts = rel_parts[i:]
-
-    idx = 0
-    n = len(rel_parts)
-    while idx < n and rel_parts[idx] == "..":
-        if parts and parts[-1] != "..":
-            parts.pop()
-        elif not anchor:
-            parts.append("..")
-        # else: a rooted base is exhausted -- further '..' are dropped.
-        idx += 1
-
-    return anchor + "/".join(parts + rel_parts[idx:])
+    anchor = _anchor_of(base)
+    if anchor:
+        return anchor + _plus(base[len(anchor) :] or "/", rel)
+    return _plus(base, rel)
 
 
 def _is_link(entry: "os.DirEntry") -> bool:
@@ -599,8 +665,14 @@ def _glob_root_and_pattern(config_root: str, datadir: str, g: str):
         return anchor, "/".join(parts)
     if _is_rooted(dd):
         anchor, parts = _split_anchor(dd)
-        return anchor, _pathname_plus("/".join(parts), g)
+        return anchor, _pathname_plus("/" + "/".join(parts), g).lstrip("/")
     return config_root, _pathname_plus(dd, g)
+
+
+def _interpolate_path(text, invocation):
+    """``text`` interpolated (methods disallowed) as a host path: on Windows
+    a ``\\`` separator, written or interpolated, reads as ``/``."""
+    return _win_slash(interpolate(_win_slash(text), invocation, allow_methods=False))
 
 
 def _resolve_paths(datadir, declared, invocation, extension=None):
@@ -618,12 +690,12 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
     """
     results = []
     for d in declared:
-        p = interpolate(_win_slash(d), invocation, allow_methods=False)
+        p = _interpolate_path(d, invocation)
         if extension and not p.endswith(extension):
             p = p + extension
         loc = _pathname_plus(datadir, p)
         exists = invocation._memo_probe(loc).kind != "absent"
-        results.append(ResolvedLocation(d, Path(loc), False, exists))
+        results.append(ResolvedLocation(d, _native(loc), False, exists))
     return results
 
 
@@ -668,7 +740,7 @@ def resolve_glob_specs(level, base_path, scope, refs=None, fs_memo=None):
         scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
     )
     config_root = Path(base_path).as_posix()
-    datadir = interpolate(_win_slash(level.datadir), strict_inv, allow_methods=False)
+    datadir = _interpolate_path(level.datadir, strict_inv)
     return _glob_specs(config_root, datadir, level.locations, lenient_inv)
 
 
@@ -692,7 +764,7 @@ def _expand_globs(config_root, datadir, declared, invocation):
         for match in glob(root, pattern):
             if os.path.isdir(match):
                 continue
-            results.append(ResolvedLocation(original, Path(match), False, True))
+            results.append(ResolvedLocation(original, match, False, True))
     return results
 
 
@@ -909,7 +981,6 @@ def _expand_mapped_paths(datadir, level, invocation):
     items = _mapped_collection_items(collection, collection_var, level.name)
 
     results = []
-    template_norm = _win_slash(template)
     for item in items:
         with invocation.with_local_memory_eluding(item_var):
             child_scope = invocation.scope.with_local_scope({item_var: item})
@@ -920,10 +991,10 @@ def _expand_mapped_paths(datadir, level, invocation):
                 scope_interpolations=invocation.scope_interpolations,
                 _fs_memo=invocation._fs_memo,
             )
-            p = interpolate(template_norm, child_inv, allow_methods=False)
+            p = _interpolate_path(template, child_inv)
             loc = _pathname_plus(datadir, p)
             exists = child_inv._memo_probe(loc).kind != "absent"
-            results.append(ResolvedLocation(template, Path(loc), False, exists))
+            results.append(ResolvedLocation(template, _native(loc), False, exists))
     return results
 
 
@@ -975,9 +1046,7 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
         # disallowed) just below.
         datadir = _win_slash(level.datadir)
     else:
-        datadir = interpolate(
-            _win_slash(level.datadir), strict_inv, allow_methods=False
-        )
+        datadir = _interpolate_path(level.datadir, strict_inv)
     base = _pathname_plus(config_root, datadir)
 
     key = level.location_key

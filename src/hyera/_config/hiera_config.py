@@ -1425,7 +1425,7 @@ class HieraLevel(_ty.NamedTuple):
         resolved = resolve_locations(self, base_path, scope)
         if resolved is None:
             return []
-        return [loc.location for loc in resolved if not loc.is_uri]
+        return [str(Path(loc.location)) for loc in resolved if not loc.is_uri]
 
 
 def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":

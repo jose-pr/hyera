@@ -35,12 +35,13 @@ def _location_ref(location) -> _LocationRef:
     """A :class:`~hyera._output.explain._LocationRef` for one resolved location
     (``core._Location``/``_location_resolver.ResolvedLocation`` -- both
     ``(original, location, is_uri, exist)``-shaped). The path form always
-    renders POSIX (``Path.as_posix()``), matching what Ruby's ``Pathname``
-    prints on every OS, regardless of this interned string's own separator.
+    renders with ``/`` separators, matching what Ruby's ``Pathname`` prints on
+    every OS, regardless of this interned string's own separator.
     """
     if location.is_uri:
         return _LocationRef(location.original, location.location, "uri")
-    return _LocationRef(location.original, Path(location.location).as_posix(), "path")
+    posix = str(location.location).replace(os.sep, "/")
+    return _LocationRef(location.original, posix, "path")
 
 
 def _recording_location(invocation, location):

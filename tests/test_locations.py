@@ -2,7 +2,10 @@
 strictness, mapped_paths scope semantics, and directory locations.
 """
 
+import json
 import os
+import pathlib
+import re
 
 import pytest
 
@@ -28,6 +31,43 @@ from hyera.core import _no_option_lookup
     ],
 )
 def test_pathname_plus(base, rel, expected):
+    assert _pathname_plus(base, rel) == expected
+
+
+_PLUS_TABLE = json.loads(
+    (pathlib.Path(__file__).parent / "data" / "pathname_plus_table.json").read_text(
+        encoding="utf-8"
+    )
+)
+
+
+@pytest.mark.parametrize(
+    "base, rel, expected",
+    [pytest.param(b, r, e, id=repr((b, r))) for b, r, e in _PLUS_TABLE["rows"]],
+)
+def test_pathname_plus_matches_the_recorded_ruby_result(base, rel, expected):
+    if os.name == "nt" and any(re.match(r"[A-Za-z]:/|//", s) for s in (base, rel)):
+        pytest.skip("a drive or UNC anchor is an anchor only on Windows")
+    assert _pathname_plus(base, rel) == expected
+
+
+@pytest.mark.skipif(os.name == "nt", reason="a drive letter is an anchor on Windows")
+def test_drive_letter_is_an_ordinary_component_off_windows():
+    assert _pathname_plus("/r/data", "c:/a.yaml") == "/r/data/c:/a.yaml"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="drive and UNC anchors are Windows-only")
+@pytest.mark.parametrize(
+    "base, rel, expected",
+    [
+        ("C:/r/data", "../../../x", "C:/x"),
+        ("C:/r/data", "D:/y/a.yaml", "D:/y/a.yaml"),
+        ("//server/share/data", "../../../x", "//server/share/x"),
+        ("//server/share", "a.yaml", "//server/share/a.yaml"),
+        ("//server/share/", "a.yaml", "//server/share/a.yaml"),
+    ],
+)
+def test_pathname_plus_windows_anchors(base, rel, expected):
     assert _pathname_plus(base, rel) == expected
 
 
@@ -187,6 +227,79 @@ def test_hiera_level_paths_resolves_mapped_paths_uncached(tmp_path):
     )
     paths = level.paths(tmp_path, Scope(facts={"roles": ["web"]}))
     assert [str(p) for p in paths] == [str(tmp_path / "data" / "roles" / "web.yaml")]
+
+
+# --- locations are joined as written -------------------------------------
+
+
+def test_incoming_parent_reference_survives_a_datadir_ending_in_parent(make_tree):
+    root = make_tree(
+        {
+            "defaults": {"datadir": "data/sub/.."},
+            "hierarchy": [{"name": "p", "path": "../a.yaml"}],
+        },
+        files={"a.yaml": "k: root\n", "data/a.yaml": "k: data\n", "data/sub/x": ""},
+    )
+    assert Hiera(str(root / "hiera.yaml")).lookup("k") == "root"
+
+
+def test_trailing_slash_location_is_not_the_file(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "p", "path": "a.yaml/"}]},
+        files={"data/a.yaml": "k: found\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k", default_value="miss") == "miss"
+    assert "a.yaml/" in h.explain("k").text()
+
+
+def test_doubled_slash_in_a_location_is_kept_in_explain(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "p", "path": "sub//c.yaml"}]},
+        files={"data/sub/c.yaml": "k: found\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "found"
+    assert "sub//c.yaml" in h.explain("k").text().replace("\\", "/")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="a drive letter is an anchor on Windows")
+def test_drive_letter_location_is_inside_datadir_off_windows(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "p", "path": "c:/a.yaml"}]},
+        files={"data/c:/a.yaml": "k: inside\n"},
+    )
+    assert Hiera(str(root / "hiera.yaml")).lookup("k") == "inside"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="backslash separators are Windows-only")
+def test_backslash_absolute_interpolated_location_is_absolute(make_tree, tmp_path):
+    target = tmp_path / "elsewhere" / "a.yaml"
+    target.parent.mkdir()
+    target.write_text("k: abs\n", encoding="utf-8")
+    root = make_tree({"hierarchy": [{"name": "p", "path": "%{facts.where}"}]})
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"where": str(target)}))
+    assert h.lookup("k") == "abs"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="UNC shares are Windows-only")
+def test_unc_share_datadir_is_walked_by_glob(make_tree, tmp_path):
+    root = make_tree(
+        {"hierarchy": [{"name": "g", "glob": "*.yaml"}]},
+        files={"data/a.yaml": "k: unc\n"},
+    )
+    drive, rest = os.path.splitdrive(str(root / "data"))
+    unc = "//localhost/" + drive[0] + "$" + rest.replace("\\", "/")
+    probe = os.path.isdir(unc)
+    if not probe:
+        pytest.skip("administrative share is not reachable here")
+    config = root / "hiera.yaml"
+    config.write_text(
+        "version: 5\ndefaults:\n  data_hash: yaml_data\n  datadir: '%s'\n"
+        "hierarchy:\n  - name: g\n    glob: '*.yaml'\n" % unc,
+        encoding="utf-8",
+    )
+    assert Hiera(str(config)).lookup("k") == "unc"
 
 
 # --- path/paths extension (used for Hiera 3 configs) ---------------------
