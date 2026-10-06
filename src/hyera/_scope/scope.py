@@ -48,8 +48,9 @@ class Strict(_StrEnum):
     """An undefined variable raises :class:`~hyera.InterpolationError`."""
 
 
-#: Plain strings, not :class:`Strict` members: interpolated into the ``ValueError`` below, whose text
-#: shows ``'off'``, not ``repr()`` of a member (``<Strict.OFF: 'off'>``).
+# : Plain strings, not :class:`Strict` members: interpolated into the ``ValueError``
+# below, whose text : shows ``'off'``, not ``repr()`` of a member (``<Strict.OFF:
+# 'off'>``).
 _STRICT_VALUES = ("off", "warning", "error")
 #: Names a Hiera 5 lookup may never bind directly (Puppet's privileged
 #: ``setvar`` targets; only ``set_node_parameters`` itself may set them).
@@ -72,8 +73,9 @@ class _WarnState:
         self._messages = set()
 
     def __getstate__(self):
-        # A threading.Lock cannot be pickled/deepcopied; a copy starts with a fresh, unlocked one (the dedup
-        # state carries over). Keeps `Hiera` and its scoped views, which hold a `Scope`, picklable and deep-copyable.
+        # A threading.Lock cannot be pickled/deepcopied; a copy starts with a fresh,
+        # unlocked one (the dedup state carries over). Keeps `Hiera` and its scoped
+        # views, which hold a `Scope`, picklable and deep-copyable.
         with self._lock:
             return {
                 "_variable_keys": set(self._variable_keys),
@@ -237,9 +239,9 @@ class Scope:
                 params[name] = value
         params["environment"] = resolved_env
 
-        # Step 4: the given server_facts merge into params without overriding, as facts do. $environment is
-        # forced into the exposed $server_facts hash last, so it wins there, but is not re-merged into params:
-        # steps 2 and 6 resolve it, and re-merging would warn a spurious "already set to 'production'".
+        # Step 4: server_facts merge into params without overriding, as facts do.
+        # $environment goes into the exposed $server_facts last, so it wins there, but
+        # is not re-merged into params (steps 2 and 6 set it; re-merging would warn).
         for name, value in server_facts_checked.items():
             if name in params:
                 _warn_collision(warn_state, name, node_name, params[name], value)
