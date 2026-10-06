@@ -105,7 +105,7 @@ class Invocation:
         self.explainer = explainer
         #: ``Hiera.explain()``'s own per-call ``lookup_options`` memo (a
         #: fresh ``_ScopeKeyedCache``), or ``None`` (every ordinary lookup:
-        #: ``core.Hiera._retrieve_lookup_options`` and friends then use the
+        #: ``lookup_adapter.retrieve_lookup_options`` and friends then use the
         #: instance's real, persistent cache instead). Shared, unchanged,
         #: with every ``Invocation`` :meth:`derive`d from this one, so a
         #: nested sub-lookup made *during* one ``explain()`` call reuses the

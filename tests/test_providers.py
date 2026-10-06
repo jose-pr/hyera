@@ -28,7 +28,10 @@ from hyera import (
 )
 from hyera._lookup.function_provider import _EnvironmentContext, _FunctionProvider
 from hyera._lookup.invocation import Invocation
-from hyera._lookup.lookup_adapter import extract_lookup_options_for_key
+from hyera._lookup.lookup_adapter import (
+    extract_lookup_options_for_key,
+    retrieve_lookup_options,
+)
 from hyera._lookup.navigation import _MISSING
 from hyera.backends import Backend, HOCONBackend, JSONBackend, SopsBackend, YAMLBackend
 
@@ -63,7 +66,7 @@ def backends(_isolated_registry, calls, script):
 
         def lookup_key(self, key, options, context):
             # `lookup_options` is gathered through this exact provider
-            # before every real lookup (`Hiera._retrieve_lookup_options`);
+            # before every real lookup (`retrieve_lookup_options`);
             # every test but `test_lookup_options_through_lookup_key_provider`
             # (which sets `script["handle_lookup_options"]`) wants that
             # gather to be an invisible miss, not another recorded call.
@@ -1086,7 +1089,7 @@ def test_lookup_options_through_lookup_key_provider(make_tree, backends, script)
     script["lookup_key"] = fn
     h = Hiera(str(root / "hiera.yaml"))
     invocation = Invocation(h.scope, h._sub_lookup)
-    compiled = h._retrieve_lookup_options(None, invocation)
+    compiled = retrieve_lookup_options(h, None, invocation)
     assert extract_lookup_options_for_key("a", compiled) == {"merge": "unique"}
 
 

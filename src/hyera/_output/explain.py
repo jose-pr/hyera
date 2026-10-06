@@ -16,6 +16,8 @@ import copy
 import logging
 import typing as _ty
 
+from pathlib_next import Path
+
 from .._lookup.interpolation import _ruby_inspect, _to_puppet_str
 from .._lookup.navigation import join_key
 from ..exceptions import HieraError
@@ -32,6 +34,26 @@ class _ProviderRef(_ty.NamedTuple):
     name: str
     config_path: _ty.Optional[str] = None
     module_name: _ty.Optional[str] = None
+
+
+def _provider_ref(provider) -> _ProviderRef:
+    """A :class:`~hyera._output.explain._ProviderRef` for one layer's provider
+    (``configured_data_provider.rb:33-39``, ``hiera_config.rb:284-286``):
+    ``Global``/``Environment Data Provider (hiera configuration version
+    N)``, or ``Module "<m>" Data Provider (...)``; a config path (never for
+    ``Hiera(None, ...)``'s built-in default) renders POSIX."""
+    if provider.place == "Module":
+        name = 'Module "{}" Data Provider (hiera configuration version {})'.format(
+            provider.module_name, provider.version
+        )
+    else:
+        name = "{} Data Provider (hiera configuration version {})".format(
+            provider.place, provider.version
+        )
+    path = provider.source.path if provider.source is not None else None
+    config_path = None if path is None else Path(path).as_posix()
+    module_name = provider.module_name if provider.place == "Module" else None
+    return _ProviderRef(name, config_path, module_name)
 
 
 class _LocationRef(_ty.NamedTuple):
