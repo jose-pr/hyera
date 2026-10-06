@@ -14,6 +14,7 @@ values, never function signatures.
 from __future__ import annotations
 
 from ..exceptions import HieraLookupError
+from .inference import infer_set
 from .types import (
     ANY,
     Array,
@@ -31,7 +32,6 @@ from .types import (
     Variant,
     _type_instance,
     puppet_quote,
-    infer_set,
 )
 
 __all__ = ["assert_instance_of"]

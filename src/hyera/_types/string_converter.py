@@ -20,7 +20,8 @@ import math
 import re
 
 from ..exceptions import HieraLookupError
-from .types import Sensitive, infer_set, puppet_quote
+from .inference import infer_set
+from .types import Sensitive, puppet_quote
 
 __all__ = ["convert", "puppet_quote"]
 

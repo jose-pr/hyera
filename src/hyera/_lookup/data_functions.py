@@ -16,7 +16,7 @@ import re
 
 from .interpolation import _ruby_inspect
 from .navigation import split_key
-from .._types.types import infer
+from .._types.inference import infer
 from ..exceptions import HieraLookupError
 
 #: getvar.rb:50 -- must start with a valid (optionally ``::``-qualified)

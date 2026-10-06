@@ -22,6 +22,7 @@ from ..exceptions import HieraLookupError
 from .string_converter import UNSET as _NO_FORMAT
 from .string_converter import convert as _string_convert
 from .mismatch import assert_instance_of, short_name
+from .inference import infer_generic, infer_set
 from .types import (
     Any,
     Array,
@@ -39,8 +40,6 @@ from .types import (
     Tuple,
     Sensitive,
     _PNamedType,
-    infer_generic,
-    infer_set,
 )
 
 __all__ = ["new_instance"]

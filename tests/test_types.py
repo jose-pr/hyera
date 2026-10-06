@@ -15,6 +15,7 @@ import yaml
 
 from hyera import HieraLookupError, Sensitive
 from hyera._lookup.lookup_adapter import convert_result
+from hyera._types.inference import infer, infer_set
 from hyera._types.new_function import new_instance
 from hyera._types.string_converter import convert as _string_convert
 from hyera._types.string_converter import puppet_quote as _puppet_quote
@@ -35,8 +36,6 @@ from hyera._types.types import (
     _literal_str,
     _num_str,
     generalize,
-    infer,
-    infer_set,
 )
 
 _CASES = Path(__file__).parent / "conformance" / "cases"

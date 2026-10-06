@@ -15,7 +15,7 @@ from ..exceptions import HieraLookupError
 from .._types.new_function import new_instance
 from .._types.parser import parse_type
 from .._types.ruby_regexp import _ruby_regex
-from .._types.types import infer
+from .._types.inference import infer
 
 #: ``Puppet::LookupValue`` (an alias for ``RichData``), parsed once and
 #: cached: every value found at a root key is checked against it
