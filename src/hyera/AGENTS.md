@@ -1373,7 +1373,7 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
 - **difference** `hocon-include-glob` — `hocon_data`'s `include
   file("*.conf")` globs and includes every match by default; Puppet's own
   `hocon_data` never expands such a glob.
-- **difference** `hocon-pyhocon-parser` — `hocon_data` is parsed by
+- **deviation** `hocon-pyhocon-parser` — `hocon_data` is parsed by
   pyhocon, so `+=`, capitalised booleans, boolean concatenation,
   leading-zero and whole-float numbers, object-then-scalar and quoted-path
   keys, the empty-string key, a byte-order mark, object key order, a

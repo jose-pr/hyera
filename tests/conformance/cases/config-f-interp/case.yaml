@@ -22,6 +22,17 @@ queries:
 - key: dotted_fact
 - key: arr.x
 - key: port.x
+  deviation:
+    id: integer-dotted-navigation-error-text
+    reason: >-
+      Navigating a dotted segment into an Integer crashes real Puppet with
+      a raw Ruby NoMethodError ("undefined method 'include?' for an
+      instance of Integer"), an interpreter accident rather than a
+      designed message; hyera keeps its own "Data Provider type mismatch"
+      text instead of reproducing the crash.
+    expect:
+      status: error
+      message: "Data Provider type mismatch: Got Integer when a hash-like object was expected"
 - key: arr.5
 - key: lookup_options
 - key: bare_missing

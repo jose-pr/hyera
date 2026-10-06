@@ -11,4 +11,14 @@ queries:
 - key: quoted.key
 - key: list
 - key: obj
+  deviation:
+    id: hocon-pyhocon-parser
+    reason: >-
+      pyhocon returns an object's keys in a different order from the
+      Ruby HOCON gem when two same-named objects merge.
+    expect:
+      status: found
+      value:
+        k: v
+        k2: v2
 - key: dur

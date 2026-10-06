@@ -26,6 +26,17 @@ queries:
     id: hash-int-key-as-string-segment
   - key: i.x
     id: int-scalar-segment
+    deviation:
+      id: integer-dotted-navigation-error-text
+      reason: >-
+        Navigating a dotted segment into an Integer crashes real Puppet with
+        a raw Ruby NoMethodError ("undefined method 'include?' for an
+        instance of Integer"), an interpreter accident rather than a
+        designed message; hyera keeps its own "Data Provider type mismatch"
+        text instead of reproducing the crash.
+      expect:
+        status: error
+        message: "Data Provider type mismatch: Got Integer when a hash-like object was expected"
   - key: '"a.b".c'
     id: double-quoted-segment
   - key: a.b.c
