@@ -13,6 +13,7 @@ import contextlib
 import functools
 import re
 
+from .._digits import parse_decimal_int
 from ..exceptions import HieraLookupError
 
 
@@ -79,7 +80,7 @@ _RUBY_STRIP_CHARS = " \t\n\v\f\r\0"
 def _ruby_to_i(segment: str) -> int:
     """Ruby's ``String#to_i``: the leading signed-digit run, else 0."""
     m = _TO_I_RE.match(segment)
-    return int(m.group(1)) if m else 0
+    return parse_decimal_int(m.group(1)) if m else 0
 
 
 def _ruby_class(value: object) -> str:

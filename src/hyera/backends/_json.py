@@ -5,6 +5,7 @@ NaN/Infinity and lone-surrogate rejection Python's own decoder accepts).
 import json
 import typing as _ty
 
+from .._digits import parse_decimal_int
 from ..exceptions import BackendError
 from . import Backend, _Names
 
@@ -67,27 +68,64 @@ def _reject_json_constant(name: str):
     raise ValueError("unexpected token '{}'".format(name))
 
 
+def loads_json(text: str):
+    """``json.loads`` with ``NaN``/``Infinity`` rejected and integers of any
+    length accepted (Python 3.11+ caps ``int(str)`` at 4300 digits; Ruby's
+    ``json`` gem has no cap).
+
+    :param text: the JSON text.
+    :returns: the parsed value.
+    :raises ValueError: ``text`` is not valid JSON (``json.JSONDecodeError``
+        for syntax errors).
+    """
+    try:
+        return json.loads(text, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError:
+        # Retried only after a failure: the hook costs a Python call per
+        # integer.
+        return json.loads(
+            text, parse_constant=_reject_json_constant, parse_int=parse_decimal_int
+        )
+
+
 def _has_lone_surrogate(text: str) -> bool:
     return any("\ud800" <= ch <= "\udfff" for ch in text)
 
 
-def _reject_lone_surrogates(obj) -> None:
-    """Walk a parsed JSON value and raise if any string (key or value)
-    holds a lone (unpaired) surrogate code point -- Ruby's json gem
-    rejects ``"\\ud800"`` ("incomplete surrogate pair"); Python's decoder
-    accepts it, keeping the bare surrogate in the resulting ``str``.
+#: Deepest array/object nesting a loaded JSON value may have.
+MAX_JSON_NESTING = 500
+TOO_DEEP = "nested too deeply (more than {} levels)".format(MAX_JSON_NESTING)
+
+
+def check_json_value(obj, surrogates: bool = True) -> None:
+    """Walk a parsed JSON value without recursion and raise
+    :class:`ValueError` when it nests deeper than :data:`MAX_JSON_NESTING`
+    or, with ``surrogates``, any string (key or value) holds a lone
+    (unpaired) surrogate code point -- Ruby's json gem rejects ``"\\ud800"``
+    ("incomplete surrogate pair"); Python's decoder accepts it.
+
+    :param obj: the value ``json.loads`` returned.
+    :param surrogates: also reject lone surrogates.
+    :raises ValueError: the value is too deep or holds a lone surrogate.
     """
-    if isinstance(obj, str):
-        if _has_lone_surrogate(obj):
-            raise ValueError("incomplete surrogate pair")
-    elif isinstance(obj, dict):
-        for key, value in obj.items():
-            if isinstance(key, str) and _has_lone_surrogate(key):
+    stack = [(obj, 1)]
+    while stack:
+        value, depth = stack.pop()
+        if isinstance(value, str):
+            if surrogates and _has_lone_surrogate(value):
                 raise ValueError("incomplete surrogate pair")
-            _reject_lone_surrogates(value)
-    elif isinstance(obj, list):
-        for item in obj:
-            _reject_lone_surrogates(item)
+        elif isinstance(value, (dict, list)):
+            if depth > MAX_JSON_NESTING:
+                raise ValueError(TOO_DEEP)
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if surrogates and isinstance(key, str) and _has_lone_surrogate(key):
+                        raise ValueError("incomplete surrogate pair")
+                    stack.append((item, depth + 1))
+            else:
+                stack.extend((item, depth + 1) for item in value)
 
 
 class JSONBackend(Backend):
@@ -109,13 +147,13 @@ class JSONBackend(Backend):
         """
         problem = None
         try:
-            result = json.loads(
-                _strip_json_comments(text), parse_constant=_reject_json_constant
-            )
-            _reject_lone_surrogates(result)
+            result = loads_json(_strip_json_comments(text))
+            check_json_value(result)
             return result
         except json.JSONDecodeError as e:
             problem = "{} at line {} column {}".format(e.msg, e.lineno, e.colno)
+        except RecursionError:
+            problem = TOO_DEEP
         except ValueError as e:
             problem = str(e)
         # Outside the except block, matching YAMLBackend's chain-free style.

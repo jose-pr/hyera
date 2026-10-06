@@ -592,3 +592,292 @@ def test_hiera_yaml_parse_error_raises_config_error(tmp_path):
     config.write_bytes(b"a: b: c: :::\n")
     with pytest.raises(ConfigError):
         _read_base_config(str(config), None)
+
+
+@pytest.mark.parametrize("raw", [b"HUNTER2SECRET: caf\xe9\n", b"HUNTER2SECRET: [a\n"])
+def test_hiera_yaml_error_chain_holds_no_document(tmp_path, raw):
+    config = tmp_path / "hiera.yaml"
+    config.write_bytes(raw)
+    with pytest.raises(ConfigError) as excinfo:
+        _read_base_config(str(config), None)
+    exc = excinfo.value
+    while exc is not None:
+        assert "HUNTER2SECRET" not in repr(vars(exc)) + repr(exc.args)
+        assert not isinstance(exc, UnicodeDecodeError)
+        exc = exc.__cause__ or exc.__context__
+
+
+# ---------------------------------------------------------------------------
+# Totality: any text returns data or raises BackendError, never anything else
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("k: " + "[" * 5000 + "]" * 5000, id="flow-sequences"),
+        pytest.param("k: " + "{a: " * 5000 + "1" + "}" * 5000, id="flow-mappings"),
+        pytest.param(
+            "".join("{}k:\n".format(" " * i) for i in range(700)), id="block-mappings"
+        ),
+        pytest.param("- " * 5000 + "x", id="compact-block-sequences"),
+        pytest.param(
+            "k: " + "[" * 450 + "]" * 450, id="beyond-what-construction-holds"
+        ),
+    ],
+)
+def test_deep_nesting_raises_backend_error(text):
+    with pytest.raises(BackendError, match="nested too deeply"):
+        safe_load(text)
+
+
+def test_reasonable_nesting_loads():
+    value = safe_load("k: " + "[" * 100 + "]" * 100)["k"]
+    for _ in range(99):
+        value = value[0]
+    assert value == []
+
+
+def test_brackets_in_quotes_comments_and_block_scalars_are_not_nesting():
+    big = "[" * 2000
+    text = (
+        "a: '{0}'\n"
+        'b: "{0}"\n'
+        "c: |\n  {0}\n  {0}\n"
+        "d: >\n  {0}\n"
+        "e: x[[[[[[ # {0}\n"
+        "# {0}\n"
+        "f: ok\n"
+    ).format(big)
+    loaded = safe_load(text)
+    assert loaded["a"] == big
+    assert loaded["b"] == big
+    assert loaded["c"] == big + "\n" + big + "\n"
+    assert loaded["e"] == "x[[[[[["
+    assert loaded["f"] == "ok"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("k: !!map [a]\n", ["a"]),
+        ("k: !!map [1, 2]\n", [1, 2]),
+        ("k: !!map x\n", "x"),
+        ("k: !!seq {a: 1}\n", {"a": 1}),
+        ("k: !!seq x\n", "x"),
+        ("k: !!pairs x\n", "x"),
+        ("k: !!omap x\n", "x"),
+        ("k: !!float {x: 1}\n", {"x": 1}),
+        ("k: !!int [1]\n", [1]),
+        ("k: !!bool {x: 1}\n", {"x": 1}),
+        ("k: !!null [1]\n", [1]),
+        ("k: !!binary [1]\n", [1]),
+        ("k: !!omap [{x: 1, y: 2}, {z: 3}]\n", {"x": 2, "z": 3}),
+    ],
+)
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_tagged_node_is_built_by_its_kind(loader, text, expected):
+    assert _load_with(loader, text)["k"] == expected
+
+
+@pytest.mark.parametrize(
+    "text", ["k: !!omap [1, 2]\n", "k: !!omap [{}]\n", "k: !!omap {x: 1}\n"]
+)
+def test_malformed_omap_raises_backend_error(text):
+    with pytest.raises(BackendError):
+        safe_load(text)
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("1__0:30", 5400),
+        ("1_:30", 5400),
+        ("-1:30", -1800),
+        ("1:30:30", 5430),
+        ("1__0:30.5", 5430.0),
+        ("1:30.5_", 5430.0),
+        ("1:30._", 5400.0),
+        ("-0:30.5", 1830.0),
+        ("1_0:30.5_5", 37833.0),
+    ],
+)
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_sexagesimal_parts_follow_rubys_to_i_and_to_f(loader, text, expected):
+    assert _load_with(loader, "k: {}\n".format(text))["k"] == expected
+
+
+@pytest.mark.parametrize("text", ["k: [a, b\n", "k: {a: 1\n"])
+def test_flow_error_keeps_its_fixed_punctuation(text):
+    with pytest.raises(BackendError, match=r"did not find expected ',' or '[\]}]'"):
+        safe_load(text)
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_yaml_problem_keeps_structural_tokens(loader):
+    with pytest.raises(yaml.YAMLError) as excinfo:
+        _load_with(loader, "k: [a, b\n")
+    assert "<redacted>" not in _yaml_problem(excinfo.value)
+
+
+def test_quoted_source_token_is_still_redacted():
+    with pytest.raises(BackendError) as excinfo:
+        safe_load("k: *HUNTER2SECRET\n")
+    assert "HUNTER2SECRET" not in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("k: !!set foo\n", "foo"),
+        ("k: !!set [1]\n", [1]),
+        ("k: !!omap [[1, 2, 3], [4]]\n", {1: 3, 4: 4}),
+        ("k: !!omap [{x: 1}, {x: 2}]\n", {"x": 2}),
+    ],
+)
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_set_and_omap_entries_follow_psych(loader, text, expected):
+    assert _load_with(loader, text)["k"] == expected
+
+
+# ---------------------------------------------------------------------------
+# Merge keys: Psych's revive_hash, in document order
+# ---------------------------------------------------------------------------
+
+_DEFAULTS = "d: &d {port: 80, tls: false}\n"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        # A merge replaces what precedes it, and is replaced by what follows.
+        (_DEFAULTS + "a: {port: 8443, <<: *d}\n", [("port", 80), ("tls", False)]),
+        (_DEFAULTS + "a: {<<: *d, port: 8443}\n", [("port", 8443), ("tls", False)]),
+        ("a: {x: 5, <<: {x: 1, y: 2}}\n", [("x", 1), ("y", 2)]),
+        ("d: &d\n  p: 1\na:\n  q: 2\n  <<: *d\n", [("q", 2), ("p", 1)]),
+        # A list merges back to front: the first mapping wins.
+        (
+            "b: &b {x: 1}\nc: &c {y: 2, x: 3}\na: {<<: [*b, *c]}\n",
+            [("y", 2), ("x", 1)],
+        ),
+        ("l: &l {x: 1}\na: {<<: [*l], y: 2}\n", [("x", 1), ("y", 2)]),
+        ("d: &d {p: 1}\ne: &e {p: 2}\na: {<<: *d, <<: *e}\n", [("p", 2)]),
+        ("a: {<<: [], x: 1}\n", [("x", 1)]),
+        # Quoted, aliased and explicitly merge-tagged keys all merge.
+        ("d: &d {p: 1}\na: {'<<': *d}\n", [("p", 1)]),
+        ("k: &k <<\nd: &d {p: 1}\na: {*k : *d}\n", [("p", 1)]),
+        ("d: &d {p: 1}\na: {!!merge <<: *d}\n", [("p", 1)]),
+        # Only !!str makes the key literal.
+        ("d: &d {p: 1}\na: {!!str <<: *d}\n", [("<<", {"p": 1})]),
+        # Anything that is not a mapping (or a list of mappings) stays literal.
+        ("a: {<<: ~, x: 1}\n", [("<<", None), ("x", 1)]),
+        ("a: {<<: text, x: 1}\n", [("<<", "text"), ("x", 1)]),
+        ("a: {<<: 5, <<: {x: 1}}\n", [("<<", 5), ("x", 1)]),
+        ("a: {<<: [{x: 1}, 5], y: 1}\n", [("<<", [{"x": 1}, 5]), ("y", 1)]),
+        ("a: {y: 1, <<: [{x: 1}, 5]}\n", [("y", 1), ("<<", [{"x": 1}, 5])]),
+        ("a: {<<: [[{x: 1}]]}\n", [("<<", [[{"x": 1}]])]),
+        ("a: {<<: [~]}\n", [("<<", [None])]),
+        # An alias to a list is a value, not a list of mappings to merge.
+        ("l: &l [1]\na: {<<: *l, x: 1}\n", [("<<", [1]), ("x", 1)]),
+        ("l: &l [{x: 1}]\na: {<<: *l, y: 2}\n", [("<<", [{"x": 1}]), ("y", 2)]),
+        ("k: &s 5\na: {<<: *s}\n", [("<<", 5)]),
+    ],
+)
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_merge_key_follows_psych(loader, text, expected):
+    assert list(_load_with(loader, text)["a"].items()) == expected
+
+
+def test_merge_key_scalar_value_does_not_reject_the_file():
+    assert safe_load("k:\n  <<: 5\n  a: 1\n") == {"k": {"<<": 5, "a": 1}}
+
+
+# ---------------------------------------------------------------------------
+# Anchors: the latest definition wins
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("a: &d 1\nb: &d 2\nk: *d\n", {"a": 1, "b": 2, "k": 2}),
+        (
+            "a: &x 1\nb: &x 2\nc: *x\nd: &x 3\ne: *x\n",
+            {"a": 1, "b": 2, "c": 2, "d": 3, "e": 3},
+        ),
+        (
+            "k:\n  one: &a {x: 1}\n  two: &a {x: 2}\n  use: *a\n",
+            {"k": {"one": {"x": 1}, "two": {"x": 2}, "use": {"x": 2}}},
+        ),
+    ],
+)
+def test_redefined_anchor_rebinds(text, expected):
+    assert safe_load(text) == expected
+
+
+def test_redefined_anchor_after_a_long_document_prefix():
+    prefix = "".join("p{0}: {0}\n".format(i) for i in range(200))
+    assert safe_load(prefix + "a: &d 1\nb: &d 2\nk: *d\n")["k"] == 2
+
+
+def test_anchor_defined_in_a_later_document_is_not_scanned():
+    assert safe_load("a: &d 1\nk: *d\n---\nb: &d 2\nc: &d 3\n") == {"a": 1, "k": 1}
+
+
+# ---------------------------------------------------------------------------
+# Keys that Python cannot tell apart
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "k: {1: a, 1.0: b}\n",
+        "k: {1: a, true: b}\n",
+        "k: {0: a, false: b}\n",
+        "k: {[1]: a, [1.0]: b}\n",
+        "d: &d {1.0: x}\nk: {1: y, <<: *d}\n",
+    ],
+)
+def test_keys_equal_only_in_python_raise_instead_of_collapsing(loader, text):
+    with pytest.raises(BackendError, match="indistinguishable"):
+        _load_with(loader, text)
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_equal_keys_of_one_type_are_one_key(loader):
+    assert _load_with(loader, "k: {1: a, 1: b, x: c, x: d}\n")["k"] == {
+        1: "b",
+        "x": "d",
+    }
+
+
+def test_key_collision_message_names_scalar_keys():
+    with pytest.raises(BackendError, match=r"keys 1 and 1\.0 "):
+        safe_load("k: {1: a, 1.0: b}\n")
+
+
+def test_key_collision_message_never_quotes_a_string_key():
+    with pytest.raises(BackendError) as excinfo:
+        safe_load("k: {[HUNTER2SECRET, 1]: a, [HUNTER2SECRET, 1.0]: b}\n")
+    assert "HUNTER2SECRET" not in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# Integers of any length
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("9" * 5000, 10**5000 - 1),
+        ("-" + "9" * 5000, -(10**5000 - 1)),
+        ("1" + "0" * 4999 + ":30", 10**4999 * 3600 + 1800),
+        ("0x" + "f" * 5000, 16**5000 - 1),
+    ],
+    ids=["decimal", "negative", "sexagesimal", "hex"],
+)
+def test_integers_beyond_the_interpreters_digit_limit_load(text, expected):
+    assert safe_load("k: " + text + "\n")["k"] == expected

@@ -489,7 +489,7 @@ def test_inherited_function_kind_mismatch_has_no_line(tmp_path):
 
 def test_duplicate_top_level_hierarchy_key_last_one_wins(tmp_path):
     # Psych/our own loader keep the *last* of two duplicate top-level
-    # mapping keys (`_flatten_mapping_keeping_dupes_last`), so `hierarchy`
+    # mapping keys (`_psych._revive_hash`), so `hierarchy`
     # here is the second (two-entry) definition. But _config_line's own
     # raw-node walk (over plain `yaml.compose`, which does not dedupe
     # duplicate keys) finds the *first* matching "hierarchy" node instead

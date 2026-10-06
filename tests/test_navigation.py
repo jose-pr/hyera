@@ -87,6 +87,14 @@ def test_split_key_syntax_error(key):
         split_key(key, _make_error)
 
 
+@pytest.mark.parametrize("digits", [4300, 4301, 20000])
+def test_index_segment_of_any_length_is_an_index_no_list_holds(digits):
+    segments = split_key("k." + "7" * digits, _make_error)
+    assert segments[0] == "k"
+    assert segments[1] == (10**digits - 1) // 9 * 7
+    assert sub_lookup("k", segments[1:], ["a", "b"]) is _MISSING
+
+
 @pytest.mark.parametrize(
     "segments,value,expect",
     [

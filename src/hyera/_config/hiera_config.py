@@ -1493,10 +1493,15 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
                 path=path,
             ) from e
 
+    # Raised after the handler so no chained exception keeps the bytes
+    # (`UnicodeDecodeError.object`).
+    problem = None
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as e:
-        raise ConfigError("({}): {}".format(label, e), path=path) from e
+        problem = str(e)
+    if problem is not None:
+        raise ConfigError("({}): {}".format(label, problem), path=path)
     source = _ConfigSource(label, path, text, root)
     # `puppet lookup` reads hiera.yaml via `HieraConfig.create` ->
     # `cached_file_data` -> `Puppet::Util::Yaml.safe_load(content, ...)`
@@ -1513,6 +1518,7 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     try:
         base = YAMLBackend().loads(text)
     except BackendError as e:
+        # The cause is the loader's own chain-free error: one line, no text.
         raise ConfigError("({}): {}".format(label, e), path=path) from e
     if isinstance(base, dict):
         # hiera_config.rb:181 -- symbol keys (however written) become

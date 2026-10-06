@@ -48,6 +48,21 @@ def test_json_backend_names():
     assert Backend.find("json", kind="format") is JSONBackend
 
 
+@pytest.mark.parametrize("depth", [501, 5000, 100000])
+def test_json_deep_nesting_raises_backend_error(depth):
+    with pytest.raises(BackendError, match="nested too deeply"):
+        JSONBackend().loads("[" * depth + "]" * depth)
+
+
+def test_json_reasonable_nesting_loads():
+    assert JSONBackend().loads("[" * 500 + "]" * 500)
+
+
+def test_json_integer_over_the_interpreters_digit_limit_loads():
+    assert JSONBackend().loads('{"n": ' + "9" * 5000 + "}") == {"n": 10**5000 - 1}
+    assert JSONBackend().loads("-" + "1" + "0" * 4999) == -(10**4999)
+
+
 def test_json_parse_error_is_backend_error():
     with pytest.raises(BackendError):
         JSONBackend().loads("{not json}")

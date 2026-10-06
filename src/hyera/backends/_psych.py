@@ -18,6 +18,7 @@ import re
 
 import yaml
 
+from .._digits import parse_decimal_int
 from ..exceptions import BackendError
 
 __all__ = ["RubySymbol", "symkeys_to_string", "safe_load"]
@@ -156,7 +157,23 @@ def _parse_int_legacy(text: str) -> int:
         return int(sign + body, 16)
     if body.startswith("0") and len(body) > 1:
         return int(sign + body, 8)
-    return int(sign + body, 10)
+    return parse_decimal_int(sign + body)
+
+
+#: Ruby ``String#to_i``/``#to_f`` prefixes: single underscores between digits
+#: are separators, anything after the first non-digit is ignored.
+_TO_I_PREFIX_RE = re.compile(r"[+-]?[0-9]+(?:_[0-9]+)*")
+_TO_F_PREFIX_RE = re.compile(r"[+-]?[0-9]+(?:_[0-9]+)*(?:\.[0-9]+(?:_[0-9]+)*)?")
+
+
+def _ruby_to_i(text: str) -> int:
+    m = _TO_I_PREFIX_RE.match(text)
+    return parse_decimal_int(m.group().replace("_", "")) if m else 0
+
+
+def _ruby_to_f(text: str) -> float:
+    m = _TO_F_PREFIX_RE.match(text)
+    return float(m.group().replace("_", "")) if m else 0.0
 
 
 def _tokenize(string: str):
@@ -199,7 +216,7 @@ def _tokenize(string: str):
         total = 0
         parts = string.split(":")
         for index, part in enumerate(parts):
-            total += int(part) * (60 ** abs(index - 2))
+            total += _ruby_to_i(part) * (60 ** abs(index - 2))
         # Only the *first* part carries the sign (Ruby: `n.to_i`, where the
         # sign lives in the first segment's own text).
         return total
@@ -207,7 +224,7 @@ def _tokenize(string: str):
         total = 0.0
         parts = string.split(":")
         for index, part in enumerate(parts):
-            total += float(part) * (60 ** abs(index - 2))
+            total += _ruby_to_f(part) * (60 ** abs(index - 2))
         return total
     if _FLOAT_RE.match(string):
         if _FLOAT_DOT_ONLY_RE.match(string):
@@ -245,9 +262,7 @@ def _tokenize(string: str):
 
 _PLAIN_TAG = "tag:hyera.internal,2026:plain"
 
-#: Tags this loader treats as merge keys are left to PyYAML's own default
-#: resolution/`flatten_mapping` -- only the literal plain scalar `<<` needs
-#: to keep resolving to the real merge tag instead of `_PLAIN_TAG`.
+_MERGE_TAG = "tag:yaml.org,2002:merge"
 _MERGE_SCALAR = "<<"
 
 
@@ -256,18 +271,23 @@ class _PsychResolverMixin:
     :data:`_PLAIN_TAG`, so none of PyYAML's own bool/int/float/null/
     timestamp implicit resolvers (Python-flavored) ever fire -- the
     constructor for :data:`_PLAIN_TAG` calls :func:`_tokenize` instead,
-    which is Ruby/Psych-flavored. The one exception is the literal `<<`
-    scalar, which must keep resolving to the real merge tag or PyYAML's
-    own `flatten_mapping` stops recognizing it as a merge key.
+    which is Ruby/Psych-flavored. An untagged ``<<`` scalar, plain or
+    quoted, resolves to the merge tag; only an explicit ``!!str`` keeps it
+    from merging (``_revive_hash``).
     """
 
     def resolve(self, kind, value, implicit):
-        if kind is yaml.nodes.ScalarNode and implicit[0] and value != _MERGE_SCALAR:
-            return _PLAIN_TAG
+        if kind is yaml.nodes.ScalarNode:
+            if value == _MERGE_SCALAR:
+                return _MERGE_TAG
+            if implicit[0]:
+                return _PLAIN_TAG
         return super().resolve(kind, value, implicit)
 
 
 def _construct_plain(loader, node):
+    if not isinstance(node, yaml.nodes.ScalarNode):
+        return _construct_unknown(loader, None, node)
     return _tokenize(loader.construct_scalar(node))
 
 
@@ -287,6 +307,8 @@ def _construct_str_multi(loader, tag_suffix, node):
 
 
 def _construct_binary(loader, node):
+    if not isinstance(node, yaml.nodes.ScalarNode):
+        return _construct_unknown(loader, None, node)
     text = loader.construct_scalar(node)
     # Non-validating, like Ruby's `String#unpack('m')` -- lenient base64,
     # matching `!!binary '%%%'` -> "" in the oracle probes.
@@ -298,6 +320,8 @@ def _construct_binary(loader, node):
 
 
 def _construct_float(loader, node):
+    if not isinstance(node, yaml.nodes.ScalarNode):
+        return _construct_unknown(loader, None, node)
     text = loader.construct_scalar(node)
     value = _tokenize(text)
     try:
@@ -324,46 +348,118 @@ def _construct_ruby_disallowed(loader, tag_suffix, node):
 
 
 def _construct_omap(loader, node):
-    result = {}
+    """``visit_Psych_Nodes_Sequence``'s ``!!omap`` branch: each entry maps its
+    first child to its last child."""
+    if isinstance(node, yaml.nodes.ScalarNode):
+        return _construct_unknown(loader, None, node)
+    if not isinstance(node, yaml.nodes.SequenceNode):
+        raise _disallowed("Psych::Omap")
+    result = _Mapping()
     for child in node.value:
-        # Each child is a one-pair MappingNode: `{key: value}`.
-        pairs = loader.construct_mapping(child, deep=True)
-        for k, v in pairs.items():
-            result[k] = v
-    return result
+        if isinstance(child, yaml.nodes.MappingNode) and child.value:
+            first, last = child.value[0][0], child.value[-1][1]
+        elif isinstance(child, yaml.nodes.SequenceNode) and child.value:
+            first, last = child.value[0], child.value[-1]
+        else:
+            raise BackendError("invalid entry in !!omap")
+        key = _freeze_key(loader.construct_object(first, deep=True))
+        result.store(key, loader.construct_object(last, deep=True))
+    return result.items
 
 
 def _construct_set_disallowed(loader, node):
+    if not isinstance(node, yaml.nodes.MappingNode):
+        return _construct_by_kind(loader, node)
     raise _disallowed("Psych::Set")
 
 
-def _construct_sequence(loader, node):
-    return loader.construct_sequence(node, deep=True)
-
-
-def _construct_mapping(loader, node):
-    return loader.construct_mapping(node, deep=True)
+def _construct_by_kind(loader, node):
+    """Build ``node`` by its kind, whatever its tag says."""
+    if isinstance(node, yaml.nodes.SequenceNode):
+        return loader.construct_sequence(node, deep=True)
+    if isinstance(node, yaml.nodes.MappingNode):
+        return _revive_hash(loader, node)
+    return _tokenize(loader.construct_scalar(node))
 
 
 def _construct_unknown(loader, tag_suffix, node):
-    if isinstance(node, yaml.nodes.ScalarNode):
-        return _tokenize(loader.construct_scalar(node))
-    if isinstance(node, yaml.nodes.SequenceNode):
-        return _construct_sequence(loader, node)
-    return _construct_mapping(loader, node)
+    return _construct_by_kind(loader, node)
 
 
-def _flatten_mapping_keeping_dupes_last(loader, node):
-    """``construct_mapping`` with ``flatten_mapping`` applied first (so
-    ``<<`` merges are honored) and the last duplicate key winning."""
-    loader.flatten_mapping(node)
-    result = {}
+_STR_TAG = "tag:yaml.org,2002:str"
+
+
+def _ruby_eql(a, b) -> bool:
+    """Ruby ``eql?`` for two keys that already compare ``==`` in Python:
+    ``1``, ``1.0`` and ``True`` are one key to Python and three to Ruby."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, tuple):
+        return len(a) == len(b) and all(_ruby_eql(x, y) for x, y in zip(a, b))
+    return True
+
+
+def _describe_key(key) -> str:
+    if isinstance(key, (bool, int, float)):
+        return repr(key)
+    return "a composite key"
+
+
+class _Mapping:
+    """A dict under construction. Python merges keys that Ruby keeps apart
+    (``1``/``1.0``/``True``); that is an error here, never a silent merge."""
+
+    __slots__ = ("items", "_keys")
+
+    def __init__(self):
+        self.items = {}
+        self._keys = {}
+
+    def store(self, key, value):
+        prior = self._keys.setdefault(key, key)
+        if prior is not key and not _ruby_eql(prior, key):
+            raise BackendError(
+                "mapping keys {} and {} are indistinguishable to hyera".format(
+                    _describe_key(prior), _describe_key(key)
+                )
+            )
+        self.items[key] = value
+
+    def update(self, other):
+        for key, value in other.items():
+            self.store(key, value)
+
+
+def _merge_sources(key_node, value_node, value):
+    """The mappings a ``<<`` entry merges, or ``None`` when Psych keeps the
+    ``<<`` key literally (``to_ruby.rb`` ``revive_hash``)."""
+    # An alias resolves to the anchored node, defined before the key.
+    is_alias = value_node.start_mark.index < key_node.start_mark.index
+    if isinstance(value_node, yaml.nodes.SequenceNode) and not is_alias:
+        if isinstance(value, list) and all(isinstance(m, dict) for m in value):
+            return list(reversed(value))
+        return None
+    return [value] if isinstance(value, dict) else None
+
+
+def _revive_hash(loader, node):
+    """Port of ``revive_hash``: entries in document order, a ``<<`` key
+    merging into the entries so far (the merged value wins) unless it is
+    tagged ``!!str``; the last duplicate key wins."""
+    result = _Mapping()
     for key_node, value_node in node.value:
         key = loader.construct_object(key_node, deep=True)
         value = loader.construct_object(value_node, deep=True)
-        key = _freeze_key(key)
-        result[key] = value
-    return result
+        if isinstance(key, str) and key == "<<" and key_node.tag != _STR_TAG:
+            sources = _merge_sources(key_node, value_node, value)
+            if sources is not None:
+                merged = _Mapping()
+                for source in sources:
+                    merged.update(source)
+                result.update(merged.items)
+                continue
+        result.store(_freeze_key(key), value)
+    return result.items
 
 
 def _freeze_key(key):
@@ -377,8 +473,8 @@ def _freeze_key(key):
     return key
 
 
-def _make_loader_class(base):
-    class _Loader(_PsychResolverMixin, base):
+def _make_loader_class(base, *mixins):
+    class _Loader(*mixins, _PsychResolverMixin, base):
         pass
 
     _Loader.add_constructor(_PLAIN_TAG, _construct_plain)
@@ -414,10 +510,10 @@ def _make_loader_class(base):
         "tag:yaml.org,2002:seq",
         "!pairs",
         "tag:yaml.org,2002:pairs",
+        "!map",
+        "tag:yaml.org,2002:map",
     ):
-        _Loader.add_constructor(prefix, _construct_sequence)
-    for prefix in ("!map", "tag:yaml.org,2002:map"):
-        _Loader.add_constructor(prefix, _construct_mapping)
+        _Loader.add_constructor(prefix, _construct_by_kind)
     # Registration order matters (PyYAML tries multi-constructor *prefixes*
     # in insertion order, first match wins): the specific "!ruby/string"
     # prefix must be added before the broad "!ruby/" one, or every
@@ -426,11 +522,21 @@ def _make_loader_class(base):
     _Loader.add_multi_constructor("!ruby/string", _construct_str_multi)
     _Loader.add_multi_constructor("!ruby/", _construct_ruby_disallowed)
     _Loader.add_multi_constructor(None, _construct_unknown)
-    _Loader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-        _flatten_mapping_keeping_dupes_last,
-    )
     return _Loader
+
+
+class _RedefinableAnchors:
+    """Composer mixin: a repeated anchor name rebinds to the latest definition
+    (``to_ruby.rb`` keeps one table and overwrites), where PyYAML's pure-Python
+    composer raises. libyaml's composer cannot be hooked; :func:`safe_load`
+    routes a document with a repeated anchor to the pure-Python loader."""
+
+    def compose_node(self, parent, index):
+        if not self.check_event(yaml.events.AliasEvent):
+            anchor = self.peek_event().anchor
+            if anchor is not None:
+                self.anchors.pop(anchor, None)
+        return super().compose_node(parent, index)
 
 
 _C_LOADER = (
@@ -438,17 +544,22 @@ _C_LOADER = (
     if getattr(yaml, "__with_libyaml__", False)
     else None
 )
-_PURE_LOADER = _make_loader_class(yaml.SafeLoader)
+_PURE_LOADER = _make_loader_class(yaml.SafeLoader, _RedefinableAnchors)
 _LOADER = _C_LOADER or _PURE_LOADER
 
 
-#: Matches a PyYAML error's own quoted token, e.g. the alias/tag/anchor name
-#: in "found undefined alias 'NAME'" or "found duplicate anchor 'NAME'".
-#: ``_yaml_problem`` never echoes decrypted data, but three ``problem``/
-#: ``context`` texts (undefined alias, unknown tag, duplicate anchor) quote a
-#: single scalar from the source verbatim -- redact it rather than trusting
-#: PyYAML's own message templates to never do this.
-_YAML_QUOTED_TOKEN_RE = re.compile(r"'[^']*'")
+#: A quoted token in a PyYAML problem text. Alias, tag-handle and
+#: escape-character names quote source text verbatim, so they are redacted;
+#: the parser's own structural tokens (``','``, ``']'``, ``'<block end>'``)
+#: are part of the message and kept.
+_YAML_QUOTED_TOKEN_RE = re.compile(r"'([^']*)'")
+_YAML_FIXED_TOKEN_RE = re.compile(r"[,\]\[{}:?-]|<[a-z ]+>")
+
+
+def _redact_token(match) -> str:
+    if _YAML_FIXED_TOKEN_RE.fullmatch(match.group(1)):
+        return match.group(0)
+    return "'<redacted>'"
 
 
 def _yaml_problem(exc) -> str:
@@ -467,7 +578,7 @@ def _yaml_problem(exc) -> str:
         text = " ".join(parts)
         mark = exc.context_mark or exc.problem_mark
         if text:
-            text = _YAML_QUOTED_TOKEN_RE.sub("'<redacted>'", text)
+            text = _YAML_QUOTED_TOKEN_RE.sub(_redact_token, text)
         if mark is not None:
             return "{} at line {} column {}".format(
                 text, mark.line + 1, mark.column + 1
@@ -478,6 +589,51 @@ def _yaml_problem(exc) -> str:
         first_line = str(exc).splitlines()[0] if str(exc) else ""
         return "{} at position {}".format(first_line, exc.position)
     return type(exc).__name__
+
+
+#: Deepest collection nesting :func:`safe_load` reads. libyaml's composer
+#: recurses in C without a bound and ends the process on Python 3.9; Psych
+#: itself gives up near 10000 levels.
+_MAX_NESTING = 500
+_TOO_DEEP = "nested too deeply (more than {} levels)".format(_MAX_NESTING)
+
+_COLLECTION_STARTS = (yaml.events.SequenceStartEvent, yaml.events.MappingStartEvent)
+_COLLECTION_ENDS = (yaml.events.SequenceEndEvent, yaml.events.MappingEndEvent)
+
+
+def _scan_structure(text: str):
+    """Walk the first document's parse events, which the parser produces
+    without recursion, before anything recursive sees it.
+
+    :returns: the loader class to compose with: the pure-Python one when an
+        anchor name is defined twice.
+    :raises BackendError: nesting exceeds :data:`_MAX_NESTING`.
+    """
+    # Each level needs at least one character, and an anchor needs an "&".
+    if len(text) <= _MAX_NESTING and "&" not in text:
+        return _LOADER
+    depth = 0
+    anchors = set()
+    redefined = False
+    scanner = _LOADER(text)
+    try:
+        while scanner.check_event():
+            event = scanner.get_event()
+            if isinstance(event, _COLLECTION_STARTS):
+                depth += 1
+                if depth > _MAX_NESTING:
+                    raise BackendError(_TOO_DEEP)
+            elif isinstance(event, _COLLECTION_ENDS):
+                depth -= 1
+            elif isinstance(event, yaml.events.DocumentEndEvent):
+                break
+            anchor = getattr(event, "anchor", None)
+            if anchor is not None and not isinstance(event, yaml.events.AliasEvent):
+                redefined = redefined or anchor in anchors
+                anchors.add(anchor)
+    finally:
+        scanner.dispose()
+    return _PURE_LOADER if redefined else _LOADER
 
 
 def safe_load(text: str):
@@ -499,7 +655,7 @@ def safe_load(text: str):
         text = " " + text[1:]
     problem = None
     try:
-        generator = yaml.load_all(text, _LOADER)
+        generator = yaml.load_all(text, _scan_structure(text))
         try:
             result = next(generator)
         except StopIteration:
@@ -511,4 +667,8 @@ def safe_load(text: str):
         problem = str(e)
     except yaml.YAMLError as e:
         problem = _yaml_problem(e)
+    except RecursionError:
+        problem = _TOO_DEEP
+    except (ValueError, TypeError, AttributeError, ArithmeticError, LookupError) as e:
+        problem = "unsupported YAML construct ({})".format(type(e).__name__)
     raise BackendError(problem)

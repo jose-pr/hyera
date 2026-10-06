@@ -293,3 +293,46 @@ def test_facts_from_facter_interrupt_kills_the_child_and_its_children(
         facts_from_facter(timeout=120)
     assert excinfo.value.__context__ is None
     process_tree.assert_killed()
+
+
+def _chain(exc):
+    seen = []
+    while exc is not None and exc not in seen:
+        seen.append(exc)
+        yield exc
+        exc = exc.__cause__ or exc.__context__
+
+
+@pytest.mark.parametrize(
+    "name,raw",
+    [
+        ("bad.json", b'{"HUNTER2SECRET": [1, 2'),
+        ("bad.yaml", b"HUNTER2SECRET: [1, 2\n"),
+        ("latin1.json", b'{"HUNTER2SECRET": "caf\xe9"}'),
+        ("latin1.yaml", b"HUNTER2SECRET: caf\xe9\n"),
+    ],
+)
+def test_facts_errors_carry_no_document_in_the_chain(tmp_path, name, raw):
+    path = tmp_path / name
+    path.write_bytes(raw)
+    with pytest.raises(BackendError) as excinfo:
+        load_facts(path)
+    for exc in _chain(excinfo.value):
+        assert "HUNTER2SECRET" not in repr(vars(exc))
+        assert "HUNTER2SECRET" not in repr(exc.args)
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__context__ is None
+
+
+@pytest.mark.parametrize("name", ["facts.json", "facts.yaml"])
+def test_deeply_nested_facts_file_raises_backend_error(tmp_path, name):
+    nest = "[" * 5000 + "]" * 5000
+    text = '{"k": ' + nest + "}" if name.endswith(".json") else "k: " + nest
+    path = _write(tmp_path, name, text)
+    with pytest.raises(BackendError, match="nested too deeply"):
+        load_facts(path)
+
+
+def test_json_facts_accept_integers_over_the_interpreters_digit_limit(tmp_path):
+    path = _write(tmp_path, "facts.json", '{"n": ' + "9" * 5000 + "}")
+    assert load_facts(path)["n"] == 10**5000 - 1

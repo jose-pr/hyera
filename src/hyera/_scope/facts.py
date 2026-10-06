@@ -14,7 +14,12 @@ import subprocess
 import typing as _ty
 
 from ..backends import _psych as _psych
-from ..backends._json import _reject_json_constant
+from ..backends._json import (
+    TOO_DEEP,
+    _reject_json_constant,
+    check_json_value,
+    loads_json,
+)
 from .._subprocess import run as _run
 from ..exceptions import BackendError
 
@@ -54,30 +59,40 @@ def _reject_symbols(value, label) -> None:
 
 
 def _parse_json_facts(raw: bytes, label: str):
+    # Every error is raised after its handler, so no chained exception holds
+    # the document (a decode error's `.object`, a JSON error's `.doc`).
+    problem = None
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as e:
-        raise BackendError("({}): {}".format(label, e), path=label) from e
-    try:
-        return json.loads(text, parse_constant=_reject_json_constant)
-    except json.JSONDecodeError as e:
-        raise BackendError(
-            "({}): {} at line {} column {}".format(label, e.msg, e.lineno, e.colno),
-            path=label,
-        ) from e
-    except ValueError as e:  # from _reject_json_constant (NaN/Infinity)
-        raise BackendError("({}): {}".format(label, e), path=label) from e
+        problem = str(e)
+    if problem is None:
+        try:
+            parsed = loads_json(text)
+            check_json_value(parsed, surrogates=False)
+            return parsed
+        except json.JSONDecodeError as e:
+            problem = "{} at line {} column {}".format(e.msg, e.lineno, e.colno)
+        except RecursionError:
+            problem = TOO_DEEP
+        except ValueError as e:  # from _reject_json_constant (NaN/Infinity)
+            problem = str(e)
+    raise BackendError("({}): {}".format(label, problem), path=label)
 
 
 def _parse_yaml_facts(raw: bytes, label: str):
+    problem = None
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as e:
-        raise BackendError("({}): {}".format(label, e), path=label) from e
-    try:
-        parsed = _psych.safe_load(text)
-    except BackendError as e:
-        raise BackendError("({}): {}".format(label, e), path=label) from e
+        problem = str(e)
+    if problem is None:
+        try:
+            parsed = _psych.safe_load(text)
+        except BackendError as e:
+            problem = str(e)
+    if problem is not None:
+        raise BackendError("({}): {}".format(label, problem), path=label)
     _reject_symbols(parsed, label)
     return parsed
 
