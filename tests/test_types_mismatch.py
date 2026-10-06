@@ -180,10 +180,8 @@ def test_describe_evidence_more_branches():
         "Found value has wrong type, expects a Struct value, got Tuple"
     )
 
-    # `_size_text`'s four shapes: unlimited (no bound at all -- covered by
-    # the Collection case above, which has no size constraint), "at least"
-    # (a lower bound only), "at most" (an upper bound only), and "between"
-    # (both, covered by the Tuple/Hash cases elsewhere in this file).
+    # `_size_text`'s shapes: unlimited (the Collection case above), "at least" (lower
+    # bound only), "at most" (upper bound only), "between" (the Tuple/Hash cases).
     assert err(parse_type("Array[Integer,3]"), [1, 2]) == (
         "Found value has wrong type, expects size to be at least 3, got 2"
     )
@@ -259,11 +257,9 @@ def test_describe_evidence_more_branches():
 
 
 def test_size_text_direct():
-    # `_size_text`'s own "unlimited" branch is unreachable through
-    # `_describe_array`/`_describe_hash`/`_describe_tuple` (each defaults or
-    # normalizes its bounds before ever calling `_size_mismatch`, so a
-    # size-mismatch report is never built from a truly unconstrained size);
-    # exercised directly, the same as this file's other private helpers.
+    # `_size_text`'s "unlimited" branch is unreachable through the `_describe_*`
+    # functions (each normalizes its bounds before `_size_mismatch`); exercised
+    # directly.
     assert _size_text(None, None) == "unlimited"
     assert _size_text(3, None) == "at least 3"
     assert _size_text(None, 3) == "at most 3"
@@ -271,11 +267,8 @@ def test_size_text_direct():
 
 
 def test_a_an_direct():
-    # _a_an's own leading-quote skip (Puppet's a_an handles a quoted label,
-    # even though nothing this subset renders through it is ever
-    # quote-prefixed): a quote char is skipped, a real letter stops the
-    # loop, and a label that is quote characters all the way through (or
-    # empty) never finds one at all.
+    # _a_an's leading-quote skip (Puppet's a_an handles a quoted label): a quote is
+    # skipped, a letter stops the loop, an all-quote or empty label finds none.
     assert _a_an("'x'") == "a"
     assert _a_an("'Anvil'") == "an"
     assert _a_an("''") == "a"

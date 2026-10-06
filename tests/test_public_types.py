@@ -1,10 +1,7 @@
 """Tests for the public facade in :mod:`hyera.types`.
 
-Every bare class and subscript expression is checked against
-:func:`hyera._types.parser.parse_type` of the equivalent Puppet text --
-``hyera.types`` is a thin, string-equivalent facade over the already
-oracle-tested private type model, so this file never needs its own Puppet
-oracle data.
+Each bare class and subscript expression is checked against ``parse_type`` of the
+equivalent Puppet text.
 """
 
 import re
@@ -82,12 +79,10 @@ def test_typespec_accepts_every_form_a_type_position_takes():
 
 
 def test_direct_references_for_export_coverage():
-    """Touches every ``hyera.types`` name not already referenced inside
-    some other ``test_*`` function body here: the parametrized tables above
-    (``BARE_NAMES``, ``SUBSCRIPT_CASES``, ...) live at module level, which
-    ``tests/test_exports.py``'s per-export presence check (a bare
-    ``ast.Name``/``ast.Attribute`` inside a ``test_*`` function) does not
-    see."""
+    """Reference every ``hyera.types`` name that no ``test_*`` body mentions.
+
+    The module-level parametrize tables are invisible to the per-export presence
+    check in ``tests/test_exports.py``."""
     assert types.Array is not None
     assert types.Boolean is not None
     assert types.Collection is not None
@@ -368,10 +363,8 @@ def test_bare_class_default_is_the_parser_singleton_where_applicable():
 
 
 def test_internal_isinstance_dispatch_on_private_classes_unaffected():
-    """Giving ``Any`` an instance-level ``__instancecheck__`` must not
-    change ``isinstance(<type object>, <private class>)`` -- the dispatch
-    every internal module (``_types.new_function``, ``_types.mismatch``,
-    ...) relies on."""
+    """An instance-level ``Any.__instancecheck__`` leaves
+    ``isinstance(<type object>, <private class>)`` alone; internal dispatch uses it."""
     integer_type = parse_type("Integer")
     assert isinstance(integer_type, _priv.Integer)
     assert isinstance(integer_type, _priv.Any)

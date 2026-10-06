@@ -106,13 +106,9 @@ def test_render_table():
     assert str(infer([True]).generalize()) == "Array[Boolean]"
 
 
-# --------------------------------------------------- parser grammar/errors
-#
-# The golden-driven `test_parse_matches_golden` above only exercises specs
-# Puppet itself was asked to parse; these cover the parser's own remaining
-# grammar shapes and error branches directly (array/hash literals, quoted
-# string escapes, unary minus, `default` size bounds, and every builder's
-# own argument-count/shape error).
+# parser grammar/errors beyond the golden-driven test: array/hash literals, quoted
+# string escapes, unary minus, `default` size bounds and every builder's argument
+# count/shape error.
 
 
 def test_parser_syntax_errors():
@@ -274,11 +270,9 @@ def test_parser_literals_and_collections():
 
 
 def test_parser_advance_past_eof_is_a_no_op():
-    # Every call site in this module only ever advances past a token whose
-    # kind it just confirmed is not "eof" -- so calling `advance()` a
-    # second time once the parser is already sitting on the eof token (a
-    # defensive backstop against an out-of-range `self.pos`) never happens
-    # through `parse_type()` itself. Exercised directly on the class.
+    # Callers only advance past a non-"eof" token, so advance() on an eof token (a
+    # backstop against an out-of-range `self.pos`) is unreachable through
+    # `parse_type()`; exercised directly.
     p = _Parser("x")
     first = p.advance()
     assert first.kind == "name"

@@ -50,15 +50,8 @@ def test_aliases_and_references():
     assert str(infer_set(RubySymbol())) == "Runtime[ruby, 'Symbol']"
 
 
-# -------------------------------------------------- type-model internals
-#
-# _key()/__eq__()/__hash__()
-# have no entry point of their own -- convert_to/value_type only ever call
-# instance()/new()/str() on a parsed type. This module ports Puppet's whole
-# type model (type_calculator.rb/type_formatter.rb), not only what hiera's
-# lookup path currently wires up, so the rest of that API is exercised
-# directly against parsed/inferred type instances, same as the rest of this
-# file.
+# type-model internals: _key()/__eq__()/__hash__() have no entry point of their own,
+# so they are exercised directly on parsed/inferred type instances.
 
 
 def test_any_type_base_defaults():
@@ -131,12 +124,9 @@ def test_bare_and_literal_optional_instances():
 
 
 def test_optional_notundef_literal_container_rendering():
-    # `Optional[integer]`/`NotUndef[integer]` (a bareword *contained type
-    # argument*) keep the contained value as a raw Python str, rendered
-    # through the plain-string branch -- but Optional/NotUndef can also wrap
-    # a real String with `.literal` set (never produced by parse_type,
-    # only by infer()); that flavor renders its quoted literal directly
-    # rather than recursing into the child's own (bare "String") renderer.
+    # A bareword contained argument (`Optional[integer]`) keeps a raw str, rendered by
+    # the plain-string branch; Optional/NotUndef around a String with `.literal` set
+    # (only infer() builds one) renders its quoted literal instead.
     assert str(Optional(infer("x"))) == "Optional['x']"
     assert str(NotUndef(infer("y"))) == "NotUndef['y']"
 
@@ -189,12 +179,9 @@ def test_numeric_and_string_range_bounds():
 
     assert parse_type("Struct[{a=>String}]").instance([1, 2]) is False
 
-    # A range-bound rendered through `_num_str`, not the value's own
-    # instance-check: `infer()` on a NaN/Infinity/large-exponent float turns
-    # it into `Float[<that value>, <that value>]`, and the mismatch-message
-    # path (`_lookup/data_functions.py`/`_lookup/lookup_adapter.py`/
-    # `_types/mismatch.py`,
-    # all calling `infer(value)`) renders it right there.
+    # A range bound renders through `_num_str`, not the value's instance check: infer()
+    # on a NaN/Infinity/large-exponent float gives `Float[<v>, <v>]`, which the mismatch
+    # messages in `_types/mismatch.py` render.
     assert str(infer(float("nan"))) == "Float[nan, nan]"
     assert str(infer(float("inf"))) == "Float[inf, inf]"
     assert str(infer(float("-inf"))) == "Float[-inf, -inf]"
@@ -229,14 +216,9 @@ def test_infer_edge_cases():
 
 
 def test_num_str_and_literal_str_direct():
-    # `_num_str`'s bool branch and `_literal_str`'s float/other branches are
-    # unreachable through `parse_type()`: the parser's own `_num_or_default`
-    # only ever hands Integer/Float range bounds a "number" or "default"
-    # node (never "bool"), and `_build_enum` only ever hands `Enum` a
-    # "string" or "bool" node -- so neither a bool bound nor a non-str/bool
-    # Enum value can arise from real Puppet type-expression text. Both
-    # helpers are still exercised directly, the same as every other private
-    # function in this module.
+    # `_num_str`'s bool branch and `_literal_str`'s float/other branches cannot be
+    # reached through parse_type(): the parser hands range bounds only number/default
+    # nodes and Enum only string/bool nodes. Both are exercised directly.
     assert _num_str(True) == "true"
     assert _num_str(False) == "false"
 

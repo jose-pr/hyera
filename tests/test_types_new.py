@@ -59,13 +59,10 @@ def _new_params():
 _Q8_UNSUPPORTED_QIDS = {"semver", "tspan", "re_t"}
 
 
-#: convert-cv/tuple_t: a real, oracle-confirmed discrepancy between what
-#: ``Tuple.new()`` reports through a direct call (both index 0 and index 1
-#: mismatch, verified with `puppet apply`) and what the SAME conversion
-#: reports through `lookup_options`/`convert_to` (only index 1) -- the
-#: lookup_adapter path's own error surfaces only the last element checked.
-#: Not reproduced here (this subset collects every mismatch, matching the
-#: direct-call oracle behaviour); asserted loosely instead of exactly.
+# convert-cv/tuple_t: Puppet's `Tuple.new()` called directly reports both index 0 and
+# index 1 mismatching, while the same conversion through lookup_options reports only
+# index 1. This subset collects every mismatch like the direct call, so the
+# comparison is loose.
 _KNOWN_QUIRK_QIDS = {"tuple_t"}
 
 
@@ -132,10 +129,9 @@ def test_new_unrecorded():
 
 
 def test_new_dispatch_optional_notundef_bare_and_literal_contained():
-    # _dispatch directly: new_instance()'s own fast path ("not args and
-    # type_.instance(value): return value") would otherwise skip _dispatch
-    # entirely here, since any non-None value trivially satisfies a bare
-    # Optional/NotUndef's own instance() check.
+    # _dispatch is called directly: new_instance()'s fast path ("not args and
+    # type_.instance(value)") would skip it, as any non-None value satisfies a bare
+    # Optional/NotUndef.
     from hyera._types.new_function import _dispatch
 
     # A bare Optional/NotUndef (no contained type argument at all) is not

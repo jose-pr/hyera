@@ -54,10 +54,8 @@ def test_ruby_format_table():
     assert _string_convert(-5, "%05d") == "-0005"
     assert _string_convert(5, "%-5d") + "|" == "5    |"
     assert _string_convert(5, "%5x") == "    5"
-    # "%g": Ruby's general float format (the exponent form's own sign is
-    # already normalized by Python's repr, so _ruby_float_inspect's own
-    # "prepend a sign" branch is effectively unreachable -- not a
-    # discrepancy Puppet fidelity depends on).
+    # "%g": Ruby's general float format. Python's repr already normalizes the exponent
+    # sign, so _ruby_float_inspect's "prepend a sign" branch is effectively unreachable.
     assert _string_convert(3.14159, "%g") == "3.14159"
     assert _string_convert(1e10, "%g") == "1e+10"
     # The final, otherwise-unmodeled-type fallback: a RubySymbol (or any

@@ -1,7 +1,6 @@
 """hyera's public string enums (``Merge``, ``Strict``, ``FunctionKind``,
-``BackendKind``, ``RenderAs``): a member is a plain ``str`` that substitutes
-cleanly for the string it equals, on every supported Python, everywhere a
-parameter already accepted that string.
+``BackendKind``, ``RenderAs``): a member is a plain ``str`` that substitutes for
+the string it equals, on every supported Python.
 """
 
 import enum
