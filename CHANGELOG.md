@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `defaults`) selects the stricter include mode; the bare `hocon_includes`
   key the README described was never valid hiera.yaml.
 - `hyera` exits `130` on Ctrl-C, with no traceback.
+- The README lists every difference from Puppet with its own tag, names
+  Puppet 8.10.0 as the reference, and says how far the promise goes: a lookup
+  finds, misses or fails as Puppet's does and returns the same value, while
+  error text, command output text and exit statuses are hyera's own.
 
 ### Changed
 
@@ -62,12 +66,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of ending the report.
 - A missing or unreadable `--facts` file exits `2` with one line, like any
   other error; `load_facts` raises `BackendError` for it.
-- A command-line option value of exactly `--` works in the `--opt=--`
-  spelling on Python 3.9 to 3.12, for every free-text option; `--strict` is
-  checked by hyera, not argparse.
 - A stdout write failure of any kind (a closed pipe on Windows, a full
   device) exits `2` quietly instead of `120`.
 - `--render-as ''` is an error, not the default format.
+- `--strict` is checked by hyera, not argparse.
 - The agent help and the MCP tool description declare the real exit codes,
   three working examples, and one-line field help that says what omitting a
   field means and that `--facts` is required; `main()` leaves the caller's
@@ -78,8 +80,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- The knockout prefix `--` (and any option value that is exactly `--`) can
-  be sent in an MCP tool call; the server refused it.
+- A command-line option value of exactly `--` (the knockout prefix `--`) is
+  kept as the value on every supported Python, in the `--opt=--` spelling
+  and in an MCP tool call, for every free-text option; the MCP server
+  refused it.
 - A deep merge of a Hash over a non-Hash (a String at a lower level, say)
   merges every key after the first as Puppet does: arrays of the later keys
   lose duplicates and honour `knockout_prefix`. A `knockout_prefix` also
@@ -101,16 +105,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `data_dig` hook asked for a path with a negative index is a miss, not an
   `IndexError`; a segment that follows non-ASCII whitespace before its digits
   is no longer read as an index.
-- Text with many unclosed `%{` is scanned in linear time (40,000 of them took
-  13 seconds).
 - `hyera.backends.SOPS_TIMEOUT = n` changes the `sops` timeout; it was
   documented but read from a private copy.
-- `sops` and `facter` run with their standard input closed instead of the
-  caller's, which under `HYERA_MCP=stdio` is the protocol stream.
-- `facts_from_facter` no longer runs a `facter.bat` found relative to the
-  current directory (Windows, Python 3.9 to 3.11); a relative resolution is
-  refused for both programs, a batch file at an absolute path still runs for
-  `facter`.
 - A `sops` failure keeps its own message (`sops executable not found`, `sops
   failed (exit n)`) instead of being relabelled "Unable to parse", and quotes
   at most the last 2,000 characters of stderr.
@@ -127,8 +123,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Importing `hyera` no longer imports `pyhocon` or replaces its include
   methods; the guard is installed on hyera's private parser copy the first
   time a HOCON document is parsed.
-- A malformed HOCON document no longer leaves pyhocon's exception, which
-  holds the whole text, chained to the `BackendError`.
 - Concurrent lookups on one `Hiera` no longer lose `lookup_options`: the
   re-entrancy guard belongs to one lookup, not to the instance, and a
   result composed while it refused a layer is never kept.
@@ -157,10 +151,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`!!map [a]`, `!!seq {a: 1}`, `!!omap x`), sexagesimal numbers with
   underscores (`1__0:30`) read as Ruby does, and a `Pattern[...]` type
   whose regex Python cannot compile is "not a valid type specification".
-- Integers over 4300 digits load from YAML and JSON, and a key segment of
-  that length is a miss, on Python 3.11 and later as on 3.9.
-- Errors from facts files and `hiera.yaml` no longer keep the file's text on
-  a chained exception.
+- Integers over 4300 digits load from YAML and JSON, render in every
+  `--render-as` format and in `--explain` output, and a key segment of that
+  length is a miss, on Python 3.11 and later as on 3.9.
 - Glob segments are matched in linear time, so a name with many `*`s no
   longer stalls a lookup; a reversed or escaped character range such as
   `[z-a]` matches as in Ruby instead of raising `re.error`; deeply nested
@@ -198,8 +191,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `String` format must be exactly one directive, follows Ruby's `format` per
   value type (negative `%x` is `..f01`) and raises Puppet's "Illegal format"
   text for a directive the type does not take; a Hash prints as `{'a' => 1}`.
-  Previously a format that was not a directive, or an illegal one, was
-  silently ignored.
+  A format that was not a directive, or an illegal one, used to be silently
+  ignored.
 - `hyera.types` subscripts keep the parameters of a nested type
   (`Optional[Integer[1, 3]]` was `Optional[Integer]`), and type objects are
   immutable and compare equal only to other type objects.
@@ -211,8 +204,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `Struct` mismatch against a hash with a non-string key reports a size or
   type mismatch as Puppet does, and `Enum`/`Struct` members render with
   Puppet's own quoting.
-- Integers of more than 4,300 digits render in every `--render-as` format and
-  in `--explain` output on Python 3.11 and later.
+
+### Security
+
+- Text with many unclosed `%{` is scanned in linear time, and glob segments
+  with many `*`s are matched in linear time, so a hostile value or pattern
+  cannot stall a lookup.
+- `sops` and `facter` run with their standard input closed instead of the
+  caller's, which under `HYERA_MCP=stdio` is the protocol stream.
+- `facts_from_facter` no longer runs a `facter.bat` found relative to the
+  current directory (Windows, Python 3.9 to 3.11); a relative resolution is
+  refused for both programs, a batch file at an absolute path still runs for
+  `facter`.
+- Errors from facts files, `hiera.yaml` and a malformed HOCON document no
+  longer keep the file's text (or pyhocon's exception, which holds it) on a
+  chained exception.
+
+### Corrections to earlier entries
+
+- `[0.0.0a0]` lists three removals at the end of `### Changed`: the
+  non-Puppet `data_hash` names `yaml`, `json`, `hocon` and `yaml.enc`,
+  `hyera.LookupDict`/`hyera.sym_lookup`/`hyera.util`, and the `data_dir`
+  spelling. It also says pre-release tags are not uploaded to PyPI; they
+  are uploaded as PyPI pre-releases, and `0.0.0a0` is on PyPI.
+- `[0.0.0]` lists `hyera.Merge` under `### Removed` and under `### Added`:
+  the removed one is the earlier strategy class, and the `hyera.Merge` of
+  that release is the string enum listed under `### Added`.
 
 ## [0.0.0] - 2026-10-01
 
