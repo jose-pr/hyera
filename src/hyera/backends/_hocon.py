@@ -1,8 +1,8 @@
 """HOCON (``hocon_data``) backend, via the optional ``pyhocon`` package.
 
 Original code: Puppet's own ``hocon_data`` fidelity (the ``include``
-directive rules and duration-as-text behaviour below) is measured against
-the oracle, not translated from Puppet source.
+directive rules and duration-as-text behaviour below) follows Puppet 8.10.0's
+behaviour, not a translation of Puppet source.
 """
 
 from __future__ import annotations
@@ -24,18 +24,9 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["HOCONBackend", "has_hocon"]
 
 
-#: Set (only for the duration of a `HOCONBackend.loads` call) to the labels
-#: (see `_guarded_hocon_classmethod`) that must raise instead of running for
-#: that call, so the `_install_hocon_include_guard`-wrapped pyhocon entry
-#: points fail closed only for the forms the active mode does not intend to
-#: resolve for real -- `"file include"` is a member only when
-#: `HOCONBackend.hocon_includes` is False (the opt-in restriction);
-#: `"URL include"`/`"package include"` are always members, in either mode,
-#: since Puppet's own hocon_data can never resolve those either. Empty
-#: outside a `loads()` call. Context-local (per thread/task), so a
-#: concurrent `loads()` on another thread and every other pyhocon caller in
-#: the process, at any point in time, are unaffected -- only the call(s)
-#: that set it see it fire.
+#: Set only during a `HOCONBackend.loads` call to the labels (see `_guarded_hocon_classmethod`) that must raise
+#: instead of running: "file include" only when `hocon_includes` is False, "URL include"/"package include" always.
+#: Empty outside `loads()`; context-local, so other threads and other pyhocon callers are unaffected.
 _HOCON_INCLUDE_GUARD: "contextvars.ContextVar[frozenset]" = contextvars.ContextVar(
     "_hocon_include_guard", default=frozenset()
 )
@@ -96,11 +87,8 @@ def _install_hocon_include_guard(module) -> None:
         (ConfigParser, "resolve_package_path", "package include"),
     ):
         current = cls.__dict__.get(attr)
-        # Ordinarily a `classmethod` object (pyhocon's own definition);
-        # tolerate anything else (e.g. a test's own monkeypatch installed
-        # ahead of this call) by wrapping it as-is instead of unwrapping a
-        # `.__func__` that may not exist, so installation never crashes on
-        # already-patched state -- it just guards whatever is there.
+        # Ordinarily a `classmethod` object; anything else (a test's monkeypatch installed ahead of this call) is
+        # wrapped as-is, so installation never crashes on already-patched state.
         original = current.__func__ if hasattr(current, "__func__") else current
         setattr(cls, attr, _guarded_hocon_classmethod(original, label))
 
@@ -275,8 +263,8 @@ class HOCONBackend(Backend):
     :func:`default_backends`.
 
     ``include`` directives resolve exactly as Puppet's own ``hocon_data``
-    does by default (2026-09-29 -- see :func:`_allow_hocon_includes`
-    for the oracle-measured rule): a plain quoted include contributes
+    does by default (see :func:`_allow_hocon_includes` for the
+    rule): a plain quoted include contributes
     nothing, ``include file(...)`` really reads the file (relative to the
     process cwd, or absolute), and every other form (``url(...)``,
     ``classpath(...)``, ``required(...)``, ``package(...)``, a
@@ -287,8 +275,8 @@ class HOCONBackend(Backend):
 
     Passing ``hocon_includes=False`` (to the constructor directly, or via
     a ``hocon_includes: false`` key on the hierarchy entry/``defaults`` --
-    hyera's own extension, not Puppet vocabulary) restores the
-    pre-fidelity refusal instead (see :func:`_refuse_hocon_includes`): every
+    hyera's own extension, not Puppet vocabulary) restricts it instead
+    (see :func:`_refuse_hocon_includes`): every
     directive form other than a plain quoted include raises, including
     ``file(...)``.
 
@@ -321,10 +309,8 @@ class HOCONBackend(Backend):
         hocon_includes: _ty.Optional[bool] = None,
     ) -> None:
         super().__init__(conf, strict=strict)
-        # No `Hiera(backend_options=...)` plumbing exists
-        # yet, so the opt-in reads from the level's own `conf` (its
-        # hiera.yaml hierarchy-entry/`defaults` mapping) when not passed
-        # directly.
+        # No `Hiera(backend_options=...)` plumbing exists, so the opt-in reads from the level's own `conf`
+        # (its hiera.yaml hierarchy-entry/`defaults` mapping) when not passed directly.
         if hocon_includes is None:
             hocon_includes = self.conf.get("hocon_includes", True)
         self.hocon_includes: bool = bool(hocon_includes)
@@ -389,10 +375,8 @@ class HOCONBackend(Backend):
             ) from None
         if self.hocon_includes:
             text = _allow_hocon_includes(text)
-            # `file(...)` is deliberately NOT guarded here -- letting it
-            # run for real (matching Puppet) is the entire point of this
-            # mode; `url`/`package` resolution stays backstopped since
-            # Puppet's own hocon_data can never resolve those either.
+            # `file(...)` is deliberately NOT guarded here: running it for real matches Puppet. `url`/`package`
+            # stay backstopped, as Puppet's hocon_data cannot resolve those either.
             guarded = frozenset({"URL include", "package include"})
         else:
             text = _refuse_hocon_includes(text)

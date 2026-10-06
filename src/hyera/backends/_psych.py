@@ -1,8 +1,6 @@
-# Ported from Psych lib/psych/scalar_scanner.rb
-# (https://github.com/ruby/psych), MIT. Modified by jose-pr. See NOTICE.
-# Ported from Puppet 8 lib/puppet/pops/lookup/hiera_config.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Psych lib/psych/scalar_scanner.rb (https://github.com/ruby/psych), MIT, and Puppet 8
+# lib/puppet/pops/lookup/hiera_config.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Ruby values as Psych reads them: ``RubySymbol``, ``symkeys_to_string`` and
 ``ScalarScanner#tokenize``.
 
@@ -67,8 +65,8 @@ def symkeys_to_string(obj):
     Memoized per call, keyed on node identity (a ``dict``/``list`` only,
     never a scalar): a YAML anchor reused elsewhere in the same document
     parses to one shared object (PyYAML's own behavior, matching Puppet),
-    and rebuilding it independently at each occurrence -- the naive
-    recursive-comprehension form this used to be -- would silently turn
+    and rebuilding it independently at each occurrence -- as a naive
+    recursive comprehension would -- would silently turn
     that one shared node into an equal but distinct copy per position,
     before interpolation ever gets a chance to preserve or reason about the
     sharing.
@@ -103,11 +101,9 @@ def _symkeys_to_string(obj, memo):
 # Psych::ScalarScanner#tokenize
 # ---------------------------------------------------------------------------
 
-# Ruby's TIME/FLOAT/INTEGER_LEGACY regexes, translated 1:1 (Ruby `^`/`$` are
-# line anchors -> re.M; `[[:alpha:]]` -> `[^\W\d_]`; Ruby's `/x` extended
-# mode just ignores whitespace/comments in the FLOAT source, already absent
-# here). `scalar_scanner.rb` uses `strict_integer: false` (Puppet's
-# `Psych::YAMLTree`/`safe_load` default), so INTEGER_LEGACY (comma-tolerant).
+# Ruby's TIME/FLOAT/INTEGER_LEGACY regexes, translated 1:1 (`^`/`$` are line anchors -> re.M; `[[:alpha:]]`
+# -> `[^\W\d_]`; the FLOAT source's `/x` whitespace is already absent). `strict_integer: false` (Puppet's
+# `safe_load` default) selects INTEGER_LEGACY (comma-tolerant).
 _TIME_RE = re.compile(
     r"^-?\d{4}-\d{1,2}-\d{1,2}(?:[Tt]|\s+)\d{1,2}:\d\d:\d\d(?:\.\d*)?"
     r"(?:\s*(?:Z|[-+]\d{1,2}:?(?:\d\d)?))?$",
@@ -247,18 +243,8 @@ def _tokenize(string: str):
         try:
             return _parse_int_legacy(string)
         except ValueError:
-            # Each of _INTEGER_LEGACY_RE's four alternatives only ever
-            # admits the digit characters valid for the base it signals
-            # (0-1 for "0b", 0-7 for a bare leading "0", 0-9a-fA-F for
-            # "0x", 0-9 otherwise), and _parse_int_legacy picks that same
-            # base from that same prefix -- so once the regex has matched,
-            # stripping the "," / "_" separators it also allows can never
-            # leave `int(sign + body, base)` an invalid literal. Kept as a
-            # direct mirror of Ruby's own `rescue` around `Integer()`
-            # (matching the sibling Float conversion just above, which
-            # *is* reachable) rather than assumed dead: unlike that
-            # invariant, this one depends on every one of the four
-            # alternatives staying exactly aligned with its base's digit
-            # set, which a future edit here could silently break.
+            # Each _INTEGER_LEGACY_RE alternative admits only the digits valid for the base it signals and _parse_int_legacy
+            # picks that base from the same prefix, so after a match `int(sign + body, base)` cannot fail. Kept as a mirror
+            # of Ruby's `rescue` around `Integer()`: it depends on every alternative staying aligned with its base.
             raise BackendError('invalid value for Integer(): "{}"'.format(string))
     return string

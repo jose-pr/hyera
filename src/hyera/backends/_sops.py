@@ -91,10 +91,8 @@ def _run_sops(
         raise
 
 
-#: sops's own ``FormatForPath`` rule (``cmd/sops/formats/formats.go``,
-#: verified against the real v3.13.3 binary and source, 2026-09-29):
-#: case-sensitive ``strings.HasSuffix``, checked in this order. Anything
-#: else is binary to sops -- not a data hash.
+#: sops's ``FormatForPath`` rule (``cmd/sops/formats/formats.go``, v3.13.3): case-sensitive
+#: ``strings.HasSuffix``, in this order. Anything else is binary to sops, not a data hash.
 _SOPS_SUFFIXES = (
     (".yaml", "yaml"),
     (".yml", "yaml"),
@@ -111,28 +109,21 @@ def _sops_format(path_str: str):
     return None
 
 
-#: Fixed prefixes of the two ``_psych`` messages that quote the
-#: offending scalar verbatim (``invalid value for Float()/Integer():
-#: "<data>"``). Matched as a plain prefix, never against the tail: the
-#: quoted scalar can itself embed a literal newline (a ``!!float |\n
-#: HUNTER2`` block scalar), which would otherwise make a naive
-#: ``.*$``-style regex fail to match the whole message and leak it.
+#: Fixed prefixes of the two ``_psych`` messages that quote the offending scalar verbatim
+#: (``invalid value for Float()/Integer(): "<data>"``). Matched as a plain prefix, never the tail: the scalar
+#: can embed a newline (a ``!!float |\n HUNTER2`` block), which would defeat a ``.*$`` regex and leak it.
 _SOPS_YAML_QUOTED_PREFIXES = (
     "invalid value for Float(): ",
     "invalid value for Integer(): ",
 )
 
-#: The third leaking shape's fixed prefix, ``Tried to load unspecified
-#: class: <name>`` (``_psych._disallowed``); ``<name>`` is
-#: attacker-controlled text for every ``!ruby/...`` tag except the fixed
-#: names below.
+#: The third leaking shape's fixed prefix, ``Tried to load unspecified class: <name>``
+#: (``_psych._disallowed``); ``<name>`` is attacker-controlled for every ``!ruby/...`` tag except the names below.
 _SOPS_YAML_CLASS_PREFIX = "Tried to load unspecified class: "
 
-#: Names ``_psych`` itself raises unconditionally for a known YAML
-#: shape (an implicit timestamp/date, `!!set`, a bare/nameless
-#: ``!ruby/object``) -- never text lifted from the decrypted document, so
-#: these stay visible. Everything else after "unspecified class: " comes
-#: from the tag's own (attacker-controlled) suffix text.
+#: Names ``_psych`` raises unconditionally for a known YAML shape (an implicit timestamp/date, `!!set`, a
+#: nameless ``!ruby/object``): never text from the decrypted document, so they stay visible. Anything else
+#: after "unspecified class: " is the tag's own (attacker-controlled) suffix.
 _SOPS_YAML_CLASS_ALLOW = frozenset({"Time", "Date", "Object", "Psych::Set"})
 
 
@@ -239,15 +230,9 @@ class SopsBackend(Backend):
                 "data_hash: sops_<yaml|json|ini|dotenv> to choose a format"
                 "".format(path)
             )
-        # sops's own INI *writer* is ambiguous -- a decrypted value
-        # containing `"""` plus a newline can inject a key or replace a
-        # whole other section, and no INI parser (including hyera's former
-        # one) can tell those bytes apart from a genuine file. INI is
-        # therefore always decrypted as sops's own JSON view instead
-        # (confirmed against real sops 3.13.3: it is exactly
-        # `{"DEFAULT": {...}, section: {...}}`) and parsed with
-        # JSONBackend; yaml/json/dotenv keep output-type equal to
-        # input-type.
+        # sops's INI *writer* is ambiguous: a decrypted value containing `"""` plus a newline can inject a key or replace
+        # a section, and no INI parser can tell those bytes from a genuine file. INI is therefore decrypted as sops's
+        # JSON view (`{"DEFAULT": {...}, section: {...}}`) and parsed with JSONBackend; yaml/json/dotenv keep output type = input type.
         parse_fmt = "json" if fmt == "ini" else fmt
         raw = _run_sops(path, fmt, output_type=parse_fmt, timeout=self._timeout)
         format_backend = Backend.new(parse_fmt, kind="format", strict=self.strict)

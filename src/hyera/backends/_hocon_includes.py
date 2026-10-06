@@ -1,6 +1,6 @@
 """Scanning HOCON text for ``include`` directives: refuse them or allow them.
 
-Original code, measured against Puppet's ``hocon_data`` rather than translated
+Original code written to match Puppet's ``hocon_data``, not translated
 from its source: each directive is found outside strings and comments, then
 blanked or rejected, without needing ``pyhocon``.
 """
@@ -25,14 +25,9 @@ def _find_hocon_string_end(text: str, start: int) -> "tuple[int, str]":
         close = text.find('"""', content_start)
         if close == -1:
             return n, text[content_start:n]
-        # HOCON's own triple-quoted string ends at the LAST quote of a
-        # run of 3+ consecutive quotes, not the first matching triple --
-        # ``"""x""""`` (4 trailing quotes) is the 1-character string "x"
-        # followed by a stray closing quote that pyhocon folds into the
-        # same terminator, not "x" followed by a bare `"` that starts a
-        # new string. Extending over every extra trailing quote keeps our
-        # notion of "end of string" in sync with pyhocon's, so scanning
-        # resumes at the same place pyhocon would.
+        # HOCON's triple-quoted string ends at the LAST quote of a run of 3+ quotes: ``"""x""""`` is the string "x" plus a
+        # stray closing quote that pyhocon folds into the terminator. Extending over every extra trailing quote
+        # keeps scanning in sync with pyhocon's end of string.
         end = close + 3
         while end < n and text[end] == '"':
             end += 1
@@ -135,7 +130,7 @@ def _refuse_hocon_includes(text: str) -> str:
     files off the process cwd and fetches ``http(s)``/``file`` URLs) from
     ever running.
 
-    **This is no longer the default (2026-09-29).** It refuses more
+    **This is not the default.** It refuses more
     than Puppet's own ``hocon_data`` does (Puppet really does read
     ``file(...)`` and keeps a value-position directive as literal text --
     see :func:`_allow_hocon_includes`), so it is reachable only as the
@@ -160,12 +155,9 @@ def _refuse_hocon_includes(text: str) -> str:
     while i < n:
         c = text[i]
         if c in ('"', "#", "$") and _preceded_by_odd_backslashes(text, i):
-            # An escaped quote/hash/substitution-start in unquoted text
-            # (``x\"``, ``x\#``, ``x\${``) is an ordinary character to
-            # pyhocon, not the start of a string, comment or substitution.
-            # (``"``, ``#`` and ``$`` are all excluded from pyhocon's
-            # unquoted-value character class, so unescaped they are always
-            # significant, unlike a lone ``/`` below.)
+            # An escaped quote/hash/substitution-start in unquoted text (``x\"``, ``x\#``, ``x\${``) is an ordinary
+            # character to pyhocon; unescaped, ``"``, ``#`` and ``$`` are excluded from its unquoted-value character class
+            # and always significant (unlike a lone ``/`` below).
             last_sig = c
             i += 1
             continue
@@ -182,20 +174,9 @@ def _refuse_hocon_includes(text: str) -> str:
             i = j
             continue
         if c == "/" and i + 1 < n and text[i + 1] == "/":
-            # Unlike ``#``, a lone ``/`` is NOT excluded from pyhocon's
-            # unquoted-value character class, so ``//`` only starts a
-            # comment at a token boundary (start of text, whitespace, or a
-            # structural character) -- ``http://h`` and ``x//y`` are
-            # ordinary unquoted text, since the value token already
-            # in progress simply continues through the slashes and pyhocon
-            # never gets a chance to try matching a comment there. An
-            # escaped ``\//`` (odd backslashes) is never a comment either.
-            # NOTE: ``:`` is deliberately not a boundary character here --
-            # unlike every other separator below, a lone ``:`` is NOT
-            # excluded from pyhocon's unquoted-value character class, so it
-            # can appear literally inside a continuous token (``http://h``)
-            # as well as as a key/value separator; treating it as always a
-            # boundary would make ``//`` in ``http://h`` a comment again.
+            # A lone ``/`` is not excluded from pyhocon's unquoted-value characters, so ``//`` starts a comment only at a
+            # token boundary (``http://h`` and ``x//y`` are plain text; an escaped ``\//`` never is a comment). ``:`` is not a
+            # boundary character: it can sit inside a token (``http://h``) or separate key and value.
             prev = text[i - 1] if i > 0 else None
             at_boundary = prev is None or prev in ' \t\r\n{}[],="'
             if at_boundary and not _preceded_by_odd_backslashes(text, i):
@@ -216,10 +197,8 @@ def _refuse_hocon_includes(text: str) -> str:
             i += 1
             continue
         if c == "\n" or c == "\r":
-            # HOCON's own line-ending token is any run of ``\n``/``\r``
-            # (pyhocon: ``eol = Word('\n\r')``) -- a lone ``\r`` (no ``\n``)
-            # ends a ``#``/``//`` comment and starts a new key-position
-            # line exactly as a real newline would.
+            # HOCON's line ending is any run of ``\n``/``\r`` (pyhocon: ``eol = Word('\n\r')``): a lone ``\r`` ends a
+            # ``#``/``//`` comment and starts a new key-position line as a newline does.
             last_sig = "\n"
             i += 1
             continue
@@ -244,17 +223,13 @@ def _refuse_hocon_includes(text: str) -> str:
                 i = j
                 continue
 
-            # Inside a `[...]` array, every position is a value, never a
-            # key -- Puppet keeps a value-position include as literal text,
-            # and hyera (which always raises for value position) must not
-            # blank it away into an empty/short array instead.
+            # Inside a `[...]` array every position is a value, never a key: Puppet keeps a value-position include as
+            # literal text, and hyera (which raises for value position) must not blank it away.
             in_array = bool(brackets) and brackets[-1] == "["
             key_position = (not in_array) and last_sig in (None, "\n", "{", ",")
             line = text.count("\n", 0, i) + text.count("\r", 0, i) + 1
-            # A lone `\r` and a `\n` from the same CRLF pair would both be
-            # counted above; CRLF is normalized to a single logical
-            # newline everywhere else in this scanner, so undo the double
-            # count for every CRLF pair before this position.
+            # A lone `\r` and a `\n` of one CRLF pair are both counted above; CRLF is one logical newline elsewhere
+            # in this scanner, so undo the double count for every CRLF pair before this position.
             line -= text.count("\r\n", 0, i)
 
             if key_position and word == "include":
@@ -297,9 +272,9 @@ def _refuse_hocon_includes(text: str) -> str:
 
 def _allow_hocon_includes(text: str) -> str:
     """Scan HOCON ``include`` directives to match Puppet's own
-    ``hocon_data`` (2026-09-29: the default; :func:`_refuse_hocon_includes`
-    is the opt-in restriction). Oracle-measured against Ruby hocon 1.4.0
-    (Puppet 8.10.0, WSL) for every form:
+    ``hocon_data`` (the default; :func:`_refuse_hocon_includes`
+    is the opt-in restriction). Behaviour of Ruby hocon 1.4.0
+    (Puppet 8.10.0) for every form:
 
     - a plain quoted ``include "..."`` (relative, absolute, or a
       ``file://`` URL) always contributes nothing -- Puppet's own bare
@@ -428,13 +403,9 @@ def _allow_hocon_includes(text: str) -> str:
             line -= text.count("\r\n", 0, i)
 
             if not key_position:
-                # Defang rather than raise or resolve: Puppet keeps this
-                # as literal text, in any spelling/case, since `include`
-                # is never special outside statement position to Ruby.
-                # pyhocon disagrees (its own `include_expr` grammar is
-                # accepted in value position too, caselessly), so quote
-                # the bareword so pyhocon's tokenizer sees an ordinary
-                # string instead of a keyword.
+                # Defang rather than raise or resolve: Puppet keeps this as literal text in any spelling/case, as `include` is
+                # not special outside statement position in Ruby. pyhocon accepts its `include_expr` grammar in value
+                # position (caselessly), so quote the bareword to make it an ordinary string.
                 if _hocon_directive_follows(text, j):
                     out[i] = '"' + word + '"'
                     for k in range(i + 1, j):
@@ -444,13 +415,9 @@ def _allow_hocon_includes(text: str) -> str:
                 continue
 
             if word != "include":
-                # Any spelling/case other than the exact lowercase
-                # keyword is never Puppet's own directive (Ruby's match
-                # is case-sensitive); refuse outright rather than let
-                # pyhocon's caseless grammar run a real read Puppet
-                # itself would never attempt. A non-directive
-                # continuation (`INCLUDE = 1`) is left alone -- Puppet
-                # parses that as an ordinary key.
+                # Any spelling/case other than lowercase `include` is never Puppet's directive (Ruby's match is case-sensitive):
+                # refuse rather than let pyhocon's caseless grammar run a real read. A non-directive continuation
+                # (`INCLUDE = 1`) is left alone: Puppet parses it as an ordinary key.
                 if _hocon_directive_follows(text, j):
                     raise BackendError(
                         "HOCON include directive is not supported here "
@@ -480,11 +447,8 @@ def _allow_hocon_includes(text: str) -> str:
                 continue
 
             if text[after : after + 5] == "file(":
-                # Puppet's `include file(...)` really does read the file
-                # (relative to the process cwd, or absolute) -- leave the
-                # text untouched so pyhocon's own resolution (which
-                # already does the same cwd-relative/absolute lookup)
-                # runs for real.
+                # Puppet's `include file(...)` reads the file (cwd-relative or absolute): leave the text untouched so
+                # pyhocon's own identical resolution runs for real.
                 last_sig = word[-1]
                 i = j
                 continue

@@ -111,7 +111,7 @@ _Names = _ty.Mapping[str, _ty.Tuple[_ty.Union[str, NamePattern], ...]]
 
 
 class Backend:
-    """A data format and/or Hiera 5 provider, found by name.
+    """A data format and/or Hiera 5 provider, registered by name.
 
     A subclass registers itself by declaring ``NAMES``, a mapping of
     namespace (one of :attr:`KINDS`) to the names (plain strings and/or
