@@ -24,6 +24,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The shipped `AGENTS.md` API header gives every signature in a code block and
+  ends with the sections Exceptions, Command line, Environment variables and
+  Gotchas; the README's Command line is its own section.
 - Internal modules are reorganised so none passes 600 lines except `core.py` and
   `backends/__init__.py`; no public import path, class `__module__` or
   signature changed.
