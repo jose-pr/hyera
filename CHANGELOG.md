@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `options: {hocon_includes: false}` on a `hocon_data` hierarchy entry (or in
   `defaults`) selects the stricter include mode; the bare `hocon_includes`
   key the README described was never valid hiera.yaml.
+- `hyera` exits `130` on Ctrl-C, with no traceback.
 
 ### Changed
 
@@ -48,6 +49,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `HieraLevel.paths()` returns `list[str]` as annotated; `HieraLevel.new()`
   defaults `datadir` to `"data"`; a `HieraLevel` with `options` is hashable;
   `HieraLevel` has a new field `lenient_locations`.
+- `--render-as yaml` writes text that reads back as the value looked up,
+  under PyYAML and Psych alike: strings such as `1,000`, `2001-1-1`, `.Nan`
+  and `+.5` are quoted, U+0085, U+2028 and U+2029 are escaped, shared values
+  are written out instead of as anchors and aliases, and an empty-string key
+  prints as `'': v`. Quoting is not byte-identical to Puppet's.
+- `--explain` reports `lookup_options` across layers as Puppet does: no node
+  for the global and environment merge, a `Merge strategy hash` node over
+  `Global and Environment` and `Module NAME` for a module, each layer once
+  for several keys, and no extra `No such key` line after a module's
+  `default_hierarchy`; a `--merge` type error across layers raises instead
+  of ending the report.
+- A missing or unreadable `--facts` file exits `2` with one line, like any
+  other error; `load_facts` raises `BackendError` for it.
+- A command-line option value of exactly `--` works in the `--opt=--`
+  spelling on Python 3.9 to 3.12, for every free-text option; `--strict` is
+  checked by hyera, not argparse.
+- A stdout write failure of any kind (a closed pipe on Windows, a full
+  device) exits `2` quietly instead of `120`.
+- `--render-as ''` is an error, not the default format.
+- The agent help and the MCP tool description declare the real exit codes,
+  three working examples, and one-line field help that says what omitting a
+  field means and that `--facts` is required; `main()` leaves the caller's
+  `sys.stdout` and `sys.stderr` encodings alone.
+- `hyera.cli` is a package; `hyera.cli:main`, `python -m hyera`,
+  `python -m hyera.cli`, `hyera.cli.Lookup` and `hyera.cli.main` are unchanged.
 
 ### Fixed
 
@@ -182,6 +208,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `Struct` mismatch against a hash with a non-string key reports a size or
   type mismatch as Puppet does, and `Enum`/`Struct` members render with
   Puppet's own quoting.
+- Integers of more than 4,300 digits render in every `--render-as` format and
+  in `--explain` output on Python 3.11 and later.
 
 ## [0.0.0] - 2026-10-01
 

@@ -76,3 +76,30 @@ def _unplaceholder(value):
     if isinstance(value, list):
         return [_unplaceholder(item) for item in value]
     return "--" if value == _DOUBLE_DASH_PLACEHOLDER else value
+
+
+#: The ``Lookup`` fields that hold free text from the command line and so
+#: may carry the placeholder.
+_FREE_TEXT_FIELDS = (
+    "merge",
+    "knock_out_prefix",
+    "value_type",
+    "default",
+    "facts",
+    "node",
+    "scope",
+    "hiera_config",
+    "environment",
+    "environmentpath",
+    "modulepath",
+    "basemodulepath",
+    "codedir",
+    "strict",
+    "render_as",
+)
+
+
+def _restored(command) -> dict:
+    """Every free-text field of ``command``, with the placeholder
+    translated back to ``"--"``."""
+    return {name: _unplaceholder(getattr(command, name)) for name in _FREE_TEXT_FIELDS}

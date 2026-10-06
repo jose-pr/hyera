@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import runpy
+import shlex
 import subprocess
 import sys
 
@@ -1992,3 +1993,110 @@ def _bigint_argv(root, *extra):
         "--facts",
         str(root / "facts.yaml"),
     ] + list(extra)
+
+
+def test_render_as_empty_is_an_unknown_format(flags_root, caplog):
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "--render-as", "", "h"))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == "Unknown rendering format ''"
+
+
+def test_verbose_usage_failure_logs_one_line_without_a_traceback(flags_root, capfd):
+    rc = main(_flags_argv(flags_root, "-v"))
+    err = capfd.readouterr().err
+    assert rc == 2
+    assert "NoneType" not in err
+    assert "Traceback" not in err
+
+
+def test_backend_timeout_is_an_ordinary_error_exit_2(
+    flags_root, monkeypatch, caplog, capfd
+):
+    def hang(*args, **kwargs):
+        raise hyera.BackendTimeoutError("the data hook timed out")
+
+    monkeypatch.setattr(hyera.Hiera, "lookup", hang)
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "h"))
+    assert rc == 2
+    assert len(_error_records(caplog)) == 1
+    assert "timed out" in _error_records(caplog)[0].getMessage()
+    assert "Traceback" not in capfd.readouterr().err
+
+
+def test_keyboard_interrupt_exits_130_without_a_traceback(
+    flags_root, monkeypatch, capfd
+):
+    def interrupt(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(hyera.Hiera, "lookup", interrupt)
+    rc = main(_flags_argv(flags_root, "h"))
+    captured = capfd.readouterr()
+    assert rc == 130
+    assert captured.err == ""
+    assert captured.out == ""
+
+
+def test_main_leaves_the_stdio_encodings_alone(flags_root):
+    code = (
+        "import sys\n"
+        "before = (sys.stdout.encoding, sys.stderr.encoding)\n"
+        "from hyera.cli import main\n"
+        "rc = main(sys.argv[1:])\n"
+        "after = (sys.stdout.encoding, sys.stderr.encoding)\n"
+        "sys.stderr.write(repr(before) + ('SAME' if before == after else 'CHANGED'))\n"
+        "sys.exit(rc)\n"
+    )
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONIOENCODING"}
+    env.update(PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", LC_ALL="C", PYTHONPATH=_SRC)
+    proc = subprocess.run(
+        [sys.executable, "-c", code] + _flags_argv(flags_root, "str"),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env=env,
+    )
+    assert proc.returncode == 0, proc.stderr
+    if "utf" in proc.stderr.lower().split("same")[0].split("changed")[0]:
+        pytest.skip("the interpreter's piped stdio is already UTF-8")
+    assert proc.stderr.endswith("SAME")
+
+
+def _agent_help(*extra):
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env={**os.environ, "AGENT_HELP": "1", "PYTHONPATH": _SRC},
+    )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_agent_help_declares_the_real_exit_codes():
+    codes = _agent_help()["exit_codes"]
+    assert codes["1"] == "No value found for the key"
+    assert codes["2"].startswith("Any other error")
+    assert "130" in codes
+
+
+def test_agent_help_examples_run(monkeypatch, capsys):
+    root = os.path.dirname(_SRC)
+    monkeypatch.chdir(root)
+    examples = _agent_help()["examples"]
+    assert len(examples) >= 3
+    for example in examples:
+        argv = shlex.split(example["command"])
+        assert argv[0] == "hyera"
+        assert main(argv[1:]) == 0, example["command"]
+        assert capsys.readouterr().out.strip() != ""
+
+
+def test_agent_help_field_help_is_one_line_and_facts_is_required():
+    options = {o["dest"]: o["help"] for o in _agent_help()["options"] if "dest" in o}
+    assert "REQUIRED" in options["facts"]
+    for dest, text in options.items():
+        assert "\n" not in text, dest

@@ -35,8 +35,8 @@ intentionally diverges.
   redacting `Sensitive` wrapper.
 - **YAML, JSON and HOCON backends**, plus `eyaml_lookup_key` (PKCS7) and a
   `sops_data` backend Puppet itself does not have.
-- **A CLI that mirrors `puppet lookup`**'s own flags, exit codes and
-  `--render-as` output, runnable as `hyera`, `python -m hyera`, or as an
+- **A CLI that takes `puppet lookup`**'s own flags and `--render-as` output,
+  runnable as `hyera`, `python -m hyera`, or as an
   MCP tool (`HYERA_MCP=stdio`).
 - **Bounded, revalidating caches** -- lookups reuse resolved locations and
   parsed data across calls, and pick up changed files without restarting.
@@ -631,9 +631,11 @@ concerned, where there is one):
 
 The CLI's exit codes: `0` found (or `--default`/`--explain` printed), `1`
 the key was not found -- nothing is printed, matching `puppet lookup`'s own
-silent miss -- `2` any other error: a usage problem, a bad config or data
-file, an unrenderable value, or a reader that closes the output early
-(also silent: nothing on stderr). A `2` is reported as one stderr line
+silent miss -- `2` any other error: a usage problem, a missing or unreadable
+facts file, a bad config or data file, an unrenderable value, or a reader
+that closes the output early or a device that cannot be written (both
+silent: nothing on stderr) -- and `130` an interrupt (Ctrl-C), with no
+traceback. A `2` is reported as one stderr line
 (`-v`, `-d` or `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup`
 exits `1` for both a miss and an error, printing nothing for the error
 case; hyera's CLI tells the two apart.
@@ -716,7 +718,12 @@ locations and under globbed directories are seen by the next lookup.
 | Encrypted-value `convert_to` beyond `Sensitive` | Not supported | |
 | hiera-eyaml encryptors other than PKCS7 | Not supported | GPG and third-party plugins. |
 | `environment.conf`'s `modulepath`/`environment_data_provider`, `metadata.json`'s deprecated `data_provider` | Not supported | superseded by the explicit `modulepath=` keyword. |
-| `--render-as binary\|msgpack` | Not supported | |
+| `--render-as binary\|msgpack\|console\|flat\|rich_data_json` | Not supported | only `s`, `json` and `yaml`; an empty `--render-as` is an error. |
+| `-V` | Not supported | use `--version`. |
+| Underscore and hyphen spellings of a flag (`--hiera-config`, `--render_as`, `--knock_out_prefix`) | Not supported | only the spellings under [Command line](#command-line) are accepted, and an option cannot be abbreviated (`--expl`). |
+| `--render-as json` float text | Not supported | floats print in Python's spelling (`1e-05`, `1000000000000000.0`), where Puppet's Ruby prints `0.00001` and `1e+15`; a `nil` hash key prints `"null"`. |
+| An MCP call with `knock_out_prefix` of exactly `--` | Not supported | the MCP server refuses a value of `--`; use the command line, or another prefix. |
+| An empty `--environment` | Not supported | Puppet falls back to its default environment; hyera reports an error. |
 | `--compile`/`--trusted` | Not supported | |
 | `calling_class`/`calling_module` | Not supported | |
 | Facts from PuppetDB or the Puppet server | Not supported | facts come only from `--facts`/`Scope(facts=...)`. |

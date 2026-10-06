@@ -1243,7 +1243,8 @@ Every class above is importable directly from `hyera` (e.g.
     CLI, then passed straight through to `Hiera(...)`'s own keywords — the
     library owns discovery and the missing-environment error, so CLI and
     API can never disagree), `codedir`, `strict` (`--strict off|warning|
-    error`, default `None` meaning `"warning"`).
+    error`, default `None` meaning `"warning"`; checked by `Scope`, not by
+    argparse, so a bad value is one `ERROR` line like any other).
   - *output*: `render_as` (`--render-as FORMAT`, default `None` meaning
     `"yaml"`, or `"s"` while explaining; case-insensitive; an unrecognized
     format exits 2 with `Unknown rendering format '<f>'` before any lookup
@@ -1260,8 +1261,9 @@ Every class above is importable directly from `hyera` (e.g.
     as UTF-8 bytes with LF line endings, regardless of the console or
     locale encoding, with a trailing newline
     added only if the rendered text lacks one (Ruby `puts` semantics); a
-    reader that closes the pipe early raises `BrokenPipeError`, silenced
-    and reported as exit 2 with nothing on stderr.
+    a write that fails with any `OSError` (a reader that closed the pipe, a
+    full device) is silenced and reported as exit 2 with nothing on stderr.
+    `main()` never reconfigures `sys.stdout`/`sys.stderr`.
   - `debug` (`--debug`/`-d`) — equivalent to `-vv`; see "Logging" below.
 
   Removed outright, no alias: `--config`/`-c` (use `--hiera_config`),
@@ -1278,8 +1280,8 @@ Every class above is importable directly from `hyera` (e.g.
   `_puppet_argv`, which joins a long value option with its following token
   (`--opt value` -> `--opt=value`) so a value that itself looks like an
   option (`--knock-out-prefix --`, `--default -x`) reaches argparse the way
-  Puppet's own parser would consume it; a value that is exactly `"--"` is
-  additionally routed through an internal placeholder, working around a
+  Puppet's own parser would consume it; a value that is exactly `"--"` (in either the two-token or the `--opt=--`
+  spelling) is additionally routed through an internal placeholder, working around a
   CPython `argparse` bug (fixed in 3.13, present on this project's 3.9
   floor) that empties a single-value option's own value when it is
   literally `"--"`.
@@ -1291,9 +1293,11 @@ Every class above is importable directly from `hyera` (e.g.
   Exit codes: `0` found (or `--default`/`--explain` printed), `1` the key
   was not found (a `KeyNotFoundError` and nothing else — nothing is
   printed, matching Puppet's own silent miss), `2` every other
-  error — a usage problem, an unknown render format, a `ConfigError`/
-  `BackendError`, an unrenderable value, or a closed output pipe (also
-  silent: nothing on stderr).
+  error — a usage problem, an unknown (or empty) render format, an
+  unreadable facts file, a `ConfigError`/`BackendError` (a
+  `BackendTimeoutError` included), an unrenderable value, or stdout that
+  cannot be written, a closed pipe included (both silent: nothing on
+  stderr); `main()` returns `130` on Ctrl-C, with no traceback.
   `--explain`/`--explain-options` exit 0 even on a miss or most lookup
   failures (Puppet's own explain report documents the failure as its own
   last line instead); only a configuration/data problem building the
@@ -1463,7 +1467,10 @@ Not supported:
 - Catalog-compilation context: class-local variable scopes beyond an
   explicit `variables=` layer, `calling_class`/`calling_module`, and
   `--compile`.
-- `--render-as binary|msgpack`.
+- `--render-as binary|msgpack|console|flat|rich_data_json`, `-V`, underscore
+  spellings of a hyphenated flag, abbreviated options, Ruby's JSON float
+  text, an empty `--environment`, and an MCP `knock_out_prefix` of exactly
+  `--` (the MCP server refuses it).
 - The GPG eyaml encryption scheme — detected and reported as an
   unsupported plugin; only PKCS7 is implemented.
 - Type aliases (`Stdlib::*`, user-defined) and `Timespan`/`Timestamp`/

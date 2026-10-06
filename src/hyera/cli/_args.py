@@ -1,4 +1,4 @@
-"""The ``duho.Arg`` annotation of every ``Lookup`` field.
+"""The ``duho.Arg`` annotation of every ``Lookup`` field, and its agent-help metadata.
 
 Module-level aliases: duho reads the same objects through
 ``typing.get_type_hints``, and pyright resolves a top-level
@@ -34,3 +34,27 @@ _RenderAsArg = duho.Arg[
     _ty.Optional[str], duho.NS(flags=["--render-as"], metavar="FORMAT")
 ]
 _DebugArg = duho.Arg[bool, duho.NS(flags=["--debug", "-d"])]
+
+#: Shown by the agent-help document (AGENT_HELP=1 hyera --help).
+_EXIT_CODES = {
+    0: "Found (or --default printed, or an explain report printed)",
+    1: "No value found for the key",
+    2: "Any other error: bad flag or value, unreadable facts or data, failed lookup",
+    130: "Interrupted",
+}
+_EXAMPLES = (
+    (
+        "hyera --facts examples/facts.yaml --hiera_config examples/hiera.yaml users",
+        "Look up a key; prints YAML.",
+    ),
+    (
+        "hyera --facts examples/facts.yaml --hiera_config examples/hiera.yaml "
+        "--merge deep --render-as json users",
+        "Deep-merge every level's value and print JSON.",
+    ),
+    (
+        "hyera --facts examples/facts.yaml --hiera_config examples/hiera.yaml "
+        "--explain ntp::servers",
+        "Show which hierarchy levels and files were searched.",
+    ),
+)

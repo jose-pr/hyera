@@ -5,16 +5,14 @@ Accepts puppet lookup's own flag set (see README.md "Command line"):
 hyera KEY --hiera_config hiera.yaml --facts facts.yaml --node N
 
 Designed for unattended use: no interactive prompts, deterministic output,
-and meaningful exit codes: 0 found (or --default printed), 1
-key not found, 2 any other error (one stderr line; -v or
-DUHO_TRACEBACK=1 adds the traceback). Output is rendered the way
-puppet lookup --render-as s|json|yaml does (hyera._output.render),
-written as UTF-8 bytes with LF line endings whatever the console/locale
-encoding.
+and exit codes: 0 found (or --default printed), 1 key not found, 2 any
+other error (one stderr line; -v or DUHO_TRACEBACK=1 adds the traceback),
+130 interrupted. Output is rendered the way puppet lookup --render-as
+s|json|yaml does (hyera._output.render), written as UTF-8 bytes with LF
+line endings whatever the console/locale encoding.
 """
 
 import logging as _logging
-import os as _os
 import sys as _sys
 import typing as _ty
 
@@ -27,20 +25,17 @@ except ModuleNotFoundError as _e:
     duho = None
 
 from .. import __version__
-from ..exceptions import BackendError, KeyNotFoundError, _one_line, HieraError
-from ..core import Hiera
-from .._types.parser import parse_type
+from ..exceptions import BackendError, KeyNotFoundError
 from ..backends import Backend
-from ._argv import _puppet_argv, _unplaceholder
+from ._argv import _puppet_argv, _restored
 from ._options import _merge_options
+from ._run import _describe, _render, _resolve
 from ._scope import (
     _PUPPET_VERSION,
-    _ScopeError,
     _UsageError,
     _build_scope,
     _parse_scope,
     _parse_scope_value,
-    _paths,
 )
 from ._stdout import _emit, _silence_stdout
 
@@ -57,84 +52,70 @@ _NO_CLI_EXTRA_HINT = (
     "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )
 
-
-def _describe(e) -> str:
-    """One-line description of an exception for the CLI's failure log."""
-    if isinstance(e, (HieraError, OSError)):
-        return _one_line(e)
-    return "{}: {}".format(type(e).__name__, _one_line(e))
-
-
 if duho is not None:
     from . import _args
 
     class Lookup(duho.LoggingArgs, duho.Cli):
         """Look up keys in Hiera data the way puppet lookup does.
 
-        Exit status: 0 found (or --default printed), 1 no key found, 2
-        any other error.
+        Needs --facts. Exit status: 0 found (or --default printed), 1 no
+        key found, 2 any other error, 130 interrupted.
         """
 
         _version_ = __version__
         _mcp_ = True
+        _utf8_stdio_ = False
         _parsername_ = "hyera"
         _logger_name_ = "hyera"
+        _exit_codes_ = _args._EXIT_CODES
+        _examples_ = _args._EXAMPLES
 
         keys: _args._KeysArg = None
-        """Keys to look up; the first one found wins."""
+        """Keys to look up, the first one found wins; omit only with --explain-options."""
         merge: _args._MergeArg = None
-        """Merge strategy: first, unique, hash or deep. Overrides the
-        data's lookup_options; omitted, lookup_options decide, else the
-        first value found wins."""
+        """Merge strategy first, unique, hash or deep; omitted, the key's lookup_options decide, else first."""
         knock_out_prefix: _args._KnockOutPrefixArg = None
-        """With --merge deep: a prefix that marks a value or key for removal."""
+        """With --merge deep: a regular expression; matching array elements are removed and matching strings blanked; omitted, nothing is removed."""
         sort_merged_arrays: _args._SortMergedArraysArg = False
-        """With --merge deep: sort merged arrays."""
+        """With --merge deep: sort merged arrays; omitted, they keep their order."""
         merge_hash_arrays: _args._MergeHashArraysArg = False
-        """With --merge deep: deep-merge hashes inside arrays by position."""
+        """With --merge deep: merge hashes inside arrays by position; omitted, array elements are united."""
         value_type: _args._ValueTypeArg = None
-        """Assert the value (and --default) has this Puppet type, e.g. Array[String]."""
+        """Puppet type the value (and --default) must have, e.g. Array[String]; omitted, any value."""
         default: _args._DefaultArg = None
-        """String printed when no key is found."""
+        """Text printed when no key is found; omitted, a miss exits 1 and prints nothing."""
         explain: _args._ExplainArg = False
-        """Show how the value was found, instead of only its value."""
+        """Print how the value was found instead of the value; omitted, print the value."""
         explain_options: _args._ExplainOptionsArg = False
-        """Show only how lookup_options was assembled."""
+        """Print only how lookup_options was assembled; omitted, print the value."""
 
         facts: _args._FactsArg = None
-        """Facts file: .json, .yaml or .yml; any other name is read as
-        JSON, then YAML."""
+        """REQUIRED: facts file, .json, .yaml or .yml (another name is read as JSON, then YAML); without it every lookup fails."""
         node: _args._NodeArg = None
-        """Node name used in messages; sets no fact."""
+        """Node name used in messages only; omitted, the local host name."""
         scope: _args._ScopeArg = None
-        """Node parameter (top-scope variable); VALUE is YAML and a
-        dotted NAME builds a hash."""
+        """Repeatable NAME=VALUE node parameter, VALUE is YAML and a dotted NAME builds a hash; omitted, none."""
 
         hiera_config: _args._HieraConfigArg = None
-        """Path to the base hiera.yaml (default: ./hiera.yaml if it
-        exists, else Puppet's built-in default configuration)."""
+        """Path to the base hiera.yaml; omitted, ./hiera.yaml if it exists, else Puppet's built-in configuration."""
         environment: _args._EnvironmentArg = None
-        """Environment name."""
+        """Environment name; omitted, production."""
         environmentpath: _args._EnvironmentPathArg = None
-        """Environment directories, separated by the OS path separator."""
+        """Environment directories separated by the OS path separator; omitted, no environment layer."""
         modulepath: _args._ModulepathArg = None
-        """Module directories for the current environment, separated by
-        the OS path separator (replaces the default modulepath)."""
+        """Module directories of the environment, separated by the OS path separator; omitted, the environment's own."""
         basemodulepath: _args._BasemodulepathArg = None
-        """Module directories shared by every environment, separated by
-        the OS path separator."""
+        """Module directories shared by every environment, separated by the OS path separator; omitted, none."""
         codedir: _args._CodedirArg = None
-        """Puppet's $codedir (Puppet's own AIO default per platform if
-        omitted); consulted only by a version 3 hiera.yaml's default
-        per-backend datadir."""
+        """Puppet's $codedir; omitted, Puppet's own default for the platform."""
         strict: _args._StrictArg = None
-        """Strictness for undefined variables: off, warning (default) or error."""
+        """Undefined-variable handling: off, warning or error; omitted, warning."""
 
         render_as: _args._RenderAsArg = None
-        """Output format: s, json or yaml (default yaml; s when explaining)."""
+        """Output format s, json or yaml; omitted, yaml (s when explaining)."""
 
         debug: _args._DebugArg = False
-        """Log debug messages (same as -vv)."""
+        """Log debug messages, same as -vv."""
 
         def _verbose_loglevel_(self) -> int:
             """Puppet's own scheme from a WARNING base: none warning, -v
@@ -152,14 +133,12 @@ if duho is not None:
         def _fail(self, text) -> int:
             """Log one ERROR-level line and return exit code 2.
 
-            The traceback is attached only when explicitly asked for
-            (-v, -d/--debug or DUHO_TRACEBACK=1); an
-            unattended caller gets a single line, not a stack.
+            The traceback is attached only when asked for (-v, -d/--debug
+            or DUHO_TRACEBACK=1) and an exception is being handled.
             """
-            kw = {}
-            if self.verbose > 0 or self.debug or _duho_logging.traceback_enabled():
-                kw = {"exc_info": True}
-            _LOGGER.error("%s", text, **kw)
+            wanted = self.verbose > 0 or self.debug or _duho_logging.traceback_enabled()
+            handling = _sys.exc_info()[0] is not None
+            _LOGGER.error("%s", text, exc_info=True if wanted and handling else None)
             return 2
 
         def __call__(self) -> int:
@@ -168,27 +147,12 @@ if duho is not None:
 
             :returns: the process exit code.
             """
+            opts = _restored(self)
             keys = list(self.keys or ()) + list(self._passthrough_ or ())
-            merge = _unplaceholder(self.merge)
-            knock_out_prefix = _unplaceholder(self.knock_out_prefix)
-            value_type = _unplaceholder(self.value_type)
-            default = _unplaceholder(self.default)
-            facts_path = _unplaceholder(self.facts)
-            node = _unplaceholder(self.node)
-            hiera_config = _unplaceholder(self.hiera_config)
-            environment = _unplaceholder(self.environment)
-            environmentpath = _unplaceholder(self.environmentpath)
-            modulepath = _unplaceholder(self.modulepath)
-            basemodulepath = _unplaceholder(self.basemodulepath)
-            codedir = _unplaceholder(self.codedir)
-            strict = _unplaceholder(self.strict)
-            render_as = _unplaceholder(self.render_as)
-            scope_items = _unplaceholder(self.scope)
-
             try:
                 merge_options = _merge_options(
-                    merge,
-                    knock_out_prefix,
+                    opts["merge"],
+                    opts["knock_out_prefix"],
                     self.sort_merged_arrays,
                     self.merge_hash_arrays,
                 )
@@ -198,65 +162,33 @@ if duho is not None:
             explaining = self.explain or self.explain_options
             only_options = self.explain_options and not self.explain
             if not keys:
-                if only_options:
-                    keys = ["__global__"]
-                else:
+                if not only_options:
                     return self._fail("No keys were given to lookup.")
+                keys = ["__global__"]
 
-            fmt = (render_as or ("s" if explaining else "yaml")).lower()
+            render_as = opts["render_as"]
+            fmt = (render_as if render_as is not None else "yaml").lower()
+            if render_as is None and explaining:
+                fmt = "s"
             if Backend.find(fmt, kind="render") is None:
                 return self._fail("Unknown rendering format '{}'".format(fmt))
 
             joined_keys = ", ".join(keys)
-
             try:
                 scope = _build_scope(
-                    _parse_scope(scope_items), facts_path, node, environment, strict
+                    _parse_scope(opts["scope"]),
+                    opts["facts"],
+                    opts["node"],
+                    opts["environment"],
+                    opts["strict"],
                 )
             except (_UsageError, BackendError, TypeError, ValueError) as e:
                 return self._fail(str(e))
 
-            config = hiera_config
-            extra = {}
-            if config is not None:
-                config = _os.path.abspath(config)
-            else:
-                default_path = _os.path.abspath("hiera.yaml")
-                if _os.path.exists(default_path):
-                    config = default_path
-                else:
-                    extra["base_path"] = _os.getcwd()
-
-            lookup_kwargs = {}
-            if default is not None:
-                lookup_kwargs["default_value"] = default
-
-            names = keys[0] if len(keys) == 1 else keys
-
             try:
-                if value_type is not None:
-                    parse_type(value_type)  # syntax error exits 2, even on a miss
-                hiera = Hiera(
-                    config,
-                    scope=scope,
-                    environmentpath=_paths(environmentpath),
-                    basemodulepath=_paths(basemodulepath) or (),
-                    modulepath=_paths(modulepath),
-                    codedir=codedir,
-                    **extra,
+                outcome = _resolve(
+                    opts, scope, keys, merge_options, explaining, only_options
                 )
-                if explaining:
-                    result = hiera.explain(
-                        names,
-                        value_type,
-                        merge_options,
-                        explain_options=only_options,
-                        **lookup_kwargs,
-                    )
-                else:
-                    value = hiera.lookup(
-                        names, value_type, merge_options, **lookup_kwargs
-                    )
             except KeyNotFoundError as e:
                 # Puppet's own miss prints nothing and exits 1, with or
                 # without -v; only -d/--debug (or -vv, or --loglevel) shows
@@ -269,14 +201,7 @@ if duho is not None:
                 )
 
             try:
-                if explaining:
-                    text = (
-                        result.text()
-                        if fmt == "s"
-                        else Backend.new(fmt, kind="render").dumps(result.to_hash())
-                    )
-                else:
-                    text = Backend.new(fmt, kind="render").dumps(value)
+                text = _render(fmt, outcome, explaining)
             except Exception as e:
                 return self._fail(
                     "Cannot render the value of key '{}': {}".format(
@@ -302,7 +227,7 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
     :param argv: the argument vector, excluding the program name; defaults
         to ``sys.argv[1:]``.
     :returns: 0 found (or ``--default`` printed), 1 no key found, 2 any
-        other error, or the CLI extra is not installed.
+        other error, or the CLI extra is not installed, 130 interrupted.
     """
     # duho.main sets up stderr logging (honoring -v/-q/--loglevel) and
     # dispatches to Lookup.__call__, whose int return becomes the exit code.
@@ -310,8 +235,7 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
         print(_NO_CLI_EXTRA_HINT, file=_sys.stderr)
         return 2
     argv = _puppet_argv(list(_sys.argv[1:] if argv is None else argv))
-    return duho.main(Lookup, argv)
-
-
-if __name__ == "__main__":
-    _sys.exit(main())
+    try:
+        return duho.main(Lookup, argv)
+    except KeyboardInterrupt:
+        return 130
