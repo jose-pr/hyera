@@ -66,15 +66,15 @@ __all__ = [
     "TypeSpec",
 ]
 
-#: Anywhere a Puppet type is taken (``value_type`` on ``lookup``/``dig``/``get``/``explain``/``__call__``, and a nested type
-#: argument in a subscript): a type object, a bare class from this module (``Integer``, not ``Integer[1, 2]``) or a Puppet
-#: type-expression string (``"Integer[1, 2]"``); :func:`hyera._types.parser.as_type` normalizes all three.
+#: A Puppet type wherever one is taken (``value_type``, a nested subscript argument): a
+#: type object, a bare class from this module (``Integer``, not ``Integer[1, 2]``) or a
+#: type-expression string; :func:`hyera._types.parser.as_type` normalizes all three.
 TypeSpec = _ty.Union[str, type, _priv.Any]
 
 
 # ------------------------------------------------------------- arguments
-# `__getitem__` turns its Python arguments into the parser's argument nodes (a type object stands for itself) and calls
-# the builders `parse_type` uses, so `Integer[1, 2] == parse_type("Integer[1, 2]")`, with the same arity and error text.
+# `__getitem__` maps its arguments (a type object stands for itself) onto `parse_type`'s
+# builders: `Integer[1, 2] == parse_type("Integer[1, 2]")`, same arity and errors.
 
 
 def _value_node(value: _ty.Any) -> tuple:
@@ -238,8 +238,9 @@ class _TypeMeta(type):
     ) -> "_TypeMeta":
         """Records the new class's own Puppet name (see ``_puppet_name``
         below) in the same step ``type.__new__`` builds it."""
-        # Every class in this module is named after the Puppet type it represents, so the class name doubles as
-        # `_puppet_name` (the exception, `hyera.Sensitive`, does not use this metaclass: see the module docstring).
+        # Every class in this module is named after the Puppet type it represents, so
+        # the class name doubles as `_puppet_name` (the exception, `hyera.Sensitive`,
+        # does not use this metaclass: see the module docstring).
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         cls._puppet_name = name
         return cls
@@ -404,7 +405,7 @@ class RichData(metaclass=_TypeMeta):
     ``Object`` values. Not parameterizable."""
 
 
-#: The public value wrapper (:class:`hyera.Sensitive`), the same object, re-exported so every public Puppet type is
-#: reachable here. It answers ``isinstance`` and ``Sensitive(x)`` without a metaclass; the *type* ``Sensitive[T]`` is
-#: defined on it in :mod:`hyera._types.types`.
+#: The public value wrapper (:class:`hyera.Sensitive`), re-exported so every public
+#: Puppet type is reachable here. It answers ``isinstance`` and ``Sensitive(x)`` with no
+#: metaclass; the type ``Sensitive[T]`` lives in :mod:`hyera._types.types`.
 Sensitive = _priv.Sensitive

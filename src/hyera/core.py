@@ -1,6 +1,8 @@
-# Ported from Puppet 8 lib/puppet/pops/lookup/{data_hash_function_provider,data_provider,lookup_adapter,interpolation,
-# hiera_config,location_resolver,function_provider,configured_data_provider}.rb, pops/lookup.rb, functions/{dig,get,getvar}.rb,
-# util/run_mode.rb (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/lookup/{data_hash_function_provider,
+# data_provider,lookup_adapter,interpolation,hiera_config,location_resolver,
+# function_provider,configured_data_provider}.rb, pops/lookup.rb, functions/{dig,get,
+# getvar}.rb, util/run_mode.rb (https://github.com/puppetlabs/puppet), Apache-2.0.
+# Modified by jose-pr. See NOTICE.
 """Core hiera engine: hierarchy loading, key lookup, and interpolation."""
 
 from __future__ import annotations
@@ -164,13 +166,13 @@ class Hiera:
         codedir: "_ty.Union[str, os.PathLike[str], None]" = None,
     ) -> None:
         self.base_config: "_ty.Union[str, os.PathLike[str], _ty.IO[str], _ty.IO[bytes], _ty.Dict[str, _ty.Any], None]" = (base_config)
-        #: Whether this is Puppet's built-in default config (``Hiera(None, ...)``), the one case ``explain()`` prunes a
-        #: missing candidate from (``hiera_config.rb:688``, ``location_resolver.rb:63``); a dict or stream config is
-        #: user-authored and keeps every ``Path not found`` line.
+        #: Whether this is Puppet's default config (``Hiera(None, ...)``), the one case
+        #: where ``explain()`` prunes missing candidates (``hiera_config.rb:688``,
+        #: ``location_resolver.rb:63``); other configs keep every ``Path not found``.
         self._is_default_config = base_config is None
-        #: Puppet's ``$codedir`` (``util/run_mode.rb``), used only by a version 3 hierarchy's default per-backend
-        #: ``datadir`` (``<codedir>/environments/%{::environment}/hieradata``). An explicit value is made absolute
-        #: against the working directory at construction, like ``base_path``.
+        #: Puppet's ``$codedir`` (``util/run_mode.rb``): used by a version 3 hierarchy's
+        #: default ``datadir`` (``<codedir>/environments/%{::environment}/hieradata``)
+        #: only. Made absolute against the working directory.
         self._codedir: Path = (
             _default_codedir() if codedir is None else Path(codedir).absolute()
         )
@@ -195,9 +197,9 @@ class Hiera:
             )
         self._revalidate: bool = revalidate
 
-        #: Puppet's three layer-discovery settings (``split_path_setting``): ``environmentpath`` stays ``None`` when unset
-        #: (no environment directories at all); ``basemodulepath`` normalizes to ``()``; ``modulepath`` is ``None`` only when
-        #: never given (Puppet's per-environment construction), an explicit empty value normalizing to ``()``.
+        #: ``split_path_setting``: ``environmentpath`` is ``None`` when unset (no
+        #: environment directories), ``basemodulepath`` normalizes to ``()``,
+        #: ``modulepath`` is ``None`` only if never given (empty gives ``()``).
         self._environmentpath = split_path_setting(environmentpath, "environmentpath")
         self._basemodulepath = (
             split_path_setting(basemodulepath, "basemodulepath") or ()
@@ -209,8 +211,9 @@ class Hiera:
         )
         #: name -> ``_EnvironmentState``, shared with every ``scoped()`` view.
         self._environments: dict = {}
-        #: Paths already warned about for an ignored version-3 layer config
-        #: (:func:`~hyera._config.data_provider.usable_provider`), so the warning fires once per config file.
+        # : Paths already warned about for an ignored version-3 layer config :
+        # (:func:`~hyera._config.data_provider.usable_provider`), so the warning fires
+        # once per config file.
         self._v3_warned_paths: set = set()
         self._hierarchy: "list[HieraLevel]" = []
         self._default_hierarchy: "list[HieraLevel]" = []
@@ -246,26 +249,29 @@ class Hiera:
         #: views. A provider built under an older value is rebuilt, which
         #: drops the data it holds.
         self._generation = [0]
-        #: Resolved locations, glob listings and parsed data files: shared by every view of this instance (unlike
-        #: ``_providers``, see ``_view``), as ``base_path``, the owning layer's root, tells one layer's hierarchy from another's.
+        #: Resolved locations, glob listings and parsed data files, shared by every view
+        #: of this instance (unlike ``_providers``): ``base_path``, the layer's root,
+        #: tells one layer's hierarchy from another's.
         self._store = _LocationStore(
             self._cache_lock, self._cache_size, self._revalidate
         )
-        #: The ``lookup_options`` value gathered from one layer's own hierarchy alone (never merged across layers),
-        #: keyed the same way, plus the location entry it was built against. See ``layer_options_cached``.
+        # : The ``lookup_options`` value gathered from one layer's own hierarchy alone
+        # (never merged across layers), : keyed the same way, plus the location entry it
+        # was built against. See ``layer_options_cached``.
         self._lookup_options_cache = _ScopeKeyedCache(
             self._cache_lock, self._cache_size
         )
-        #: ``(module_name, function_name, path) -> (parsed data, pruned data)``, apart from the store's unpruned file cache
-        #: a global/environment read of the same file uses; valid while the parsed data is the object the pruned copy came from.
+        #: ``(module_name, function_name, path) -> (parsed data, pruned data)``, apart
+        #: from the store's unpruned file cache; valid while the parsed data is the
+        #: object the pruned copy came from.
         self._pruned_cache: dict = {}
-        #: ``module_name -> (scope, compiled)``: the latest ``retrieve_lookup_options`` result per module, an identity fast
-        #: path like ``_ScopeKeyedCache``'s ``_last`` (``Scope`` is immutable). It skips re-running ``validate_lookup_options``
-        #: and ``compile_patterns`` (which recompiles every ``^`` regex) on every lookup; a miss just recomputes.
+        #: ``module_name -> (scope, compiled)``: the latest ``retrieve_lookup_options``
+        #: result per module, an identity fast path (``Scope`` is immutable) skipping
+        #: ``validate_lookup_options`` and ``compile_patterns``; a miss recomputes.
         self._compiled_options_cache: dict = {}
-        #: Per-(Hiera or ``h.scoped(...)`` view) function providers keyed by ``(tag, base_path, level index)``, never shared
-        #: with another view (see :meth:`_view`): a provider's interpolated options are bound to one scope. ``base_path`` tells
-        #: layers apart and ``tag`` a module's ``default_hierarchy`` from its main one; ``revalidate=True`` refreshes ``.locations`` in place.
+        #: Per-view providers, never shared across views: their interpolated options are
+        #: bound to one scope. The key's ``tag`` splits a module's ``default_hierarchy``
+        #: from its main one; ``revalidate=True`` refreshes ``.locations`` in place.
         self._providers: dict = {}
         #: Shared with every view (like the store): the file-content
         #: cache a ``lookup_key``/``data_dig`` provider's ``LookupContext.
@@ -398,9 +404,9 @@ class Hiera:
         view = object.__new__(type(self))
         view.__dict__.update(self.__dict__)
         view.scope = scope
-        # Never shared with the instance it was derived from or any other view: a provider's interpolated options
-        # are bound to one scope (unlike the store and ``_lookup_options_cache``, keyed on the scope value or not at all,
-        # and ``_environment_context``, whose file cache has no scope).
+        # Never shared with the instance it came from or another view: a provider's
+        # interpolated options are bound to one scope, unlike the store,
+        # ``_lookup_options_cache`` and ``_environment_context``, which are scope-free.
         for name in _VIEW_OWN_STATE:
             setattr(view, name, {})
         return view
@@ -413,9 +419,9 @@ class Hiera:
 
         The filesystem walk (glob/iterdir/stat) is cached, keyed on the
         values of the variables the hierarchy's own interpolation reads
-        (not the whole scope -- see :meth:`_LocationStore.location_entry_for`), so a merge
-        lookup across many keys does not re-walk the tree for each key, and
-        a scope differing only elsewhere shares the same cached walk. With
+        (not the whole scope -- see :meth:`_LocationStore.location_entry_for`),
+        so a merge lookup across many keys does not re-walk the tree for each
+        key, and a scope differing only elsewhere shares the same cached walk. With
         ``revalidate=True`` (the default) each call still re-probes every
         candidate and re-lists any glob whose directory changed; with
         ``revalidate=False`` it reflects the tree as first seen for this
@@ -562,8 +568,9 @@ class Hiera:
         except KeyNotFoundError:
             return False
 
-    #: Without this, ``__getitem__`` alone would make a ``Hiera`` iterable (Python calls ``[0]``, ``[1]``, ... until
-    #: ``IndexError``: here an endless stream of ``KeyNotFoundError``). A ``Hiera`` is not a sequence; ``iter(h)`` raises ``TypeError``.
+    #: Without this, ``__getitem__`` alone would make a ``Hiera`` iterable: Python would
+    #: call ``[0]``, ``[1]``, ... and never see ``IndexError``. A ``Hiera`` is not a
+    #: sequence; ``iter(h)`` raises ``TypeError``.
     __iter__ = None
 
     def dig(
@@ -702,8 +709,9 @@ class Hiera:
             )
 
             def search(name, inv, m, _root=root):
-                # Puppet's `get()` looks up the root by its *segment* form directly, never re-parsed: a quoted root such as
-                # `'"a.b".c'` must not have its embedded dot split again by a second `parse_lookup_key` pass.
+                # Puppet's `get()` looks up the root by its *segment* form directly,
+                # never re-parsed: a quoted root such as `'"a.b".c'` must not have its
+                # embedded dot split again by a second `parse_lookup_key` pass.
                 return self._search_and_merge(name, inv, m, parsed=(_root, ()))
 
             with recursion_bound():
@@ -832,8 +840,9 @@ class Hiera:
         error = None
         try:
             if invocation.only_explain_options:
-                # lookup_adapter.rb:61-63: look up the literal key "lookup_options" through the same layer stack as an ordinary key
-                # (not `retrieve_lookup_options`'s hand-composed combining, which builds no `merge` explain node); swallow what it finds or misses.
+                # lookup_adapter.rb:61-63: look up "lookup_options" through the layer
+                # stack like any key, not via `retrieve_lookup_options`'s own combining
+                # (no `merge` explain node); swallow what it finds or misses.
                 first_name = call.names[0] if call.names else None
                 first_root = (
                     first_name[0] if isinstance(first_name, tuple) else first_name
@@ -850,8 +859,9 @@ class Hiera:
         except RecursionError as exc:
             raise depth_error(exc) from None
         except BackendError:
-            # A data file that cannot be read or parsed is a data/infrastructure problem, not one of Puppet's reportable
-            # LookupErrors: it always escapes, wherever raised, as an ordinary `.lookup()` never catches it.
+            # A data file that cannot be read or parsed is a data/infrastructure
+            # problem, not one of Puppet's reportable LookupErrors: it always escapes,
+            # wherever raised, as an ordinary `.lookup()` never catches it.
             raise
         except HieraLookupError as e:
             if getattr(e, "_explain_escape", False):
