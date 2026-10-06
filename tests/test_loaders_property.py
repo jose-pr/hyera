@@ -296,6 +296,14 @@ def _hiera_yaml(content):
     return run
 
 
+def _hocon(text):
+    def run(_t):
+        pytest.importorskip("pyhocon")
+        return HOCONBackend().loads(text)
+
+    return run
+
+
 _SECRET_DOCUMENTS = [
     pytest.param(
         lambda _t: YAMLBackend().loads('k: "%s\n' % _SECRET), id="yaml-unclosed-quote"
@@ -356,6 +364,10 @@ _SECRET_DOCUMENTS = [
     ),
     pytest.param(
         _hiera_yaml(_SECRET.encode() + b": \xff\n"), id="hiera-yaml-invalid-utf8"
+    ),
+    pytest.param(_hocon('{"%s": [1, 2' % _SECRET), id="hocon-unclosed-bracket"),
+    pytest.param(
+        _hocon("a = 1\n%s = {\n  b = [" % _SECRET), id="hocon-unclosed-nested"
     ),
 ]
 
