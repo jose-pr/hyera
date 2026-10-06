@@ -44,6 +44,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   time a HOCON document is parsed.
 - A malformed HOCON document no longer leaves pyhocon's exception, which
   holds the whole text, chained to the `BackendError`.
+- Concurrent lookups on one `Hiera` no longer lose `lookup_options`: the
+  re-entrancy guard belongs to one lookup, not to the instance, and a
+  result composed while it refused a layer is never kept.
+- A changed module data file is seen by the next lookup, and two module
+  levels with no location (custom `data_hash` functions) each serve their
+  own data.
+- A glob level sees a file that starts matching when its directory was
+  absent, was reached through a literal segment, or gained the file under
+  an existing wildcard directory.
+- `lookup_key` and `data_dig` results are kept apart from what a hook stores
+  with `context.cache()`, and live until a file the hook read through
+  `context.cached_file_data()` changes: an `eyaml_lookup_key` file edited on
+  disk is re-read. A result from a hook that read no file is kept for one
+  lookup (until `clear_cache()` with `revalidate=False`), so such a hook is
+  called again by the next lookup.
+- `pickle`, `copy.copy` and `copy.deepcopy` of an instance that looked up a
+  module key work and start with no derived state, so a copy re-reads the
+  disk; `clear_cache()` on an instance or on one of its views reaches all of
+  them.
+- Two layers rooted at one directory no longer share cached locations or
+  providers (an `IndexError`, or the wrong layer's data).
+- `Hiera.getvar()` returns a copy of the scope's value, and the path intern
+  table no longer grows with every distinct candidate path.
 
 ## [0.0.0] - 2026-10-01
 
