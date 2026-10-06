@@ -16,6 +16,10 @@ own. Every deliberate difference is listed in
 per-feature fidelity table is
 [`README.md#hiera-coverage`](README.md#hiera-coverage).
 
+| Shipped header | Covers |
+| --- | --- |
+| [`src/hyera/AGENTS.md`](src/hyera/AGENTS.md) | the whole public API: `hyera`, `hyera.types`, `hyera.backends` and `hyera.cli` with every signature, argument, contract and gotcha, the exception classes, the environment variables and the differences from Puppet |
+
 ## Layout
 
 ```
@@ -132,7 +136,7 @@ examples/
 └── data/                       # the data tree the hierarchy reads
 
 docs/
-├── index.md            # the hand-written landing page (its examples are tested, see Develop)
+├── index.md            # the hand-written landing page (its examples are tested, see Checks)
 ├── changelog.md          # snippet-embeds CHANGELOG.md
 └── api/                     # one `:::` mkdocstrings page per public module (hyera, hyera.exceptions, hyera.types, hyera.backends, hyera.cli)
 
@@ -149,18 +153,7 @@ LICENSE, NOTICE, LICENSES/            # MIT for original code; NOTICE credits ev
 .gitattributes                          # * text=auto eol=lf
 ```
 
-`hyera._*` modules are private engine internals mirroring Puppet's own file
-split; import public names from `hyera` itself, or from the public modules
-`hyera.types`, `hyera.backends` and `hyera.cli`, never from a `hyera._*`
-module. `src/hyera/AGENTS.md` is the shipped API header (see
-[Packaging](#packaging) below) — every export with its exact signature,
-arguments and gotchas, so a consuming agent skips the source.
-
-`pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
-levels use hyera's own Ruby `Dir.glob` port in `_config/dir_glob.py`, never
-`Path.glob`.
-
-## How it fits together
+### How it fits together
 
 `Hiera(base_config, ...)` loads a Hiera 5 base config (path, file-like, or
 dict) and builds a `HieraLevel` per hierarchy entry (each pairing a `Backend`
@@ -194,7 +187,7 @@ and its own exit codes: `0` (found), `1` (key missing) and `2` (any other
 error), `130` on an interrupt.
 `HYERA_MCP=stdio hyera` serves the same command as an MCP tool over stdio.
 
-## Develop
+## Environment
 
 - venvs: `.venv/3.14-nt-amd64` and `.venv/3.9-nt-amd64`, named
   `<version>-<os>-<arch>` (both interpreter bounds are supported and kept
@@ -204,6 +197,9 @@ error), `130` on an interrupt.
   `build`/`pytest`/`twine`/`coverage`/`pyright[nodejs]` and, on Python 3.10+, `black`
   (pinned to major 26); `docs` adds the MkDocs toolchain (Python 3.10+ only
   — install it on the 3.14 venv, not the 3.9 floor).
+
+## Checks
+
 - Tests: `<py> -m pytest -q -rs` (pytest config in `pyproject.toml` puts
   `src/` on the path). `tests/test_readme.py` runs the README's `pycon`,
   `console` and `sh` blocks, so a command that stops working turns it red.
@@ -239,7 +235,20 @@ error), `130` on an interrupt.
   for the JSON schema). Compare only same-machine results; a local number
   never backs a release claim on its own.
 
-## Packaging
+## Conventions
+
+`hyera._*` modules are private engine internals mirroring Puppet's own file
+split; import public names from `hyera` itself, or from the public modules
+`hyera.types`, `hyera.backends` and `hyera.cli`, never from a `hyera._*`
+module. `src/hyera/AGENTS.md` is the shipped API header (see
+[Packaging](#packaging) below) — every export with its exact signature,
+arguments and gotchas, so a consuming agent skips the source.
+
+`pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
+levels use hyera's own Ruby `Dir.glob` port in `_config/dir_glob.py`, never
+`Path.glob`.
+
+### Packaging
 
 Built with `hatchling`. `src/hyera/AGENTS.md` (the shipped API header) and
 `README.md` both ship in the sdist and the wheel; the root `AGENTS.md` you
@@ -249,14 +258,23 @@ version lives in exactly one place, `src/hyera/__init__.py`'s
 installed-metadata lookup) to build the package. Bump it in the same commit
 as the matching `## [x.y.z]` `CHANGELOG.md` heading.
 
-## CI and release
+### License
+
+MIT, for this project's own code. Several modules port code translated
+from [Puppet](https://github.com/puppetlabs/puppet) (Apache-2.0), the
+[deep_merge](https://github.com/danielsdeleo/deep_merge) gem (MIT), from
+[Psych](https://github.com/ruby/psych) (MIT), Ruby's YAML library, and from
+Ruby's [uri](https://github.com/ruby/uri) library (2-clause BSDL); those
+files carry their own notice. See `NOTICE` and `LICENSES/`.
+
+## Releasing
 
 Three workflow files, one per concern — test, release, docs — so a release
 is never the first time the test suite or the docs build is exercised, and
 the docs site can be redeployed without cutting a release.
 
 - **`test.yml`**: `workflow_dispatch` (with a `ref` input) or a throwaway
-  `ci-*` tag — nothing runs on an ordinary push. 19 jobs: `test` (a
+  `ci-*` tag — nothing runs on an ordinary push. 19 jobs on every run: `test` (a
   10-leg OS/Python matrix: every supported Python on Ubuntu, the oldest and
   newest on Windows and macOS), `types` (`pyright --verifytypes`, Python
   3.9 and 3.14), `floors` (every declared dependency pinned to its
@@ -267,9 +285,10 @@ the docs site can be redeployed without cutting a release.
   break never fails the run), `docs` (the same strict `mkdocs build` the
   release gates on), and `console-script` (build the wheel, install it into
   a clean venv, run the installed script — Ubuntu, Windows and macOS). A
-  `benchmark` job (Python 3.9 and 3.14, both revalidate modes, results kept
-  as artifacts, never a gate) runs only on a dispatch with `benchmark` set
-  or a `ci-bench-*` tag. A
+  `benchmark` job (two legs, Python 3.9 and 3.14, both revalidate modes,
+  results kept as artifacts, never a gate) is the only other job: it runs
+  only on a dispatch with `benchmark` set or a `ci-bench-*` tag, so a run
+  has 19 or 21 jobs. A
   `ci-*` tag is throwaway: give it a unique name, push it, poll the run,
   then delete it locally and on the remote.
 - **`docs.yml`**: push to `main` touching `docs/`, `mkdocs.yml`, `src/` or
@@ -280,13 +299,14 @@ the docs site can be redeployed without cutting a release.
 - **`release.yml`** (`v*` tag): `test` (a 6-leg matrix: Ubuntu/Windows/
   macOS × the oldest and newest supported Python) and `floors` (the same
   dependency-floor job `test.yml` runs) → `build` (checks the tag names the
-  version actually built) → `wheel-smoke` (install the built wheel bare into
-  a clean venv, check it ships `py.typed` and `AGENTS.md` and that `import
-  hyera` loads no extra) and `docs-gate` (strict docs build, no deploy) →
-  `github-release` (flagged pre-release when the tag's PEP 440 form says
-  so) → `publish-pypi` (every tag, pre-releases included, PyPI
-  Trusted Publishing, no stored token) and `docs-deploy` (final tags only,
-  dispatches `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`,
+  version actually built) → `wheel-smoke` (Python 3.9 and 3.14: install the
+  built wheel bare into a clean venv, check it ships `py.typed` and
+  `AGENTS.md` and that `import hyera` loads no extra); `docs-gate` (strict
+  docs build, no deploy) needs only `test`; `github-release` (flagged
+  pre-release when the tag's PEP 440 form says so) needs `build`,
+  `wheel-smoke` and `docs-gate`; `publish-pypi` (every tag, pre-releases included, PyPI
+  Trusted Publishing, no stored token) and `docs-deploy` (final
+  tags only, dispatches `docs.yml` at the tag) follow it. A pre-release tag (`v1.0.0-rc.1`,
   `v0.0.0a0`) is uploaded to PyPI as a pre-release, which `pip install
   hyera` skips unless asked for (`--pre` or an exact pin); it does not
   redeploy the docs.
@@ -300,12 +320,3 @@ the docs site can be redeployed without cutting a release.
 - **Tagging discipline**: a `v*` tag is pushed only with the owner's
   explicit consent for that release and that version — publish is
   irreversible. A `ci-*` tag needs no such consent.
-
-## License
-
-MIT, for this project's own code. Several modules port code translated
-from [Puppet](https://github.com/puppetlabs/puppet) (Apache-2.0), the
-[deep_merge](https://github.com/danielsdeleo/deep_merge) gem (MIT), from
-[Psych](https://github.com/ruby/psych) (MIT), Ruby's YAML library, and from
-Ruby's [uri](https://github.com/ruby/uri) library (2-clause BSDL); those
-files carry their own notice. See `NOTICE` and `LICENSES/`.
