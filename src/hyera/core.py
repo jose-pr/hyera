@@ -14,13 +14,14 @@ from pathlib_next import Path
 from ._lookup import data_functions as _data_functions
 from ._lookup.cache import _ScopeKeyedCache
 from ._config.data_provider import (
-    _EnvironmentState,
     _Provider,
-    find_environment,
-    load_layer_provider,
+    environment_for,
+    global_only_for,
     module_name_of,
+    module_provider_for,
     prune_module_data,
     split_path_setting,
+    usable_provider,
 )
 from ._output import explain as _explain
 from ._output.explain import (
@@ -34,7 +35,6 @@ from ._output.explain import (
 from ._config.hiera_config import (
     HieraLevel,
     _build_hierarchies,
-    _config_error,
     _config_version,
     _default_codedir,
     _fill_v5_defaults,
@@ -48,10 +48,11 @@ from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._lookup.locations import _LocationStore
 from ._lookup.lookup_adapter import (
-    LOOKUP_OPTIONS,
-    _ExplainOptionsMemo,
     convert_result,
     extract_lookup_options_for_key,
+)
+from ._lookup.lookup_options import (
+    _ExplainOptionsMemo,
     memoized_options,
     module_default_lookup_options,
     retrieve_lookup_options,
@@ -66,6 +67,7 @@ from ._lookup.lookup_function import (
 from ._lookup.merge_strategy import MergeSpec, MergeStrategy
 from ._lookup.navigation import (
     _MISSING,
+    LOOKUP_OPTIONS,
     join_key,
     parse_lookup_key,
     split_key,
@@ -86,8 +88,6 @@ from .exceptions import (
 from .types import TypeSpec
 
 __all__ = ["Hiera"]
-
-_LOGGER = logging.getLogger(__name__)
 
 #: A single path, an iterable of paths, or a string of paths joined by
 #: ``os.pathsep`` -- the shape every ``*path`` constructor argument takes.
@@ -275,7 +275,7 @@ class Hiera:
         #: name -> ``_EnvironmentState``, shared with every ``scoped()`` view.
         self._environments: dict = {}
         #: Paths already warned about for an ignored version-3 layer config
-        #: (:meth:`_usable`), so the warning fires once per config file.
+        #: (:func:`~hyera._config.data_provider.usable_provider`), so the warning fires once per config file.
         self._v3_warned_paths: set = set()
         self._hierarchy: "list[HieraLevel]" = []
         self._default_hierarchy: "list[HieraLevel]" = []
@@ -444,7 +444,7 @@ class Hiera:
             # validated in full against Puppet's own v3 schema. A version-3
             # config outside the global layer is never read this way -- it
             # is ignored (with a warning) or raised about by
-            # :meth:`_usable` instead.
+            # :func:`~hyera._config.data_provider.usable_provider` instead.
             self._hierarchy, self._default_hierarchy = _read_v3(
                 self._base, source, self.scope, self._backends, self._codedir, cwd
             )
@@ -492,101 +492,7 @@ class Hiera:
         # Puppet fails every lookup on a broken environment config; loading
         # the construction scope's own environment now gives the same
         # failure at construction instead.
-        self._environment(self.scope.environment)
-
-    def _environment(self, name):
-        """The cached :class:`~hyera._config.data_provider._EnvironmentState` for
-        environment ``name`` (``puppet.rb:213-233``): discovered on first
-        use, then reused by every later lookup and by every
-        :meth:`scoped` view (``self._environments`` is shared, since
-        :meth:`_view` copies ``__dict__`` without deep-copying it).
-
-        With no ``environmentpath`` configured, every name resolves with no
-        environment root and no error (a documented difference from Puppet,
-        which always has one). With one configured, a name other than
-        ``"production"`` that is not found raises :class:`~hyera.ConfigError`
-        with Puppet's own text; a missing ``"production"`` directory is not
-        an error (Puppet's static default environment).
-        """
-        state = self._environments.get(name)
-        if state is not None:
-            return state
-
-        root = None
-        if self._environmentpath:
-            root = find_environment(self._environmentpath, name)
-            if root is None and name != "production":
-                raise ConfigError(
-                    "Could not find a directory environment named '{}' "
-                    "anywhere in the path: {}. Does the directory exist?".format(
-                        name,
-                        os.pathsep.join(str(p) for p in self._environmentpath),
-                    )
-                )
-
-        provider = (
-            load_layer_provider("Environment", root, self._backends, self.scope)
-            if root is not None
-            else None
-        )
-        if self._modulepath_override is not None:
-            modulepath = self._modulepath_override
-        elif root is not None:
-            modulepath = (root / "modules",) + self._basemodulepath
-        else:
-            modulepath = self._basemodulepath
-
-        state = _EnvironmentState(name, root, provider, modulepath)
-        self._environments[name] = state
-        return state
-
-    def _module_provider(self, state, module_name):
-        """The cached layer provider for ``module_name`` in environment
-        ``state`` (``module.rb:303-312``): ``None`` when no module of that
-        name is on the modulepath, or it has no ``hiera.yaml``."""
-        cache = state.module_providers
-        if module_name in cache:
-            return cache[module_name]
-        result = None
-        module_dir = state.modules().get(module_name)
-        if module_dir is not None:
-            result = load_layer_provider(
-                "Module",
-                module_dir,
-                self._backends,
-                self.scope,
-                module_name=module_name,
-            )
-        cache[module_name] = result
-        return result
-
-    def _usable(self, provider, invocation):
-        """A layer provider ready to be walked, or ``None``.
-
-        ``None``/a real :class:`~hyera._config.data_provider._Provider` pass
-        through unchanged. An :class:`~hyera._config.data_provider._IgnoredConfig`
-        (a version-3, or missing-version, config outside the global layer)
-        is Puppet's own per-use decision (``environment_data_provider.
-        rb:15-26``/``module_data_provider.rb:64-75``): under
-        ``strict="error"`` it raises; otherwise it warns once per config
-        path and the layer contributes nothing.
-        """
-        if provider is None or isinstance(provider, _Provider):
-            return provider
-        if provider.place == "Environment":
-            noun, warn_text = "an environment", "the environment root"
-        else:
-            noun, warn_text = "a module", "module root"
-        if invocation.scope.strict == "error":
-            raise _config_error(
-                provider.source,
-                "hiera.yaml version 3 cannot be used in {}".format(noun),
-            )
-        path = provider.source.path
-        if path not in self._v3_warned_paths:
-            self._v3_warned_paths.add(path)
-            _LOGGER.warning("hiera.yaml version 3 found at %s was ignored", warn_text)
-        return None
+        environment_for(self, self.scope.environment)
 
     def _resolved_locations_for(
         self, hierarchy, index, base_path, scope, tag, invocation
@@ -821,13 +727,13 @@ class Hiera:
             if layer == "global":
                 provider = self._global
                 inv = invocation
-                if not invocation.global_only and self._global_only_for(scope):
+                if not invocation.global_only and global_only_for(self, scope):
                     inv = invocation.derive(invocation._lookup, global_only=True)
             elif invocation.global_only:
                 return _MISSING
             elif layer == "environment":
-                state = self._environment(scope.environment)
-                provider = self._usable(state.provider, invocation)
+                state = environment_for(self, scope.environment)
+                provider = usable_provider(self, state.provider, invocation)
                 inv = invocation
             else:
                 # `layer` is always one of `_LAYERS` (the only caller,
@@ -837,15 +743,15 @@ class Hiera:
                 # "module" -- never a fourth, unhandled name to check for.
                 if module_name is None:
                     return _MISSING
-                state = self._environment(scope.environment)
-                raw = self._module_provider(state, module_name)
+                state = environment_for(self, scope.environment)
+                raw = module_provider_for(self, state, module_name)
                 if raw is None:
                     if module_name in state.modules():
                         invocation.report_module_provider_not_found(module_name)
                     else:
                         invocation.report_module_not_found(module_name)
                     return _MISSING
-                provider = self._usable(raw, invocation)
+                provider = usable_provider(self, raw, invocation)
                 inv = invocation
             if provider is None:
                 return _MISSING
@@ -909,19 +815,6 @@ class Hiera:
             if getattr(e, "_in_layer", False):
                 raise
             raise _escapes(e)
-
-    def _global_only_for(self, scope) -> bool:
-        """Whether a lookup into the global layer's own data must stay
-        confined to it (``lookup_adapter.rb:266-269``): the global layer is
-        version 3, and there is no *version 5* environment provider for
-        ``scope.environment`` -- an absent environment, an ignored version
-        3 one, and a version 4 one all count as none (only a real
-        :class:`~hyera._config.data_provider._Provider` with ``version == 5``
-        disqualifies global-only)."""
-        if self._global.version != 3:
-            return False
-        provider = self._environment(scope.environment).provider
-        return not (isinstance(provider, _Provider) and provider.version == 5)
 
     def _search_and_merge(self, key, invocation, merge, parsed=None):
         """Resolve ``key`` in full: the port of ``LookupAdapter#lookup``
@@ -1186,8 +1079,10 @@ class Hiera:
         """
         if module_name is None:
             return _MISSING
-        state = self._environment(invocation.scope.environment)
-        provider = self._usable(self._module_provider(state, module_name), invocation)
+        state = environment_for(self, invocation.scope.environment)
+        provider = usable_provider(
+            self, module_provider_for(self, state, module_name), invocation
+        )
         if provider is None or not provider.default_hierarchy:
             return _MISSING
         with invocation.recording(

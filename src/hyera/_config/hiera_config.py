@@ -141,7 +141,7 @@ def _config_version(data: dict, source: "_ConfigSource") -> int:
     raises its schema error, never "cannot be used in the global layer").
     The layer rule itself lives in the caller: :meth:`~hyera.core.
     Hiera._load_config` raises the version 4 in the global layer error
-    right after :func:`_read_v4` succeeds; :meth:`~hyera.core.Hiera._usable`
+    right after :func:`_read_v4` succeeds; :func:`~hyera._config.data_provider.usable_provider`
     applies the version 3 outside the global layer rule at each use.
     """
     v = data.get("version")
@@ -1470,7 +1470,7 @@ def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]
     :data:`V3_DEFAULT_CONFIG_HASH` (``hiera_config.rb:139-144``), which
     :func:`_config_version` then reads as version 3 -- read in full by
     :func:`_read_v3` at the global layer, or left, like any other version-3
-    layer config, for :meth:`~hyera.core.Hiera._usable` to ignore or raise
+    layer config, for :func:`~hyera._config.data_provider.usable_provider` to ignore or raise
     about outside it.
     """
     if base_config is None:

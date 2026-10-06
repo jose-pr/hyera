@@ -28,10 +28,8 @@ from hyera import (
 )
 from hyera._lookup.function_provider import _EnvironmentContext, _FunctionProvider
 from hyera._lookup.invocation import Invocation
-from hyera._lookup.lookup_adapter import (
-    extract_lookup_options_for_key,
-    retrieve_lookup_options,
-)
+from hyera._lookup.lookup_adapter import extract_lookup_options_for_key
+from hyera._lookup.lookup_options import retrieve_lookup_options
 from hyera._lookup.navigation import _MISSING
 from hyera.backends import Backend, HOCONBackend, JSONBackend, SopsBackend, YAMLBackend
 

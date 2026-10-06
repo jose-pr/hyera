@@ -305,3 +305,7 @@ def parse_lookup_key(key: str) -> "Tuple[str, Tuple[Union[str, int], ...]]":
     if not isinstance(root, str):
         raise HieraLookupError("Syntax error in key: '{}'".format(key))
     return root, rest
+
+
+#: The reserved data key holding per-key merge/convert_to options.
+LOOKUP_OPTIONS = "lookup_options"

@@ -18,6 +18,7 @@ from pathlib_next import Path
 
 from .hiera_config import (
     _build_hierarchies,
+    _config_error,
     _config_version,
     _fill_v3_defaults,
     _fill_v5_defaults,
@@ -27,9 +28,12 @@ from .hiera_config import (
     _validate_v5,
     _warn_deprecated,
 )
-from .._lookup.lookup_adapter import LOOKUP_OPTIONS
+from .._lookup.navigation import LOOKUP_OPTIONS
+from ..exceptions import ConfigError
 
 _LOGGER = logging.getLogger(__name__)
+#: The engine's own logger, shared with ``hyera.core``.
+_CORE_LOGGER = logging.getLogger("hyera.core")
 
 #: ``node/environment.rb:127-129``.
 _ENV_NAME_RE = re.compile(r"[A-Za-z0-9_]+")
@@ -56,7 +60,7 @@ class _IgnoredConfig(_ty.NamedTuple):
 
     Whether it is silently ignored (with a warning) or raises depends on the
     invocation's ``strict`` at the point it is actually consulted
-    (:meth:`~hyera.core.Hiera._usable`), not at load time.
+    (:func:`usable_provider`), not at load time.
     """
 
     place: str
@@ -159,7 +163,7 @@ def load_layer_provider(place, root, backends, scope=None, *, module_name=None):
     Puppet's own ``HieraConfigV3#validate_config`` always runs before any
     layer-appropriateness check does -- then becomes an
     :class:`_IgnoredConfig` once it validates, left for
-    :meth:`~hyera.core.Hiera._usable` to warn or raise about, with the
+    :func:`usable_provider` to warn or raise about, with the
     invocation's own ``strict``. A version-4 config is read in full
     (Puppet accepts it only in the environment/module layers). A version-5
     config is validated and built exactly like the global config, with
@@ -249,3 +253,114 @@ class _EnvironmentState:
         if self._modules is None:
             self._modules = module_dirs(self.modulepath)
         return self._modules
+
+
+def environment_for(hiera, name):
+    """The cached :class:`~hyera._config.data_provider._EnvironmentState` for
+    environment ``name`` (``puppet.rb:213-233``): discovered on first
+    use, then reused by every later lookup and by every
+    :meth:`~hyera.Hiera.scoped` view (``hiera._environments`` is shared, since
+    :meth:`Hiera._view <hyera.core.Hiera._view>` copies ``__dict__`` without deep-copying it).
+
+    With no ``environmentpath`` configured, every name resolves with no
+    environment root and no error (a documented difference from Puppet,
+    which always has one). With one configured, a name other than
+    ``"production"`` that is not found raises :class:`~hyera.ConfigError`
+    with Puppet's own text; a missing ``"production"`` directory is not
+    an error (Puppet's static default environment).
+    """
+    state = hiera._environments.get(name)
+    if state is not None:
+        return state
+
+    root = None
+    if hiera._environmentpath:
+        root = find_environment(hiera._environmentpath, name)
+        if root is None and name != "production":
+            raise ConfigError(
+                "Could not find a directory environment named '{}' "
+                "anywhere in the path: {}. Does the directory exist?".format(
+                    name,
+                    os.pathsep.join(str(p) for p in hiera._environmentpath),
+                )
+            )
+
+    provider = (
+        load_layer_provider("Environment", root, hiera._backends, hiera.scope)
+        if root is not None
+        else None
+    )
+    if hiera._modulepath_override is not None:
+        modulepath = hiera._modulepath_override
+    elif root is not None:
+        modulepath = (root / "modules",) + hiera._basemodulepath
+    else:
+        modulepath = hiera._basemodulepath
+
+    state = _EnvironmentState(name, root, provider, modulepath)
+    hiera._environments[name] = state
+    return state
+
+
+def module_provider_for(hiera, state, module_name):
+    """The cached layer provider for ``module_name`` in environment
+    ``state`` (``module.rb:303-312``): ``None`` when no module of that
+    name is on the modulepath, or it has no ``hiera.yaml``."""
+    cache = state.module_providers
+    if module_name in cache:
+        return cache[module_name]
+    result = None
+    module_dir = state.modules().get(module_name)
+    if module_dir is not None:
+        result = load_layer_provider(
+            "Module",
+            module_dir,
+            hiera._backends,
+            hiera.scope,
+            module_name=module_name,
+        )
+    cache[module_name] = result
+    return result
+
+
+def usable_provider(hiera, provider, invocation):
+    """A layer provider ready to be walked, or ``None``.
+
+    ``None``/a real :class:`~hyera._config.data_provider._Provider` pass
+    through unchanged. An :class:`~hyera._config.data_provider._IgnoredConfig`
+    (a version-3, or missing-version, config outside the global layer)
+    is Puppet's own per-use decision (``environment_data_provider.
+    rb:15-26``/``module_data_provider.rb:64-75``): under
+    ``strict="error"`` it raises; otherwise it warns once per config
+    path and the layer contributes nothing.
+    """
+    if provider is None or isinstance(provider, _Provider):
+        return provider
+    if provider.place == "Environment":
+        noun, warn_text = "an environment", "the environment root"
+    else:
+        noun, warn_text = "a module", "module root"
+    if invocation.scope.strict == "error":
+        raise _config_error(
+            provider.source,
+            "hiera.yaml version 3 cannot be used in {}".format(noun),
+        )
+    path = provider.source.path
+    if path not in hiera._v3_warned_paths:
+        hiera._v3_warned_paths.add(path)
+        _CORE_LOGGER.warning("hiera.yaml version 3 found at %s was ignored", warn_text)
+    return None
+
+
+def global_only_for(hiera, scope) -> bool:
+    """Whether a lookup into the global layer's own data must stay
+    confined to it (``lookup_adapter.rb:266-269``): the global layer is
+    version 3, and there is no *version 5* environment provider for
+    ``scope.environment`` -- an absent environment, an ignored version
+    3 one, and a version 4 one all count as none (only a real
+    :class:`~hyera._config.data_provider._Provider` with ``version == 5``
+    disqualifies global-only)."""
+    if hiera._global.version != 3:
+        return False
+    provider = environment_for(hiera, scope.environment).provider
+    return not (isinstance(provider, _Provider) and provider.version == 5)

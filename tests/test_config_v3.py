@@ -5,7 +5,7 @@ builds, per-layer version rules, and version 3 global-only sub-lookups
 (``_hiera_config.py``'s ``_config_version``/``_fill_v3_defaults``/
 ``_validate_v3``/``_read_v3``/``_v3_level_specs``/``_v3_backend_class``/
 ``_find_line_matching``/``_default_codedir``/``_fill_v4_defaults``/
-``_validate_v4``/``_read_v4``; ``core.py``'s ``_usable``/``_global_only_for``;
+``_validate_v4``/``_read_v4``; ``data_provider.py``'s ``usable_provider``/``global_only_for``;
 ``_invocation.Invocation.global_only``).
 
 Ports ``HieraConfig.create``'s dispatch, ``HieraConfigV3``/``HieraConfigV4``'s
