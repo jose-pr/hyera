@@ -1546,7 +1546,7 @@ def test_quotes_are_rendered_by_one_function():
 
 
 def test_ruby_regex_rejects_a_trailing_backslash():
-    from hyera._types.types import _ruby_regex
+    from hyera._types.ruby_regexp import _ruby_regex
 
     with pytest.raises(HieraLookupError) as info:
         _ruby_regex("a\\")

@@ -14,7 +14,8 @@ import typing as _ty
 from ..exceptions import HieraLookupError
 from .._types.new_function import new_instance
 from .._types.parser import parse_type
-from .._types.types import _ruby_regex, infer
+from .._types.ruby_regexp import _ruby_regex
+from .._types.types import infer
 
 #: ``Puppet::LookupValue`` (an alias for ``RichData``), parsed once and
 #: cached: every value found at a root key is checked against it
@@ -125,7 +126,7 @@ def compile_patterns(options):
     """Puppet's ``LookupAdapter#compile_patterns`` (:317-330).
 
     A key starting with ``^`` is a Ruby regex, compiled through
-    :func:`hyera._types.types._ruby_regex`; anything else, including a non-``str``
+    :func:`hyera._types.ruby_regexp._ruby_regex`; anything else, including a non-``str``
     key, is an exact match. An invalid pattern raises immediately (no
     rescue, as in Puppet), naming the pattern.
     """

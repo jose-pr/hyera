@@ -50,9 +50,9 @@ from .types import (
     Variant,
     _PNamedType,
     _num_str,
-    _ruby_regex,
     _type_instance,
 )
+from .ruby_regexp import _ruby_regex
 
 __all__ = ["parse_type", "as_type", "build_access"]
 
