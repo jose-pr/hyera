@@ -447,23 +447,14 @@ def parse_type(text):
             # of common types, though the general rule rejects it.
             return Array(None, 1, None)
         try:
-            # `_Parser.__init__` tokenizes the whole text up front, and an
-            # unrecognized character (e.g. "@") raises `_SyntaxError` right
-            # there, before `parse_primary` ever runs -- it must land in
-            # this same `except _SyntaxError` below, not escape raw.
+            # `_Parser.__init__` tokenizes up front, so an unrecognized character (e.g. "@") raises
+            # `_SyntaxError` before `parse_primary` runs; it must land in the `except _SyntaxError` below.
             parser = _Parser(text)
             expr = parser.parse_primary()
             if parser.peek().kind != "eof":
-                # Leftover input: only a *second*, independently valid
-                # expression (e.g. "Integer [1]" is a bare Integer followed
-                # by a separate array literal) makes this the generic
-                # not-a-type-spec case; a genuinely malformed tail (a stray
-                # "]", say) is its own syntax error and must propagate as
-                # one, not be swallowed into the generic message. A bare
-                # trailing comma ("Integer,") reads as Puppet expecting a
-                # continuation list, not a stray token -- with nothing
-                # after it, that surfaces as "end of input", same as any
-                # other primary hitting EOF.
+                # Leftover input: only a second, independently valid expression ("Integer [1]") is the generic
+                # not-a-type-spec case; a malformed tail (a stray "]") is its own syntax error and propagates.
+                # A bare trailing comma ("Integer,") reads as Puppet expecting a continuation: "end of input".
                 if parser.peek().kind == "comma":
                     parser.advance()
                 parser.parse_primary()
@@ -526,10 +517,8 @@ def as_type(spec):
         return parse_type(spec)
     if isinstance(spec, Any):
         return spec
-    # A bare `hyera.types` facade class (not yet subscripted), or
-    # `hyera.Sensitive` itself used in a type position: imported lazily --
-    # `hyera.types` imports this module to build every type object, so a
-    # module-level import here would be circular.
+    # A bare `hyera.types` facade class or `hyera.Sensitive` in a type position: imported lazily,
+    # because `hyera.types` imports this module to build every type object.
     from .. import types as _public_types
 
     if isinstance(spec, type) and isinstance(spec, _public_types._TypeMeta):

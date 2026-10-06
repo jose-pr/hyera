@@ -9,12 +9,8 @@ import warnings
 from ..exceptions import HieraLookupError
 
 # ------------------------------------------------------------ Ruby regexes
-#
-# Ruby (Onigmo) syntax differs from Python's ``re``: ``\A``/``\z``/``\Z``/
-# ``\h``, POSIX bracket classes, ``(?m)`` meaning dot-all, ``(?i)`` applying
-# only to the rest of its group, ASCII-only ``\w \d \s \b``, and ``^``/``$``
-# always matching at line boundaries. ``_ruby_regex`` translates one source in
-# a single pass and raises ``HieraLookupError`` for anything it cannot.
+# Ruby (Onigmo) differs from Python's ``re`` in ``\A \z \Z \h``, POSIX classes, dot-all ``(?m)``, group-local
+# ``(?i)``, ASCII-only ``\w \d \s \b`` and line-boundary ``^``/``$``; ``_ruby_regex`` raises for what it cannot translate.
 
 _WORD = "A-Za-z0-9_"
 

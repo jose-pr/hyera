@@ -124,12 +124,9 @@ def _dispatch(type_, value, args):
         if type_.contained is None:
             _not_supported(type_)
         if isinstance(type_.contained, str):
-            # A literal string argument (``Optional['x']``/``Optional[x]``,
-            # as Puppet does): Puppet's own new() dispatches through the
-            # literal's generalized data type (String), then the caller's
-            # assert_instance_of checks the result against the literal type
-            # itself -- so a value equal to the literal converts cleanly and
-            # anything else is a wrong-type mismatch, never "not supported".
+            # A literal string argument (``Optional['x']``): Puppet's new() dispatches through the literal's
+            # generalized type (String), then assert_instance_of checks the result against the literal
+            # itself, so an equal value converts and anything else is a wrong-type mismatch.
             return _dispatch(String(), value, args)
         return _dispatch(type_.contained, value, args)
     if isinstance(type_, Regexp) or (

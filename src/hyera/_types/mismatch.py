@@ -38,11 +38,9 @@ from .compound_types import (
 
 __all__ = ["assert_instance_of"]
 
-#: Types whose own formatter/short_name keeps one bare level of their
-#: contained type's name (``type_mismatch_describer.rb`` ``short_name``,
-#: also ``type_formatter.rb``'s dedicated ``string_P*`` methods for these
-#: three -- ``Type`` is the fourth in Puppet but unparameterized in this
-#: subset, so it never reaches here with a contained type).
+#: Types whose formatter/short_name keeps one bare level of their contained type's name
+#: (``type_mismatch_describer.rb`` ``short_name``, ``type_formatter.rb``'s ``string_P*``
+#: methods for these three; ``Type``, the fourth in Puppet, is unparameterized here).
 _WRAPPER_TYPES = (Optional, NotUndef, SensitiveType)
 
 
@@ -262,11 +260,8 @@ def _describe_variant(expected, value, path):
             return []
         per_branch.append((i, t, sub))
 
-    # Every branch failed. When every failure landed at THIS level (no
-    # deeper path), Puppet collapses them into one combined message; a
-    # pattern-shaped branch set renders as "a match for Variant[...]",
-    # anything else as "a value of type A, B, or C" (each rendered with
-    # its own detailed-vs-short rule).
+    # Every branch failed. When every failure landed at THIS level, Puppet collapses them into
+    # one message: "a match for Variant[...]" for a pattern-shaped set, else "a value of type A, B, or C".
     immediate = [
         (i, t, sub) for i, t, sub in per_branch if len(sub) == 1 and sub[0].path == path
     ]
@@ -277,19 +272,9 @@ def _describe_variant(expected, value, path):
         types = [t for _, t, _ in per_branch]
         return [_Mismatch(path, "type", types, actual)]
 
-    # A mix of immediate and nested failures: report the first branch that
-    # failed deeper in the structure, prefixed with its "variant N" path
-    # element (the shallow, whole-value mismatches on the other branches
-    # are the less informative ones -- a simplification of Puppet's own
-    # ``merge_descriptions``, see AGENTS.md Gotchas).
-    #
-    # `immediate` is exactly the per_branch entries where
-    # `len(sub) == 1 and sub[0].path == path`, so `len(immediate) !=
-    # len(per_branch)` (the only way to reach here) guarantees at least
-    # one entry fails that same condition -- `next()` below can never
-    # exhaust the generator. Written with `next()` rather than a `for`
-    # loop so that guarantee is structural (no reachable "ran out of
-    # entries" path for a branch-coverage tool to ever ask about).
+    # A mix of immediate and nested failures: report the first branch that failed deeper, prefixed
+    # with its "variant N" path element (a simplification of Puppet's ``merge_descriptions``, see
+    # AGENTS.md Gotchas). `immediate` is short of `per_branch` here, so `next()` always finds one.
     i, t, sub = next(
         (i, t, sub) for i, t, sub in per_branch if len(sub) != 1 or sub[0].path != path
     )

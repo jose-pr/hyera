@@ -1,7 +1,5 @@
-# Ported from Puppet 8 lib/puppet/pops/types/types.rb, type_calculator.rb,
-# type_formatter.rb, p_sensitive_type.rb
-# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr.
-# See NOTICE.
+# Ported from Puppet 8 lib/puppet/pops/types/{types,type_calculator,type_formatter,p_sensitive_type}.rb
+# (https://github.com/puppetlabs/puppet), Apache-2.0. Modified by jose-pr. See NOTICE.
 """Puppet type system: the type model, Sensitive, convert_to.
 
 Ports Puppet's ``pops/types`` (``types.rb``, ``type_calculator.rb``,
@@ -266,11 +264,8 @@ class String(Any):
     def __init__(self, size_from=None, size_to=None, literal=None):
         self.size_from = size_from
         self.size_to = size_to
-        #: set only for the "value" flavor (``TypeFactory.string(literal)``),
-        #: used by Optional/NotUndef to render the raw literal (see
-        #: ``_render_container``); everywhere else it renders as bare
-        #: ``String`` (``string_PStringType`` never shows ``.value``
-        #: outside Puppet's debug formatter).
+        #: set only for the "value" flavor (``TypeFactory.string(literal)``): Optional/NotUndef render the
+        #: raw literal (see ``_render_container``); everywhere else it renders as bare ``String``.
         self.literal = literal
 
     DEFAULT = None  # set below
