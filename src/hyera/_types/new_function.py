@@ -8,10 +8,10 @@
 ``type_`` (and no ``*args``) is returned unchanged; else the type's own
 conversion runs, and the result is asserted against ``type_`` with the
 subject ``"Converted value from <type_>.new()"`` (``_types.mismatch``).
-Types outside this subset's new()-capable tier (SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type,
-Object) raise our own "hyera does not support new()" text -- a deliberate
-deviation, not a bug, since Puppet itself does support new() for several
-of them.
+Types outside this subset's new()-capable tier (SemVer, SemVerRange, Timespan,
+Timestamp, Regexp, Binary, URI, Type, Object) raise our own "hyera does not
+support new()" text -- a deliberate deviation, not a bug, since Puppet itself
+does support new() for several of them.
 """
 
 from __future__ import annotations
@@ -124,9 +124,9 @@ def _dispatch(type_, value, args):
         if type_.contained is None:
             _not_supported(type_)
         if isinstance(type_.contained, str):
-            # A literal string argument (``Optional['x']``): Puppet's new() dispatches through the literal's
-            # generalized type (String), then assert_instance_of checks the result against the literal
-            # itself, so an equal value converts and anything else is a wrong-type mismatch.
+            # A literal string argument (``Optional['x']``): Puppet's new() dispatches
+            # through the generalized type (String), then assert_instance_of checks the
+            # result against the literal: equal converts, anything else mismatches.
             return _dispatch(String(), value, args)
         return _dispatch(type_.contained, value, args)
     if isinstance(type_, Regexp) or (

@@ -252,8 +252,9 @@ class _Parser:
         return ("hash", pairs, tok.start, end.end)
 
     def parse_pair(self):
-        # A hash literal's own ``k => v`` is already explicit; parse_arg_expr would greedily collapse
-        # a bare ``k => v`` into one pair node, leaving nothing before the expected ``=>``.
+        # A hash literal's own ``k => v`` is already explicit; parse_arg_expr would
+        # greedily collapse a bare ``k => v`` into one pair node, leaving nothing before
+        # the expected ``=>``.
         k = self.parse_primary()
         self.expect("farrow")
         v = self.parse_primary()

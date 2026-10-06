@@ -9,8 +9,8 @@ import warnings
 from ..exceptions import HieraLookupError
 
 # ------------------------------------------------------------ Ruby regexes
-# Ruby (Onigmo) differs from Python's ``re`` in ``\A \z \Z \h``, POSIX classes, dot-all ``(?m)``, group-local
-# ``(?i)``, ASCII-only ``\w \d \s \b`` and line-boundary ``^``/``$``; ``_ruby_regex`` raises for what it cannot translate.
+# Onigmo differs in ``\A \z \Z \h``, POSIX classes, dot-all ``(?m)``, group-local
+# ``(?i)``, ASCII-only ``\w \d \s \b``, ``^``/``$``; ``_ruby_regex`` rejects the rest.
 
 _WORD = "A-Za-z0-9_"
 

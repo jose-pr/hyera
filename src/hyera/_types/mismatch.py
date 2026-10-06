@@ -260,8 +260,9 @@ def _describe_variant(expected, value, path):
             return []
         per_branch.append((i, t, sub))
 
-    # Every branch failed. When every failure landed at THIS level, Puppet collapses them into
-    # one message: "a match for Variant[...]" for a pattern-shaped set, else "a value of type A, B, or C".
+    # Every branch failed. When every failure landed at THIS level, Puppet collapses
+    # them into one message: "a match for Variant[...]" for a pattern-shaped set, else
+    # "a value of type A, B, or C".
     immediate = [
         (i, t, sub) for i, t, sub in per_branch if len(sub) == 1 and sub[0].path == path
     ]
@@ -272,9 +273,9 @@ def _describe_variant(expected, value, path):
         types = [t for _, t, _ in per_branch]
         return [_Mismatch(path, "type", types, actual)]
 
-    # A mix of immediate and nested failures: report the first branch that failed deeper, prefixed
-    # with its "variant N" path element (a simplification of Puppet's ``merge_descriptions``, see
-    # AGENTS.md Gotchas). `immediate` is short of `per_branch` here, so `next()` always finds one.
+    # Mixed immediate and nested failures: report the first branch that failed deeper,
+    # prefixed with its "variant N" element (Puppet's ``merge_descriptions``,
+    # simplified). `immediate` is short of `per_branch`, so `next()` finds one.
     i, t, sub = next(
         (i, t, sub) for i, t, sub in per_branch if len(sub) != 1 or sub[0].path != path
     )
