@@ -1,6 +1,7 @@
 """Interpolation edge cases: literal backslashes, regex-special values, format()."""
 
 import logging
+import time
 
 import pytest
 
@@ -243,6 +244,15 @@ def test_a_value_type_nested_beyond_the_stack_raises_a_hiera_error(make_tree):
     nested = "Array[" * 3000 + "String" + "]" * 3000
     with pytest.raises(InterpolationError):
         h.lookup("k", nested)
+
+
+@pytest.mark.parametrize("tail", ["", "}", "%{x}"])
+def test_unclosed_expressions_are_scanned_in_linear_time(tail):
+    text = "%{x}" + "%{" * 40000 + tail
+    h = Hiera({"version": 5, "hierarchy": []}, scope=Scope(variables={"x": "v"}))
+    start = time.perf_counter()
+    h.format(text)
+    assert time.perf_counter() - start < 2.0
 
 
 def test_cli_recursion_exits_2(make_tree, caplog):

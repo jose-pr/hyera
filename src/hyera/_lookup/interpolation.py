@@ -265,7 +265,9 @@ def _interpolate_string(subject, inv, allow_methods):
     with inv.recording("interpolate", subject):
         out = []
         pos = 0
-        for m in _EXPR_RE.finditer(subject):
+        # A `%{` with no `}` after it matches nothing, and the regex would
+        # rescan to the end of the text from each one: stop at the last `}`.
+        for m in _EXPR_RE.finditer(subject, 0, subject.rfind("}") + 1):
             out.append(subject[pos : m.start()])
             pos = m.end()
             expr = m.group(1).strip(_RUBY_STRIP_CHARS)
