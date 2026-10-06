@@ -472,11 +472,9 @@ class _Scope(_TreeNode):
         return "scope"
 
 
-#: ``Explainer#push``'s dispatch table (``explainer.rb:487-506``).
-#: ``:global`` is deliberately absent: this library's global layer is
-#: always Hiera, so ``ExplainGlobal`` (a non-Hiera ``data_binding_terminus``
-#: report) is not ported -- pushing ``"global"`` raises, like any other
-#: unknown kind.
+#: ``Explainer#push``'s dispatch table (``explainer.rb:487-506``). ``:global`` is absent: this
+#: library's global layer is always Hiera, so ``ExplainGlobal`` (a non-Hiera ``data_binding_terminus``
+#: report) is not ported and pushing ``"global"`` raises, like any unknown kind.
 _PUSH = {
     "meta": lambda current, qualifier: _Top(current, "meta", qualifier),
     "data": lambda current, qualifier: _Top(current, "data", qualifier),
