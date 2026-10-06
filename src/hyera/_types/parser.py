@@ -18,13 +18,6 @@ import typing as _ty
 
 from ..exceptions import HieraLookupError
 from .types import (
-    ANY,
-    BOOLEAN,
-    NUMERIC,
-    REGEXP,
-    SCALAR,
-    SCALAR_DATA,
-    UNDEF,
     NAMED_ONLY_TYPES,
     Any,
     Boolean,
@@ -41,8 +34,6 @@ from .types import (
 )
 from .literal_format import _num_str
 from .compound_types import (
-    COLLECTION,
-    _PNamedType,
     ALIASES,
     Array,
     Collection,
@@ -54,67 +45,10 @@ from .compound_types import (
     Variant,
 )
 from .ruby_regexp import _ruby_regex
+from .type_names import _BARE_TYPES, _NEVER_PARAMETERIZED, _UNSUPPORTED_NAMES
 from .type_syntax import _Parser, _SyntaxError
 
 __all__ = ["parse_type", "as_type", "build_access"]
-
-#: Names never accepted with parameters, whether or not they are otherwise
-#: parameterizable elsewhere (``type_parser.rb`` ``when 'any', 'data', ...``).
-_NEVER_PARAMETERIZED = frozenset(
-    [
-        "any",
-        "data",
-        "catalogentry",
-        "scalar",
-        "undef",
-        "numeric",
-        "default",
-        "semverrange",
-        "scalardata",
-    ]
-)
-
-#: The third tier: never modeled at all, bare or
-#: parameterized.
-_UNSUPPORTED_NAMES = frozenset(["iterable", "iterator", "init", "unit"])
-
-#: Bare (zero-argument) type names -> a constructor taking no arguments.
-_BARE_TYPES = {
-    "any": lambda: ANY,
-    "undef": lambda: UNDEF,
-    "notundef": lambda: NotUndef(),
-    "optional": lambda: Optional(),
-    "enum": lambda: Enum([]),
-    "pattern": lambda: Pattern([]),
-    "scalar": lambda: SCALAR,
-    "scalardata": lambda: SCALAR_DATA,
-    "string": lambda: String.DEFAULT,
-    "integer": lambda: Integer.DEFAULT,
-    "float": lambda: Float.DEFAULT,
-    "numeric": lambda: NUMERIC,
-    "boolean": lambda: BOOLEAN,
-    "array": lambda: Array(),
-    "hash": lambda: Hash(),
-    "collection": lambda: COLLECTION,
-    "tuple": lambda: Tuple([]),
-    "struct": lambda: Struct([]),
-    "variant": lambda: Variant([]),
-    "sensitive": lambda: SensitiveType(),
-    "regexp": lambda: REGEXP,
-}
-#: Names whose Puppet-cased spelling ``str.capitalize()`` gets wrong.
-_PRETTY_NAMES = {
-    "uri": "URI",
-    "semver": "SemVer",
-    "semverrange": "SemVerRange",
-    "typeset": "TypeSet",
-    "catalogentry": "CatalogEntry",
-    "notundef": "NotUndef",
-    "scalardata": "ScalarData",
-}
-for _n in NAMED_ONLY_TYPES:
-    _pretty_n = _PRETTY_NAMES.get(_n, _n.capitalize())
-    _BARE_TYPES.setdefault(_n, (lambda n: (lambda: _PNamedType(n)))(_pretty_n))
 
 
 class _NotAValidTypeSpec(Exception):
