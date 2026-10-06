@@ -1,0 +1,10 @@
+description: >-
+  A level naming a function that does not exist fails a lookup only when it
+  must call that function for a location that exists: a missing path, a glob
+  with no match and an empty mapped_paths never reach it, so the other levels
+  answer (a level whose location exists raises, see config-data-dig-unknown).
+queries:
+  - key: k
+    note: Puppet 8.10 probe
+  - key: not_anywhere
+    note: Puppet 8.10 probe

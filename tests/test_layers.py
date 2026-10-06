@@ -769,3 +769,15 @@ def test_nonexistent_modulepath_and_environmentpath_entries_are_skipped(
         basemodulepath=[tmp_path / "no-such-mods", modules],
     )
     assert h.lookup("m::k") == "v"
+
+
+def test_environment_hiera_yaml_that_is_a_directory_is_an_error(tmp_path, make_tree):
+    base = _global(make_tree)
+    envs = tmp_path / "envs"
+    (envs / "target" / "hiera.yaml").mkdir(parents=True)
+    with pytest.raises(ConfigError, match="Is a directory"):
+        Hiera(
+            str(base / "hiera.yaml"),
+            environmentpath=envs,
+            scope=Scope(environment="target"),
+        ).lookup("g")

@@ -115,9 +115,10 @@ def test_bad_merge_strategy_raises_merge_error(make_tree):
 def test_internal_keyerror_is_not_chained(make_tree):
     bad_backend_root = make_tree(
         {"hierarchy": [{"name": "one", "path": "one.yaml", "data_hash": "nope"}]},
+        files={"data/one.yaml": "k: v\n"},
     )
     with pytest.raises(ConfigError) as excinfo:
-        Hiera(str(bad_backend_root / "hiera.yaml"))
+        Hiera(str(bad_backend_root / "hiera.yaml")).lookup("k")
     assert excinfo.value.__cause__ is None
     assert excinfo.value.__suppress_context__ is True
 

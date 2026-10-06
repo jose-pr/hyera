@@ -719,9 +719,11 @@ def test_sops_names_registered():
 def test_ini_and_dotenv_are_not_data_hash_names(make_tree, data_hash):
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "secret.ini", "data_hash": data_hash}]},
+        files={"data/secret.ini": "k = v\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("k")
 
 
 def test_sops_format_pattern_forces_format_regardless_of_extension(

@@ -95,16 +95,19 @@ def _kind_mismatch_text(backend, func_name: str, kind: str) -> str:
 
 
 def _check_kind_implemented(backend, kind: str) -> None:
-    """Raise Puppet's kind-mismatch error (:func:`_kind_mismatch_text`) the
-    moment a level's function is actually invoked, if it does not implement
-    ``kind`` -- the lazy counterpart of the eager name-resolution check
-    :func:`~hyera._config.hiera_config._build_level` still does at config
-    build time. Called from each provider's ``key_lookup``, after the
+    """Raise the level's "Unable to find ... function" error if its function
+    name did not resolve, else Puppet's kind-mismatch error
+    (:func:`_kind_mismatch_text`) if the function does not implement
+    ``kind``, the moment the function is actually invoked. Called from each
+    provider's ``key_lookup``, after the
     per-location existence gate (or unconditionally for a location-less
     entry), so a location that does not exist never reaches this and never
     refuses the rest of the ``Hiera`` instance. ``backend.name`` is the
     function name as declared (``Backend.new`` sets it to the name actually
     asked for), not the hierarchy level's own ``name``."""
+    unknown = getattr(backend, "unknown_function_error", None)
+    if unknown is not None:
+        raise ConfigError(*unknown.args, path=unknown.path, line=unknown.line) from None
     if not backend.implements(kind):
         raise ConfigError(_kind_mismatch_text(backend, backend.name, kind))
 

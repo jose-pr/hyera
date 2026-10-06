@@ -815,8 +815,9 @@ for.
   `%{var}`/`%{scope('var')}` interpolates as `""` and logs a warning);
   Puppet 8 defaults to `strict="error"`, which fails the lookup. Pass
   `Scope(strict="error")` (or `.scoped(strict="error")`) to match Puppet's
-  own default. Hierarchy locations are lenient in every mode, as in
-  Puppet. (id: `strict-default-warning`)
+  own default. Hierarchy locations of a version 5 `hiera.yaml` are
+  lenient in every mode, as in Puppet; a version 3 or 4 one fails the lookup
+  under `strict="error"`, as in Puppet. (id: `strict-default-warning`)
 - **Glob wildcards are case-sensitive and results sort by byte order on
   every OS**, as on Puppet's Linux servers; Ruby on Windows matches glob
   wildcards case-insensitively instead, so a hierarchy authored against a

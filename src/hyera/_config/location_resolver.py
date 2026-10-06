@@ -675,6 +675,30 @@ def _interpolate_path(text, invocation):
     return _win_slash(interpolate(_win_slash(text), invocation, allow_methods=False))
 
 
+def _entry_datadir(level, config_root, invocation) -> str:
+    """A level's data directory, rooted: Puppet's ``entry_datadir``. A
+    version 5 ``datadir`` is joined onto the config root first and the result
+    interpolated, so a variable that expands to an absolute path still lands
+    under the root; a version 3 one is interpolated first (``Pathname`` of an
+    absolute value is that value), a version 4 one never is.
+    """
+    if level.datadir_literal:
+        return _pathname_plus(config_root, _win_slash(level.datadir))
+    if level.datadir_base is not None:
+        return _pathname_plus(config_root, _interpolate_path(level.datadir, invocation))
+    return _interpolate_path(
+        _pathname_plus(config_root, _win_slash(level.datadir)), invocation
+    )
+
+
+def _glob_datadir(entry: str, config_root: str) -> str:
+    """``entry`` as the datadir :func:`_glob_root_and_pattern` takes: relative
+    to ``config_root`` (whose own characters are never glob-live) when it is
+    under it, else as is."""
+    prefix = config_root.rstrip("/") + "/"
+    return entry[len(prefix) :] if entry.startswith(prefix) else entry
+
+
 def _resolve_paths(datadir, declared, invocation, extension=None):
     """``path``/``paths`` (``location_resolver.rb:56-66``): each entry
     interpolates (methods disallowed), gets ``extension`` appended unless it
@@ -737,10 +761,15 @@ def resolve_glob_specs(level, base_path, scope, refs=None, fs_memo=None):
         scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
     )
     lenient_inv = Invocation(
-        scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
+        scope,
+        _no_lookup,
+        lenient=level.lenient_locations,
+        scope_interpolations=refs,
+        _fs_memo=fs_memo,
     )
     config_root = Path(base_path).as_posix()
-    datadir = _interpolate_path(level.datadir, strict_inv)
+    entry = _entry_datadir(level, config_root, strict_inv)
+    datadir = _glob_datadir(entry, config_root)
     return _glob_specs(config_root, datadir, level.locations, lenient_inv)
 
 
@@ -987,7 +1016,7 @@ def _expand_mapped_paths(datadir, level, invocation):
             child_inv = Invocation(
                 child_scope,
                 _no_lookup,
-                lenient=True,
+                lenient=invocation.lenient,
                 scope_interpolations=invocation.scope_interpolations,
                 _fs_memo=invocation._fs_memo,
             )
@@ -1034,20 +1063,17 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
         scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
     )
     lenient_inv = Invocation(
-        scope, _no_lookup, lenient=True, scope_interpolations=refs, _fs_memo=fs_memo
+        scope,
+        _no_lookup,
+        lenient=level.lenient_locations,
+        scope_interpolations=refs,
+        _fs_memo=fs_memo,
     )
 
     root = base_path if level.datadir_base is None else level.datadir_base
     config_root = Path(root).as_posix()
-    if level.datadir_literal:
-        # A version 4 datadir is joined onto the config root as written,
-        # with no interpolation at all (`hiera_config.rb:525`) -- unlike
-        # every other level, which interpolates it strictly (methods
-        # disallowed) just below.
-        datadir = _win_slash(level.datadir)
-    else:
-        datadir = _interpolate_path(level.datadir, strict_inv)
-    base = _pathname_plus(config_root, datadir)
+    base = _entry_datadir(level, config_root, strict_inv)
+    datadir = _glob_datadir(base, config_root)
 
     key = level.location_key
     if key is None:
@@ -1056,9 +1082,10 @@ def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
         # key that expands to zero candidates.
         return None
     if key in ("path", "paths"):
-        return _resolve_paths(
-            base, level.locations, lenient_inv, extension=level.extension
-        )
+        extension = level.extension
+        if extension:
+            extension = interpolate(extension, strict_inv, allow_methods=False)
+        return _resolve_paths(base, level.locations, lenient_inv, extension=extension)
     if key in ("glob", "globs"):
         return _expand_globs(config_root, datadir, level.locations, lenient_inv)
     if key == "mapped_paths":

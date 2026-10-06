@@ -151,7 +151,9 @@ def module_name_of(root: str) -> "_ty.Optional[str]":
 def load_layer_provider(place, root, backends, scope=None, *, module_name=None):
     """Load ``root / "hiera.yaml"`` as an environment or module layer.
 
-    ``None`` when there is no ``hiera.yaml`` there at all. A version-3 (or
+    ``None`` when there is no ``hiera.yaml`` there at all; one that is a
+    directory raises :class:`~hyera.ConfigError` like the global layer's.
+    A version-3 (or
     missing-version) config is still read in full against Puppet's own v3
     schema -- a schema error surfaces here regardless of layer, exactly as
     Puppet's own ``HieraConfigV3#validate_config`` always runs before any
@@ -167,10 +169,10 @@ def load_layer_provider(place, root, backends, scope=None, *, module_name=None):
     """
     hiera_yaml = root / "hiera.yaml"
     try:
-        is_file = hiera_yaml.is_file()
+        present = hiera_yaml.exists()
     except OSError:
-        is_file = False
-    if not is_file:
+        present = False
+    if not present:
         return None
     layer = place.lower()
     source, data = _read_base_config(hiera_yaml, None)

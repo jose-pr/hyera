@@ -691,3 +691,77 @@ def test_lookup_key_registered_as_data_hash_builds_and_only_errors_on_lookup(
     h2 = Hiera(str(root2 / "hiera.yaml"))
     with pytest.raises(ConfigError, match="'yaml_data' expects 2 arguments, got 3"):
         h2.lookup("k")
+
+
+# --- function names are resolved when called ------------------------------
+
+
+@pytest.mark.parametrize("name", ["YAML_DATA", "Yaml_Data", '"::yaml_data"'])
+def test_function_name_ignores_case_and_leading_colons(make_tree, name):
+    root = make_tree(
+        "version: 5\ndefaults: {datadir: data}\nhierarchy:\n"
+        "  - {name: c, data_hash: %s, path: common.yaml}\n" % name,
+        files={"data/common.yaml": "k: v\n"},
+    )
+    assert Hiera(str(root / "hiera.yaml")).lookup("k") == "v"
+
+
+@pytest.mark.parametrize("key", ["data_hash", "lookup_key", "data_dig"])
+def test_unknown_function_fails_only_for_an_existing_location(make_tree, key):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "first", "path": "first.yaml"},
+                {"name": "gone", key: "nope_fn", "path": "absent.yaml"},
+                {"name": "no-match", key: "nope_fn", "glob": "nothing-*.yaml"},
+                {"name": "bad", key: "nope_fn", "path": "second.yaml"},
+            ]
+        },
+        files={"data/first.yaml": "k: first\n", "data/second.yaml": "k: second\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(ConfigError, match="Unable to find '%s' function" % key):
+        h.lookup("k")
+
+
+@pytest.mark.parametrize("key", ["data_hash", "lookup_key", "data_dig"])
+def test_unknown_function_with_no_existing_location_lets_others_answer(make_tree, key):
+    root = make_tree(
+        {
+            "hierarchy": [
+                {"name": "first", "path": "first.yaml"},
+                {"name": "gone", key: "nope_fn", "path": "absent.yaml"},
+                {"name": "no-match", key: "nope_fn", "glob": "nothing-*.yaml"},
+            ]
+        },
+        files={"data/first.yaml": "k: first\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k") == "first"
+    assert h.lookup("other", default_value="miss") == "miss"
+
+
+@pytest.mark.parametrize("where", ["entry", "defaults"])
+def test_empty_datadir_is_rejected(make_tree, where):
+    if where == "entry":
+        config = {"hierarchy": [{"name": "c", "path": "common.yaml", "datadir": ""}]}
+    else:
+        config = {
+            "defaults": {"datadir": ""},
+            "hierarchy": [{"name": "c", "path": "common.yaml"}],
+        }
+    root = make_tree(config, files={"data/common.yaml": "k: v\n"})
+    with pytest.raises(ConfigError, match=r"expects a String\[1\] value"):
+        Hiera(str(root / "hiera.yaml"))
+
+
+def test_interpolated_absolute_datadir_is_joined_under_the_config_root(make_tree):
+    root = make_tree(
+        {
+            "defaults": {"datadir": "%{facts.dd}"},
+            "hierarchy": [{"name": "c", "path": "a.yaml"}],
+        },
+        files={"srv/data/a.yaml": "k: under-root\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(facts={"dd": "/srv/data"}))
+    assert h.lookup("k") == "under-root"

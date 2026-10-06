@@ -17,6 +17,7 @@ from pathlib_next import Path
 
 from ..backends import Backend, YAMLBackend, has_hocon
 from ..exceptions import BackendError, ConfigError
+from .._lookup.interpolation import _to_puppet_str
 from .location_resolver import resolve_locations
 from .._scope.scope import Scope
 from ..backends._psych import RubySymbol, symkeys_to_string
@@ -538,7 +539,7 @@ def _v3_level_specs(data: dict, source: "_ConfigSource", codedir: Path) -> "list
         first_line[b] = line
 
         conf = data.get(b) or {}
-        if "datadir" in conf:
+        if conf.get("datadir") is not None:
             datadir_value = conf["datadir"]
             if not isinstance(datadir_value, str):
                 raise _type_error(
@@ -552,8 +553,8 @@ def _v3_level_specs(data: dict, source: "_ConfigSource", codedir: Path) -> "list
             datadir = "{}/environments/%{{::environment}}/hieradata".format(
                 codedir.as_posix()
             )
-        if "extension" in conf:
-            extension = "." + conf["extension"]
+        if conf.get("extension") is not None:
+            extension = "." + _to_puppet_str(conf["extension"])
         elif b == "hocon":
             extension = ".conf"
         else:
@@ -623,6 +624,7 @@ def _v3_levels(
                 extension=spec["extension"],
                 datadir_base=cwd,
                 backend_cls=spec["backend_cls"],
+                lenient_locations=False,
             )
         )
     return levels
@@ -831,6 +833,7 @@ def _v4_levels(data: dict, source: "_ConfigSource", backends, scope) -> "list":
                 extension=extension,
                 datadir_base=None,
                 datadir_literal=True,
+                lenient_locations=False,
             )
         )
     return levels
@@ -1051,7 +1054,7 @@ def _check_entry(entry, where: "_ty.Tuple", source) -> None:
         if key == "name":
             _check_string(value, where + ("name",), source, nonempty=True)
         elif key == "datadir":
-            _check_string(value, where + ("datadir",), source)
+            _check_string(value, where + ("datadir",), source, nonempty=True)
         elif key == "options":
             _check_options(value, where + ("options",), source)
         elif key in ("path", "glob", "uri"):
@@ -1101,7 +1104,7 @@ def _check_defaults_type(value, where: "_ty.Tuple", source) -> None:
     # here at all -- see _function_of). So this never falls through either.
     for key, v in value.items():
         if key == "datadir":
-            _check_string(v, where + ("datadir",), source)
+            _check_string(v, where + ("datadir",), source, nonempty=True)
         elif key == "options":
             _check_options(v, where + ("options",), source)
         elif key in _FUNCTION_KEYS:
@@ -1360,6 +1363,11 @@ class HieraLevel(_ty.NamedTuple):
     #: plain string substitution attempt (``allow_methods=False`` rules out
     #: escaping it with ``%{literal('%')}``) cannot avoid.
     datadir_literal: bool = False
+    #: ``True`` unless this is a version 3 or 4 level: only a version 5
+    #: hierarchy resolves an undefined variable in a location to ``''`` under
+    #: ``strict: error`` (``hiera_config.rb``'s ``avoid_hiera_interpolation_
+    #: errors``), the older readers let it fail the lookup.
+    lenient_locations: bool = True
 
     @classmethod
     def new(
@@ -1371,6 +1379,7 @@ class HieraLevel(_ty.NamedTuple):
         extension: _ty.Optional[str] = None,
         datadir_base: "_ty.Optional[Path]" = None,
         datadir_literal: bool = False,
+        lenient_locations: bool = True,
     ) -> "HieraLevel":
         """Build a level from one already-resolved hierarchy entry
         ``conf`` (a hiera.yaml entry, or ``defaults`` filled in): reads
@@ -1389,6 +1398,8 @@ class HieraLevel(_ty.NamedTuple):
             against (``None`` for v4/v5).
         :param datadir_literal: whether ``datadir`` is joined onto the
             config root literally, with no interpolation (v4 only).
+        :param lenient_locations: whether an undefined variable in a location
+            resolves to ``''`` under ``strict: error`` (``False`` for v3/v4).
         :returns: the built level.
         """
         location_key = next((k for k in _LOCATION_KEYS if k in conf), None)
@@ -1410,6 +1421,7 @@ class HieraLevel(_ty.NamedTuple):
             extension=extension,
             datadir_base=datadir_base,
             datadir_literal=datadir_literal,
+            lenient_locations=lenient_locations,
         )
 
     def paths(self, base_path: Path, scope: Scope) -> "_ty.List[str]":
@@ -1596,6 +1608,42 @@ def _build_hierarchies(base, backends, source: "_ConfigSource", *, scope=None):
     return backend_levels, default_levels
 
 
+def _function_name(name: str) -> str:
+    """A function name as Puppet's loader resolves it: a leading ``::`` is
+    dropped and case does not matter (registered names are lower case)."""
+    if name.startswith("::"):
+        name = name[2:]
+    return name if Backend.find(name, "function") is not None else name.lower()
+
+
+class _UnknownFunction(Backend):
+    """The stand-in backend of a level whose function name is unknown or not
+    allowed: it implements nothing and carries the error the level raises
+    when a lookup first calls it."""
+
+    def __init__(self, error: ConfigError) -> None:
+        super().__init__()
+        self.name = None
+        self.unknown_function_error = error
+
+
+def _unknown_function_error(source, kind, function, backends) -> ConfigError:
+    if kind == "data_hash":
+        allowed_names = [
+            n
+            for n in Backend.names("function")
+            if Backend.find(n, "function") in backends
+        ]
+        return _config_error(
+            source,
+            "Unable to find 'data_hash' function named '{}'; "
+            "known: {}".format(function, ", ".join(allowed_names)),
+        )
+    return _config_error(
+        source, "Unable to find '{}' function named '{}'".format(kind, function)
+    )
+
+
 def _build_level(
     conf: dict,
     kind: str,
@@ -1610,6 +1658,7 @@ def _build_level(
     datadir_base=None,
     datadir_literal=False,
     backend_cls=None,
+    lenient_locations=True,
 ) -> HieraLevel:
     """Resolve one hierarchy entry's backend and build its
     :class:`HieraLevel`.
@@ -1631,33 +1680,20 @@ def _build_level(
             function, conf, kind="v3", strict=getattr(scope, "strict", None)
         )
     elif kind in ("data_hash", "lookup_key", "data_dig"):
+        # Puppet resolves the function (name and kind alike) only when it
+        # calls it for an existing location, so a level naming an unknown
+        # function is built anyway and raises on its first such call (see
+        # `_lookup.function_provider`); every other level keeps answering.
+        function = _function_name(function)
         resolved_cls = Backend.find(function, kind="function")
         if resolved_cls is None or resolved_cls not in backends:
-            if kind == "data_hash":
-                allowed_names = [
-                    n
-                    for n in Backend.names("function")
-                    if Backend.find(n, "function") in backends
-                ]
-                raise _config_error(
-                    source,
-                    "Unable to find 'data_hash' function named '{}'; "
-                    "known: {}".format(function, ", ".join(allowed_names)),
-                ) from None
-            raise _config_error(
-                source,
-                "Unable to find '{}' function named '{}'".format(kind, function),
-            ) from None
-        # A function that does not implement `kind` is *not* rejected here:
-        # Puppet only raises for this (`_kind_mismatch_text`) when the
-        # function is actually invoked for a location that exists -- a
-        # kind-mismatched level whose location does not exist still lets
-        # every other level answer, matching Puppet rather than refusing
-        # the whole instance. The level is still built; the check happens
-        # per invocation in `_lookup.function_provider`.
-        conf = dict(conf)
-        conf[kind] = function
-        backend = Backend.new(function, conf, kind="function")
+            backend = _UnknownFunction(
+                _unknown_function_error(source, kind, function, backends)
+            )
+        else:
+            conf = dict(conf)
+            conf[kind] = function
+            backend = Backend.new(function, conf, kind="function")
     else:
         # Unreachable via the v5 path: _validate_v5 guarantees a function
         # key exists. _build_levels handles hiera3_backend/v4_data_hash
@@ -1672,6 +1708,7 @@ def _build_level(
         extension=extension,
         datadir_base=datadir_base,
         datadir_literal=datadir_literal,
+        lenient_locations=lenient_locations,
     )
 
 

@@ -1,0 +1,12 @@
+description: >-
+  An undefined variable in a version 3 hierarchy path fails the lookup under
+  `--strict error` (only a version 5 hiera.yaml reads its locations
+  leniently); under the default `warning` the path simply does not exist.
+queries:
+  - key: k
+    id: strict-error
+    puppet_args: ["--strict", "error"]
+    error_match: "Undefined variable '::norole'"
+  - key: k
+    id: strict-warning
+    puppet_args: ["--strict", "warning"]

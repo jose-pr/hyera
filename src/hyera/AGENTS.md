@@ -82,8 +82,10 @@ since Hiera data is dynamic.
   `lookup_key`/`data_dig` function is called per key and per location
   through a `hyera.LookupContext` (see Backends below); naming a function
   that does not implement the requested kind raises `ConfigError` with
-  Puppet's own arity/parameter-type text ("Unable to find" for an
-  unregistered name). A hierarchy entry with no location key at all calls
+  Puppet's own arity/parameter-type text, and an unregistered name raises
+  "Unable to find ... function named ..." the same way: on the first call
+  for a location that exists, never while the config is read. A function
+  name matches without regard to case and a leading `::` is dropped. A hierarchy entry with no location key at all calls
   its function once, with no location, instead of contributing nothing.
   Raises `ConfigError` for a missing, unreadable, or invalid `hiera.yaml` —
   a directory, unparsable, an unsupported `version` (an explicit `1`, `2`,
@@ -457,13 +459,14 @@ since Hiera data is dynamic.
     builds).
 - **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
   `location_key`, `locations`, `kind`, `options`, `extension`,
-  `datadir_base`, `datadir_literal`) — one hierarchy entry, stored exactly
+  `datadir_base`, `datadir_literal`, `lenient_locations`) — one hierarchy
+  entry, stored exactly
   as written in hiera.yaml (`locations`/`options` are never interpolated or
   normalized here).
 - **`hyera.FunctionKind`** (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`) — which
   Puppet Hiera 5 provider hook a level's backend implements; see
   `HieraLevel.kind`/`.new` below.
-  - **`.new(conf, backend, kind='data_hash', *, extension=None, datadir_base=None, datadir_literal=False)`**
+  - **`.new(conf, backend, kind='data_hash', *, extension=None, datadir_base=None, datadir_literal=False, lenient_locations=True)`**
     builds one from a hierarchy dict (`location_key` is the first of
     `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
     `None`; `locations` is that key's raw value(s) — one string for a
@@ -475,14 +478,15 @@ since Hiera data is dynamic.
     own `options`, else `defaults`'s, uninterpolated; `extension` is a
     version-3-only appended suffix; `datadir_base`/`datadir_literal` are
     version-specific `datadir`-resolution flags — see "Version 3"/"Version
-    4" above).
+    4" above; `lenient_locations` is `False` for a version 3/4 level, whose
+    undefined variable in a location fails under `strict="error"`).
   - **`.paths(base_path, scope)`** resolves candidate source
     *file* paths for a bound `Scope`, through the same `%{...}` engine as
     data values (`allow_methods=False`): an undefined variable interpolates
     as `''` plus the scope's `strict`-mode warning and the resulting path is
     still probed, **never** a skipped level; `datadir` interpolates
     separately, under the scope's `strict` (raises under `"error"`, unlike a
-    location itself, which is always lenient); method-call syntax
+    location itself, which is lenient only at version 5); method-call syntax
     (`%{lookup(...)}` etc.) raises `ConfigError` in any of these positions.
     A location-less entry, or one using `uri`/`uris`, contributes no paths
     here (`[]`) — a `uri` is never a filesystem path.

@@ -23,7 +23,7 @@ import re
 import pytest
 from pathlib_next import Path
 
-from hyera import Backend, ConfigError, Hiera, KeyNotFoundError, Scope
+from hyera import Backend, ConfigError, Hiera, HieraError, KeyNotFoundError, Scope
 from hyera._config.hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
     _ConfigSource,
@@ -1001,3 +1001,79 @@ def test_v3_global_sub_lookups_stay_global(make_tree, monkeypatch):
     assert h.lookup("x") == "ab"
     assert h.lookup("gg") == "agvalb"
     assert h.lookup("mymod::k") == "modval"
+
+
+def test_v3_extension_is_stringified_interpolated_and_nil_is_the_default(
+    make_tree, monkeypatch
+):
+    def lookup(extension, files, **scope):
+        root = make_tree(
+            ":backends: [yaml]\n:yaml:\n  :datadir: data\n"
+            "  :extension: {}\n:hierarchy: [common]\n".format(extension),
+            files=files,
+            raw=True,
+            root="ext-{}".format(abs(hash(extension))),
+        )
+        monkeypatch.chdir(root)
+        return Hiera(str(root / "hiera.yaml"), scope=Scope(**scope)).lookup("k")
+
+    assert lookup("5", {"data/common.5": "k: five\n"}) == "five"
+    assert lookup("~", {"data/common.yaml": "k: default\n"}) == "default"
+    assert (
+        lookup("'%{facts.x}'", {"data/common.yml": "k: yml\n"}, facts={"x": "yml"})
+        == "yml"
+    )
+
+
+def test_v3_nil_datadir_is_the_default_not_an_error(make_tree, monkeypatch):
+    root = make_tree(
+        ":backends: [yaml]\n:yaml:\n  :datadir: ~\n:hierarchy: [common]\n",
+        raw=True,
+    )
+    monkeypatch.chdir(root)
+    h = Hiera(str(root / "hiera.yaml"))
+    assert h.lookup("k", default_value="miss") == "miss"
+
+
+def test_v3_hierarchy_path_with_undefined_variable_fails_under_strict_error(
+    make_tree, monkeypatch
+):
+    root = make_tree(
+        ":backends: [yaml]\n:yaml:\n  :datadir: data\n"
+        ':hierarchy: ["roles/%{::norole}", common]\n',
+        files={"data/common.yaml": "k: common\n"},
+        raw=True,
+    )
+    monkeypatch.chdir(root)
+    config = str(root / "hiera.yaml")
+    assert Hiera(config, scope=Scope(strict="warning")).lookup("k") == "common"
+    with pytest.raises(HieraError, match="Undefined variable '::norole'"):
+        Hiera(config, scope=Scope(strict="error")).lookup("k")
+
+
+def test_v4_hierarchy_path_with_undefined_variable_fails_under_strict_error(
+    tmp_path, make_tree
+):
+    base = make_tree(
+        {"hierarchy": [{"name": "g", "path": "g.yaml"}]},
+        files={"data/g.yaml": "g: 1\n"},
+    )
+    env = tmp_path / "envs" / "target"
+    (env / "data").mkdir(parents=True)
+    (env / "data" / "common.yaml").write_bytes(b"k: common\n")
+    (env / "hiera.yaml").write_bytes(
+        b"version: 4\ndatadir: data\nhierarchy:\n"
+        b"  - {name: c, backend: yaml, path: 'roles/%{::norole}'}\n"
+        b"  - {name: d, backend: yaml, path: common}\n"
+    )
+
+    def hiera(strict):
+        return Hiera(
+            str(base / "hiera.yaml"),
+            environmentpath=tmp_path / "envs",
+            scope=Scope(environment="target", strict=strict),
+        )
+
+    assert hiera("warning").lookup("k") == "common"
+    with pytest.raises(HieraError, match="Undefined variable '::norole'"):
+        hiera("error").lookup("k")

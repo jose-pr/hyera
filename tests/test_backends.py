@@ -85,10 +85,12 @@ def test_non_puppet_data_hash_names_are_rejected(make_tree, name):
     # Strict Puppet only. These short/legacy names never resolved to a
     # backend registered in the "function" namespace.
     root = make_tree(
-        {"hierarchy": [{"name": "c", "data_hash": name, "path": "common.yaml"}]}
+        {"hierarchy": [{"name": "c", "data_hash": name, "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("k")
 
 
 def test_hocon_backend(make_tree):
@@ -193,10 +195,12 @@ def test_default_backends_and_registry_order_unchanged_by_the_package_split():
 
 def test_unknown_backend_raises_config_error(make_tree):
     root = make_tree(
-        {"hierarchy": [{"name": "c", "data_hash": "nonsense", "path": "common.yaml"}]}
+        {"hierarchy": [{"name": "c", "data_hash": "nonsense", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
     )
+    h = Hiera(str(root / "hiera.yaml"))
     with pytest.raises(ConfigError, match="Unable to find 'data_hash' function"):
-        Hiera(str(root / "hiera.yaml"))
+        h.lookup("k")
 
 
 def test_missing_hierarchy_uses_puppet_default(make_tree):
