@@ -150,9 +150,9 @@ and exit codes `0` (found), `1` (key missing) and `2` (any other error).
   green).
 - Editable install: `<py> -m pip install -e ".[dev,docs]"`. `dev` composes
   every extra that has tests depending on it (`cli`, `hocon`, `eyaml`) plus
-  `black`/`build`/`pytest`/`twine`/`pyright[nodejs]`; `docs` adds the
-  MkDocs toolchain (Python 3.10+ only — install it on the 3.14 venv, not
-  the 3.9 floor).
+  `build`/`pytest`/`twine`/`pyright[nodejs]` and, on Python 3.10+, `black`
+  (pinned to major 26); `docs` adds the MkDocs toolchain (Python 3.10+ only
+  — install it on the 3.14 venv, not the 3.9 floor).
 - Tests: `<py> -m pytest -q -rs` (pytest config in `pyproject.toml` puts
   `src/` on the path).
 - Coverage: `<py> -m coverage run --branch --source=src/hyera -m pytest -q
@@ -171,7 +171,9 @@ and exit codes `0` (found), `1` (key missing) and `2` (any other error).
   difference, tested against `README.md`'s "Differences from Puppet" list
   by `tests/test_readme.py::test_differences_match_deviations`.
 - Format: the exact command CI runs —
-  `<py> -m black --check src/ tests/ benchmarks/ examples/`.
+  `<py> -m black --check src/ tests/ benchmarks/ examples/` — on the newest
+  interpreter (the 3.14 venv) only: the 3.9 venv has no black, and an older
+  black major formats some files differently.
 - Type gate: the exact command CI runs —
   `<py> -m pyright --pythonpath "$(which python)" --verifytypes hyera --ignoreexternal`
   (must report 100% and no public symbol without a docstring; CI runs it on
@@ -207,7 +209,7 @@ the docs site can be redeployed without cutting a release.
   newest on Windows and macOS), `types` (`pyright --verifytypes`, Python
   3.9 and 3.14), `floors` (every declared dependency pinned to its
   `pyproject.toml` floor, on the oldest supported Python), `format`
-  (`black --check`), `coverage` ("Coverage report (not a gate)", Python
+  (`black --check`, black 26, on the newest Python), `coverage` ("Coverage report (not a gate)", Python
   3.14 only: branch coverage via `coverage run`/`report`, printed to the
   job's own step summary — `continue-on-error: true`, so a coverage-tool
   break never fails the run), `docs` (the same strict `mkdocs build` the
@@ -221,10 +223,13 @@ the docs site can be redeployed without cutting a release.
   deploy — `release.yml` never deploys docs itself, only gates on a strict
   build.
 - **`release.yml`** (`v*` tag): `test` (a 6-leg matrix: Ubuntu/Windows/
-  macOS × the oldest and newest supported Python) → `build` (checks the
-  tag names the version actually built) → `docs-gate` (strict docs build,
-  no deploy) → `github-release` (flagged pre-release when the tag's PEP 440
-  form says so) → `publish-pypi` (every tag, pre-releases included, PyPI
+  macOS × the oldest and newest supported Python) and `floors` (the same
+  dependency-floor job `test.yml` runs) → `build` (checks the tag names the
+  version actually built) → `wheel-smoke` (install the built wheel bare into
+  a clean venv, check it ships `py.typed` and `AGENTS.md` and that `import
+  hyera` loads no extra) and `docs-gate` (strict docs build, no deploy) →
+  `github-release` (flagged pre-release when the tag's PEP 440 form says
+  so) → `publish-pypi` (every tag, pre-releases included, PyPI
   Trusted Publishing, no stored token) and `docs-deploy` (final tags only,
   dispatches `docs.yml` at the tag). A pre-release tag (`v1.0.0-rc.1`,
   `v0.0.0-a0`) is uploaded to PyPI as a pre-release, which `pip install

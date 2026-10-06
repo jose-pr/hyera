@@ -52,8 +52,18 @@ eyaml = ["cryptography>=50.0,<51"]
 # extras -- without pyhocon/duho/cryptography the HOCON/CLI/eyaml tests
 # silently skip instead of running. `hatchling` is left out: build isolation
 # supplies it.
-dev = ["hyera[cli,hocon,eyaml]", "black", "build", "pytest", "twine", "pyright[nodejs]", "coverage"]
-docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
+# black 26 needs Python 3.10, and two black majors format differently, so the
+# format check runs on the newest interpreter only and `dev` pins that major.
+dev = [
+    "hyera[cli,hocon,eyaml]",
+    "black>=26,<27; python_version >= '3.10'",
+    "build",
+    "pytest",
+    "twine",
+    "pyright[nodejs]",
+    "coverage",
+]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material", "mkdocstrings[python]"]
 
 [project.scripts]
 hyera = "hyera.cli:main"
