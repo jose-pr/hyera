@@ -457,21 +457,22 @@ since Hiera data is dynamic.
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches under one lock per instance (untested on free-threaded
     builds).
-- **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
-  `location_key`, `locations`, `kind`, `options`, `extension`,
-  `datadir_base`, `datadir_literal`, `lenient_locations`) — one hierarchy
-  entry, stored exactly
-  as written in hiera.yaml (`locations`/`options` are never interpolated or
-  normalized here).
 - **`hyera.FunctionKind`** (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`) — which
   Puppet Hiera 5 provider hook a level's backend implements; see
   `HieraLevel.kind`/`.new` below.
+- **`HieraLevel`** (`NamedTuple`: `name`, `backend`, `datadir`,
+  `location_key`, `locations`, `kind`, `options`, `extension`,
+  `datadir_base`, `datadir_literal`, `lenient_locations`) — one hierarchy
+  entry, stored exactly as written in hiera.yaml (`locations`/`options` are
+  never interpolated or normalized here). `locations` is always a tuple, a
+  one-element one for a singular key. Hashable, `options` included.
   - **`.new(conf, backend, kind='data_hash', *, extension=None, datadir_base=None, datadir_literal=False, lenient_locations=True)`**
     builds one from a hierarchy dict (`location_key` is the first of
     `path`/`paths`/`glob`/`globs`/`uri`/`uris`/`mapped_paths` present, or
-    `None`; `locations` is that key's raw value(s) — one string for a
-    singular key, the declared tuple for a plural one, or `(collection_var,
-    item_var, template)` for `mapped_paths`; `kind` is a `FunctionKind`
+    `None`; `locations` is that key's raw value(s) as a tuple — the one
+    string of a singular key, the declared strings of a plural one, or
+    `(collection_var, item_var, template)` for `mapped_paths`; `datadir`
+    defaults to `"data"`; `kind` is a `FunctionKind`
     member (`DATA_HASH`/`LOOKUP_KEY`/`DATA_DIG`) or the same plain string;
     the built `HieraLevel.kind` field itself always reads back a plain
     `str`. `options` is the entry's
@@ -480,8 +481,9 @@ since Hiera data is dynamic.
     version-specific `datadir`-resolution flags — see "Version 3"/"Version
     4" above; `lenient_locations` is `False` for a version 3/4 level, whose
     undefined variable in a location fails under `strict="error"`).
-  - **`.paths(base_path, scope)`** resolves candidate source
-    *file* paths for a bound `Scope`, through the same `%{...}` engine as
+  - **`.paths(base_path, scope) -> list[str]`** resolves candidate source
+    *file* paths (plain `str`, with the host's separator) for a bound
+    `Scope`, through the same `%{...}` engine as
     data values (`allow_methods=False`): an undefined variable interpolates
     as `''` plus the scope's `strict`-mode warning and the resulting path is
     still probed, **never** a skipped level; `datadir` interpolates

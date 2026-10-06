@@ -1302,6 +1302,18 @@ def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") 
     )
 
 
+def _freeze(value):
+    """``value`` with every list, dict and set replaced by a hashable
+    equivalent, so a :class:`HieraLevel` with ``options`` can be hashed."""
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze(v) for v in value)
+    if isinstance(value, dict):
+        return frozenset((k, _freeze(v)) for k, v in value.items())
+    if isinstance(value, (set, frozenset)):
+        return frozenset(_freeze(v) for v in value)
+    return value
+
+
 class FunctionKind(_StrEnum):
     """A hierarchy entry's resolved function kind: :attr:`HieraLevel.kind`,
     and the ``kind=`` argument of :meth:`HieraLevel.new`. Which Puppet
@@ -1334,9 +1346,9 @@ class HieraLevel(_ty.NamedTuple):
     #: ``"glob"``, ``"globs"``, ``"uri"``, ``"uris"`` or ``"mapped_paths"``),
     #: or ``None`` for a location-less entry.
     location_key: "_ty.Optional[str]"
-    #: The raw declared value(s): one string for a singular key, the tuple
-    #: as written for a plural one, and ``(collection_var, item_var,
-    #: template)`` for ``mapped_paths``.
+    #: The raw declared value(s), always a tuple: one string for a singular
+    #: key, the strings as written for a plural one, and ``(collection_var,
+    #: item_var, template)`` for ``mapped_paths``.
     locations: "_ty.Tuple[str, ...]"
     #: This entry's resolved function kind: ``"data_hash"``, ``"lookup_key"``
     #: or ``"data_dig"``.
@@ -1368,6 +1380,9 @@ class HieraLevel(_ty.NamedTuple):
     #: ``strict: error`` (``hiera_config.rb``'s ``avoid_hiera_interpolation_
     #: errors``), the older readers let it fail the lookup.
     lenient_locations: bool = True
+
+    def __hash__(self) -> int:
+        return hash(_freeze(tuple(self)))
 
     @classmethod
     def new(
@@ -1413,7 +1428,7 @@ class HieraLevel(_ty.NamedTuple):
         return cls(
             name=conf["name"],
             backend=backend,
-            datadir=conf["datadir"],
+            datadir=conf.get("datadir", "data"),
             location_key=location_key,
             locations=locations,
             kind=kind,
@@ -1437,7 +1452,7 @@ class HieraLevel(_ty.NamedTuple):
         resolved = resolve_locations(self, base_path, scope)
         if resolved is None:
             return []
-        return [str(Path(loc.location)) for loc in resolved if not loc.is_uri]
+        return [loc.location for loc in resolved if not loc.is_uri]
 
 
 def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":

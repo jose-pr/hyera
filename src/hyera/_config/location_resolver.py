@@ -32,6 +32,10 @@ from .._lookup.interpolation import (
 from .._lookup.invocation import Invocation
 from ..exceptions import ConfigError
 
+if _ty.TYPE_CHECKING:
+    from .._scope.scope import Scope
+    from .hiera_config import HieraLevel
+
 _LOGGER = logging.getLogger(__name__)
 
 _WINDOWS = os.name == "nt"
@@ -793,7 +797,7 @@ def _expand_globs(config_root, datadir, declared, invocation):
         for match in glob(root, pattern):
             if os.path.isdir(match):
                 continue
-            results.append(ResolvedLocation(original, match, False, True))
+            results.append(ResolvedLocation(original, _native(match), False, True))
     return results
 
 
@@ -1027,7 +1031,13 @@ def _expand_mapped_paths(datadir, level, invocation):
     return results
 
 
-def resolve_locations(level, base_path, scope, refs=None, fs_memo=None):
+def resolve_locations(
+    level: "HieraLevel",
+    base_path: "_ty.Union[str, os.PathLike[str]]",
+    scope: "Scope",
+    refs: "_ty.Optional[list]" = None,
+    fs_memo: "_ty.Optional[dict]" = None,
+) -> "_ty.Optional[_ty.List[ResolvedLocation]]":
     """The candidate :class:`ResolvedLocation` list for one hierarchy level
     in a bound :class:`~hyera.Scope` (``hiera_config.rb:664-687``).
 

@@ -32,6 +32,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   latest definition before it.
 - YAML parse errors keep their fixed punctuation (`',' or ']'`); only
   quoted source tokens are redacted.
+- A hierarchy level naming a function that does not exist now raises
+  "Unable to find ... function named ..." on the first call for a location
+  that exists, as Puppet does, instead of failing every lookup when the
+  configuration is read; function names ignore case and a leading `::`.
+- An undefined variable in a version 3 or 4 hierarchy location fails the
+  lookup under `strict="error"`; only version 5 locations are lenient.
+- An empty `datadir` is rejected; a version 5 `datadir` is joined onto the
+  config root before interpolation, so a variable that expands to an absolute
+  path stays under the root; a directory named `hiera.yaml` in an environment
+  or module raises `ConfigError`.
+- Version 3: `:extension:` and `:datadir:` set to nil mean the default, an
+  extension that is not a string is converted as Ruby does, and the
+  extension is interpolated.
+- `HieraLevel.paths()` returns `list[str]` as annotated; `HieraLevel.new()`
+  defaults `datadir` to `"data"`; a `HieraLevel` with `options` is hashable;
+  `HieraLevel` has a new field `lenient_locations`.
 
 ### Fixed
 
@@ -93,6 +109,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that length is a miss, on Python 3.11 and later as on 3.9.
 - Errors from facts files and `hiera.yaml` no longer keep the file's text on
   a chained exception.
+- Glob segments are matched in linear time, so a name with many `*`s no
+  longer stalls a lookup; a reversed or escaped character range such as
+  `[z-a]` matches as in Ruby instead of raising `re.error`; deeply nested
+  braces and deep directory trees no longer raise `RecursionError`; a segment
+  such as `.*` matches `.`, so `.*/a.yaml` finds `./a.yaml`.
+- A location keeps an incoming `..` behind a datadir ending in `..`, a
+  trailing `/` and an inner `//` as Ruby's `Pathname#+` does, so `a.yaml/` is
+  not the file `a.yaml`.
+- A drive-letter prefix is an anchor only on Windows; elsewhere
+  `path: 'c:/a.yaml'` is a file inside the datadir.
+- Windows: a UNC datadir or pattern is walked by `glob`, a literal glob
+  segment after `**` follows the filesystem's case rule like any other
+  literal, and a backslash-absolute interpolated path is absolute.
 
 ## [0.0.0] - 2026-10-01
 

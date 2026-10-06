@@ -13,6 +13,7 @@ import copy
 import importlib
 import importlib.util
 import inspect
+import os
 import pickle
 import pkgutil
 import re
@@ -480,3 +481,30 @@ def test_header_is_self_contained():
         offenders.append("contains a src/ reference")
 
     assert not offenders, offenders
+
+
+def test_hiera_level_new_is_usable_with_a_minimal_entry():
+    level = hyera.HieraLevel.new({"name": "n", "path": "x.yaml"}, hyera.YAMLBackend())
+    assert level.datadir == "data"
+    assert level.locations == ("x.yaml",)
+    assert level.kind == "data_hash"
+
+
+def test_hiera_level_hashes_with_options_set():
+    entry = {"name": "n", "path": "x.yaml", "options": {"a": [1, {"b": 2}], "c": "d"}}
+    backend = hyera.YAMLBackend()
+    one = hyera.HieraLevel.new(entry, backend)
+    two = hyera.HieraLevel.new(copy.deepcopy(entry), backend)
+    assert one == two
+    assert hash(one) == hash(two)
+    assert len({one, two}) == 1
+
+
+def test_hiera_level_paths_are_strings(tmp_path):
+    level = hyera.HieraLevel.new(
+        {"name": "n", "datadir": "d", "paths": ["a.yaml", "b.yaml"]},
+        hyera.YAMLBackend(),
+    )
+    paths = level.paths(tmp_path, hyera.Scope())
+    assert [type(p) for p in paths] == [str, str]
+    assert [os.path.basename(p) for p in paths] == ["a.yaml", "b.yaml"]
