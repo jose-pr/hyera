@@ -16,24 +16,24 @@ import threading
 
 import pytest
 
-import hyera.core as core
 from hyera import Hiera, HieraError, KeyNotFoundError, Scope
+from hyera._lookup import locations
 from hyera.backends import YAMLBackend
 
 
 def _counting_resolver(monkeypatch):
-    """Wrap ``core.resolve_locations`` with a call counter: one call per
+    """Wrap ``locations.resolve_locations`` with a call counter: one call per
     hierarchy level per build, so ``calls[0] // n_levels`` is the number of
     distinct location builds a test's assertions care about.
     """
     calls = [0]
-    original = core.resolve_locations
+    original = locations.resolve_locations
 
     def counting(*args, **kwargs):
         calls[0] += 1
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(core, "resolve_locations", counting)
+    monkeypatch.setattr(locations, "resolve_locations", counting)
     return calls
 
 
@@ -61,7 +61,7 @@ def test_unreferenced_variable_shares_location_entry(make_tree, monkeypatch):
         assert view.lookup("k") == "node_n1"
 
     assert calls[0] // 2 == builds_after_first_lookup
-    assert len(h._location_cache) == 1
+    assert len(h._store._location_cache) == 1
 
 
 def test_referenced_variable_change_rebuilds(make_tree, monkeypatch):
@@ -78,7 +78,7 @@ def test_referenced_variable_change_rebuilds(make_tree, monkeypatch):
         results.append(view.lookup("k"))
 
     assert results == ["node_a", "node_b", "node_a", "node_b"]
-    assert len(h._location_cache) == 2
+    assert len(h._store._location_cache) == 2
     assert calls[0] // 1 == 2  # one level -> one resolve_locations call per build
 
 
@@ -122,7 +122,7 @@ def test_type_tagged_values_do_not_collide(make_tree):
     assert int_view.lookup("picked") == "int"
     assert h.lookup("picked") == "bool"
 
-    assert len(h._location_cache) == 3
+    assert len(h._store._location_cache) == 3
 
 
 def test_segment_reference_keys_on_segment_value(make_tree):
@@ -141,11 +141,11 @@ def test_segment_reference_keys_on_segment_value(make_tree):
 
     same_family = h.scoped(facts={"os": {"family": "RedHat", "release": 9}})
     assert same_family.lookup("k") == "redhat_val"
-    assert len(h._location_cache) == 1
+    assert len(h._store._location_cache) == 1
 
     other_family = h.scoped(facts={"os": {"family": "Debian", "release": 8}})
     assert other_family.lookup("k") == "debian_val"
-    assert len(h._location_cache) == 2
+    assert len(h._store._location_cache) == 2
 
 
 def test_mapped_paths_item_variable_not_recorded(make_tree):
@@ -165,11 +165,11 @@ def test_mapped_paths_item_variable_not_recorded(make_tree):
 
     diff_top_scope_app = h.scoped(variables={"app": "topscope2"})
     assert diff_top_scope_app.lookup("k") == "a1"
-    assert len(h._location_cache) == 1
+    assert len(h._store._location_cache) == 1
 
     diff_apps = h.scoped(facts={"apps": ["a1"]})
     assert diff_apps.lookup("k") == "a1"
-    assert len(h._location_cache) == 2
+    assert len(h._store._location_cache) == 2
 
     # A second, separate level reading the *top-scope* `app` variable
     # explicitly (`%{::app}`, outside any mapped_paths item layer) is a
@@ -195,7 +195,7 @@ def test_mapped_paths_item_variable_not_recorded(make_tree):
     assert h2.lookup("topkey") == "top1"
     v2 = h2.scoped(variables={"app": "topscope2"})
     assert v2.lookup("topkey") == "top2"
-    assert len(h2._location_cache) == 2
+    assert len(h2._store._location_cache) == 2
 
 
 def test_lookup_options_refs_key_their_cache(make_tree):
@@ -228,7 +228,7 @@ def test_lookup_options_refs_key_their_cache(make_tree):
         assert view.lookup("a::list") == expect_a
         assert view.lookup("b::list") == expect_b
 
-    assert len(h._location_cache) == 1
+    assert len(h._store._location_cache) == 1
     assert len(h._lookup_options_cache) == 2
 
 
@@ -321,7 +321,7 @@ def test_location_entries_share_path_strings(make_tree):
     v = h.scoped(variables={"clientcert": "b"})
     assert v.lookup("k") == "b"
 
-    entries = list(h._location_cache._entries.values())
+    entries = list(h._store._location_cache._entries.values())
     assert len(entries) == 2
     common_paths = []
     for entry in entries:
@@ -425,7 +425,7 @@ def test_cache_size_bounds_and_evicts_lru(make_tree, monkeypatch):
     assert h.scoped(variables={"clientcert": "a"}).lookup("k") == "node_a"
     assert h.scoped(variables={"clientcert": "c"}).lookup("k") == "node_c"
 
-    assert len(h._location_cache) == 2
+    assert len(h._store._location_cache) == 2
 
     builds_before = calls[0]
     assert h.scoped(variables={"clientcert": "a"}).lookup("k") == "node_a"
@@ -450,7 +450,7 @@ def test_cache_size_zero_caches_nothing(make_tree, monkeypatch):
         assert calls[0] > builds_before
         builds_before = calls[0]
 
-    assert len(h._location_cache) == 0
+    assert len(h._store._location_cache) == 0
     assert len(h._lookup_options_cache) == 0
 
 
@@ -480,7 +480,7 @@ def test_clear_cache_then_lookup_finds_value(make_tree):
 
     assert h.lookup("k") == "common"
     assert "k" in h
-    assert len(h._file_cache) == 1
+    assert len(h._store._file_cache) == 1
 
 
 def test_internal_keyerror_is_not_a_miss(make_tree, monkeypatch):
@@ -512,13 +512,13 @@ def test_clear_cache_through_scoped_view(make_tree):
     h = Hiera(str(root / "hiera.yaml"))
     v = h.scoped(environment="production")
     assert v.lookup("k") == "v"
-    assert len(h._location_cache) >= 1
-    assert len(h._file_cache) >= 1
+    assert len(h._store._location_cache) >= 1
+    assert len(h._store._file_cache) >= 1
 
     v.clear_cache()
 
-    assert len(h._location_cache) == 0
-    assert len(h._file_cache) == 0
+    assert len(h._store._location_cache) == 0
+    assert len(h._store._file_cache) == 0
 
 
 def test_no_public_cache_attribute(make_tree):
@@ -539,11 +539,26 @@ def test_pickle_and_deepcopy_start_with_empty_caches(make_tree):
     assert h.lookup("k") == "v"
 
     for clone in (pickle.loads(pickle.dumps(h)), copy.deepcopy(h)):
-        assert len(clone._location_cache) == 0
+        assert len(clone._store._location_cache) == 0
         assert len(clone._lookup_options_cache) == 0
-        assert len(clone._file_cache) == 0
+        assert len(clone._store._file_cache) == 0
         assert clone.lookup("k") == "v"
-        assert len(clone._location_cache) >= 1
+        assert len(clone._store._location_cache) >= 1
+        assert clone._store is not h._store
+
+
+def test_views_share_the_instances_store_and_a_copy_does_not(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    view = h.scoped(variables={"role": "web"})
+    assert view._store is h._store
+    assert view.lookup("k") == "v"
+    assert len(h._store._file_cache) == 1
+    h.clear_cache()
+    assert len(view._store._file_cache) == 0
 
 
 def test_concurrent_lookups_with_eviction(make_tree):
@@ -658,7 +673,7 @@ def test_deleted_file_reads_as_absent(make_tree):
 
 
 def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree):
-    # _load_file's own absent-after-cached branch: a path successfully
+    # load_file's own absent-after-cached branch: a path successfully
     # read and cached once, then found gone by a *later* call's fresh
     # probe, reads as absent rather than an error -- distinct from
     # test_deleted_file_reads_as_absent above, where the file is already
@@ -668,7 +683,7 @@ def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree)
     # a real two-lookup sequence would need defeating several layers of
     # scope-interpolation-stable caching above this method that have
     # nothing to do with the file-content cache being tested here, so
-    # _load_file is called directly instead -- the same way
+    # load_file is called directly instead -- the same way
     # test_data_hash_load_file_missing_is_not_found above substitutes a
     # fake implementation of this same method to test what a `_MISSING`
     # return does one layer up.
@@ -682,17 +697,17 @@ def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree)
     path = root / "data" / "a.yaml"
     backend = YAMLBackend()
 
-    first = h._load_file(path, backend, {})
+    first = h._store.load_file(path, backend, {})
     assert first == {"k": "v"}
     cache_key = (path, backend.strict, "{}")
-    assert cache_key in h._file_cache
-    assert path in h._loaded_paths
+    assert cache_key in h._store._file_cache
+    assert path in h._store._loaded_paths
 
     os.remove(str(path))
-    second = h._load_file(path, backend, {})
+    second = h._store.load_file(path, backend, {})
     assert second is _MISSING
-    assert cache_key not in h._file_cache
-    assert path not in h._loaded_paths
+    assert cache_key not in h._store._file_cache
+    assert path not in h._store._loaded_paths
 
 
 def test_new_file_at_literal_location_is_seen(make_tree):
@@ -1005,7 +1020,7 @@ def test_copy_of_a_used_instance_reads_the_disk(make_tree, copier, revalidate):
 
     (root / "data" / "common.yaml").write_bytes(b"k: CHANGED-ON-DISK\n")
     clone = _COPIERS[copier](h)
-    assert len(clone._file_cache) == 0
+    assert len(clone._store._file_cache) == 0
     assert clone.lookup("k") == "CHANGED-ON-DISK"
 
 
@@ -1042,8 +1057,8 @@ def test_intern_table_is_bounded_by_live_entries(make_tree):
     h = Hiera(str(root / "hiera.yaml"), cache_size=4)
     for i in range(3000):
         assert h.scoped(trusted={"certname": "n{}".format(i)}).lookup("k") == "v"
-    assert len(h._location_cache) <= 4
-    assert len(h._paths) < 2200
+    assert len(h._store._location_cache) <= 4
+    assert len(h._store._paths) < 2200
 
 
 def test_intern_table_still_shares_paths_of_live_entries(make_tree):
@@ -1053,7 +1068,7 @@ def test_intern_table_still_shares_paths_of_live_entries(make_tree):
     h.scoped(trusted={"certname": "b"}).lookup("k")
     paths = [
         loc.location
-        for entry in h._location_cache._entries.values()
+        for entry in h._store._location_cache._entries.values()
         for locations in entry.levels
         for loc in locations
         if loc.location.endswith("common.yaml")
@@ -1160,13 +1175,13 @@ def test_warm_lookup_probes_each_location_once(make_tree, monkeypatch):
     )
     assert h.lookup("k") == "v"
     probes = [0]
-    original = core.Hiera._require_not_dir
+    original = locations._LocationStore.require_not_dir
 
     def counting(self, path, invocation):
         probes[0] += 1
         return original(self, path, invocation)
 
-    monkeypatch.setattr(core.Hiera, "_require_not_dir", counting)
+    monkeypatch.setattr(locations._LocationStore, "require_not_dir", counting)
     assert h.lookup("k") == "v"
     assert probes[0] == levels
 

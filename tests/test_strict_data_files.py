@@ -3,7 +3,7 @@
 not once and for all: the same file, on the same ``Hiera`` instance, raises
 under a ``strict="error"`` scope and warns-and-falls-through under
 ``strict="warning"``, in either order -- guards the ``(path, backend.strict)``
-cache key in ``core.Hiera._load_file`` against caching the *adapted* result
+cache key in ``_LocationStore.load_file`` against caching the *adapted* result
 under a bare path, which would freeze whichever strictness ran first.
 """
 

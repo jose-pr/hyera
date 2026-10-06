@@ -952,7 +952,7 @@ def test_function_provider_key_lookup_is_abstract():
 
 
 def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
-    # _load_file returning _MISSING (a previously-cached file vanishing
+    # load_file returning _MISSING (a previously-cached file vanishing
     # under revalidation) makes this location a miss, not an error.
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
@@ -960,8 +960,8 @@ def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
     )
     h = Hiera(str(root / "hiera.yaml"))
     monkeypatch.setattr(
-        h,
-        "_load_file",
+        h._store,
+        "load_file",
         lambda path, backend, options, invocation=None: _MISSING,
     )
     with pytest.raises(KeyNotFoundError):
@@ -1430,11 +1430,11 @@ def test_sources_skips_a_file_that_vanishes_between_its_own_exist_check_and_load
     # still vanish between those two probes is something outside Hiera's
     # own code entirely (another process, here simulated by making the
     # exist-check's own probe delete the file as a side effect, the
-    # instant after it observes "still there"). _load_file's fresh probe
+    # instant after it observes "still there"). load_file's fresh probe
     # then correctly finds it gone despite the cached entry from an
     # earlier, successful sources() call, and this level contributes
     # nothing to the result instead of a stale or crashing entry.
-    import hyera.core as core
+    from hyera._lookup import locations
 
     root = make_tree(
         {"hierarchy": [{"name": "s", "path": "a.yaml"}]},
@@ -1446,7 +1446,7 @@ def test_sources_skips_a_file_that_vanishes_between_its_own_exist_check_and_load
     first = h.sources()
     assert any(str(s).endswith("a.yaml") for s in first)
 
-    real_probe = core._probe
+    real_probe = locations._probe
     armed = []
 
     def vanishing_probe(p):
@@ -1455,7 +1455,7 @@ def test_sources_skips_a_file_that_vanishes_between_its_own_exist_check_and_load
             path.unlink(missing_ok=True)
         return result
 
-    monkeypatch.setattr(core, "_probe", vanishing_probe)
+    monkeypatch.setattr(locations, "_probe", vanishing_probe)
     armed.append(True)
 
     second = h.sources()

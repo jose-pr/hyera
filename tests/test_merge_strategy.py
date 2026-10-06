@@ -507,7 +507,7 @@ def test_deep_merge_mutates_only_owned_values():
 
 def test_merged_lookup_leaves_cache_untouched(make_tree):
     # A merged result is freshly built per call, never a reference into
-    # ``h._file_cache``: mutating one result must not change a later one, or
+    # ``h._store._file_cache``: mutating one result must not change a later one, or
     # the cached parsed data itself.
     root = make_tree(
         {
@@ -533,7 +533,7 @@ def test_merged_lookup_leaves_cache_untouched(make_tree):
     assert third == second
     assert "mutated" not in third["items"]
 
-    for entry in h._file_cache.values():
+    for entry in h._store._file_cache.values():
         conf = entry.data.get("conf")
         if conf:
             assert "mutated" not in conf.get("items", [])

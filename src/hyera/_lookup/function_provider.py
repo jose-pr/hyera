@@ -33,7 +33,7 @@ _NULL_CONTEXT = contextlib.nullcontext()
 
 def _location_ref(location) -> _LocationRef:
     """A :class:`~hyera._output.explain._LocationRef` for one resolved location
-    (``core._Location``/``_location_resolver.ResolvedLocation`` -- both
+    (``locations._Location``/``_location_resolver.ResolvedLocation`` -- both
     ``(original, location, is_uri, exist)``-shaped). The path form always
     renders with ``/`` separators, matching what Ruby's ``Pathname`` prints on
     every OS, regardless of this interned string's own separator.
@@ -571,7 +571,7 @@ class _DataHashProvider(_FunctionProvider):
                 self._require_kind_implemented()
             ctx = self._context(location)
             if location is not None and not location.is_uri:
-                # A real file. While `self._revalidate`, `Hiera._load_file`
+                # A real file. While `self._revalidate`, `_LocationStore.load_file`
                 # owns both the parsed-content cache and its revalidation
                 # (probed at most once per top-level lookup, through
                 # `invocation`'s memo) and must run on every call -- gating

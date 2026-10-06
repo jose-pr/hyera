@@ -446,7 +446,7 @@ class Backend:
         :meth:`loads`, is re-raised (outside the ``except`` block, so
         neither holds the original as ``__cause__``/``__context__``) as
         ``BackendError("Unable to parse (<path>): <problem>", path=...)``.
-        Because ``.path`` is set here, a caller (``Hiera._load_file``) does
+        Because ``.path`` is set here, a caller (``_LocationStore.load_file``) does
         not need to prefix it again.
 
         :param source: a path-like, or an already-open file object.

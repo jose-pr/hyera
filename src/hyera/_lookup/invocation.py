@@ -137,7 +137,7 @@ class Invocation:
         #: shared with every ``Invocation`` :meth:`derive`d from this one,
         #: appended to by :meth:`remember_scope_lookup` (Puppet's
         #: ``ScopeLookupCollectingInvocation``). A caller building a cache
-        #: entry (``core.Hiera._location_entry_for``/``_lookup_options_map``)
+        #: entry (``_LocationStore.location_entry_for``/``_lookup_options_map``)
         #: passes its own fresh list here and reads it back afterwards.
         self.scope_interpolations = scope_interpolations
         #: Per-lookup filesystem probe memo (``path -> _Probe``), shared with

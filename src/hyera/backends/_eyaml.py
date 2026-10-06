@@ -596,7 +596,7 @@ class EyamlBackend(Backend):
     :meth:`~hyera._lookup.function_provider.LookupContext.cached_file_data`, its
     *raw* parse only -- caching the non-Hash rule's strict-sensitive result
     would freeze whichever strictness read it first, exactly the trap
-    ``Hiera._load_file`` guards against for ``data_hash``), then each
+    ``_LocationStore.load_file`` guards against for ``data_hash``), then each
     requested key's value is decrypted (:func:`hyera.backends._eyaml.decrypt_string`);
     the engine keeps that result until the file changes. The raw hash is
     never returned to the engine, and its

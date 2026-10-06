@@ -560,7 +560,7 @@ def _glob_one(
 
     ``probe_isdir``, when given, replaces the plain ``os.path.isdir(child)``
     check an intermediate literal segment uses to decide whether to descend
-    -- a memo-aware caller (``core.Hiera._glob_matches``) passes one so this
+    -- a memo-aware caller (``_LocationStore.glob_matches``) passes one so this
     check costs a real probe at most once per lookup, same as
     ``on_scandir``. Never used for a *final* literal segment's own
     ``os.path.lexists`` check: that one deliberately does not follow
@@ -739,7 +739,7 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
     Existence is checked through ``invocation``'s filesystem memo
     (:meth:`~hyera._lookup.invocation.Invocation._memo_probe`), not a bare
     ``os.path.exists``: when ``invocation`` shares a memo with the rest of
-    the current top-level lookup (``core.Hiera._location_entry_for``), this
+    the current top-level lookup (``_LocationStore.location_entry_for``), this
     is the one real probe of ``loc`` that lookup ever makes, and a caller
     checking the same path again (to tell a directory from a plain miss)
     reads the cached result instead of probing twice.
@@ -758,7 +758,7 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
 class _GlobSpec(_ty.NamedTuple):
     """One ``glob``/``globs`` declared string, interpolated and rooted, but
     not yet walked -- the interpolation half of ``_expand_globs``, split out
-    so a caller (``core.Hiera._location_entry_for``) can defer the actual
+    so a caller (``_LocationStore.location_entry_for``) can defer the actual
     ``Dir.glob`` match listing to per-lookup materialization instead of
     paying for it on every hierarchy build."""
 
@@ -1085,7 +1085,7 @@ def resolve_locations(
     ``refs``, when given, is a list every scope read made while resolving
     this level appends itself to (:meth:`~hyera._lookup.invocation.Invocation.
     remember_scope_lookup`), shared across every level of one hierarchy
-    build by the caller (``core.Hiera._location_entry_for``) so the whole
+    build by the caller (``_LocationStore.location_entry_for``) so the whole
     hierarchy's build is keyed on one combined reference set, matching
     Puppet's own single ``scope_interpolations_stable?`` check per rebuild.
     Omitted (``None``, the default), nothing is recorded -- used by
