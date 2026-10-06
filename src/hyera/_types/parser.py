@@ -635,7 +635,11 @@ def _build_pattern(args):
             sources.append(a[1])
         else:
             raise _NotAValidTypeSpec()
-    return Pattern(sources)
+    try:
+        return Pattern(sources)
+    except re.error:
+        # A Ruby regex Python's `re` cannot compile (`/^?a/`).
+        raise _NotAValidTypeSpec() from None
 
 
 def _build_regexp(args):
