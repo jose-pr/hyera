@@ -1,10 +1,10 @@
 """Guard against internal working-artefact labels leaking into tracked files.
 
 This project's working notes (a numbered plan, a phase/item inside one, a
-work-item or security-review finding code, a decision log entry) live in a
-private, untracked ``.agents/`` directory and must never show up in anything
-this repository ships or records -- not source, not a comment or docstring,
-not a test, not the changelog. Those labels are meaningful only to someone
+work-item or security-review finding code, a finding's slug, a decision log
+entry) live in a private, untracked directory and must never show up in
+anything this repository ships or records -- not source, not a comment or
+docstring, not a test, not the changelog. Those labels are meaningful only to someone
 with that private directory open; to everyone else (a user reading
 ``--help``, a contributor reading a diff, a future maintainer years later)
 they are noise at best and a dangling reference at worst.
@@ -67,6 +67,22 @@ _PATTERNS = [
     # single-letter-plus-digit domain tokens (flake8's own "F401", a Unicode
     # control-block name like "C0"/"C1").
     ("review-code-bare", re.compile(r"\b(?:R|S|X)\d{1,2}[a-z]?\b")),
+    # A kebab-case id of four or more words in backticks is a working-note
+    # slug unless README.md publishes it as a difference id (see _line_hits).
+    ("finding-slug", re.compile(r"`+([a-z][a-z0-9]*(?:-[a-z0-9]+){3,})`+")),
+    ("session-reference", re.compile(r"\bsessions?\b", re.IGNORECASE)),
+    ("hardening-pass", re.compile(r"hardening pass", re.IGNORECASE)),
+    (
+        "review-said",
+        re.compile(
+            r"\b(?:review|audit)s? (?:found|flagged|said|caught|fixtures?)\b"
+            r"|\b(?:security|code) review\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # Matched on its own so a "the" that a line wrap separated from
+    # "plan's" is still found.
+    ("plan-possessive", re.compile(r"\bplan's\b", re.IGNORECASE)),
     ("reviewer-reference", re.compile(r"\breviewer\b", re.IGNORECASE)),
     ("in-depth-review", re.compile(r"in-depth review", re.IGNORECASE)),
     ("review-finding", re.compile(r"review finding", re.IGNORECASE)),
@@ -93,6 +109,11 @@ _ALLOWLIST = [
         "directory, not a leaked reference to its contents",
     ),
     (
+        "src/hyera/AGENTS.md",
+        "an MCP session",
+        "a Model Context Protocol session, the transport's own term",
+    ),
+    (
         "benchmarks/README.md",
         "scope=S0",
         "S0 is a literal example hyera.Scope variable name in the "
@@ -108,11 +129,34 @@ def _is_allowed(path: str, line: str) -> bool:
     )
 
 
+#: A difference id README.md publishes, written ``(id: `<slug>`)``; a
+#: conformance case's directory name is public too.
+_PUBLIC_ID_RE = re.compile(r"\(id: `([a-z0-9-]+)`\)")
+
+
+def _public_ids() -> "frozenset[str]":
+    try:
+        text = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    cases = (_REPO_ROOT / "tests" / "conformance" / "cases").glob("*")
+    return frozenset(_PUBLIC_ID_RE.findall(text)) | {c.name for c in cases}
+
+
+_PUBLIC_IDS = _public_ids()
+
+
+def _line_hits(name: str, pattern: "re.Pattern[str]", line: str) -> bool:
+    if name == "finding-slug":
+        return any(m.group(1) not in _PUBLIC_IDS for m in pattern.finditer(line))
+    return bool(pattern.search(line))
+
+
 def _scan_text(text: str):
     """Yield (pattern_name, line_no, line) for every label match in `text`."""
     for line_no, line in enumerate(text.splitlines(), start=1):
         for name, pattern in _PATTERNS:
-            if pattern.search(line):
+            if _line_hits(name, pattern, line):
                 yield name, line_no, line
 
 
@@ -184,6 +228,11 @@ def test_label_patterns_catch_a_planted_offender():
         "the-plan": "See " + "the pl" + "an's Known Facts.",
         "decision-id": "Per " + "D" + "01" + ", the SDK stays optional.",
         "backlog-item": "Three fixes from the " + "backl" + "og.",
+        "finding-slug": "Filed as `" + "hocon-file-include" + "-globs-extra" + "`.",
+        "session-reference": "Verified in the reviewing " + "ses" + "sion.",
+        "hardening-pass": "Found by a later " + "hardening" + " pass.",
+        "review-said": "A security " + "review fou" + "nd the leak.",
+        "plan-possessive": "Listed in the parent " + "pl" + "an's facts.",
         "private-working-dir": "Notes live in " + "." + "agents" + "/plans/.",
     }
     assert set(samples) == {
@@ -195,3 +244,10 @@ def test_label_patterns_catch_a_planted_offender():
         assert (
             name in matched_names
         ), f"pattern {name!r} failed to catch its own planted offender"
+
+
+def test_a_published_difference_id_is_not_a_finding_slug():
+    assert _PUBLIC_IDS, "README.md publishes difference ids"
+    public = sorted(_PUBLIC_IDS, key=len)[-1]
+    assert not [hit for hit in _scan_text("See `" + public + "`.")]
+    assert [hit for hit in _scan_text("See `" + public + "-extra`.")]
