@@ -10,14 +10,8 @@ Ports ``PCollectionType``, ``PArrayType``, ``PHashType``, ``PTupleType``,
 
 from __future__ import annotations
 
-from .types import (
-    Any,
-    _key_of,
-    _render_size_args,
-    _type_instance,
-    generalize,
-    puppet_quote,
-)
+from .types import Any, _key_of, _type_instance, generalize
+from .literal_format import _render_size_args, puppet_quote
 
 
 class Collection(Any):

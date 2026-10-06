@@ -21,7 +21,8 @@ import re
 
 from ..exceptions import HieraLookupError
 from .inference import infer_set
-from .types import Sensitive, puppet_quote
+from .types import Sensitive
+from .literal_format import puppet_quote
 
 __all__ = ["convert", "puppet_quote"]
 

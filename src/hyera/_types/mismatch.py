@@ -24,8 +24,8 @@ from .types import (
     SensitiveType,
     String,
     _type_instance,
-    puppet_quote,
 )
+from .literal_format import puppet_quote
 from .compound_types import (
     Array,
     Hash,

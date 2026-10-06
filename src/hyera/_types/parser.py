@@ -38,9 +38,9 @@ from .types import (
     Regexp,
     SensitiveType,
     String,
-    _num_str,
     _type_instance,
 )
+from .literal_format import _num_str
 from .compound_types import (
     ALIASES,
     COLLECTION,

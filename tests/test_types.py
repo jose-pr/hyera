@@ -31,10 +31,9 @@ from hyera._types.types import (
     NotUndef,
     Optional,
     _eql_key,
-    _literal_str,
-    _num_str,
     generalize,
 )
+from hyera._types.literal_format import _literal_str, _num_str
 from hyera._types.compound_types import ALIASES, TypeReference
 
 _CASES = Path(__file__).parent / "conformance" / "cases"
