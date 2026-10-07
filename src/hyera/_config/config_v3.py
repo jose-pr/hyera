@@ -18,9 +18,18 @@ import typing as _ty
 from pathlib_next import Path
 
 from .._lookup.interpolation import _to_puppet_str
-from ..exceptions import ConfigError
-from .config_source import _ConfigSource, _config_error, _ruby_type_name, _type_error
-from .config_v5 import _msg
+from .._types.compound_types import Struct, StructElement
+from .._types.mismatch import type_name_of
+from .._types.parser import parse_type
+from .config_source import (
+    _NES,
+    _check_config_type,
+    _config_error,
+    _ConfigSource,
+    _optional,
+    _struct,
+    _type_error,
+)
 from .hiera_config import V3_DEFAULT_CONFIG_HASH, _warn_deprecated
 from .level_builder import _build_level, _v3_backend_class
 
@@ -44,84 +53,28 @@ def _fill_v3_defaults(data: dict) -> None:
         data["deep_merge_options"] = {}
 
 
-#: ``HieraConfigV3``'s own struct keys (``hiera_config.rb:355-370``), in schema order,
-#: which is the order :func:`_validate_v3` reports mismatches in. A backend's config key
-#: (``:yaml:``, ...) is added per name in ``backends`` (``:397``), so it is not listed.
-_V3_TOP_KEYS = (
-    "version",
-    "backends",
-    "logger",
-    "merge_behavior",
-    "deep_merge_options",
-    "hierarchy",
+#: ``hiera_config.rb:362-369``: ``HieraConfigV3``'s own keys. A backend's config
+#: key (``:yaml:``, ...) is added per name in ``backends`` (``:455-456``).
+_V3_CONFIG_TYPE = parse_type(
+    _struct(
+        _optional("version", "Integer[3, 3]"),
+        _optional("backends", "Variant[{0}, Array[{0}]]".format(_NES)),
+        _optional("logger", _NES),
+        _optional("merge_behavior", "Enum['deep', 'deeper', 'native']"),
+        _optional(
+            "deep_merge_options", "Hash[{}, Variant[String, Boolean]]".format(_NES)
+        ),
+        _optional("hierarchy", "Variant[{0}, Array[{0}]]".format(_NES)),
+    )
 )
-_V3_MERGE_BEHAVIORS = ("deep", "deeper", "native")
-
-
-def _v3_string_detail(value) -> "_ty.Optional[str]":
-    """Puppet's ``String[1]`` mismatch detail, or ``None``."""
-    if not isinstance(value, str):
-        return "expects a String value, got {}".format(_ruby_type_name(value))
-    if value == "":
-        return "expects a String[1] value, got String"
-    return None
-
-
-def _v3_string_or_array_details(value) -> "_ty.List[str]":
-    """Puppet's ``Variant[String[1], Array[String[1]]]`` mismatch detail(s)
-    (``backends``/``hierarchy``), unwrapped (the caller applies ``entry
-    '<name>'`` via :func:`_msg`). A structurally-wrong value (not a String,
-    not an Array) merges into one "expects a value of type ... or ..." line;
-    an Array with bad items instead names BOTH failing variants, one line
-    per failing item, exactly as Puppet's ``TypeMismatchDescriber`` does for
-    a ``Variant`` whose value is at least shaped like one of its members
-    (probed: ``[5, common]`` -> two lines, one naming the Array variant's
-    own bad index)."""
-    if isinstance(value, str):
-        if value == "":
-            return ["expects a value of type String[1] or Array[String[1]], got String"]
-        return []
-    if isinstance(value, list):
-        bad = [
-            (i, item)
-            for i, item in enumerate(value)
-            if not isinstance(item, str) or item == ""
-        ]
-        if not bad:
-            return []
-        lines = ["variant 0 expects a String value, got Tuple"]
-        for i, item in bad:
-            if not isinstance(item, str):
-                lines.append(
-                    "variant 1 index {} expects a String value, got {}".format(
-                        i, _ruby_type_name(item)
-                    )
-                )
-            else:
-                lines.append(
-                    "variant 1 index {} expects a String[1] value, got String".format(i)
-                )
-        return lines
-    return [
-        "expects a value of type String or Array, got {}".format(_ruby_type_name(value))
-    ]
-
-
-def _v3_merge_behavior_detail(value) -> "_ty.Optional[str]":
-    """``Enum['deep', 'deeper', 'native']`` mismatch detail, or ``None``."""
-    enum = "Enum['deep', 'deeper', 'native']"
-    if isinstance(value, str):
-        if value in _V3_MERGE_BEHAVIORS:
-            return None
-        return "expects a match for {}, got '{}'".format(enum, value)
-    return "expects a match for {}, got {}".format(enum, _ruby_type_name(value))
+#: ``hiera_config.rb:455``: a backend's own config.
+_V3_BACKEND_CONFIG = parse_type("Hash[{}, Any]".format(_NES))
 
 
 def _v3_backend_names(value) -> "_ty.List[str]":
     """Distinct backend names from a ``backends`` value, in first-appearance
-    order -- ``[]`` when it is not validly shaped (its own mismatch is
-    reported by :func:`_v3_string_or_array_details` instead). Used both to
-    know which dynamic per-backend config keys are allowed top-level keys
+    order -- ``[]`` when it is not validly shaped (the type check reports that).
+    Used to know which dynamic per-backend config keys are allowed top-level keys
     here, and (a later phase) to build one provider per name."""
     if isinstance(value, str):
         items = [value] if value else []
@@ -136,112 +89,23 @@ def _v3_backend_names(value) -> "_ty.List[str]":
     return seen
 
 
+def _v3_config_type(data: dict) -> Struct:
+    """The type of ``data``: :data:`_V3_CONFIG_TYPE` with an optional entry holding
+    a ``Hash`` for each backend named in ``backends`` (``hiera_config.rb:450-456``)."""
+    elements = {e.key: e for e in _V3_CONFIG_TYPE.elements}
+    for name in _v3_backend_names(data.get("backends")):
+        elements[name] = StructElement(name, True, _V3_BACKEND_CONFIG)
+    return Struct(list(elements.values()))
+
+
 def _validate_v3(data: dict, source: "_ConfigSource") -> None:
     """Every Puppet v3 schema mismatch, in Puppet's struct-declaration order
-    (``HieraConfigV3::CONFIG_TYPE``, ``hiera_config.rb:355-370``, walked by
-    ``pops/types/type_mismatch_describer.rb``'s ``describe_PStructType``):
-    each mismatch renders as its own "The Lookup Configuration ... has
-    wrong type, ..." detail line; all of them join with ``"\\n"`` into one
-    :class:`ConfigError` (unlike v5's :func:`_validate_v5`, which reports
-    only the first: a versionless v5-shaped file needs every mismatch
-    visible in one pass to be fixable). Assumes :func:`_fill_v3_defaults`
-    already ran, so ``version``/``backends``/``hierarchy``/
-    ``merge_behavior``/``deep_merge_options`` are always present.
+    (``HieraConfigV3::CONFIG_TYPE``): all of them join into one
+    :class:`ConfigError`. Assumes :func:`_fill_v3_defaults` already ran, so
+    ``version``/``backends``/``hierarchy``/``merge_behavior``/
+    ``deep_merge_options`` are always present.
     """
-    details: "list" = []
-
-    v = data.get("version")
-    if isinstance(v, bool) or not isinstance(v, int):
-        details.append(
-            _msg(
-                ("version",),
-                "expects an Integer value, got {}".format(_ruby_type_name(v)),
-            )
-        )
-
-    backends = data.get("backends")
-    for detail in _v3_string_or_array_details(backends):
-        details.append(_msg(("backends",), detail))
-
-    if "logger" in data:
-        detail = _v3_string_detail(data["logger"])
-        if detail:
-            details.append(_msg(("logger",), detail))
-
-    detail = _v3_merge_behavior_detail(data.get("merge_behavior"))
-    if detail:
-        details.append(_msg(("merge_behavior",), detail))
-
-    dmo = data.get("deep_merge_options")
-    if not isinstance(dmo, dict):
-        details.append(
-            _msg(
-                ("deep_merge_options",),
-                "expects a Hash value, got {}".format(_ruby_type_name(dmo)),
-            )
-        )
-    else:
-        for k, val in dmo.items():
-            if not isinstance(k, str) or k == "":
-                details.append(
-                    _msg(
-                        ("deep_merge_options",),
-                        "key of entry '{}' expects a String[1] value, got {}".format(
-                            k, _ruby_type_name(k)
-                        ),
-                    )
-                )
-                continue
-            if not isinstance(val, (str, bool)):
-                details.append(
-                    _msg(
-                        ("deep_merge_options", k),
-                        "expects a value of type String or Boolean, got {}".format(
-                            _ruby_type_name(val)
-                        ),
-                    )
-                )
-
-    hierarchy = data.get("hierarchy")
-    for detail in _v3_string_or_array_details(hierarchy):
-        details.append(_msg(("hierarchy",), detail))
-
-    backend_names = _v3_backend_names(backends)
-    for name in backend_names:
-        if name not in data:
-            continue
-        conf = data[name]
-        if not isinstance(conf, dict):
-            details.append(
-                _msg(
-                    (name,),
-                    "expects a Hash value, got {}".format(_ruby_type_name(conf)),
-                )
-            )
-            continue
-        for k in conf:
-            if not isinstance(k, str) or k == "":
-                details.append(
-                    _msg(
-                        (name,),
-                        "key of entry '{}' expects a String[1] value, got {}".format(
-                            k, _ruby_type_name(k)
-                        ),
-                    )
-                )
-
-    allowed = set(_V3_TOP_KEYS) | set(backend_names)
-    for k in data:
-        if k not in allowed:
-            details.append(_msg((), "unrecognized key '{}'".format(k)))
-
-    if not details:
-        return
-    label = source.label if source else "<dict>"
-    message = "The Lookup Configuration at '{}' has wrong type, {}".format(
-        label, "\n".join(details)
-    )
-    raise ConfigError(message, path=source.path if source else None)
+    _check_config_type(source, _v3_config_type(data), data, lines=False)
 
 
 def _default_codedir() -> Path:
@@ -334,7 +198,7 @@ def _v3_level_specs(data: dict, source: "_ConfigSource", codedir: Path) -> "list
                 raise _type_error(
                     source,
                     "entry '{}' entry 'datadir' expects a String value, got "
-                    "{}".format(b, _ruby_type_name(datadir_value)),
+                    "{}".format(b, type_name_of(datadir_value)),
                     line=line,
                 )
             datadir = datadir_value

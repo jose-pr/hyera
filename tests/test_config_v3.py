@@ -4,12 +4,14 @@ backend ordering."""
 import logging
 
 import pytest
+from pathlib_next import Path
 
 from hyera import ConfigError, Hiera, KeyNotFoundError, Scope
+from hyera._config.config_source import _ConfigSource
 from hyera._config.hiera_config import (
     V3_DEFAULT_CONFIG_HASH,
 )
-from hyera._config.config_v3 import _fill_v3_defaults
+from hyera._config.config_v3 import _fill_v3_defaults, _validate_v3
 from hyera.backends._psych import RubySymbol
 
 
@@ -102,8 +104,9 @@ from hyera.backends._psych import RubySymbol
                 "hierarchy": ["common"],
                 "deep_merge_options": {5: True},
             },
-            r"entry 'deep_merge_options' key of entry '5' expects a String\[1\] "
-            r"value, got Integer",
+            r"entry 'deep_merge_options' expects a Hash\[String\[1\], "
+            r"Variant\[String, Boolean\]\] value, got Hash\[Integer\[5, 5\], "
+            r"Boolean\[true\]\]",
         ),
         (
             {
@@ -111,8 +114,8 @@ from hyera.backends._psych import RubySymbol
                 "hierarchy": ["common"],
                 "deep_merge_options": {"": True},
             },
-            r"entry 'deep_merge_options' key of entry '' expects a String\[1\] "
-            r"value, got String",
+            r"entry 'deep_merge_options' expects a Hash\[String\[1\], "
+            r"Variant\[String, Boolean\]\] value, got Hash\[String, Boolean\[true\]\]",
         ),
         (
             {"backends": ["yaml"], "yaml": {"datadir": 5}, "hierarchy": ["common"]},
@@ -120,7 +123,8 @@ from hyera.backends._psych import RubySymbol
         ),
         (
             {"backends": ["yaml"], "yaml": {5: "x"}, "hierarchy": ["common"]},
-            r"entry 'yaml' key of entry '5' expects a String\[1\] value, got Integer",
+            r"entry 'yaml' expects a Hash\[String\[1\], Any\] value, "
+            r"got Hash\[Integer\[5, 5\], String\]",
         ),
         (
             {"backends": ["yaml"], "hierarchy": ["common"], "logger": None},
@@ -170,18 +174,38 @@ def test_v3_bare_string_backends_and_hierarchy_are_valid():
 
 def test_v3_mismatches_in_puppet_order():
     # A v5-shaped file with no `version:` key is read as v3 (Hiera 1/2/3's
-    # own dialect); every mismatch against the v3 schema is reported, not
-    # just the first (unlike v5's own `_validate_v5`).
+    # own dialect); every mismatch against the v3 schema is reported, each
+    # line carrying the same prefix.
     config = {
         "defaults": {"datadir": "data", "data_hash": "yaml_data"},
         "hierarchy": [{"name": "common", "path": "common.yaml"}],
     }
     with pytest.raises(ConfigError) as excinfo:
         Hiera(config)
-    lines = str(excinfo.value).splitlines()
-    assert lines[-3].endswith("variant 0 expects a String value, got Tuple")
-    assert lines[-2].endswith("variant 1 index 0 expects a String value, got Struct")
-    assert lines[-1].endswith("unrecognized key 'defaults'")
+    prefix = "The Lookup Configuration at '<dict>' has wrong type,"
+    assert str(excinfo.value) == (
+        prefix
+        + " entry 'hierarchy' variant 0 expects a String value, got Tuple\n "
+        + prefix
+        + " entry 'hierarchy' variant 1 index 0 expects a String value, got "
+        "Struct\n " + prefix + " unrecognized key 'defaults'"
+    )
+
+
+def test_v3_backend_config_key_is_the_backend_name_whatever_it_holds():
+    data = {
+        "version": 3,
+        "backends": ["we'ird name"],
+        "hierarchy": ["common"],
+        "we'ird name": {"datadir": "data"},
+    }
+    source = _ConfigSource("<test>", None, None, Path("."))
+    _fill_v3_defaults(data)
+    _validate_v3(data, source)
+
+    data["we'ird name"] = "data"
+    with pytest.raises(ConfigError, match="entry 'we.ird name' expects a Hash value"):
+        _validate_v3(data, source)
 
 
 def test_fill_v3_defaults():

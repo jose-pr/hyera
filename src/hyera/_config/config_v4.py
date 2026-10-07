@@ -11,19 +11,38 @@ from __future__ import annotations
 import re
 import typing as _ty
 
-from ..exceptions import ConfigError
-from .config_source import _ConfigSource, _config_error, _ruby_type_name
-from .config_v5 import _msg
-from .config_v3 import _V3_NAME_RE_TEMPLATE, _find_line_matching, _v3_string_detail
+from .._types.parser import parse_type
+from .config_source import (
+    _NES,
+    _check_config_type,
+    _config_error,
+    _ConfigSource,
+    _optional,
+    _struct,
+)
+from .config_v3 import _V3_NAME_RE_TEMPLATE, _find_line_matching
 from .hiera_config import _warn_deprecated
 from .level_builder import _build_level
 
-#: ``HieraConfigV4``'s own struct keys (``hiera_config.rb:489-507``), in
-#: schema-declaration order.
-_V4_TOP_KEYS = ("version", "datadir", "hierarchy")
-#: A v4 hierarchy entry's struct keys, in schema-declaration order.
-_V4_ENTRY_KEYS = ("backend", "name", "datadir", "path", "paths")
-_V4_ENTRY_REQUIRED = ("backend", "name")
+#: ``hiera_config.rb:495-506``.
+_V4_CONFIG_TYPE = parse_type(
+    _struct(
+        "version => Integer[4, 4]",
+        _optional("datadir", _NES),
+        _optional(
+            "hierarchy",
+            "Array[{}]".format(
+                _struct(
+                    "backend => " + _NES,
+                    "name => " + _NES,
+                    _optional("datadir", _NES),
+                    _optional("path", _NES),
+                    _optional("paths", "Array[{}]".format(_NES)),
+                )
+            ),
+        ),
+    )
+)
 
 
 def _fill_v4_defaults(data: dict) -> None:
@@ -37,92 +56,10 @@ def _fill_v4_defaults(data: dict) -> None:
 
 def _validate_v4(data: dict, source: "_ConfigSource") -> None:
     """Every Puppet v4 schema mismatch, in struct-declaration order
-    (``HieraConfigV4::CONFIG_TYPE``, ``hiera_config.rb:489-507``) -- like
-    :func:`_validate_v3`, every mismatch is reported, not just the first
-    (a nested per-entry mismatch line always precedes a top-level
-    "unrecognized key" line, since entries are walked before the top-level
-    key scan below). Assumes :func:`_fill_v4_defaults` already ran.
+    (``HieraConfigV4::CONFIG_TYPE``, ``hiera_config.rb:489-507``): all of them join
+    into one :class:`ConfigError`. Assumes :func:`_fill_v4_defaults` already ran.
     """
-    details: "list" = []
-
-    v = data.get("version")
-    if isinstance(v, bool) or not isinstance(v, int):
-        details.append(
-            _msg(
-                ("version",),
-                "expects an Integer value, got {}".format(_ruby_type_name(v)),
-            )
-        )
-
-    detail = _v3_string_detail(data.get("datadir"))
-    if detail:
-        details.append(_msg(("datadir",), detail))
-
-    hierarchy = data.get("hierarchy")
-    if not isinstance(hierarchy, list):
-        details.append(
-            _msg(
-                ("hierarchy",),
-                "expects an Array value, got {}".format(_ruby_type_name(hierarchy)),
-            )
-        )
-    else:
-        for i, entry in enumerate(hierarchy):
-            if not isinstance(entry, dict):
-                details.append(
-                    _msg(
-                        ("hierarchy", i),
-                        "expects a Struct value, got {}".format(_ruby_type_name(entry)),
-                    )
-                )
-                continue
-            for key in _V4_ENTRY_REQUIRED:
-                if key not in entry:
-                    details.append(
-                        _msg(
-                            ("hierarchy", i),
-                            "expects a value for key '{}'".format(key),
-                        )
-                    )
-            for key in ("backend", "name", "datadir", "path"):
-                if key not in entry:
-                    continue
-                detail = _v3_string_detail(entry[key])
-                if detail:
-                    details.append(_msg(("hierarchy", i, key), detail))
-            if "paths" in entry:
-                pv = entry["paths"]
-                if not isinstance(pv, list):
-                    details.append(
-                        _msg(
-                            ("hierarchy", i, "paths"),
-                            "expects an Array value, got {}".format(
-                                _ruby_type_name(pv)
-                            ),
-                        )
-                    )
-                else:
-                    for j, item in enumerate(pv):
-                        detail = _v3_string_detail(item)
-                        if detail:
-                            details.append(_msg(("hierarchy", i, "paths", j), detail))
-            for key in entry:
-                if key not in _V4_ENTRY_KEYS:
-                    details.append(
-                        _msg(("hierarchy", i), "unrecognized key '{}'".format(key))
-                    )
-
-    for k in data:
-        if k not in _V4_TOP_KEYS:
-            details.append(_msg((), "unrecognized key '{}'".format(k)))
-
-    if not details:
-        return
-    label = source.label if source else "<dict>"
-    message = "The Lookup Configuration at '{}' has wrong type, {}".format(
-        label, "\n".join(details)
-    )
-    raise ConfigError(message, path=source.path if source else None)
+    _check_config_type(source, _V4_CONFIG_TYPE, data, lines=False)
 
 
 _V4_NAME_RE_TEMPLATE = r"\s+name:\s+['\"]?{}(?:[^\w]|$)"

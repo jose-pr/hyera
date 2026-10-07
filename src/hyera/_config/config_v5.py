@@ -10,15 +10,16 @@ by the package's own type describer, the rest by hand.
 
 from __future__ import annotations
 
-import typing as _ty
-
 from .._types.parser import parse_type
 from ..backends import has_hocon
 from .config_source import (
+    _NES,
     _check_config_type,
     _config_error,
     _config_line,
     _ConfigSource,
+    _optional,
+    _struct,
 )
 
 #: ``hiera_config.rb:71-73``.
@@ -29,28 +30,6 @@ _LOCATION_KEYS = ("path", "paths", "glob", "globs", "uri", "uris", "mapped_paths
 _RESERVED_OPTION_KEYS = ("path", "uri")
 
 
-def _where(path: "_ty.Tuple") -> str:
-    return " ".join(
-        "index {}".format(step) if isinstance(step, int) else "entry '{}'".format(step)
-        for step in path
-    )
-
-
-def _msg(where: "_ty.Tuple", tail: str) -> str:
-    prefix = _where(where)
-    return "{} {}".format(prefix, tail) if prefix else tail
-
-
-def _struct(*members: str) -> str:
-    return "Struct[{" + ", ".join(members) + "}]"
-
-
-def _optional(key: str, type_: str) -> str:
-    return "Optional[{}] => {}".format(key, type_)
-
-
-#: ``hiera_config.rb:574``, the ``nes_t`` of every string the schema names.
-_NES = "String[1]"
 #: ``hiera_config.rb:580``, kept verbatim including its own ``(:?`` (an optional
 #: literal ``:``, not a non-capturing group).
 _OPTION_NAME = r"Pattern[/\A[A-Za-z](:?[0-9A-Za-z_-]*[0-9A-Za-z])?\z/]"

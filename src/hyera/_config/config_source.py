@@ -17,7 +17,7 @@ import yaml
 from pathlib_next import Path
 
 from .._types.mismatch import describe_instance_of, format_mismatches
-from ..backends._psych import RubySymbol
+from .._types.parser import parse_type
 from ..exceptions import ConfigError
 
 
@@ -65,6 +65,23 @@ def _type_error(source: "_ConfigSource", detail: str, line=None) -> ConfigError:
         message = "{} (line: {})".format(message, line)
     path = source.path if source else None
     return ConfigError(message, path=path, line=line)
+
+
+#: ``hiera_config.rb:574``, the ``nes_t`` of every string the schemas name.
+_NES = "String[1]"
+#: The ``version`` entry of every schema, without its range (``hiera_config.rb:363``,
+#: ``:497``, ``:605``): what a ``version`` that is no Integer is checked against.
+_VERSION_TYPE = parse_type("Struct[{version => Integer}]")
+
+
+def _struct(*members: str) -> str:
+    """The type expression of a ``Struct`` with these ``key => type`` members."""
+    return "Struct[{" + ", ".join(members) + "}]"
+
+
+def _optional(key: str, type_: str) -> str:
+    """The ``Struct`` member ``Optional[key] => type_``."""
+    return "Optional[{}] => {}".format(key, type_)
 
 
 @functools.lru_cache(maxsize=8)
@@ -171,32 +188,6 @@ def _check_config_type(
     )
 
 
-def _ruby_type_name(value) -> str:
-    """The Puppet type name a value of this Python type reports as."""
-    if isinstance(value, bool):
-        return "Boolean"
-    if value is None:
-        return "Undef"
-    if isinstance(value, RubySymbol):
-        # A Ruby Symbol value survives `symkeys_to_string` (only dict keys are
-        # normalized) and has no Puppet type of its own: Puppet's TypeCalculator
-        # reports a bare `Runtime`.
-        return "Runtime"
-    if isinstance(value, str):
-        return "String"
-    if isinstance(value, int):
-        return "Integer"
-    if isinstance(value, float):
-        return "Float"
-    if isinstance(value, list):
-        return "Tuple"
-    if isinstance(value, dict):
-        if value and all(isinstance(k, str) for k in value):
-            return "Struct"
-        return "Hash"
-    return type(value).__name__
-
-
 _VERSION_LEADING_INT = re.compile(r"\s*[+-]?\d+")
 
 
@@ -226,12 +217,7 @@ def _config_version(data: dict, source: "_ConfigSource") -> int:
     if v is None:
         return 3
     if isinstance(v, bool) or not isinstance(v, (int, float, str)):
-        raise _type_error(
-            source,
-            "entry 'version' expects an Integer value, got {}".format(
-                _ruby_type_name(v)
-            ),
-        )
+        _check_config_type(source, _VERSION_TYPE, {"version": v}, lines=False)
     if isinstance(v, str):
         m = _VERSION_LEADING_INT.match(v)
         n = int(m.group()) if m else 0
@@ -241,12 +227,7 @@ def _config_version(data: dict, source: "_ConfigSource") -> int:
         n = v
     if n == 5:
         if not isinstance(v, int):
-            raise _type_error(
-                source,
-                "entry 'version' expects an Integer value, got {}".format(
-                    _ruby_type_name(v)
-                ),
-            )
+            _check_config_type(source, _VERSION_TYPE, {"version": v}, lines=False)
         return 5
     if n == 3:
         return 3

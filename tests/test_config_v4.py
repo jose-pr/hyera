@@ -261,6 +261,25 @@ def test_v4_in_global_layer_valid_file_gives_layer_error(make_tree, caplog):
     assert "is deprecated" in caplog.records[0].message
 
 
+def test_v4_schema_mismatches_each_carry_the_prefix_in_puppet_order():
+    cfg = {
+        "version": "4",
+        "hierarchy": [{"name": "c"}],
+        "defaults": {},
+    }
+    with pytest.raises(ConfigError) as excinfo:
+        Hiera(cfg)
+    prefix = "The Lookup Configuration at '<dict>' has wrong type,"
+    assert str(excinfo.value) == (
+        prefix
+        + " entry 'version' expects an Integer value, got String\n "
+        + prefix
+        + " entry 'hierarchy' index 0 expects a value for key 'backend'\n "
+        + prefix
+        + " unrecognized key 'defaults'"
+    )
+
+
 def test_v4_in_global_layer_invalid_file_gives_schema_error(make_tree):
     root = make_tree('version: 4\nhierarchy: ["oops"]\n', raw=True)
     with pytest.raises(
