@@ -12,7 +12,7 @@ import os as _os
 import typing as _ty
 
 from .._config.confinement import is_inside
-from ..backends import Backend
+from ..backends._base import Backend
 from ._scope import _UsageError
 
 _ROOT_VAR = "HYERA_MCP_ROOT"
