@@ -106,9 +106,10 @@ def find_environment(environmentpath, name) -> "_ty.Optional[Path]":
     """The first ``environmentpath`` entry listing a directory named exactly
     ``name`` (``puppet.rb:213-233``, ``environments.rb:213-214,255-263``: the
     name is joined onto the entry unfolded, so on a case-sensitive filesystem
-    only its exact spelling exists): a directory LISTING is matched, never ``(entry / name).is_dir()``, so a
-    case-insensitive filesystem (Windows/macOS) does not find ``MyMod`` for
-    ``mymod`` the way Linux Puppet never would.
+    only its exact spelling exists): a directory LISTING is matched, never
+    ``(entry / name).is_dir()``, so a case-insensitive filesystem
+    (Windows/macOS) does not find ``MyMod`` for ``mymod`` the way Linux Puppet
+    never would.
     """
     if not name or not _ENV_NAME_RE.fullmatch(name):
         return None
