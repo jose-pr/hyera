@@ -99,7 +99,10 @@ def _is_type_like(value: _ty.Any) -> bool:
 
 def _type_node(value: _ty.Any) -> tuple:
     """A type-position argument: a type object, a ``hyera.types`` class or a
-    type-expression ``str`` (``Array["Integer"]`` is ``Array[Integer]``)."""
+    type-expression ``str`` (``Array["Integer"]`` is ``Array[Integer]``).
+    ``None`` is Puppet's ``default``, which no type position accepts."""
+    if value is None:
+        return _value_node(None)
     try:
         return ("type", _as_type(value), 0, 0)
     except TypeError:

@@ -28,6 +28,15 @@ def _plain(excinfo, kind):
         lambda: T.Boolean[1],
         lambda: T.Any[1],
         lambda: T.Pattern["("],
+        # `None` is Puppet's `default`, which no type position takes.
+        lambda: T.Optional[None],
+        lambda: T.NotUndef[None],
+        lambda: T.Variant[None],
+        lambda: T.Variant[T.Integer, None],
+        lambda: T.Hash[None, T.Integer],
+        lambda: T.Hash[T.Integer, None],
+        lambda: T.Tuple[None, T.Integer],
+        lambda: T.Sensitive[None],
     ],
 )
 def test_a_type_subscript_the_caller_gets_wrong_is_a_plain_value_error(build):
@@ -62,6 +71,17 @@ def test_a_wrongly_typed_subscript_argument_is_still_a_type_error():
 def test_a_type_subscript_or_call_that_works_is_unchanged():
     assert T.Integer[1, 5]("3") == 3
     assert str(T.Array[T.Integer, 1]) == "Array[Integer, 1]"
+
+
+def test_forms_puppet_accepts_stay_accepted():
+    # Each is read by Puppet's type parser or evaluator without error.
+    assert not isinstance(["a"] * 2, T.Tuple[5])
+    assert isinstance(["a"] * 5, T.Tuple[5])
+    assert isinstance("abc", T.String[-1])
+    assert T.Array(5) == [0, 1, 2, 3, 4]
+    assert isinstance({}, T.Hash[None, None])
+    assert not isinstance({"a": 1}, T.Hash[None, None])
+    assert isinstance(["a"], T.Tuple[T.String, None])
 
 
 def test_the_same_conversion_from_a_convert_to_in_data_stays_a_lookup_error(

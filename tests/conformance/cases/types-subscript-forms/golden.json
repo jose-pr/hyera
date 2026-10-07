@@ -1,0 +1,285 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "5266842a13cb465e99fafa679ccf0aebcbc0453a2b0c8145b57cd5542878b6fe",
+  "results": {
+    "optional-default": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Optional-Type[] arguments must be types. Got Symbol (line: 1, column: 30) on node golden.example.com"
+    },
+    "notundef-default": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: NotUndef-Type[] argument must be a Type or a String. Got Symbol (line: 1, column: 30) on node golden.example.com"
+    },
+    "variant-default": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error creating type specialization of a Variant-Type, Cannot use Default where Any-Type is expected (line: 1, column: 29) on node golden.example.com"
+    },
+    "variant-default-then-integer": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error creating type specialization of a Variant-Type, Cannot use Default where Any-Type is expected (line: 1, column: 29) on node golden.example.com"
+    },
+    "variant-integer-then-default": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error creating type specialization of a Variant-Type, Cannot use Default where Any-Type is expected (line: 1, column: 38) on node golden.example.com"
+    },
+    "hash-default-key": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Hash-Type[] arguments must be types. Got Symbol (line: 1, column: 26) on node golden.example.com"
+    },
+    "hash-default-value": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Hash-Type[] arguments must be types. Got Symbol (line: 1, column: 35) on node golden.example.com"
+    },
+    "tuple-default-first-member": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error creating type specialization of a Tuple-Type, Cannot use Default where Any-Type is expected (line: 1, column: 27) on node golden.example.com"
+    },
+    "string-negative-size": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "abc"
+    },
+    "array-new-from-an-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "array-new-from-zero": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": []
+    },
+    "tuple-new-from-an-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        0,
+        1,
+        2
+      ]
+    },
+    "hash-new-from-zero": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {}
+    },
+    "type-tuple-of-a-minimum-size": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[5]",
+        "a2"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects size to be at least 5, got 2"
+    },
+    "type-tuple-of-a-size-range": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[1, 2]",
+        "a2"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "x",
+        "y"
+      ]
+    },
+    "type-tuple-exact-size": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[2, 2]",
+        "a2"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "x",
+        "y"
+      ]
+    },
+    "type-tuple-of-defaults": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[default, default]",
+        "a2"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "x",
+        "y"
+      ]
+    },
+    "type-tuple-member-then-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[String, default]",
+        "a2"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "x",
+        "y"
+      ]
+    },
+    "type-tuple-default-then-member": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Tuple[default, Integer]",
+        "a2"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <Tuple[default, Integer]> is not a valid type specification."
+    },
+    "type-optional-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[default]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <Optional[default]> is not a valid type specification."
+    },
+    "type-notundef-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[default]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <NotUndef[default]> is not a valid type specification."
+    },
+    "type-variant-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[default, Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <Variant[default, Integer]> is not a valid type specification."
+    },
+    "type-hash-default-key": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[default, Integer]",
+        "h1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <Hash[default, Integer]> is not a valid type specification."
+    },
+    "type-hash-default-value": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[Integer, default]",
+        "h1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The expression <Hash[Integer, default]> is not a valid type specification."
+    },
+    "type-hash-of-defaults": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[default, default]",
+        "h0"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": {}
+    },
+    "type-string-negative-size": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "String[-1]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "type-string-default-bounds": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "String[default, default]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    }
+  }
+}

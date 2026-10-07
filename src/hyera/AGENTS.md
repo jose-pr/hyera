@@ -950,8 +950,11 @@ by how it is used:
   key. A `Tuple`'s trailing size arguments are a minimum (`Tuple[String,
   1]` is one or more) or a minimum and maximum, and its last type repeats;
   a bare `Tuple` is any array. `Enum`'s trailing `True` makes it
-  case-insensitive; bare `Enum` and bare `Pattern` accept any `str`; bare
-  `Optional` accepts only `None`; `ScalarData` is the four scalars only.
+  case-insensitive; bare `Pattern` accepts any `str` and bare `Enum` none;
+  bare `Optional` accepts only `None`; `ScalarData` is the four scalars only.
+  `None` is Puppet's `default`: a size or range bound, or a trailing `Tuple`
+  size, but in any other type position (`Optional[None]`,
+  `Variant[Integer, None]`, `Hash[None, Integer]`) it raises `ValueError`.
   A `Pattern`/
   `Regexp` source containing a literal `/` has no escape that survives the
   text round-trip these classes build on; pass the pre-built type object

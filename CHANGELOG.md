@@ -310,6 +310,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as Puppet does (`expects an Integer value, got Undef`), merges `Optional`
   members of a `Variant` into one `Optional`, and a bare `Optional` rejects a
   value with an empty message, as Puppet's assertion does.
+- `Optional[None]`, `NotUndef[None]`, `Variant[Integer, None]`, `Hash[None,
+  Integer]`, `Tuple[None, Integer]` and `Sensitive[None]` raise `ValueError`:
+  `None` is Puppet's `default`, which none of those positions accept, and they
+  built a type with `None` inside it.
 
 ### Security
 

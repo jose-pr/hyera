@@ -570,9 +570,12 @@ class Sensitive:
         :param item: a type object, a ``hyera.types`` class, or a Puppet
             type-expression string, for the contained type.
         :returns: the ``Sensitive[T]`` type object.
+        :raises ValueError: ``item`` is ``None``, Puppet's ``default``.
         """
         from .parser import as_type
 
+        if item is None:
+            raise ValueError("Sensitive[] takes a type, not default")
         return SensitiveType(as_type(item))
 
     def unwrap(self) -> _ty.Any:

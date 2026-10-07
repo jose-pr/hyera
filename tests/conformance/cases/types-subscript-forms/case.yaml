@@ -1,0 +1,97 @@
+description: >-
+  Type subscripts and calls Puppet accepts or refuses. `default` where a type
+  belongs (Optional, NotUndef, Variant, Hash, a Tuple member) is refused by the
+  manifest evaluator and the type parser alike; a size bound written with a
+  negative number, `Array.new(5)` and a Hash of sizes only are accepted. The
+  key queries give the type parser's answer for the forms the evaluator reads
+  differently (a Tuple of sizes only).
+queries:
+  - id: optional-default
+    expression: 'Optional[default]'
+    python: {target: types, method: Optional, params: [null]}
+    error_class: ValueError
+  - id: notundef-default
+    expression: 'NotUndef[default]'
+    python: {target: types, method: NotUndef, params: [null]}
+    error_class: ValueError
+  - id: variant-default
+    expression: 'Variant[default]'
+    python: {target: types, method: Variant, params: [null]}
+    error_class: ValueError
+  - id: variant-default-then-integer
+    expression: 'Variant[default, Integer]'
+    python: {target: types, method: Variant, params: [null, {type: Integer}]}
+    error_class: ValueError
+  - id: variant-integer-then-default
+    expression: 'Variant[Integer, default]'
+    python: {target: types, method: Variant, params: [{type: Integer}, null]}
+    error_class: ValueError
+  - id: hash-default-key
+    expression: 'Hash[default, Integer]'
+    python: {target: types, method: Hash, params: [null, {type: Integer}]}
+    error_class: ValueError
+  - id: hash-default-value
+    expression: 'Hash[Integer, default]'
+    python: {target: types, method: Hash, params: [{type: Integer}, null]}
+    error_class: ValueError
+  - id: tuple-default-first-member
+    expression: 'Tuple[default, Integer]'
+    python: {target: types, method: Tuple, params: [null, {type: Integer}]}
+    error_class: ValueError
+  - id: string-negative-size
+    expression: 'String[-1].new("abc")'
+    python: {target: types, method: String, params: [-1], args: [abc]}
+  - id: array-new-from-an-integer
+    expression: 'Array.new(5)'
+    python: {target: types, method: Array, args: [5]}
+  - id: array-new-from-zero
+    expression: 'Array.new(0)'
+    python: {target: types, method: Array, args: [0]}
+  - id: tuple-new-from-an-integer
+    expression: 'Tuple.new(3)'
+    python: {target: types, method: Tuple, args: [3]}
+  - id: hash-new-from-zero
+    expression: 'Hash.new(0)'
+    python: {target: types, method: Hash, args: [0]}
+  - key: a2
+    id: type-tuple-of-a-minimum-size
+    type: 'Tuple[5]'
+  - key: a2
+    id: type-tuple-of-a-size-range
+    type: 'Tuple[1, 2]'
+  - key: a2
+    id: type-tuple-exact-size
+    type: 'Tuple[2, 2]'
+  - key: a2
+    id: type-tuple-of-defaults
+    type: 'Tuple[default, default]'
+  - key: a2
+    id: type-tuple-member-then-default
+    type: 'Tuple[String, default]'
+  - key: a2
+    id: type-tuple-default-then-member
+    type: 'Tuple[default, Integer]'
+  - key: s
+    id: type-optional-default
+    type: 'Optional[default]'
+  - key: s
+    id: type-notundef-default
+    type: 'NotUndef[default]'
+  - key: s
+    id: type-variant-default
+    type: 'Variant[default, Integer]'
+  - key: h1
+    id: type-hash-default-key
+    type: 'Hash[default, Integer]'
+  - key: h1
+    id: type-hash-default-value
+    type: 'Hash[Integer, default]'
+  - key: h0
+    id: type-hash-of-defaults
+    type: 'Hash[default, default]'
+  - key: s
+    id: type-string-negative-size
+    type: 'String[-1]'
+  - key: s
+    id: type-string-default-bounds
+    type: 'String[default, default]'
