@@ -222,6 +222,13 @@ def _build(case_dir, case: dict, query: dict, golden: dict):
     return hiera, key
 
 
+def _supplies_argument(query: dict) -> bool:
+    """Whether the query hands the API a ``type`` or ``merge`` argument: only then
+    is a plain ``TypeError`` or ``ValueError`` the answer to a bad argument, and not
+    a defect to surface."""
+    return "type" in query or "merge" in query
+
+
 def _lookup_kwargs(query: dict) -> dict:
     kwargs = {"value_type": query.get("type"), "merge": query.get("merge")}
     if query.get("default") is not None:
@@ -262,6 +269,10 @@ def _run_api(case_dir, case: dict, query: dict, golden: dict) -> dict:
         return {"status": "not_found"}
     except HieraError as e:
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
+    except (TypeError, ValueError) as e:
+        if not _supplies_argument(query):
+            raise
+        return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
     try:
         rendered = as_puppet_json(value)
     except ValueError as e:
@@ -284,6 +295,10 @@ def run_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
             kwargs["explain_options"] = query["explain"] == "options"
             result = hiera.explain(key, **kwargs)
     except HieraError as e:
+        return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
+    except (TypeError, ValueError) as e:
+        if not _supplies_argument(query):
+            raise
         return {"status": "error", "message": str(e), "exc_class": type(e).__name__}
     tree = _golden.normalize_tree_paths(as_puppet_json(result.to_hash()), case_dir)
     text = [_golden.normalize_paths(l, case_dir) for l in result.text().splitlines()]
@@ -397,9 +412,13 @@ def run_expression(case_dir, case: dict, query: dict, golden: dict) -> dict:
                 "message": str(e),
                 "exc_class": _public_class_name(e),
             }
-        except TypeError as e:
+        except (TypeError, ValueError) as e:
             # hyera rejects a malformed call itself, which is an error outcome.
-            result = {"status": "error", "message": str(e), "exc_class": "TypeError"}
+            result = {
+                "status": "error",
+                "message": str(e),
+                "exc_class": type(e).__name__,
+            }
         else:
             try:
                 result = {"status": "found", "value": to_data(value)}

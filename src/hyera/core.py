@@ -37,6 +37,7 @@ from ._lookup.providers import files_for
 from ._lookup.lookup_options import _ExplainOptionsMemo
 from ._lookup.lookup_function import (
     check_call,
+    check_merge,
     depth_error,
     lookup as _lookup_call,
     parse_call,
@@ -515,15 +516,19 @@ class Hiera:
 
         :returns: the found (or defaulted) value.
         :raises KeyNotFoundError: no value was found and no default was given.
-        :raises HieraLookupError: a ``value_type``/``convert_to`` assertion
-            failed, or resolving the key otherwise failed.
+        :raises HieraLookupError: the found value does not match a valid
+            ``value_type``, a ``convert_to`` assertion failed, or resolving
+            the key otherwise failed.
         :raises InterpolationError: a ``%{...}`` reference or function call
             in the found data could not be resolved.
-        :raises MergeError: an unknown or invalid merge strategy was named.
+        :raises MergeError: values found in the data could not be merged, or
+            the data names an unknown merge strategy.
         :raises BackendError: a data file the lookup needed could not be
             read or parsed.
         :raises TypeError: the arguments do not match one of the five call
-            forms above.
+            forms above, or one has the wrong type.
+        :raises ValueError: ``merge`` names an unknown strategy or has invalid
+            options, or ``value_type`` is a string that does not parse.
         """
         call = parse_call(
             name, value_type, merge, default_value, default_values_hash, override, block
@@ -603,11 +608,14 @@ class Hiera:
         :param merge: a merge strategy applied to every key; ``None`` uses each
             key's own ``lookup_options``, as :meth:`lookup` does.
         :returns: a new dict of key to value.
+        :raises TypeError: ``merge`` is not a ``str`` or a mapping.
+        :raises ValueError: ``merge`` names an unknown strategy or has invalid
+            options.
         :raises HieraLookupError: resolving a key failed; the first error met
             propagates unchanged (an :class:`~hyera.InterpolationError` among
             them).
         """
-        return _enumeration.to_dict(self, merge)
+        return _enumeration.to_dict(self, check_merge("to_dict", merge))
 
     def dig(
         self,
@@ -644,7 +652,9 @@ class Hiera:
         :param override: consulted for the root key before the hierarchy.
         :returns: the dug-out value, or ``None`` on a root miss.
         :raises TypeError: fewer than one key was given, the first is not a
-            ``str``, or ``value_type`` is not a type spec.
+            ``str``, or ``value_type`` or ``merge`` has the wrong type.
+        :raises ValueError: ``merge`` names an unknown strategy or
+            ``value_type`` is a string that does not parse.
         :raises HieraLookupError: a key after the first does not fit the
             value found there (a non-``int`` against a ``list``, or any key
             against a non-collection).
@@ -712,7 +722,9 @@ class Hiera:
         :param override: consulted for the root key before the hierarchy.
         :returns: the dug-out value, or ``default_value``.
         :raises TypeError: ``dotted`` is not a ``str``, ``block`` is not
-            callable, or ``value_type`` is not a type spec.
+            callable, or ``value_type`` or ``merge`` has the wrong type.
+        :raises ValueError: ``merge`` names an unknown strategy or
+            ``value_type`` is a string that does not parse.
         :raises HieraLookupError: ``dotted`` is empty or malformed, or a
             navigation error was reached with no ``block``.
         """
@@ -721,6 +733,7 @@ class Hiera:
                 "get() dotted key must be a str, not {}".format(type(dotted).__name__)
             )
         parsed_type = check_call("get", value_type, block)
+        merge = check_merge("get", merge)
         if dotted == "":
             raise HieraLookupError("Syntax error in dotted-navigation string")
         segments = split_key(
@@ -856,7 +869,9 @@ class Hiera:
         :raises ConfigError: the base configuration is invalid (never
             reachable mid-lookup, but kept for parity with ``lookup()``).
         :raises TypeError: the arguments do not match one of the five call
-            forms `.lookup()` accepts.
+            forms `.lookup()` accepts, or one has the wrong type.
+        :raises ValueError: ``merge`` names an unknown strategy or has invalid
+            options, or ``value_type`` is a string that does not parse.
         """
         call = parse_call(
             name, value_type, merge, default_value, default_values_hash, override, block

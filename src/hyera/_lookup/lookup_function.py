@@ -16,6 +16,7 @@ from collections.abc import Mapping
 
 from .._output.explain import _debug_preamble
 from .invocation import _STRICT
+from .merge_strategy import MergeStrategy
 from .navigation import _MISSING, join_key
 from .._types.parser import as_type
 from .._types.mismatch import assert_instance_of
@@ -23,6 +24,7 @@ from ..exceptions import (
     HieraLookupError,
     InterpolationError,
     KeyNotFoundError,
+    MergeError,
     _escapes,
 )
 
@@ -52,15 +54,65 @@ def depth_error(exc: RecursionError) -> InterpolationError:
     )
 
 
+def _shown(value) -> str:
+    """``value`` as a message shows it: its ``repr``, cut at 60 characters."""
+    text = repr(value)
+    return text if len(text) <= 60 else text[:57] + "..."
+
+
+def check_value_type(fn_name, value_type):
+    """Parse a caller's ``value_type`` argument, once, before any data is read.
+
+    :param fn_name: the public function named in the message.
+    :param value_type: a type object, a ``hyera.types`` class, a Puppet
+        type-expression string, or ``None``.
+    :returns: the parsed type, or ``None``.
+    :raises TypeError: ``value_type`` is none of the above.
+    :raises ValueError: ``value_type`` is a string that does not parse.
+    """
+    try:
+        with recursion_bound():
+            return as_type(value_type)
+    except TypeError as e:
+        raise TypeError("{}(): value_type {}".format(fn_name, e)) from None
+    except HieraLookupError as e:
+        raise ValueError(
+            "{}(): value_type {}: {}".format(fn_name, _shown(value_type), e)
+        ) from None
+
+
+def check_merge(fn_name, merge):
+    """Validate and parse a caller's ``merge`` argument, once, before any data
+    is read.
+
+    :param fn_name: the public function named in the message.
+    :param merge: a strategy name, a ``{"strategy": ...}`` mapping or ``None``.
+    :returns: the strategy the engine uses, or ``None`` for the level's own.
+    :raises TypeError: ``merge`` is not a ``str`` or a mapping with ``str`` keys.
+    :raises ValueError: the strategy is unknown or its options are invalid.
+    """
+    if merge is None or isinstance(merge, MergeStrategy):
+        return merge
+    if isinstance(merge, str):
+        if merge == "":
+            raise ValueError("{}(): merge must not be an empty string".format(fn_name))
+    elif not (isinstance(merge, Mapping) and all(isinstance(k, str) for k in merge)):
+        raise TypeError(
+            "{}(): merge must be a str or a mapping with str keys, not {}".format(
+                fn_name, type(merge).__name__
+            )
+        )
+    try:
+        return MergeStrategy.strategy(merge)
+    except MergeError as e:
+        raise ValueError("{}(): merge: {}".format(fn_name, e)) from None
+
+
 def check_call(fn_name, value_type, block):
     """Validate the arguments ``get()``/``dig()`` share with ``lookup()``
     before anything is resolved: ``block`` must be callable and
     ``value_type`` a type spec. Returns the parsed type (or ``None``)."""
-    try:
-        with recursion_bound():
-            parsed_type = as_type(value_type)
-    except TypeError as e:
-        raise TypeError("{}(): value_type {}".format(fn_name, e)) from None
+    parsed_type = check_value_type(fn_name, value_type)
     if block is not None and not callable(block):
         raise TypeError("{}(): block must be callable".format(fn_name))
     return parsed_type
@@ -92,6 +144,8 @@ class LookupCall(_ty.NamedTuple):
     names: tuple
     #: A parsed type instance, or ``None``.
     value_type: object
+    #: The parsed :class:`~hyera._lookup.merge_strategy.MergeStrategy`, or
+    #: ``None`` when the call named none.
     merge: object
     #: Whether a default value was given at all (``default_value=None`` is
     #: a real default; Puppet's own ``has_default``).
@@ -183,22 +237,6 @@ def _validate_name(name) -> None:
     )
 
 
-def _validate_merge(merge) -> None:
-    if merge is None:
-        return
-    if isinstance(merge, str):
-        if merge == "":
-            raise TypeError("lookup(): merge must not be an empty string")
-        return
-    if isinstance(merge, Mapping) and all(isinstance(k, str) for k in merge):
-        return
-    raise TypeError(
-        "lookup(): merge must be a str or a mapping with str keys, not {}".format(
-            type(merge).__name__
-        )
-    )
-
-
 def _validate_hash_option(value, what) -> None:
     if value is None:
         return
@@ -214,8 +252,10 @@ def parse_call(
     223``), normalized to one shape. Every call-shape problem raises
     ``TypeError``, as Python itself reports a bad argument; ``value_type``
     is accepted as a type object, a ``hyera.types`` class, or a Puppet
-    type-expression string (:func:`~hyera._types.parser.as_type`), and an
-    unparsable string is left to raise ``hyera.HieraLookupError``.
+    type-expression string (:func:`~hyera._types.parser.as_type`), and
+    ``merge`` as a strategy name or a ``{"strategy": ...}`` mapping. An
+    unparsable ``value_type`` or an unknown ``merge`` strategy raises
+    ``ValueError``.
     """
     if isinstance(name, dict):
         # Form 4: {name => ..., <option> => ..., ...}. block is still its
@@ -249,12 +289,8 @@ def parse_call(
         override = opts.get("override")
 
     _validate_name(real_name)
-    try:
-        with recursion_bound():
-            parsed_type = as_type(value_type)
-    except TypeError as e:
-        raise TypeError("lookup(): value_type {}".format(e)) from None
-    _validate_merge(merge)
+    parsed_type = check_value_type("lookup", value_type)
+    parsed_merge = check_merge("lookup", merge)
     _validate_hash_option(override, "override")
     _validate_hash_option(default_values_hash, "default_values_hash")
     if block is not None and not callable(block):
@@ -265,7 +301,7 @@ def parse_call(
         name=real_name,
         names=names,
         value_type=parsed_type,
-        merge=merge,
+        merge=parsed_merge,
         has_default=_default_given(default_value),
         default_value=None if default_value is _MISSING else default_value,
         default_values_hash=default_values_hash or {},

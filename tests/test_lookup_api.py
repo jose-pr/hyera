@@ -66,8 +66,8 @@ def test_bad_call_shapes_raise_type_error(fn):
         h.lookup(())  # an empty tuple path has no root
     with pytest.raises(TypeError):
         h.lookup((1, "b"))  # a tuple path's root (element 0) must be a str
-    with pytest.raises(TypeError):
-        h.lookup("k", merge="")
+    with pytest.raises(ValueError):
+        h.lookup("k", merge="")  # a usable type, an unusable value
     with pytest.raises(TypeError):
         h.lookup("k", merge=5)
     with pytest.raises(TypeError):

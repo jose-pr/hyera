@@ -4,6 +4,7 @@ Needs no Puppet. A query marked ``divergence:`` runs as a strict xfail; errors a
 asserted by status only; every warning Puppet recorded must also be logged.
 """
 
+import builtins
 import difflib
 import re
 import sys
@@ -128,7 +129,10 @@ def test_api_matches_puppet(case_dir, case, query):
             )
         error_class = query.get("error_class")
         if error_class:
-            assert actual.get("exc_class") == getattr(hyera, error_class).__name__
+            exc_class = getattr(hyera, error_class, None) or getattr(
+                builtins, error_class
+            )
+            assert actual.get("exc_class") == exc_class.__name__
     if not query.get("deviation") and not query.get("explain"):
         lost = missing_warnings(golden_result, actual, case_dir)
         assert not lost, "Puppet warned, hyera did not: {}".format(lost)

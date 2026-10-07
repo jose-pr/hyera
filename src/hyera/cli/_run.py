@@ -40,7 +40,7 @@ def _resolve(
         kwargs["default_value"] = opts["default"]
     value_type = opts["value_type"]
     if value_type is not None:
-        parse_type(value_type)  # a syntax error exits 2, even on a miss
+        value_type = parse_type(value_type)  # a syntax error exits 2, even on a miss
     hiera = Hiera(
         config,
         scope=scope,

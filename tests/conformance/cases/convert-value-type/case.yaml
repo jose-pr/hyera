@@ -273,13 +273,13 @@ queries:
   - key: s
     id: t62
     type: NoSuch[
-    error_class: HieraLookupError
-    error_match: "^\\s*Syntax\\ error\\ at\\ end\\ of\\ input"
+    error_class: ValueError
+    error_match: "Syntax\\ error\\ at\\ end\\ of\\ input"
   - key: s
     id: t63
     type: integer
-    error_class: HieraLookupError
-    error_match: "^\\s*The\\ expression\\ <integer>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
+    error_class: ValueError
+    error_match: "The\\ expression\\ <integer>\\ is\\ not\\ a\\ valid\\ type\\ specification\\."
   - key: s
     id: t64
     type: Collection
@@ -308,8 +308,8 @@ queries:
   - key: n
     id: t69
     type: Integer[10,0]
-    error_class: HieraLookupError
-    error_match: "^\\s*'from'\\ must\\ be\\ less\\ or\\ equal\\ to\\ 'to'\\.\\ Got\\ \\(10,\\ 0"
+    error_class: ValueError
+    error_match: "'from'\\ must\\ be\\ less\\ or\\ equal\\ to\\ 'to'\\.\\ Got\\ \\(10,\\ 0"
   - key: s
     id: t70
     type: Callable

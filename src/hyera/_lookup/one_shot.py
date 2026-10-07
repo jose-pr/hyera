@@ -46,6 +46,8 @@ def lookup(
     :returns: the found (or defaulted) value.
     :raises TypeError: both ``facts`` and ``scope`` were given, or the lookup
         arguments match none of the call forms of :meth:`~hyera.Hiera.lookup`.
+    :raises ValueError: ``merge`` names an unknown strategy or ``value_type``
+        is a string that does not parse, as :meth:`~hyera.Hiera.lookup` raises it.
     :raises ConfigError: ``base_config`` is missing or invalid.
     :raises KeyNotFoundError: no value was found and no default was given.
     :raises HieraLookupError: a type assertion failed or resolving the key

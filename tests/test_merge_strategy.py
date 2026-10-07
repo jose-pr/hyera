@@ -548,8 +548,9 @@ def test_invalid_merge_raises_merge_error(make_tree):
     )
     h = Hiera(str(root / "hiera.yaml"))
 
-    with pytest.raises(MergeError):
-        h.lookup("k", merge="bogus")
+    with pytest.raises(ValueError) as excinfo:
+        h.lookup("k", merge="bogus")  # the caller's own argument
+    assert type(excinfo.value) is ValueError
     # lookup_options' `{merge: unique}` has no `strategy` key.
     with pytest.raises(MergeError):
         h.lookup("k")

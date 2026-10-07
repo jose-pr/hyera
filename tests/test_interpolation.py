@@ -243,11 +243,12 @@ def test_explain_of_a_chain_beyond_the_stack_never_raises_recursion_error(make_t
     assert isinstance(result.error, InterpolationError)
 
 
-def test_a_value_type_nested_beyond_the_stack_raises_a_hiera_error(make_tree):
+def test_a_value_type_nested_beyond_the_stack_raises_a_value_error(make_tree):
     h = _hiera(make_tree, "k: x\n")
     nested = "Array[" * 3000 + "String" + "]" * 3000
-    with pytest.raises(HieraLookupError):
+    with pytest.raises(ValueError, match="nested more than") as excinfo:
         h.lookup("k", nested)
+    assert type(excinfo.value) is ValueError
 
 
 @pytest.mark.parametrize("tail", ["", "}", "%{x}"])
