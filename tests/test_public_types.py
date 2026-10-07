@@ -116,7 +116,7 @@ SUBSCRIPT_CASES = [
     (lambda: types.Array[types.Integer], "Array[Integer]"),
     (lambda: types.Array["Integer"], "Array[Integer]"),
     (lambda: types.Array[types.Integer, 1, 3], "Array[Integer, 1, 3]"),
-    (lambda: types.Array[1, 3], "Array[1, 3]"),
+    (lambda: types.Array[1, 3], "Array[Any, 1, 3]"),
     (lambda: types.Hash[types.String, types.Integer], "Hash[String, Integer]"),
     (lambda: types.Hash["String", "Integer"], "Hash[String, Integer]"),
     (

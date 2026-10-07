@@ -299,6 +299,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `convert_to: Enum` is refused); it matched every string.
 - `Hash.new` and `convert_to: Hash` take an Array as a key (it renders as
   `["a", 1]`) and the `tree` and `hash_tree` build options.
+- A type expression reads its range parameters as Puppet's type parser does:
+  `Integer[1.0, 50]`, `Integer[undef, 2]`, `Hash[0, 0]`, `Hash[1, 2]` (whose
+  key and value types are `Default`), `Array[1, 2]` (element type `Default`)
+  and a size given as an Integer type (`String[Integer[1, 5]]`,
+  `Array[String, Integer[2, 2]]`, `Hash[String, Integer, Integer[2]]`) parse
+  instead of being refused or, for `Array[1, 2]`, matching any element.
+  `hyera.types.Array[1, 3]` still bounds the size only.
 
 ### Security
 

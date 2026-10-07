@@ -143,6 +143,10 @@ def _nodes_optional_like(args: tuple) -> list:
 def _nodes_array(args: tuple) -> list:
     if args and _is_type_like(args[0]):
         return [_type_node(args[0])] + _nodes_literal(args[1:])
+    if len(args) == 2:
+        # ``Array[1, 3]`` bounds the size, as Puppet's evaluator reads it; the
+        # type parser would read it as an element type of ``Default``.
+        return [_type_node(_priv.Any())] + _nodes_literal(args)
     return _nodes_literal(args)
 
 

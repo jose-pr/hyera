@@ -43,6 +43,7 @@ from .compound_types import (
     Tuple,
     TypeReference,
     Variant,
+    _PNamedType,
 )
 from .ruby_regexp import _ruby_regex
 from .type_names import _BARE_TYPES, _NEVER_PARAMETERIZED, _UNSUPPORTED_NAMES
@@ -117,6 +118,12 @@ def _num_or_default(node):
     raise _NotAValidTypeSpec()
 
 
+def _bound(node):
+    """One bound of a two-argument ``Integer`` or ``Float``: a number,
+    ``default`` or ``undef``."""
+    return None if node[0] == "undef" else _num_or_default(node)
+
+
 def _check_range(a, b):
     if a is not None and b is not None and a > b:
         raise HieraLookupError(
@@ -147,9 +154,30 @@ def _size_range(nodes):
     lo = _int_or_default(nodes[0])
     hi = _int_or_default(nodes[1]) if len(nodes) > 1 else None
     _check_range(lo, hi)
+    return _to_size(lo, hi)
+
+
+def _to_size(lo, hi):
+    """``PIntegerType#to_size`` (``types.rb:1085``): a negative bound is 0."""
     if hi is not None and hi < 0:
         hi = 0
     return max(lo or 0, 0), hi
+
+
+def _size_or_type(nodes):
+    """A size constraint given as one Integer type (``String[Integer[1, 5]]``)
+    or as ``from`` and ``to`` (``type_parser.rb:316-326``)."""
+    if len(nodes) == 1 and _is_type_node(nodes[0]):
+        size = _interp_type(nodes[0])
+        if not isinstance(size, Integer):
+            raise _NotAValidTypeSpec()
+        return _to_size(size.from_, size.to)
+    return _size_range(nodes)
+
+
+#: The type Puppet's factory puts where a size-only `Array[1, 2]` or
+#: `Hash[1, 2]` has no element, key or value type.
+_DEFAULT_TYPE = _PNamedType("Default")
 
 
 def _is_type_node(node):
@@ -165,8 +193,11 @@ def _unless_any(t):
 def _build_integer(args):
     if len(args) not in (1, 2):
         _arity("Integer", "1 or 2", len(args))
-    from_ = _int_or_default(args[0])
-    to = _int_or_default(args[1]) if len(args) == 2 else None
+    if len(args) == 1:
+        from_, to = _int_or_default(args[0]), None
+    else:
+        # Two arguments are any number, `default` or `undef` (type_parser.rb:530-534).
+        from_, to = _bound(args[0]), _bound(args[1])
     _check_range(from_, to)
     return Integer(from_, to)
 
@@ -174,8 +205,10 @@ def _build_integer(args):
 def _build_float(args):
     if len(args) not in (1, 2):
         _arity("Float", "1 or 2", len(args))
-    from_ = _num_or_default(args[0])
-    to = _num_or_default(args[1]) if len(args) == 2 else None
+    if len(args) == 1:
+        from_, to = _num_or_default(args[0]), None
+    else:
+        from_, to = _bound(args[0]), _bound(args[1])
     from_ = float(from_) if from_ is not None else None
     to = float(to) if to is not None else None
     _check_range(from_, to)
@@ -185,7 +218,7 @@ def _build_float(args):
 def _build_string(args):
     if len(args) not in (1, 2):
         _arity("String", "1 to 2", len(args))
-    return String(*_size_range(args))
+    return String(*_size_or_type(args))
 
 
 def _build_boolean(args):
@@ -206,27 +239,36 @@ def _build_array(args):
         elem = _unless_any(_interp_type(args[0]))
         if len(args) == 1:
             return Array(elem)
-        return Array(elem, *_size_range(args[1:]))
+        return Array(elem, *_size_or_type(args[1:2] if len(args) == 2 else args[1:]))
     if len(args) == 3:
         raise _NotAValidTypeSpec()
-    return Array(None, *_size_range(args))
+    # Two sizes and no element type: Puppet's factory makes the element type
+    # `Default`, which no value matches (type_parser.rb:327-331).
+    return Array(_DEFAULT_TYPE, *_size_range(args))
 
 
 def _build_hash(args):
     if len(args) not in (2, 3, 4):
         _arity("Hash", "2 to 4", len(args))
+    if len(args) == 2 and not (_is_type_node(args[0]) and _is_type_node(args[1])):
+        # Two sizes: the key and value types are `Default` (type_parser.rb:349-351).
+        return Hash(_DEFAULT_TYPE, _DEFAULT_TYPE, *_size_range(args))
     key = _unless_any(_interp_type(args[0]))
     val = _unless_any(_interp_type(args[1]))
     if len(args) == 2:
         return Hash(key, val)
-    return Hash(key, val, *_size_range(args[2:]))
+    return Hash(
+        key,
+        val,
+        *(_size_or_type(args[2:]) if len(args) == 3 else _size_range(args[2:])),
+    )
 
 
 def _build_collection(args):
     if len(args) > 2:
         _arity("Collection", "1 to 2", len(args))
     # `args` is never empty here (see `_build_array`'s own comment).
-    return Collection(*_size_range(args))
+    return Collection(*_size_or_type(args))
 
 
 def _is_range_node(node):

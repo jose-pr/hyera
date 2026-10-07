@@ -415,3 +415,64 @@ def test_type_nesting_past_the_bound_is_a_lookup_error():
     with pytest.raises(HieraLookupError, match="nested more than 200 levels"):
         parse_type(text)
     assert str(parse_type("Array[" * 150 + "Integer" + "]" * 150)).count("Array") == 150
+
+
+@pytest.mark.parametrize(
+    "text, value, expected",
+    [
+        ("Integer[1.0, 50]", 1, True),
+        ("Integer[1.0, 50]", 0, False),
+        ("Integer[1.0, 50]", 51, False),
+        ("Integer[1.0, 50]", 1.0, False),
+        ("Integer[40.5, 50]", 40, False),
+        ("Integer[40.5, 50]", 41, True),
+        ("Integer[1e1, 50]", 9, False),
+        ("Integer[1e1, 50]", 10, True),
+        ("Integer[1, 50.5]", 50, True),
+        ("Integer[1, 50.5]", 51, False),
+        ("Integer[default, 1.5]", 1, True),
+        ("Integer[default, 1.5]", 2, False),
+        ("Integer[undef, 2]", -5, True),
+        ("Integer[undef, 2]", 3, False),
+        ("Hash[0, 0]", {}, True),
+        ("Hash[0, 0]", {"a": 1}, False),
+        ("Hash[1, 2]", {"a": 1}, False),
+        ("Hash[-1, 2]", {}, True),
+        ("Hash[String, Integer, Integer[2]]", {"a": 1, "b": 2}, True),
+        ("Hash[String, Integer, Integer[2]]", {"a": 1}, False),
+        ("Array[1, 2]", [], False),
+        ("Array[1, 2]", ["x"], False),
+        ("Array[String, Integer[2, 2]]", ["x", "y"], True),
+        ("Array[String, Integer[2, 2]]", ["x"], False),
+        ("String[Integer[1, 5]]", "abc", True),
+        ("String[Integer[1, 5]]", "", False),
+        ("Collection[Integer[1, 2]]", [1], True),
+        ("Collection[Integer[1, 2]]", [], False),
+    ],
+)
+def test_range_parameters_read_as_puppets_type_parser_reads_them(text, value, expected):
+    assert parse_type(text).instance(value) is expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Integer[1.5]",
+        "Integer[1e1]",
+        "Hash[1.5, 2]",
+        "Hash[Integer, 2]",
+        "Hash[String, Integer, 1.5]",
+        "Array[String, undef]",
+        "Array[1, Integer[1, 2]]",
+        "String[1.0, 5]",
+        "Collection[1.0, 2]",
+    ],
+)
+def test_range_parameters_puppet_refuses_stay_refused(text):
+    with pytest.raises(HieraLookupError, match="not a valid type specification"):
+        parse_type(text)
+
+
+def test_a_float_bound_keeps_its_float_text():
+    assert str(parse_type("Integer[1e1, 50]")) == "Integer[10.0, 50]"
+    assert str(parse_type("Integer[1.0, 2.5]")) == "Integer[1.0, 2.5]"

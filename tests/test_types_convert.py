@@ -63,7 +63,7 @@ def test_convert_result_wraps_every_error_of_a_conversion():
         convert_result("k", "Integer", float("inf"))
     assert "raised error" in str(info.value)
     with pytest.raises(HieraLookupError) as info:
-        convert_result("k", "Hash", [[[1, 2], 3]])
+        convert_result("k", "Hash", [[{"a": 1}, 3]])
     assert "raised error: unusable Hash key" in str(info.value)
 
 
