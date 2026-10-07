@@ -65,6 +65,52 @@ def test_mcp_stdio_serves_lookup(hiera_root):
     assert replies[2]["result"]["content"] == [{"type": "text", "text": "myapp\n"}]
 
 
+def test_mcp_tool_call_reports_a_miss_as_an_error_result_with_its_meaning(
+    hiera_root,
+):
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "hyera",
+                "arguments": {
+                    "keys": ["no::such::key"],
+                    "hiera_config": str(hiera_root / "hiera.yaml"),
+                    "facts": str(hiera_root / "facts.yaml"),
+                },
+            },
+        },
+    ]
+    src = os.path.join(os.path.dirname(__file__), os.pardir, "src")
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera"],
+        input="".join(json.dumps(m) + "\n" for m in messages),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HYERA_MCP": "stdio", "PYTHONPATH": src},
+        timeout=60,
+    )
+
+    reply = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}[2]
+    assert reply["result"]["isError"] is True
+    assert reply["result"]["content"] == [
+        {"type": "text", "text": "exit code: 1 (No value found for the key)"}
+    ]
+
+
 def test_mcp_tool_call_accepts_double_dash_as_the_knockout_prefix(flags_root):
     # An option value that is exactly "--" is a valid tool argument, not an
     # invalid-arguments error: the knockout prefix applies to the merge.
@@ -167,7 +213,10 @@ def test_mcp_tool_call_reports_a_bad_option_value_as_one_error(arguments, flags_
     reply = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}[2]
     assert reply["result"]["isError"] is True, reply
     text = reply["result"]["content"][0]["text"]
-    assert text.splitlines()[-1].startswith("exit code: 2"), text
+    assert text.splitlines()[-1] == (
+        "exit code: 2 (Any other error: bad flag or value, unreadable facts "
+        "or data, failed lookup)"
+    ), text
     assert len([line for line in text.splitlines() if "ERROR" in line]) == 1, text
     for noise in ("Traceback", "ValueError", "TypeError"):
         assert noise not in text + proc.stderr

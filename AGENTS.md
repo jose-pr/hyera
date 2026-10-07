@@ -39,7 +39,7 @@ src/hyera/
 │   ├── __init__.py                  # Lookup (the duho command) and main()
 │   ├── __main__.py                   # python -m hyera.cli
 │   ├── _args.py                       # the duho.Arg annotation of every Lookup field and its agent help
-│   ├── _argv.py                        # argument-vector preparation: values that look like options
+│   ├── _values.py                      # the option values of a parsed command, by field name
 │   ├── _options.py                      # merge-option validation in Puppet's order
 │   ├── _run.py                           # one lookup: build the Hiera, resolve, render
 │   ├── _scope.py                          # scope, facts and path-list handling

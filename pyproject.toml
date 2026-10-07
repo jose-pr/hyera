@@ -33,9 +33,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 0.6.4 is the first duho that keeps an attached "--" option value
-# (--knock-out-prefix=--) on every Python and accepts one in an MCP tool call.
-cli = ["duho>=0.6.4,<0.7"]
+# 0.7.0 is the first duho with the keyword-only Meta this package declares its
+# options with (NS is gone), and with literal_value for an option whose value
+# may look like a flag.
+cli = ["duho>=0.7.0,<0.8"]
 # 0.3.29 is the first pyhocon that does not pin pyparsing 2.0.3-2.1.1, which
 # fails to import on Python 3.10 and later; 0.3.29-0.3.61 still call
 # pyparsing's deprecated setDefaultWhitespaceChars, which fails the suite

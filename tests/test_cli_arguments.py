@@ -4,12 +4,13 @@ import logging
 import os
 import subprocess
 import sys
+import typing
 
 import pytest
 
 duho = pytest.importorskip("duho")
 
-from hyera.cli import main  # noqa: E402
+from hyera.cli import Lookup, main  # noqa: E402
 from cli_support import (  # noqa: F401
     _SRC,
     _error_records,
@@ -259,3 +260,65 @@ def test_keys_after_double_dash(flags_root, capsys):
     rc = main(_flags_argv(flags_root, "--", "str"))
     assert rc == 0
     assert capsys.readouterr().out == "--- one\n"
+
+
+@pytest.mark.parametrize(
+    "flag, field",
+    [
+        ("--merge", "merge"),
+        ("--knock-out-prefix", "knock_out_prefix"),
+        ("--type", "value_type"),
+        ("--default", "default"),
+        ("--facts", "facts"),
+        ("--node", "node"),
+        ("--hiera_config", "hiera_config"),
+        ("--environment", "environment"),
+        ("--environmentpath", "environmentpath"),
+        ("--modulepath", "modulepath"),
+        ("--basemodulepath", "basemodulepath"),
+        ("--codedir", "codedir"),
+        ("--strict", "strict"),
+        ("--render-as", "render_as"),
+    ],
+)
+@pytest.mark.parametrize("value", ["--", "-x", "--explain"])
+def test_a_value_option_takes_the_next_word_whatever_it_looks_like(flag, field, value):
+    command = duho.parse(Lookup, [flag, value, "k"])
+    assert getattr(command, field) == value
+    assert command.keys == ["k"]
+    assert command.explain is False
+
+
+def test_scope_takes_the_next_word_whatever_it_looks_like():
+    command = duho.parse(Lookup, ["--scope", "--", "-s", "-x", "k"])
+    assert command.scope == ["--", "-x"]
+    assert command.keys == ["k"]
+
+
+def test_every_single_value_option_is_covered_by_the_test_above():
+    hints = typing.get_type_hints(Lookup, include_extras=True)
+    valued = {
+        name
+        for name, hint in hints.items()
+        if not name.startswith("_")
+        and typing.get_origin(hint) is typing.Annotated
+        and typing.get_args(hint)[0] in (typing.Optional[str], typing.List[str])
+        and name != "keys"
+    }
+    assert valued == {
+        "merge",
+        "knock_out_prefix",
+        "value_type",
+        "default",
+        "facts",
+        "node",
+        "scope",
+        "hiera_config",
+        "environment",
+        "environmentpath",
+        "modulepath",
+        "basemodulepath",
+        "codedir",
+        "strict",
+        "render_as",
+    }

@@ -30,7 +30,6 @@ from .. import __version__
 from ..exceptions import BackendError, KeyNotFoundError
 from ..backends._base import Backend
 from . import _mcp_boundary
-from ._argv import _free_text, _puppet_argv
 from ._options import _merge_options
 from ._run import _describe, _render, _resolve
 from ._scope import (
@@ -40,6 +39,7 @@ from ._scope import (
     _parse_scope,
     _parse_scope_value,
 )
+from ._values import _free_text
 from ._stdout import _emit, _silence_stdout
 
 __all__ = ["main"]
@@ -247,7 +247,7 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
     except _UsageError as e:
         print("hyera: {}".format(e), file=_sys.stderr)
         return 2
-    argv = _puppet_argv(list(_sys.argv[1:] if argv is None else argv))
+    argv = list(_sys.argv[1:] if argv is None else argv)
     try:
         return duho.main(Lookup, argv)
     except KeyboardInterrupt:

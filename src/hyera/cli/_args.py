@@ -13,29 +13,58 @@ import typing as _ty
 
 import duho
 
-_KeysArg = duho.Arg[_ty.List[str], duho.NS(flags=["keys"], metavar="KEY")]
-_MergeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--merge"])]
-_KnockOutPrefixArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--knock-out-prefix"])]
-_SortMergedArraysArg = duho.Arg[bool, duho.NS(flags=["--sort-merged-arrays"])]
-_MergeHashArraysArg = duho.Arg[bool, duho.NS(flags=["--merge-hash-arrays"])]
-_ValueTypeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--type"])]
-_DefaultArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--default"])]
-_ExplainArg = duho.Arg[bool, duho.NS(flags=["--explain"])]
-_ExplainOptionsArg = duho.Arg[bool, duho.NS(flags=["--explain-options"])]
-_FactsArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--facts"])]
-_NodeArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--node"])]
-_ScopeArg = duho.Arg[_ty.List[str], duho.NS(flags=["--scope", "-s"]), duho.Append()]
-_HieraConfigArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--hiera_config"])]
-_EnvironmentArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--environment"])]
-_EnvironmentPathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--environmentpath"])]
-_ModulepathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--modulepath"])]
-_BasemodulepathArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--basemodulepath"])]
-_CodedirArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--codedir"])]
-_StrictArg = duho.Arg[_ty.Optional[str], duho.NS(flags=["--strict"])]
-_RenderAsArg = duho.Arg[
-    _ty.Optional[str], duho.NS(flags=["--render-as"], metavar="FORMAT")
+# literal_value: a value option takes the next word whatever it looks like, as
+# Puppet's option parser does (--knock-out-prefix --, --default -x).
+_KeysArg = duho.Arg[_ty.List[str], duho.Meta(flags=["keys"], metavar="KEY")]
+_MergeArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--merge"], literal_value=True)
 ]
-_DebugArg = duho.Arg[bool, duho.NS(flags=["--debug", "-d"])]
+_KnockOutPrefixArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--knock-out-prefix"], literal_value=True)
+]
+_SortMergedArraysArg = duho.Arg[bool, duho.Meta(flags=["--sort-merged-arrays"])]
+_MergeHashArraysArg = duho.Arg[bool, duho.Meta(flags=["--merge-hash-arrays"])]
+_ValueTypeArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--type"], literal_value=True)
+]
+_DefaultArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--default"], literal_value=True)
+]
+_ExplainArg = duho.Arg[bool, duho.Meta(flags=["--explain"])]
+_ExplainOptionsArg = duho.Arg[bool, duho.Meta(flags=["--explain-options"])]
+_FactsArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--facts"], literal_value=True)
+]
+_NodeArg = duho.Arg[_ty.Optional[str], duho.Meta(flags=["--node"], literal_value=True)]
+_ScopeArg = duho.Arg[
+    _ty.List[str], duho.Meta(flags=["--scope", "-s"], literal_value=True), duho.Append()
+]
+_HieraConfigArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--hiera_config"], literal_value=True)
+]
+_EnvironmentArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--environment"], literal_value=True)
+]
+_EnvironmentPathArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--environmentpath"], literal_value=True)
+]
+_ModulepathArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--modulepath"], literal_value=True)
+]
+_BasemodulepathArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--basemodulepath"], literal_value=True)
+]
+_CodedirArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--codedir"], literal_value=True)
+]
+_StrictArg = duho.Arg[
+    _ty.Optional[str], duho.Meta(flags=["--strict"], literal_value=True)
+]
+_RenderAsArg = duho.Arg[
+    _ty.Optional[str],
+    duho.Meta(flags=["--render-as"], metavar="FORMAT", literal_value=True),
+]
+_DebugArg = duho.Arg[bool, duho.Meta(flags=["--debug", "-d"])]
 
 #: Shown by the agent-help document (AGENT_HELP=1 hyera --help).
 _EXIT_CODES = {

@@ -1891,10 +1891,9 @@ Every class above is importable directly from `hyera` (e.g.
   alone with no key becomes the key `"__global__"`; otherwise "No keys were
   given to lookup."), then the render format, then scope/facts, then
   `--hiera_config`/layers/`--type` and the lookup or `--explain` itself.
-  `main()` first runs every argv token through
-  `_puppet_argv`, which joins a long value option with its following token
-  (`--opt value` -> `--opt=value`) so a value that itself looks like an
-  option (`--knock-out-prefix --`, `--default -x`) reaches argparse the way
+  Every option that takes a value takes the next token as that value,
+  whatever it looks like, so a value that itself looks like an option
+  (`--knock-out-prefix --`, `--default -x`) reaches the command the way
   Puppet's own parser would consume it; a value that is exactly `"--"`
   (two-token or `--opt=--`, also in an MCP tool call) is kept as the value.
   Tokens after a bare `--` (not itself following a value option) go to

@@ -170,7 +170,9 @@ stdin/stdout, so an MCP client can drive lookups: it exposes one tool,
 `hyera`, whose arguments are the command-line fields (`keys`, `hiera_config`,
 `facts`, `scope`, `merge`, ...) and whose result is what the command would
 print. An option value of exactly `--` (the knock-out prefix `--`) is passed
-through as the value, as on the command line.
+through as the value, as on the command line. A call that finds nothing or
+fails comes back as an error result whose last line gives the exit status
+and its meaning, `exit code: 1 (No value found for the key)`.
 
 An MCP caller that controls the tool's arguments can do what a user at the
 command line can: read any file the process can read as a facts file or a

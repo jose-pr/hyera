@@ -175,7 +175,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sys.stdout` and `sys.stderr` encodings alone.
 - `hyera.cli` is a package; `hyera.cli:main`, `python -m hyera`,
   `python -m hyera.cli`, `hyera.cli.Lookup` and `hyera.cli.main` are unchanged.
-- The `cli` extra requires `duho` 0.6.4 or later.
+- The `cli` extra requires `duho` 0.7.0 or later, and each option that takes a
+  value is declared so that it takes the next word whatever it looks like.
+- Over MCP, a call that finds nothing or fails returns an error result whose
+  last line gives the exit status and its meaning (`exit code: 1 (No value
+  found for the key)`); a miss used to return an error result with no text.
 
 ### Fixed
 
