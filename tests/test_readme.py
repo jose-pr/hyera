@@ -50,8 +50,8 @@ DOC_ONLY = {
         "the conformance recorder runs every case with --strict warning"
     ),
     "glob-case-sensitive-byte-order": (
-        "the recording host and CI both run case-sensitive filesystems, so "
-        "case-insensitivity has no recordable fixture"
+        "a golden would record the case rule of the filesystem Puppet ran on, "
+        "which differs between the recording host and the CI platforms"
     ),
     "render-yaml-sensitive-redacted": (
         "the harness's oracle capture never records a raw Sensitive "
@@ -133,8 +133,8 @@ DOC_ONLY = {
         "combine a brace group with ** or an empty brace alternative"
     ),
     "glob-case-folded-spelling": (
-        "the recording host and CI both run case-sensitive filesystems, so "
-        "no fixture can match a segment by case folding"
+        "a golden would record the case rule of the filesystem Puppet ran on, "
+        "which differs between the recording host and the CI platforms"
     ),
 }
 
