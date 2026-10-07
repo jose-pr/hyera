@@ -1,0 +1,146 @@
+{"format":1,"area":"yaml_data","seed":1,"count":200,"agree":75,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"yaml-bools","sha":"569c66b062ca2c9b"}
+{"q":"yaml-bools::k15","p":{"status":"found","value":"N"}}
+{"q":"yaml-bools::k16","p":{"status":"found","value":true}}
+{"scn":"yaml-facts-bom","sha":"195cf7ebe72c2060"}
+{"q":"yaml-facts-bom::iup","p":{"status":"found","value":"[|]"}}
+{"q":"yaml-facts-bom::int","p":{"status":"found","value":"[main|main||]"}}
+{"scn":"yaml-facts-crlf","sha":"4c13325d1dc63400"}
+{"q":"yaml-facts-crlf::ienv_f","p":{"status":"found","value":"[]"}}
+{"scn":"yaml-facts-dup","sha":"34f6a4bea83b7c95"}
+{"q":"yaml-facts-dup::itrusted_all","p":{"status":"found","value":"[{\"authenticated\" => \"local\", \"certname\" => nil, \"extensions\" => {}, \"hostname\" => nil, \"domain\" => nil, \"external\" => {}}]"}}
+{"scn":"yaml-facts-empty","sha":"ac8cbc0d219ed857"}
+{"q":"yaml-facts-empty::ienv_f","p":{"status":"error","message":"Incorrectly formatted data in ./facts.yaml given via the --facts flag (only accepts yaml and json files)"},"r":"error-message-text"}
+{"scn":"yaml-facts-emptymap","sha":"8c603ed45e049894"}
+{"q":"yaml-facts-emptymap::itop","p":{"status":"error","message":"No facts available for target node: golden.example.com"}}
+{"q":"yaml-facts-emptymap::isv","p":{"status":"error","message":"No facts available for target node: golden.example.com"}}
+{"scn":"yaml-facts-env-like","sha":"2476fecce1b4d66f"}
+{"q":"yaml-facts-env-like::ienv_f","p":{"status":"found","value":"[staging]"}}
+{"q":"yaml-facts-env-like::idotted","p":{"status":"error","message":"Lookup of key 'idotted' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'b' from key 'a.b'"}}
+{"scn":"yaml-facts-inf","sha":"0b294fdea4dfa03a"}
+{"q":"yaml-facts-inf::ifacts_a","p":{"status":"found","value":"[]"}}
+{"q":"yaml-facts-inf::idotted","p":{"status":"error","message":"Lookup of key 'idotted' failed: Data Provider type mismatch: Got Float when a hash-like object was expected to access value using 'b' from key 'a.b'"}}
+{"q":"yaml-facts-inf::inum","p":{"status":"found","value":"[||]"}}
+{"q":"yaml-facts-inf::isp","p":{"status":"found","value":"[|]"}}
+{"scn":"yaml-facts-nan","sha":"3724d81a4ef0d76d"}
+{"q":"yaml-facts-nan::iax","p":{"status":"error","message":"Lookup of key 'iax' failed: Data Provider type mismatch: Got Float when a hash-like object was expected to access value using 'x' from key 'facts.a.x'"}}
+{"q":"yaml-facts-nan::isp","p":{"status":"found","value":"[|]"}}
+{"scn":"yaml-facts-nested-nil","sha":"f564d37af80003f4"}
+{"q":"yaml-facts-nested-nil::itop","p":{"status":"found","value":"[{\"x\" => \"\", \"y\" => [\"\"]}]"}}
+{"q":"yaml-facts-nested-nil::ib","p":{"status":"found","value":"[1]"}}
+{"scn":"yaml-facts-null","sha":"1b0cef44485973bc"}
+{"q":"yaml-facts-null::inum","p":{"status":"error","message":"Incorrectly formatted data in ./facts.yaml given via the --facts flag (only accepts yaml and json files)"},"r":"error-message-text"}
+{"scn":"yaml-facts-numeric-name","sha":"ee4ba3a5dcc10b0e"}
+{"q":"yaml-facts-numeric-name::iund","p":{"status":"error","message":"Cannot assign to a numeric match result variable '$0'"}}
+{"scn":"yaml-facts-server-facts-like","sha":"4fed0456742ab1e7"}
+{"q":"yaml-facts-server-facts-like::ib","p":{"status":"error","message":"Attempt to assign to a reserved variable name: 'server_facts'"}}
+{"scn":"yaml-facts-symkey","sha":"f110cb1345629ab6"}
+{"q":"yaml-facts-symkey::isv","p":{"status":"error","message":"(./facts.yaml): Tried to load unspecified class: Symbol\nWrapped exception:\nTried to load unspecified class: Symbol"},"r":"error-message-text"}
+{"scn":"yaml-facts-typing","sha":"cb4c6a93f691e688"}
+{"q":"yaml-facts-typing::i_a","p":{"status":"found","value":"alpha"}}
+{"q":"yaml-facts-typing::i_null_f","p":{"status":"found","value":""}}
+{"q":"yaml-facts-typing::i_fl_f","p":{"status":"found","value":"1.0"}}
+{"scn":"yaml-floats-0","sha":"40898c83d22ea20e"}
+{"q":"yaml-floats-0::k22","p":{"status":"error","message":"Infinity not allowed in JSON"},"r":"error-message-text"}
+{"q":"yaml-floats-0::as_map","p":{"status":"error","message":"Infinity not allowed in JSON"},"r":"error-message-text"}
+{"scn":"yaml-floats-1","sha":"9059e7142304be44"}
+{"q":"yaml-floats-1::k13","p":{"status":"found","value":685230.15}}
+{"q":"yaml-floats-1::k15","p":{"status":"found","value":685230.15}}
+{"q":"yaml-floats-1::k17","p":{"status":"found","value":"inf"}}
+{"scn":"yaml-floats-2","sha":"a2e5b733f082a3f2"}
+{"q":"yaml-floats-2::k05","p":{"status":"found","value":1e-05,"text":"0.00001\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"yaml-floats-2::k06","p":{"status":"found","value":1e-05,"text":"0.00001\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"yaml-floats-2::k12","p":{"status":"found","value":2.5}}
+{"q":"yaml-floats-2::as_list","p":{"status":"found","value":["1e16","1.0e16",1e+16,"1.0e15",0.0001,1e-05,1e-05,0.0001,123456789.12345679,1e+20,3.0,3.1,2.5,"1e+3",1000.0,"1.5e","1.5e+","._5","1._5","_.5","0.1_",-1.5,1.5,"1.0e3","1.0E3","0e0"],"text":"[\"1e16\",\"1.0e16\",1e+16,\"1.0e15\",0.0001,0.00001,0.00001,0.0001,123456789.12345679,1e+20,3.0,3.1,2.5,\"1e+3\",1000.0,\"1.5e\",\"1.5e+\",\"._5\",\"1._5\",\"_.5\",\"0.1_\",-1.5,1.5,\"1.0e3\",\"1.0E3\",\"0e0\"]\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"yaml-floats-2::as_map","p":{"status":"found","value":{"m00":"1e16","m01":"1.0e16","m02":1e+16,"m03":"1.0e15","m04":0.0001,"m05":1e-05,"m06":1e-05,"m07":0.0001,"m08":123456789.12345679,"m09":1e+20,"m10":3.0,"m11":3.1,"m12":2.5,"m13":"1e+3","m14":1000.0,"m15":"1.5e","m16":"1.5e+","m17":"._5","m18":"1._5","m19":"_.5","m20":"0.1_","m21":-1.5,"m22":1.5,"m23":"1.0e3","m24":"1.0E3","m25":"0e0"},"text":"{\"m00\":\"1e16\",\"m01\":\"1.0e16\",\"m02\":1e+16,\"m03\":\"1.0e15\",\"m04\":0.0001,\"m05\":0.00001,\"m06\":0.00001,\"m07\":0.0001,\"m08\":123456789.12345679,\"m09\":1e+20,\"m10\":3.0,\"m11\":3.1,\"m12\":2.5,\"m13\":\"1e+3\",\"m14\":1000.0,\"m15\":\"1.5e\",\"m16\":\"1.5e+\",\"m17\":\"._5\",\"m18\":\"1._5\",\"m19\":\"_.5\",\"m20\":\"0.1_\",\"m21\":-1.5,\"m22\":1.5,\"m23\":\"1.0e3\",\"m24\":\"1.0E3\",\"m25\":\"0e0\"}\n"},"k":"RENDER","r":"json-float-spelling"}
+{"scn":"yaml-ints-1","sha":"361ad68d188d91f1"}
+{"q":"yaml-ints-1::k05","p":{"status":"found","value":-123456789012345678901234567890}}
+{"q":"yaml-ints-1::k13","p":{"status":"found","value":1}}
+{"scn":"yaml-strings-0","sha":"5980e2ae51913927"}
+{"q":"yaml-strings-0::k02","p":{"status":"found","value":0.0}}
+{"q":"yaml-strings-0::k06","p":{"status":"found","value":"single"}}
+{"q":"yaml-strings-0::k17","p":{"status":"found","value":"a\u00a0b\u0085c\u2028d\u2029e"}}
+{"scn":"yaml-strings-2","sha":"5dbbd87466ba96ed"}
+{"q":"yaml-strings-2::k06","p":{"status":"found","value":"offer"}}
+{"scn":"yamldate-04","sha":"16a354b9ee20d623"}
+{"q":"yamldate-04::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): Tried to load unspecified class: Time"}}
+{"scn":"yamldate-11","sha":"38fc33a8662140b6"}
+{"q":"yamldate-11::k d=dflt","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): Tried to load unspecified class: Time"}}
+{"scn":"yamlrej-03","sha":"eec4667cf52e5f58"}
+{"q":"yamlrej-03::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): block sequence entries are not allowed in this context at line 1 column 4"}}
+{"scn":"yamlrisky-03","sha":"1c9cc36110222dea"}
+{"q":"yamlrisky-03::other","p":{"status":"found","value":1}}
+{"scn":"yamlrisky-04","sha":"5b7611bd95545430"}
+{"q":"yamlrisky-04::other","p":{"status":"found","value":1}}
+{"scn":"yamlrisky-05","sha":"09a00bd8bba2a598"}
+{"q":"yamlrisky-05::k","p":{"status":"found","value":null},"k":"VALUE","r":"open:yaml-tags-psych-loads"}
+{"q":"yamlrisky-05::k d=dflt","p":{"status":"found","value":null},"k":"VALUE","r":"open:yaml-tags-psych-loads"}
+{"scn":"yamlrisky-16","sha":"b350e0bad65bcc85"}
+{"q":"yamlrisky-16::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): mapping keys are not allowed in this context at line 1 column 4"}}
+{"scn":"yamlrisky-30","sha":"b5740a60d327c48d"}
+{"q":"yamlrisky-30::k d=dflt","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): found invalid Unicode character escape code while parsing a quoted scalar at line 1 column 4"}}
+{"scn":"yamlrisky-33","sha":"b372d9460cd18882"}
+{"q":"yamlrisky-33::other","p":{"status":"found","value":1}}
+{"scn":"yamlrisky-38","sha":"85721f9bdc678b52"}
+{"q":"yamlrisky-38::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): found invalid Unicode character escape code while parsing a quoted scalar at line 1 column 4"}}
+{"scn":"yamlrisky-39","sha":"8a84a7629c3201db"}
+{"q":"yamlrisky-39::other","p":{"status":"found","value":1}}
+{"scn":"yamlstruct-anchor-scalar","sha":"625b17bef0fe4e7d"}
+{"q":"yamlstruct-anchor-scalar::k","p":{"status":"found","value":"hello"}}
+{"scn":"yamlstruct-cr-only","sha":"d6c27bc455799274"}
+{"q":"yamlstruct-cr-only::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-invalid-unclosed-quote","sha":"6b3d2ba18169d331"}
+{"q":"yamlstruct-invalid-unclosed-quote::fb","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): found unexpected end of stream while scanning a quoted scalar at line 1 column 4"}}
+{"scn":"yamlstruct-key-bool","sha":"93214c20f3409815"}
+{"q":"yamlstruct-key-bool::true","p":{"status":"not_found"}}
+{"q":"yamlstruct-key-bool::yes","p":{"status":"not_found"}}
+{"scn":"yamlstruct-key-complex","sha":"d4f813cba7dc0372"}
+{"q":"yamlstruct-key-complex::k","p":{"status":"found","value":1}}
+{"scn":"yamlstruct-key-dotted","sha":"402c47e0bbdedd53"}
+{"q":"yamlstruct-key-dotted::a","p":{"status":"found","value":{"b":"nested"}}}
+{"q":"yamlstruct-key-dotted::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-key-int-nested","sha":"11c23eb7f8bfe703"}
+{"q":"yamlstruct-key-int-nested::h.1","p":{"status":"found","value":"one"}}
+{"scn":"yamlstruct-key-list-nested","sha":"21c74d92bae4d53e"}
+{"q":"yamlstruct-key-list-nested::k m=unique","p":{"status":"found","value":["fallback_k"]}}
+{"scn":"yamlstruct-key-null","sha":"1772ae36763fa9c0"}
+{"q":"yamlstruct-key-null::k m=unique","p":{"status":"found","value":["v","fallback_k"]}}
+{"scn":"yamlstruct-key-null-nested","sha":"8e599fa12017af36"}
+{"q":"yamlstruct-key-null-nested::k m=unique","p":{"status":"found","value":["fallback_k"]}}
+{"scn":"yamlstruct-key-quoted-num","sha":"f72faa4244fe0b95"}
+{"q":"yamlstruct-key-quoted-num::1","p":{"status":"found","value":"one"}}
+{"scn":"yamlstruct-long-line","sha":"5b2780491ace5173"}
+{"q":"yamlstruct-long-line::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-lookup-options-null","sha":"2f032ba1c10ba3ac"}
+{"q":"yamlstruct-lookup-options-null::k","p":{"status":"found","value":"v"}}
+{"scn":"yamlstruct-mac-ip-time","sha":"1783a9ef5925e534"}
+{"q":"yamlstruct-mac-ip-time::time","p":{"status":"found","value":45000}}
+{"q":"yamlstruct-mac-ip-time::port","p":{"status":"found","value":"0:80"}}
+{"scn":"yamlstruct-merge-key-scalar","sha":"e74678f4bfb95978"}
+{"q":"yamlstruct-merge-key-scalar::k","p":{"status":"found","value":{"<<":"notamap","a":1}}}
+{"scn":"yamlstruct-norway","sha":"49975666e78f9d74"}
+{"q":"yamlstruct-norway::answer","p":{"status":"found","value":"y"}}
+{"scn":"yamlstruct-octal-strings","sha":"5a80d02d9eaf1a2b"}
+{"q":"yamlstruct-octal-strings::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-only-doc-start-null","sha":"4f4e61a1afc1af51"}
+{"q":"yamlstruct-only-doc-start-null::k m=unique","p":{"status":"found","value":["fallback_k"]}}
+{"scn":"yamlstruct-tag-directive","sha":"1cb81cac9c46ddb4"}
+{"q":"yamlstruct-tag-directive::k","p":{"status":"found","value":"bar"}}
+{"q":"yamlstruct-tag-directive::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-top-string-quoted","sha":"cc4ffe242fa61deb"}
+{"q":"yamlstruct-top-string-quoted::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlsym-03","sha":"2b78d0b15dd7a55f"}
+{"q":"yamlsym-03::other","p":{"status":"found","value":1}}
+{"scn":"yamlsym-04","sha":"9744a6c991180283"}
+{"q":"yamlsym-04::other","p":{"status":"found","value":1}}
+{"scn":"yamlsym-20","sha":"43b4659246017c32"}
+{"q":"yamlsym-20::other","p":{"status":"found","value":1}}
+{"scn":"yamltag-04","sha":"0dc2c5a21f32cb57"}
+{"q":"yamltag-04::k","p":{"status":"found","value":1.5}}
+{"q":"yamltag-04::other","p":{"status":"found","value":1}}
+{"scn":"yamltag-40","sha":"4eb2026e2713a0f1"}
+{"q":"yamltag-40::k d=dflt","p":{"status":"found","value":"5"}}
+{"scn":"yamltag-54","sha":"e6985d8b681333fa"}
+{"q":"yamltag-54::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): Tried to load unspecified class: Foo"}}
+{"scn":"yamltag-57","sha":"2d70c7e2e293df55"}
+{"q":"yamltag-57::k d=dflt","p":{"status":"found","value":"2001-12-14"}}

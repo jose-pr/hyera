@@ -1,0 +1,138 @@
+{"format":1,"area":"backends","seed":1,"count":200,"agree":60,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"hocon-array-of-obj","sha":"411c8bb41e3d50e2"}
+{"q":"hocon-array-of-obj::m","p":{"status":"found","value":[{"b":2,"a":1}]},"k":"RENDER","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-basic","sha":"811aba3e08d3554b"}
+{"q":"hocon-basic::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"hocon-bool-null-like","sha":"fe7f494fe66e5b0d"}
+{"q":"hocon-bool-null-like::b5","p":{"status":"found","value":"True"},"k":"VALUE","r":"hocon-pyhocon-parser"}
+{"q":"hocon-bool-null-like::b6","p":{"status":"found","value":"TRUE"},"k":"VALUE","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-concat-str","sha":"13c874597551f994"}
+{"q":"hocon-concat-str::g","p":{"status":"found","value":"true false"},"k":"VALUE","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-crlf","sha":"5d38cfc6450b97a8"}
+{"q":"hocon-crlf::h","p":{"status":"found","value":{"a":1}}}
+{"scn":"hocon-durations","sha":"2a4aa61975e372a4"}
+{"q":"hocon-durations::d8","p":{"status":"found","value":"1 year"}}
+{"q":"hocon-durations::d13","p":{"status":"found","value":"2 hours"}}
+{"q":"hocon-durations::d14","p":{"status":"found","value":"1.5 seconds"}}
+{"scn":"hocon-empty-obj","sha":"5622d7d4b8b07429"}
+{"q":"hocon-empty-obj::k","p":{"status":"found","value":"fallback_k"}}
+{"scn":"hocon-equals-in-obj-key","sha":"ecfd4b18e2139774"}
+{"q":"hocon-equals-in-obj-key::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"hocon-escapes","sha":"2f25007e7450efab"}
+{"q":"hocon-escapes::k","p":{"status":"error","message":"undefined method 'line_number' for an instance of String"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"q":"hocon-escapes::j","p":{"status":"error","message":"undefined method 'line_number' for an instance of String"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"q":"hocon-escapes::fb","p":{"status":"error","message":"undefined method 'line_number' for an instance of String"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"scn":"hocon-include-nested-obj","sha":"fd054089af98c00e"}
+{"q":"hocon-include-nested-obj::h","p":{"status":"found","value":{"inc":"from_data_inc"}}}
+{"scn":"hocon-json-style","sha":"cb78146d02bb15f8"}
+{"q":"hocon-json-style::k","p":{"status":"found","value":"v"}}
+{"scn":"hocon-key-numeric","sha":"9a1660db69622c2d"}
+{"q":"hocon-key-numeric::10","p":{"status":"found","value":{"a":1}}}
+{"scn":"hocon-key-quoted-forms","sha":"57b23d7ac2640c01"}
+{"q":"hocon-key-quoted-forms::p.q","p":{"status":"not_found"},"k":"STATUS","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-multiline-array-concat","sha":"5ea4219635840239"}
+{"q":"hocon-multiline-array-concat::l","p":{"status":"found","value":[1,2,"3 4"]}}
+{"scn":"hocon-nested-arrays","sha":"03a28e2fd23137bd"}
+{"q":"hocon-nested-arrays::l","p":{"status":"found","value":[[1,2],[3],[]]}}
+{"scn":"hocon-null-then-obj","sha":"d33b9f565d82be33"}
+{"q":"hocon-null-then-obj::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"hocon-numbers","sha":"aef1bc3b3cdbbe84"}
+{"q":"hocon-numbers::i3","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 6: Expecting a value but got wrong token: '1' ('+' not followed by =, '1' not allowed after '+') (if you intended '1' ('+' not followed by =, '1' not allowed after '+') to be part of a key or string value, try"},"k":"STATUS","r":"hocon-pyhocon-parser"}
+{"q":"hocon-numbers::i5","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 6: Expecting a value but got wrong token: '1' ('+' not followed by =, '1' not allowed after '+') (if you intended '1' ('+' not followed by =, '1' not allowed after '+') to be part of a key or string value, try"},"k":"STATUS","r":"hocon-pyhocon-parser"}
+{"q":"hocon-numbers::i9","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 6: Expecting a value but got wrong token: '1' ('+' not followed by =, '1' not allowed after '+') (if you intended '1' ('+' not followed by =, '1' not allowed after '+') to be part of a key or string value, try"},"k":"STATUS","r":"hocon-pyhocon-parser"}
+{"q":"hocon-numbers::i10","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 6: Expecting a value but got wrong token: '1' ('+' not followed by =, '1' not allowed after '+') (if you intended '1' ('+' not followed by =, '1' not allowed after '+') to be part of a key or string value, try"},"k":"STATUS","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-path-keys","sha":"d0900c702f624910"}
+{"q":"hocon-path-keys::a","p":{"status":"found","value":{"e":3,"b":{"d":2,"c":1}}},"k":"RENDER","r":"hocon-pyhocon-parser"}
+{"q":"hocon-path-keys::a.b","p":{"status":"found","value":{"d":2,"c":1}},"k":"RENDER","r":"hocon-pyhocon-parser"}
+{"q":"hocon-path-keys::a.b.c","p":{"status":"found","value":1}}
+{"scn":"hocon-plus-equals","sha":"5a88e6093d243f78"}
+{"q":"hocon-plus-equals::l","p":{"status":"found","value":[1,2]},"k":"VALUE","r":"hocon-pyhocon-parser"}
+{"q":"hocon-plus-equals::m","p":{"status":"found","value":[1]},"k":"VALUE","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-properties-like","sha":"d4ed29b07ca2bc4f"}
+{"q":"hocon-properties-like::a","p":{"status":"found","value":{"c":2,"b":1}},"k":"RENDER","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-subst-merge-obj","sha":"f5330bc2900f7f36"}
+{"q":"hocon-subst-merge-obj::k","p":{"status":"found","value":{"b":3,"c":4,"a":1}},"k":"RENDER","r":"hocon-pyhocon-parser"}
+{"scn":"hocon-subst-optional-in-concat","sha":"dff716df35ad07ea"}
+{"q":"hocon-subst-optional-in-concat::l","p":{"status":"found","value":[1,2]}}
+{"q":"hocon-subst-optional-in-concat::h","p":{"status":"found","value":{}}}
+{"scn":"hocon-unquoted-special","sha":"a2bbec0b10018267"}
+{"q":"hocon-unquoted-special::k9","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 2: Expecting close brace } or a comma, got ':' (if you intended ':' to be part of a key or string value, try enclosing the key or value in double quotes"},"r":"error-message-text"}
+{"q":"hocon-unquoted-special::k14","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 2: Expecting close brace } or a comma, got ':' (if you intended ':' to be part of a key or string value, try enclosing the key or value in double quotes"},"r":"error-message-text"}
+{"scn":"hocon-unterminated-string","sha":"5096a6fee9b4f937"}
+{"q":"hocon-unterminated-string::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.conf): String: 1: Expecting a value but got wrong token: '\n' (JSON does not allow unescaped \n in quoted strings, use a backslash escape) (if you intended '\n' (JSON does not allow unescaped \n in quoted strings, use a backslas"},"r":"error-message-text"}
+{"scn":"json-dup-keys","sha":"7a685e8840db7fd4"}
+{"q":"json-dup-keys::k","p":{"status":"found","value":"second"}}
+{"q":"json-dup-keys::h","p":{"status":"found","value":{"a":2}}}
+{"scn":"json-empty-obj","sha":"e1fb6c5f6a0fec9c"}
+{"q":"json-empty-obj::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"json-floats","sha":"71178cebccef93d9"}
+{"q":"json-floats::f7","p":{"status":"found","value":1000000000000000.0,"text":"1e+15\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"json-floats::f9","p":{"status":"found","value":1e-05,"text":"0.00001\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"json-floats::f16","p":{"status":"found","value":1.0}}
+{"q":"json-floats::f18","p":{"status":"found","value":1e-07,"text":"0.0000001\n"},"k":"RENDER","r":"json-float-spelling"}
+{"scn":"json-hex-number","sha":"7f870b3d74e32817"}
+{"q":"json-hex-number::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.json): expected ',' or '}' after object value, got: 'x10}' at line 1 column 8"},"r":"error-message-text"}
+{"scn":"json-ints","sha":"97802498b46c02cf"}
+{"q":"json-ints::i8","p":{"status":"found","value":1.0}}
+{"scn":"json-latin1","sha":"14738b3591e6865d"}
+{"q":"json-latin1::fb","p":{"status":"found","value":"fallback"},"k":"STATUS","r":"non-utf8-data"}
+{"scn":"json-lookup-options","sha":"e2a5f1225a49590b"}
+{"q":"json-lookup-options::k","p":{"status":"found","value":[1,"fallback_k"]}}
+{"scn":"json-non-string-key-like","sha":"8891c485263bcf1f"}
+{"q":"json-non-string-key-like::null","p":{"status":"found","value":"n"}}
+{"scn":"json-top-number","sha":"2ec6583ca98ea563"}
+{"q":"json-top-number::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location '<case>/data/subject.json', has wrong type, expects a Hash value, got Integer"}}
+{"q":"json-top-number::fb","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location '<case>/data/subject.json', has wrong type, expects a Hash value, got Integer"}}
+{"scn":"json-top-string","sha":"0bffbccc644309f0"}
+{"q":"json-top-string::fb","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Value returned from data_hash function 'json_data', when using location '<case>/data/subject.json', has wrong type, expects a Hash value, got String"}}
+{"scn":"json-unterminated","sha":"14b12ec2d59997f9"}
+{"q":"json-unterminated::fb","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.json): expected ',' or '}' after object value, got: EOF at line 1 column 10"},"r":"error-message-text"}
+{"scn":"render-values","sha":"0e24d09aebe5eb1d"}
+{"q":"render-values::r_space","p":{"status":"found","value":" lead and trail "}}
+{"q":"render-values::r_multiline@s","p":{"status":"found","text":"line1\nline2\n"}}
+{"q":"render-values::r_tab","p":{"status":"found","value":"a\tb"}}
+{"q":"render-values::r_colon","p":{"status":"found","value":"a: b"}}
+{"q":"render-values::r_hash_c@s","p":{"status":"found","text":"a #b\n"}}
+{"q":"render-values::r_ls","p":{"status":"found","value":"a\u2028b"}}
+{"q":"render-values::r_tilde","p":{"status":"found","value":"~"}}
+{"q":"render-values::r_no@yaml","p":{"status":"found","text":"--- 'No'\n"}}
+{"q":"render-values::r_symstr","p":{"status":"found","value":":sym"}}
+{"q":"render-values::r_qmark@s","p":{"status":"found","text":"? x\n"}}
+{"q":"render-values::r_bang@yaml","p":{"status":"found","text":"--- \"!tag\"\n"},"k":"RENDER","r":"render-yaml-equivalent-not-identical"}
+{"q":"render-values::r_amp@s","p":{"status":"found","text":"&a\n"}}
+{"q":"render-values::r_at","p":{"status":"found","value":"@x"}}
+{"q":"render-values::r_at@yaml","p":{"status":"found","text":"--- \"@x\"\n"},"k":"RENDER","r":"render-yaml-equivalent-not-identical"}
+{"q":"render-values::r_brace@yaml","p":{"status":"found","text":"--- \"{a}\"\n"},"k":"RENDER","r":"render-yaml-equivalent-not-identical"}
+{"q":"render-values::r_bracket","p":{"status":"found","value":"[a]"}}
+{"q":"render-values::r_dots@yaml","p":{"status":"found","text":"--- \"...\"\n"},"k":"RENDER","r":"render-yaml-equivalent-not-identical"}
+{"q":"render-values::r_dashes@s","p":{"status":"found","text":"---\n"}}
+{"q":"render-values::r_nan","p":{"status":"found","value":".NaN"}}
+{"q":"render-values::r_under","p":{"status":"found","value":"1_000"}}
+{"q":"render-values::r_comma_num","p":{"status":"found","value":"1,000"}}
+{"q":"render-values::r_comma_num@yaml","p":{"status":"found","text":"--- '1,000'\n"}}
+{"q":"render-values::r_lead_colon@s","p":{"status":"found","text":":a\n"}}
+{"q":"render-values::r_int","p":{"status":"found","value":42}}
+{"q":"render-values::r_int@yaml","p":{"status":"found","text":"--- 42\n"}}
+{"q":"render-values::r_int@s","p":{"status":"found","text":"42\n"}}
+{"q":"render-values::r_neg@yaml","p":{"status":"found","text":"--- -1\n"}}
+{"q":"render-values::r_big@yaml","p":{"status":"found","text":"--- 123456789012345678901234567890\n"}}
+{"q":"render-values::r_flt_int","p":{"status":"found","value":2.0}}
+{"q":"render-values::r_flt_e16@yaml","p":{"status":"found","text":"--- 1.0e+16\n"}}
+{"q":"render-values::r_flt_e20","p":{"status":"found","value":1e+20}}
+{"q":"render-values::r_flt_small","p":{"status":"found","value":1e-05,"text":"0.00001\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"render-values::r_flt_neg0","p":{"status":"found","value":-0.0}}
+{"q":"render-values::r_flt_long@s","p":{"status":"found","text":"0.30000000000000004\n"}}
+{"q":"render-values::r_flt_max","p":{"status":"found","value":1.7976931348623157e+308}}
+{"q":"render-values::r_flt_e15","p":{"status":"found","value":1000000000000000.0,"text":"1e+15\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"render-values::r_arr_str@yaml","p":{"status":"found","text":"---\n- ''\n- \" \"\n- 'a: b'\n- \"- x\"\n- 'yes'\n- '42'\n- |-\n  multi\n  line\n"},"k":"RENDER","r":"render-yaml-equivalent-not-identical"}
+{"q":"render-values::r_hash","p":{"status":"found","value":{"b":1,"a":"two","c":null}}}
+{"q":"render-values::r_hash@s","p":{"status":"found","text":"{\"b\" => 1, \"a\" => \"two\", \"c\" => nil}\n"},"r":"aio-hash-rendering"}
+{"q":"render-values::r_hash_empty@yaml","p":{"status":"found","text":"--- {}\n"}}
+{"q":"render-values::r_hash_nested@s","p":{"status":"found","text":"{\"z\" => {\"y\" => {\"x\" => [1, {\"w\" => \"v\"}]}}, \"a\" => []}\n"},"r":"aio-hash-rendering"}
+{"q":"render-values::r_hash_keys@s","p":{"status":"found","text":"{\"\" => \"e\", \" \" => \"s\", \"a b\" => \"sp\", \"a: b\" => \"c\", \"42\" => \"n\", \"yes\" => \"y\", \"~\" => \"t\", \"true\" => \"b\", \"- x\" => \"d\", \"\u00e9\" => \"u\", \"multi\\nline\" => \"m\", \"#c\" => \"h\", \"'q'\" => \"q\", \"1.5\" => \"f\", \":s\" => \"sym\", \"null\" => \"nul\"}\n"},"r":"aio-hash-rendering"}
+{"q":"render-values::r_hash_order@yaml","p":{"status":"found","text":"---\nzeta: 1\nalpha: 2\nMid: 3\n'10': 4\n'9': 5\n"}}
+{"q":"render-values::r_hash_order@s","p":{"status":"found","text":"{\"zeta\" => 1, \"alpha\" => 2, \"Mid\" => 3, \"10\" => 4, \"9\" => 5}\n"},"r":"aio-hash-rendering"}
+{"q":"render-values::r_sens","p":{"status":"found","value":"Sensitive [value redacted]"}}
+{"q":"render-values::r_sens@yaml","p":{"status":"found","text":"--- !ruby/object:Puppet::Pops::Types::PSensitiveType::Sensitive\nvalue: secret\n"},"k":"RENDER","r":"render-yaml-sensitive-redacted"}
+{"q":"render-values::r_sens_h@yaml","p":{"status":"found","text":"--- !ruby/object:Puppet::Pops::Types::PSensitiveType::Sensitive\nvalue:\n  user: u\n  pass: p\n"},"k":"RENDER","r":"render-yaml-sensitive-redacted"}
+{"q":"render-values::r_deep@s","p":{"status":"found","text":"{\"a\" => {\"b\" => {\"c\" => {\"d\" => {\"e\" => {\"f\" => [1, [2, [3, [4]]]]}}}}}}\n"},"r":"aio-hash-rendering"}

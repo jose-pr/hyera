@@ -1,0 +1,120 @@
+{"format":1,"area":"config","seed":1,"count":200,"agree":60,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"cfg-crlf","sha":"6a84ddd349b1c4c8"}
+{"q":"cfg-crlf::k","p":{"status":"found","value":"common"}}
+{"q":"cfg-crlf::l m=unique","p":{"status":"found","value":["common"]}}
+{"q":"cfg-crlf::k --strict error","p":{"status":"found","value":"common"}}
+{"scn":"cfg-datadir-with-uri","sha":"e9ec4998a48578b5"}
+{"q":"cfg-datadir-with-uri::k","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-default-hier-global","sha":"3c1ef4a85ddc3793"}
+{"q":"cfg-default-hier-global::k --strict error","p":{"status":"error","message":"'default_hierarchy' is only allowed in the module layer (file: <case>/hiera.yaml, line: 5)"}}
+{"scn":"cfg-defaults-datadir-list","sha":"91c1eb4c4d909766"}
+{"q":"cfg-defaults-datadir-list::l m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'defaults' entry 'datadir' expects a String value, got Tuple"},"r":"error-message-text"}
+{"scn":"cfg-defaults-fn-upper","sha":"9a5585b153a3f2fa"}
+{"q":"cfg-defaults-fn-upper::k","p":{"status":"found","value":"common"}}
+{"q":"cfg-defaults-fn-upper::nope","p":{"status":"not_found"}}
+{"scn":"cfg-defaults-null","sha":"39e478aa898e6001"}
+{"q":"cfg-defaults-null::k","p":{"status":"found","value":"common"}}
+{"q":"cfg-defaults-null::l m=unique","p":{"status":"found","value":["common"]}}
+{"q":"cfg-defaults-null::k --strict error","p":{"status":"found","value":"common"}}
+{"scn":"cfg-defaults-options-with-level-fn","sha":"c0f5245d417866e1"}
+{"q":"cfg-defaults-options-with-level-fn::l m=unique","p":{"status":"error","message":"'json_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-defaults-two-fns","sha":"c9de73b3e12392ec"}
+{"q":"cfg-defaults-two-fns::nope","p":{"status":"error","message":"Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in defaults (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-ext-eyaml-as-yaml","sha":"dd2fffee4df0975b"}
+{"q":"cfg-ext-eyaml-as-yaml::k","p":{"status":"found","value":"eyaml_plain"}}
+{"scn":"cfg-ext-none","sha":"6d8a2a5af7e2f205"}
+{"q":"cfg-ext-none::l m=unique","p":{"status":"not_found"}}
+{"q":"cfg-ext-none::nope","p":{"status":"not_found"}}
+{"scn":"cfg-fn-eyaml-missing-file","sha":"9a7ebf0dd7c38f02"}
+{"q":"cfg-fn-eyaml-missing-file::nope","p":{"status":"not_found"}}
+{"scn":"cfg-fn-eyaml-no-keys","sha":"b1aca9f44793d55c"}
+{"q":"cfg-fn-eyaml-no-keys::k --strict error","p":{"status":"found","value":"common"}}
+{"scn":"cfg-fn-hiera3-json","sha":"c1a4a02188ba750d"}
+{"q":"cfg-fn-hiera3-json::k","p":{"status":"error","message":"Use \"data_hash: json_data\" instead of \"hiera3_backend: json\" (file: <case>/hiera.yaml, line: 4)"}}
+{"q":"cfg-fn-hiera3-json::k --strict error","p":{"status":"error","message":"Use \"data_hash: json_data\" instead of \"hiera3_backend: json\" (file: <case>/hiera.yaml, line: 4)"}}
+{"scn":"cfg-fn-hiera3-level","sha":"7e4216ced8e6e18a"}
+{"q":"cfg-fn-hiera3-level::nope","p":{"status":"error","message":"Use \"data_hash: yaml_data\" instead of \"hiera3_backend: yaml\" (file: <case>/hiera.yaml, line: 4)"}}
+{"scn":"cfg-fn-hiera3-level-ext","sha":"52c6e5f047e43ea8"}
+{"q":"cfg-fn-hiera3-level-ext::nope","p":{"status":"error","message":"Use \"data_hash: yaml_data\" instead of \"hiera3_backend: yaml\" (file: <case>/hiera.yaml, line: 4)"}}
+{"scn":"cfg-fn-hiera3-unknown","sha":"d816efa54d8bfe79"}
+{"q":"cfg-fn-hiera3-unknown::k","p":{"status":"not_found"},"k":"STATUS","r":"v3-ruby-backend-unavailable"}
+{"q":"cfg-fn-hiera3-unknown::l m=unique","p":{"status":"not_found"},"k":"STATUS","r":"v3-ruby-backend-unavailable"}
+{"q":"cfg-fn-hiera3-unknown::nope","p":{"status":"not_found"},"k":"STATUS","r":"v3-ruby-backend-unavailable"}
+{"q":"cfg-fn-hiera3-unknown::k --strict error","p":{"status":"not_found"},"k":"STATUS","r":"v3-ruby-backend-unavailable"}
+{"scn":"cfg-fn-kind-mismatch","sha":"dada3533ebbc4a7e"}
+{"q":"cfg-fn-kind-mismatch::k","p":{"status":"error","message":"'yaml_data' expects 2 arguments, got 3"}}
+{"scn":"cfg-fn-kind-mismatch-dig","sha":"6f065dd0a0454d98"}
+{"q":"cfg-fn-kind-mismatch-dig::l m=unique","p":{"status":"error","message":"'yaml_data' expects 2 arguments, got 3"}}
+{"scn":"cfg-fn-unknown","sha":"7fc86675c8a02022"}
+{"q":"cfg-fn-unknown::k --strict error","p":{"status":"error","message":"Unable to find 'data_hash' function named 'nope_data' (file: <case>/hiera.yaml)"},"r":"error-message-text"}
+{"scn":"cfg-globs-string","sha":"5b6104879d467f60"}
+{"q":"cfg-globs-string::nope","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'globs' expects an Array value, got String"},"r":"error-message-text"}
+{"scn":"cfg-hier-empty","sha":"99d7e6df10f4af6d"}
+{"q":"cfg-hier-empty::k","p":{"status":"not_found"}}
+{"q":"cfg-hier-empty::k --strict error","p":{"status":"not_found"}}
+{"scn":"cfg-hier-entry-null","sha":"371528ac4999ac5a"}
+{"q":"cfg-hier-entry-null::nope","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 expects a Struct value, got Undef"},"r":"error-message-text"}
+{"scn":"cfg-interp-name","sha":"1d1485f36d703f63"}
+{"q":"cfg-interp-name::k","p":{"status":"found","value":"common"}}
+{"scn":"cfg-long-hierarchy","sha":"3a3933edf595f952"}
+{"q":"cfg-long-hierarchy::k","p":{"status":"found","value":"common"}}
+{"scn":"cfg-mapped-and-path","sha":"82cb9b349adcaf86"}
+{"q":"cfg-mapped-and-path::nope","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-name-dup","sha":"2120f63bc041a00b"}
+{"q":"cfg-name-dup::nope","p":{"status":"error","message":"Hierarchy name 'c' defined more than once. First defined at (line: 3) (file: <case>/hiera.yaml, line: 5)"}}
+{"scn":"cfg-name-dup-case","sha":"356f623d52d10f5b"}
+{"q":"cfg-name-dup-case::k --strict error","p":{"status":"found","value":"common"}}
+{"scn":"cfg-name-only","sha":"c18edb71bb485707"}
+{"q":"cfg-name-only::k --strict error","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-name-only-json","sha":"2b2449f57c4633f1"}
+{"q":"cfg-name-only-json::k --strict error","p":{"status":"error","message":"'json_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-options-bad-key","sha":"8c2b8214daa8125e"}
+{"q":"cfg-options-bad-key::nope","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"q":"cfg-options-bad-key::k --strict error","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-options-empty","sha":"57abcbfd4a219c58"}
+{"q":"cfg-options-empty::l m=unique","p":{"status":"found","value":["common"]}}
+{"scn":"cfg-options-nested","sha":"5fe90dc6c0c0f086"}
+{"q":"cfg-options-nested::k","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-path-and-glob","sha":"5ccecd36b041b42c"}
+{"q":"cfg-path-and-glob::nope","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"q":"cfg-path-and-glob::k --strict error","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-path-and-paths","sha":"d70d5b2fa783e7db"}
+{"q":"cfg-path-and-paths::l m=unique","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-path-and-uri","sha":"9894f51f1ff6ed10"}
+{"q":"cfg-path-and-uri::nope","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-three-fns","sha":"0e9c5dec07ec8678"}
+{"q":"cfg-three-fns::k --strict error","p":{"status":"error","message":"Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-three-locs","sha":"c2895a4463086d7d"}
+{"q":"cfg-three-locs::k --strict error","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-top-int","sha":"038b3198a9a5773a"}
+{"q":"cfg-top-int::nope","p":{"status":"not_found"}}
+{"scn":"cfg-top-list","sha":"52467518d6fc85bc"}
+{"q":"cfg-top-list::k --strict error","p":{"status":"not_found"}}
+{"scn":"cfg-top-null","sha":"8a70d22103fed63a"}
+{"q":"cfg-top-null::k --strict error","p":{"status":"not_found"}}
+{"scn":"cfg-top-string","sha":"e91c54a4c82f9358"}
+{"q":"cfg-top-string::l m=unique","p":{"status":"not_found"}}
+{"scn":"cfg-two-fns","sha":"b46dde72312a0ae2"}
+{"q":"cfg-two-fns::k","p":{"status":"error","message":"Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"q":"cfg-two-fns::l m=unique","p":{"status":"error","message":"Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"q":"cfg-two-fns::nope","p":{"status":"error","message":"Only one of data_hash, lookup_key, data_dig, or hiera3_backend can be defined in hierarchy 'c' (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-uri-file","sha":"10188c394ed2c62c"}
+{"q":"cfg-uri-file::l m=unique","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"q":"cfg-uri-file::nope","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-uri-ok-yaml","sha":"35648732a2ed34fc"}
+{"q":"cfg-uri-ok-yaml::k --strict error","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-uri-relative","sha":"8b13e535ccecaebc"}
+{"q":"cfg-uri-relative::k","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"q":"cfg-uri-relative::k --strict error","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"cfg-uris-mixed","sha":"0beff598d4b5518f"}
+{"q":"cfg-uris-mixed::k --strict error","p":{"status":"error","message":"bad URI (is not URI?): \"bad uri\""}}
+{"scn":"cfg-version-4","sha":"022cbc9d54d06f0c"}
+{"q":"cfg-version-4::k --strict error","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 expects a value for key 'backend'"}}
+{"scn":"cfg-version-7","sha":"0f0098a8454bf95b"}
+{"q":"cfg-version-7::nope","p":{"status":"error","message":"This runtime does not support hiera.yaml version 7 (file: <case>/hiera.yaml)"}}
+{"scn":"cfg-version-float","sha":"056c1f35afa3420d"}
+{"q":"cfg-version-float::l m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'version' expects an Integer value, got Float"}}
+{"q":"cfg-version-float::nope","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'version' expects an Integer value, got Float"}}
+{"q":"cfg-version-float::k --strict error","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'version' expects an Integer value, got Float"}}
+{"scn":"cfg-yes-keys","sha":"54d97c1177c7e1e3"}
+{"q":"cfg-yes-keys::k --strict error","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'name' expects a String value, got Boolean"},"r":"error-message-text"}

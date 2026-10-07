@@ -1,0 +1,90 @@
+{"format":1,"area":"interp","seed":1,"count":200,"agree":60,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"interp-cfg-datadir","sha":"9112fef9aa92b231"}
+{"q":"interp-cfg-datadir::n","p":{"status":"not_found"}}
+{"q":"interp-cfg-datadir::k m=unique","p":{"status":"found","value":["data-web"]}}
+{"scn":"interp-cfg-datadir-abs-missing","sha":"d58e78bfe614799f"}
+{"q":"interp-cfg-datadir-abs-missing::sv","p":{"status":"not_found"}}
+{"scn":"interp-cfg-datadir-dotdot","sha":"e11f3b07badc05f3"}
+{"q":"interp-cfg-datadir-dotdot::dot","p":{"status":"not_found"}}
+{"q":"interp-cfg-datadir-dotdot::out","p":{"status":"not_found"}}
+{"q":"interp-cfg-datadir-dotdot::prod","p":{"status":"not_found"}}
+{"q":"interp-cfg-datadir-dotdot::rh","p":{"status":"not_found"}}
+{"scn":"interp-cfg-datadir-missing","sha":"cb6afea658d95eca"}
+{"q":"interp-cfg-datadir-missing::b","p":{"status":"not_found"}}
+{"q":"interp-cfg-datadir-missing::xw","p":{"status":"not_found"}}
+{"scn":"interp-cfg-level-datadir","sha":"5c94601ef25f6711"}
+{"q":"interp-cfg-level-datadir::prod","p":{"status":"not_found"}}
+{"q":"interp-cfg-level-datadir::k --strict error","p":{"status":"found","value":"data-web"}}
+{"scn":"interp-cfg-name-interp","sha":"7f68d60d8e6cec3d"}
+{"q":"interp-cfg-name-interp::only_common","p":{"status":"found","value":1}}
+{"q":"interp-cfg-name-interp::b","p":{"status":"not_found"}}
+{"scn":"interp-cfg-options-interp","sha":"2ac99a608c1177e5"}
+{"q":"interp-cfg-options-interp::si","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"interp-cfg-path-abs","sha":"3c4f9130c5acdb09"}
+{"q":"interp-cfg-path-abs::xw","p":{"status":"not_found"}}
+{"q":"interp-cfg-path-abs::out","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-arr-fact","sha":"7dd5231c3e68c17d"}
+{"q":"interp-cfg-path-arr-fact::f","p":{"status":"not_found"}}
+{"q":"interp-cfg-path-arr-fact::dot","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-dotdot","sha":"39b90688e1a93ddf"}
+{"q":"interp-cfg-path-dotdot::out","p":{"status":"found","value":1}}
+{"q":"interp-cfg-path-dotdot::prod","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-empty-fact","sha":"bc6301963987dba3"}
+{"q":"interp-cfg-path-empty-fact::n","p":{"status":"error","message":"Is a directory @ io_fread - <case>/data"},"r":"error-message-text"}
+{"q":"interp-cfg-path-empty-fact::k m=unique","p":{"status":"error","message":"Is a directory @ io_fread - <case>/data"},"r":"error-message-text"}
+{"scn":"interp-cfg-path-fn-alias","sha":"5397237de2f1ef69"}
+{"q":"interp-cfg-path-fn-alias::only_common","p":{"status":"error","message":"Interpolation using method syntax is not allowed in this context (file: <case>/hiera.yaml)"},"r":"error-message-text"}
+{"scn":"interp-cfg-path-fn-literal","sha":"9fc524971cfb738a"}
+{"q":"interp-cfg-path-fn-literal::b","p":{"status":"error","message":"Interpolation using method syntax is not allowed in this context (file: <case>/hiera.yaml)"},"r":"error-message-text"}
+{"scn":"interp-cfg-path-fn-lookup","sha":"7ac6099f9cf3e619"}
+{"q":"interp-cfg-path-fn-lookup::sv","p":{"status":"error","message":"Interpolation using method syntax is not allowed in this context (file: <case>/hiera.yaml)"},"r":"error-message-text"}
+{"scn":"interp-cfg-path-int-bool","sha":"94323c741065bee1"}
+{"q":"interp-cfg-path-int-bool::k","p":{"status":"found","value":"n42"}}
+{"q":"interp-cfg-path-int-bool::b","p":{"status":"found","value":1}}
+{"q":"interp-cfg-path-int-bool::rh","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-no-ext","sha":"9b97d1638e500ee1"}
+{"q":"interp-cfg-path-no-ext::n","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-slash-fact","sha":"6214bc51fb6f6e12"}
+{"q":"interp-cfg-path-slash-fact::ne","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-topscope","sha":"e1050a6f1f5580a3"}
+{"q":"interp-cfg-path-topscope::b","p":{"status":"not_found"}}
+{"q":"interp-cfg-path-topscope::xw","p":{"status":"not_found"}}
+{"scn":"interp-cfg-path-trusted-env","sha":"9e073376c64fa06b"}
+{"q":"interp-cfg-path-trusted-env::prod","p":{"status":"found","value":1}}
+{"q":"interp-cfg-path-trusted-env::k --strict error","p":{"status":"found","value":"dotyaml"}}
+{"scn":"interp-cross","sha":"b25a089517b31d0d"}
+{"q":"interp-cross::h m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"from_common":{"x":1,"y":"alpha"},"shared":"node-alpha","from_os":"from-common-but-shadowed","web":"node_key","from_node":"cval"}}}
+{"q":"interp-cross::a","p":{"status":"found","value":["cval","n"]}}
+{"q":"interp-cross::a m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":["cval",{"x":1,"y":"alpha"},"RedHat","n","x"]}}
+{"q":"interp-cross::mixed m=hash","p":{"status":"error","message":"Lookup of key 'mixed' failed: The second element of the merge has wrong type, expects a Hash value, got Tuple"}}
+{"q":"interp-cross::a.3 m=unique","p":{"status":"found","value":"x"}}
+{"scn":"interp-fns","sha":"c79ec60f11777fe5"}
+{"q":"interp-fns::f_alias_nil","p":{"status":"found","value":null}}
+{"q":"interp-fns::f_alias_ws_inside","p":{"status":"error","message":"Lookup of key 'f_alias_ws_inside' failed: Syntax error in string: %{alias( 'hash_target' )}"}}
+{"q":"interp-fns::f_lookup_fn_ws","p":{"status":"error","message":"Lookup of key 'f_lookup_fn_ws' failed: Syntax error in string: %{lookup ('target')}"}}
+{"q":"interp-fns::f_lookup_float","p":{"status":"found","value":"2.5"}}
+{"q":"interp-fns::f_lookup_empty_hash","p":{"status":"found","value":"[{}]"}}
+{"q":"interp-fns::f_lookup_dotted_quoted","p":{"status":"found","value":"dk"}}
+{"q":"interp-fns::f_chain1","p":{"status":"found","value":"<alpha>"}}
+{"q":"interp-fns::f_lookup_emptyarg","p":{"status":"error","message":"Lookup of key 'f_lookup_emptyarg' failed: Syntax error in string: [%{lookup('')}]"}}
+{"q":"interp-fns::f_lookup_two","p":{"status":"found","value":"tval/7"}}
+{"q":"interp-fns::f_lookup_ns","p":{"status":"found","value":"nsval"}}
+{"q":"interp-fns::f_lookup_ns_top","p":{"status":"found","value":"[]"}}
+{"q":"interp-fns::f_in_key_alias","p":{"status":"found","value":{"tval":"v"}}}
+{"q":"interp-fns::f_in_key_alias_hash","p":{"status":"found","value":{"{\"a\" => {\"b\" => \"deep\"}, \"list\" => [\"l0\", \"l1\"], \"dotted.key\" => \"dk\"}":"v"}},"k":"STATUS","r":"interpolation-key-shapes"}
+{"q":"interp-fns::role_key","p":{"status":"found","value":"notused"}}
+{"q":"interp-fns::conv","p":{"status":"found","value":12}}
+{"scn":"interp-vars","sha":"5ce9e8c56dda06f3"}
+{"q":"interp-vars::v_bare","p":{"status":"found","value":"alpha"}}
+{"q":"interp-vars::v_arr_whole","p":{"status":"found","value":"[\"x\", \"y\", {\"k\" => \"v\"}]"}}
+{"q":"interp-vars::v_missing_top","p":{"status":"found","value":"[]"}}
+{"q":"interp-vars::v_unclosed","p":{"status":"found","value":"x%{facts.a"}}
+{"scn":"interp-vars-strict","sha":"68074babd777efc9"}
+{"q":"interp-vars-strict::u_missing","p":{"status":"found","value":"[]"}}
+{"q":"interp-vars-strict::u_in_hash --strict off","p":{"status":"found","value":{"k":"[]","ok":1}}}
+{"q":"interp-vars-strict::u_in_key --strict off","p":{"status":"found","value":{"":"v"}}}
+{"q":"interp-vars-strict::u_empty_fact","p":{"status":"found","value":"[]"}}
+{"q":"interp-vars-strict::u_lookup_missing --strict error","p":{"status":"found","value":"[]"}}
+{"q":"interp-vars-strict::u_alias_missing --strict off","p":{"status":"found","value":""}}
+{"q":"interp-vars-strict::u_alias_missing --strict error","p":{"status":"found","value":""}}
+{"q":"interp-vars-strict::u_empty_expr --strict off","p":{"status":"found","value":"[]"}}

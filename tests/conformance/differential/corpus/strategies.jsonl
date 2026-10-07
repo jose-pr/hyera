@@ -1,0 +1,124 @@
+{"format":1,"area":"strategies","seed":1,"count":200,"agree":75,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"merge-cli-spellings","sha":"57c2c5d67974f417"}
+{"q":"merge-cli-spellings::h --merge ","p":{"status":"error","message":"The --merge option only accepts 'first', 'hash', 'unique', or 'deep'\nRun 'puppet lookup --help' for more details"},"r":"error-message-text"}
+{"q":"merge-cli-spellings::h --merge deep --knock-out-prefix=**","p":{"status":"found","value":{"b":2,"l":["x","a","--x","b"],"a":1}},"k":"STATUS","r":"knockout-prefix-not-python-regex"}
+{"q":"merge-cli-spellings::h --merge deep --knock-out-prefix=(?<n>-)-","p":{"status":"found","value":{"b":2,"l":["a","b"],"a":1}},"k":"STATUS","r":"knockout-prefix-not-python-regex"}
+{"q":"merge-cli-spellings::l --merge unique --sort-merged-arrays","p":{"status":"error","message":"The options --knock-out-prefix, --sort-merged-arrays, and --merge-hash-arrays are only available with '--merge deep'\nRun 'puppet lookup --help' for more details"},"r":"error-message-text"}
+{"q":"merge-cli-spellings::l --merge deep --knock-out-prefix=**","p":{"status":"found","value":[3,1,2]},"k":"STATUS","r":"knockout-prefix-not-python-regex"}
+{"q":"merge-cli-spellings::l --merge deep --knock-out-prefix=[","p":{"status":"found","value":[3,1,2]},"k":"STATUS","r":"knockout-prefix-not-python-regex"}
+{"q":"merge-cli-spellings::l --merge deep --knock-out-prefix=\\","p":{"status":"found","value":[3,1,2]},"k":"STATUS","r":"knockout-prefix-not-python-regex"}
+{"q":"merge-cli-spellings::l --merge first --merge deep","p":{"status":"found","value":[3,1,2]}}
+{"scn":"merge-falsy-shadow","sha":"a2ef4961874f0edc"}
+{"q":"merge-falsy-shadow::h.b d=dflt","p":{"status":"found","value":false}}
+{"scn":"merge-knockout","sha":"84e63c5bb22cf975"}
+{"q":"merge-knockout::arr m={\"knockout_prefix\": \"--\", \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":["b","c","n","o","r","zz"]}}
+{"q":"merge-knockout::ko_hash_key m=deep","p":{"status":"found","value":{"a":0,"--a":1}}}
+{"q":"merge-knockout::ko_hash_key m={\"knockout_prefix\": \"x\", \"strategy\": \"deep\"}","p":{"status":"found","value":{"a":0,"--a":1}}}
+{"q":"merge-knockout::space m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":["b"]}}
+{"scn":"merge-rnd-000","sha":"8ab3ededc0fe8911"}
+{"q":"merge-rnd-000::k1 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"name":"1","b":[["--c","--a"],["b","A",10,"z"],[1,null,"true"]],"d":[]}}}
+{"q":"merge-rnd-000::k5 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"b":{},"name":"1"}}}
+{"q":"merge-rnd-000::k5 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"b":{},"name":"1"}}}
+{"scn":"merge-rnd-001","sha":"f1268d58eb6e81e6"}
+{"q":"merge-rnd-001::k0 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":{"b":1.5,"1":["--b",0,1.5,"1"],"id":[{"b":"b","a":"--a"},{"d":"--"}],"--a":"","a":["c",0,"a",10]}}}
+{"q":"merge-rnd-001::k3 m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":[[],2,{}]}}
+{"scn":"merge-rnd-002","sha":"1302741d0dd7b926"}
+{"q":"merge-rnd-002::k1 m=unique","p":{"status":"error","message":"Lookup of key 'k1' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"}}
+{"q":"merge-rnd-002::k1 m=hash","p":{"status":"found","value":{"id":{"c":false,"name":10,"b":{},"id":"b"},"a":"b","c":{"name":[],"b":false,"1":true,"--a":{"1":"--c","a":true,"b":"true","name":"a"}},"b":"1"}}}
+{"q":"merge-rnd-002::k1 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"id":{"c":false,"name":10,"b":{},"id":"b"},"a":"b","c":{"name":[],"b":false,"1":true,"--a":{"1":"--c","a":true,"b":"true","name":"a"}},"b":"1"}}}
+{"q":"merge-rnd-002::k6 m=first","p":{"status":"found","value":{}}}
+{"q":"merge-rnd-002::k1.a m=deep","p":{"status":"found","value":"b"}}
+{"scn":"merge-rnd-003","sha":"255a8faa79b865d2"}
+{"q":"merge-rnd-003::k2 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":{"1":"a","id":[false,2],"d":{"1":{"id":"--"},"id":["",1],"a":[1.5,"--a","--b","--a"]},"name":[[1.5]],"b":{"id":["x y","1",false,0],"name":{},"d":"A","c":["b",1]},"a":2,"c":{"a":{},"1":[]}}}}
+{"q":"merge-rnd-003::k2.0 m=unique","p":{"status":"error","message":"Lookup of key 'k2.0' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"}}
+{"scn":"merge-rnd-004","sha":"da5f4774dc535a37"}
+{"q":"merge-rnd-004::k2 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":["z","A","10"]}}
+{"q":"merge-rnd-004::k4 m=unique","p":{"status":"found","value":["b","z"]}}
+{"scn":"merge-rnd-005","sha":"68e33b7b017a3105"}
+{"q":"merge-rnd-005::k5.a m=deep","p":{"status":"error","message":"Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'a' from key 'k5.a'"}}
+{"scn":"merge-rnd-006","sha":"ca298f967250f7ce"}
+{"q":"merge-rnd-006::k1 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":{"name":"c","id":{"name":1},"d":[{"--a":null}]}}}
+{"scn":"merge-rnd-007","sha":"2e67819f571d4c8a"}
+{"q":"merge-rnd-007::k0 m=first","p":{"status":"found","value":{"1":{"a":"--b","--a":"--b","b":{"name":-1,"c":"--","a":""}},"--a":["10","z"],"c":{"c":"c","d":"--","name":{"b":null,"c":"true","d":2,"1":null},"a":["z","--a","x y"]},"d":"--b"}}}
+{"scn":"merge-rnd-008","sha":"6dd7a71cd69afb04"}
+{"q":"merge-rnd-008::k1","p":{"status":"found","value":{}}}
+{"scn":"merge-rnd-009","sha":"6f9984b3bf323b86"}
+{"q":"merge-rnd-009::k5 m=unique","p":{"status":"found","value":["A",{"c":-1,"--a":"a","1":0},{},{"--a":"1","c":"--a"},"--c","","true","c","b",2,null,10,"a"]}}
+{"q":"merge-rnd-009::k5 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":[[{"c":-1,"--a":"a","1":0},{},{"--a":"1","c":"--a"}],["--c","","true"],[["c","b","b","b"],[2],[null,10,"a"]],[10,"c"],"A"]}}
+{"scn":"merge-rnd-010","sha":"f33c4115ff85e94a"}
+{"q":"merge-rnd-010::k0 m=unique","p":{"status":"found","value":["--c","10","z","a","b",1,"x y",false]}}
+{"q":"merge-rnd-010::k2 m=deep","p":{"status":"found","value":[]}}
+{"q":"merge-rnd-010::k6 m=first","p":{"status":"found","value":{"id":"","name":"b","c":"a","d":"x y"}}}
+{"scn":"merge-rnd-012","sha":"ff3f9c941611baf2"}
+{"q":"merge-rnd-012::k4 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":[2,[],[{"a":"z"}]]}}
+{"q":"merge-rnd-012::k6 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"d":1.5,"name":[false,"c"],"c":"--b","--a":null,"1":"--c"}}}
+{"scn":"merge-rnd-013","sha":"c3b73fd5b0a158a6"}
+{"q":"merge-rnd-013::k0","p":{"status":"found","value":"z"}}
+{"q":"merge-rnd-013::k0 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":"z"}}
+{"q":"merge-rnd-013::k2","p":{"status":"found","value":{"1":"a","name":{"--a":"x y","1":{"d":1,"id":"--b","c":"A"},"a":{"c":"b"},"name":0},"c":"c","--a":"a"}}}
+{"q":"merge-rnd-013::k4 m=hash","p":{"status":"error","message":"Lookup of key 'k4' failed: The first element of the merge has wrong type, expects a Hash value, got Array"}}
+{"q":"merge-rnd-013::k4 m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":[]}}
+{"q":"merge-rnd-013::k7 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"1":"x y","c":{"name":"z","b":10,"--a":10,"id":"A"},"a":"--c"}}}
+{"q":"merge-rnd-013::k7 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"1":"x y","c":{"name":"z","b":10,"--a":10,"id":"A"},"a":"--c"}}}
+{"scn":"merge-rnd-014","sha":"60db42834c9b5674"}
+{"q":"merge-rnd-014::k7 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"error","message":"comparison of Integer with String failed"},"r":"error-message-text"}
+{"scn":"merge-rnd-016","sha":"36410b2482afa574"}
+{"q":"merge-rnd-016::k1","p":{"status":"found","value":{"a":"--","c":{},"name":"true","1":"c"}}}
+{"q":"merge-rnd-016::k1 m=first","p":{"status":"found","value":{"a":"--","c":{},"name":"true","1":"c"}}}
+{"scn":"merge-rnd-018","sha":"ee38c8e5767194f3"}
+{"q":"merge-rnd-018::k0 m=deep","p":{"status":"found","value":"A"}}
+{"scn":"merge-rnd-019","sha":"b330c37df330d4e0"}
+{"q":"merge-rnd-019::k3 m=first","p":{"status":"found","value":[{"d":["10","10","A"],"id":["A","z","1","x y"],"c":[false,1.5]}]}}
+{"q":"merge-rnd-019::k5","p":{"status":"found","value":{"1":0,"b":{"c":[2,0],"--a":10,"1":0,"a":"1"},"id":{"--a":true,"name":{"1":"c","a":"--","b":"b"},"a":"a"},"name":["","a",1.5,"true"]}}}
+{"q":"merge-rnd-019::k6 m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":""}}
+{"scn":"merge-rnd-020","sha":"7ed62ae658360de9"}
+{"q":"merge-rnd-020::k0 m=unique","p":{"status":"error","message":"Lookup of key 'k0' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Struct"}}
+{"q":"merge-rnd-020::k4 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"c":"1","a":"z","1":0,"id":1}}}
+{"scn":"merge-rnd-021","sha":"8ae8140b66fefd68"}
+{"q":"merge-rnd-021::k0 m=hash","p":{"status":"found","value":{"b":"true","c":"A","d":{"a":false,"name":{"d":"--a"}},"id":{"c":-1,"id":["true",1,"--c","A"]}}}}
+{"q":"merge-rnd-021::k3 m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":0}}
+{"q":"merge-rnd-021::k6","p":{"status":"found","value":"10"}}
+{"scn":"merge-rnd-022","sha":"cb206049f60326af"}
+{"q":"merge-rnd-022::k1 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{"d":[{"a":"","c":"a","--a":"z"},[],{"d":"A"},{"name":"a","c":"--","a":"","--a":"a"}],"name":{"c":"true","d":{"1":"a","b":"a","c":"A","--a":"A"},"b":{"--a":"--a"}},"--a":"true","c":["a",10,true]}}}
+{"scn":"merge-rnd-023","sha":"f4530836b7c7d817"}
+{"q":"merge-rnd-023::k1 m=deep","p":{"status":"found","value":{"name":"--","d":["a",[1],[]],"--a":{"c":{"c":"b","--a":1},"1":[],"id":""},"c":"c","b":["--a","b","a","--"],"id":["--b",10]}}}
+{"q":"merge-rnd-023::k2 m=unique","p":{"status":"found","value":[{"a":{"a":"true","c":"A"},"1":{},"name":"x y","id":"true"},{"d":1.5,"c":["10","A","b",1.5],"--a":"","1":"1"},"--c","10",10,"--",{"id":null,"--a":true,"c":false},{"b":0,"name":0,"id":{"a":"A"}}]}}
+{"q":"merge-rnd-023::k2 m=hash","p":{"status":"error","message":"Lookup of key 'k2' failed: The first element of the merge has wrong type, expects a Hash value, got Tuple"}}
+{"scn":"merge-rnd-024","sha":"2033b733780e1d77"}
+{"q":"merge-rnd-024::k0 m=unique","p":{"status":"found","value":[null,"--b",-1,"a","--c"]}}
+{"q":"merge-rnd-024::k0 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":["a","--c",null,"--b",-1]}}
+{"q":"merge-rnd-024::k1","p":{"status":"found","value":{"1":"a","--a":[[false],[]],"c":[]}}}
+{"q":"merge-rnd-024::k7 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":["",[],"b","A",null,"x y","10","--","--c"]}}
+{"scn":"merge-rnd-lo-000","sha":"62522e1f864609b7"}
+{"q":"merge-rnd-lo-000::k2 m=first","p":{"status":"found","value":{"b":"x y","--a":"10"}}}
+{"q":"merge-rnd-lo-000::k6 m={\"merge_hash_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":[["b","b","--","z"],["10",1.5,"1"]]}}
+{"q":"merge-rnd-lo-000::k7","p":{"status":"found","value":{"id":{"b":false,"c":"a"},"c":{},"1":{"c":10,"d":"a"},"b":[[-1,"b"],[-1],["x y",true,"x y"]]}}}
+{"scn":"merge-rnd-lo-003","sha":"b33b38085740e6c7"}
+{"q":"merge-rnd-lo-003::k1 m={\"knockout_prefix\": \"--\", \"strategy\": \"deep\"}","p":{"status":"found","value":{"d":10,"id":{"c":["b",0,1.5]},"name":1,"a":[true,"b"],"c":{"--a":[],"a":["a","b"],"b":"b"},"--a":{"1":"1","d":{"id":"","--a":10,"d":"z"}}}}}
+{"scn":"merge-rnd-lo-004","sha":"b000329b537c5242"}
+{"q":"merge-rnd-lo-004::k2 m=first","p":{"status":"found","value":{"d":"","c":["--c","--c","A"]}}}
+{"q":"merge-rnd-lo-004::k6","p":{"status":"found","value":[{"c":"c"},{"id":0},0,10,"A"]}}
+{"scn":"merge-rnd-lo-006","sha":"a2756a8126d20237"}
+{"q":"merge-rnd-lo-006::k6 m={\"knockout_prefix\": \"--\", \"merge_hash_arrays\": true, \"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"error","message":"comparison of String with false failed"},"r":"error-message-text"}
+{"scn":"merge-rnd-lo-007","sha":"d86d7d9f75b0acc7"}
+{"q":"merge-rnd-lo-007::k2 m=first","p":{"status":"found","value":"x y"}}
+{"scn":"merge-rnd-lo-008","sha":"ebde89660604013c"}
+{"q":"merge-rnd-lo-008::k1","p":{"status":"error","message":"comparison of Hash with String failed"}}
+{"q":"merge-rnd-lo-008::k4 m=deep","p":{"status":"found","value":{"1":[["c","--c",-1,true],{"id":"a","d":1,"--a":"1","1":"true"},{},{"id":null,"1":"c","b":"z"}],"d":{"name":{"1":"b","id":"10","a":"c"},"--a":"","c":"","b":2},"b":["b","--","x y"],"id":[],"a":"b"}}}
+{"scn":"merge-rnd-lo-009","sha":"c3cdb63742405b7c"}
+{"q":"merge-rnd-lo-009::k2 m=deep","p":{"status":"found","value":{"d":"10","b":["--a","z","--b","b"],"1":{"d":-1},"--a":"b"}}}
+{"q":"merge-rnd-lo-009::k4 m=first","p":{"status":"found","value":"z"}}
+{"scn":"merge-rnd-lo-015","sha":"487aed44b4878760"}
+{"q":"merge-rnd-lo-015::k6 m=first","p":{"status":"found","value":{"d":{"1":null}}}}
+{"scn":"merge-rnd-lo-016","sha":"e03048fe77b1e071"}
+{"q":"merge-rnd-lo-016::k6 m=first","p":{"status":"found","value":[{"d":-1,"1":["","--c","true",10],"a":[]},{},{"1":"b","a":{"c":"--c","--a":"x y","b":"--","id":"a"},"c":true},{}]}}
+{"scn":"merge-rnd-lo-017","sha":"890f7129042c8f9c"}
+{"q":"merge-rnd-lo-017::k1.0 m=unique","p":{"status":"found","value":1}}
+{"scn":"merge-rnd-lo-018","sha":"540b9267465428db"}
+{"q":"merge-rnd-lo-018::k4.a m=deep","p":{"status":"found","value":{}}}
+{"scn":"merge-rnd-lo-020","sha":"3153beda87f7b323"}
+{"q":"merge-rnd-lo-020::k2","p":{"status":"error","message":"Lookup of key 'k2' failed: The first element of the merge has wrong type, expects a Hash value, got String"}}
+{"scn":"merge-rnd-lo-021","sha":"78059d541ca86cc2"}
+{"q":"merge-rnd-lo-021::k4 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"found","value":{}}}
+{"q":"merge-rnd-lo-021::k7","p":{"status":"found","value":{"a":{"a":{"c":"1","b":"--c","name":-1},"c":[-1,1.5,"x y",true],"b":"b"},"name":"z","--a":"true","1":"true","id":"a"}}}
+{"q":"merge-rnd-lo-021::k7 m={\"sort_merged_arrays\": true, \"strategy\": \"deep\"}","p":{"status":"error","message":"comparison of String with true failed"},"r":"error-message-text"}

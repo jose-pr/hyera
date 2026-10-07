@@ -1,0 +1,89 @@
+{"format":1,"area":"locations","seed":1,"count":200,"agree":50,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"loc-glob-abs","sha":"3b32794a7e0b40dc"}
+{"q":"loc-glob-abs::l","p":{"status":"found","value":["common"]}}
+{"q":"loc-glob-abs::l m=unique","p":{"status":"found","value":["common"]}}
+{"q":"loc-glob-abs::l m=unique --strict error","p":{"status":"found","value":["common"]}}
+{"scn":"loc-glob-braces-nested","sha":"26152a9db108688f"}
+{"q":"loc-glob-braces-nested::h","p":{"status":"found","value":{"glob_a":1}}}
+{"scn":"loc-glob-classes","sha":"260c8fc45bf9a0e4"}
+{"q":"loc-glob-classes::who m=unique","p":{"status":"found","value":["glob/9","glob/Z","glob/b","glob/\u00e9","glob/a","glob/10"]}}
+{"scn":"loc-glob-dir-match","sha":"d8d32b4bc4f305e6"}
+{"q":"loc-glob-dir-match::l m=unique","p":{"status":"found","value":["common"]}}
+{"q":"loc-glob-dir-match::h m=hash","p":{"status":"found","value":{"common":1}}}
+{"scn":"loc-glob-dotdot","sha":"5c474ebd5321fa4d"}
+{"q":"loc-glob-dotdot::l","p":{"status":"found","value":["outside"]}}
+{"q":"loc-glob-dotdot::who","p":{"status":"found","value":"outside"}}
+{"scn":"loc-glob-double-star-forms","sha":"94d9e151b4f9a4ff"}
+{"q":"loc-glob-double-star-forms::who","p":{"status":"found","value":"glob/10"}}
+{"scn":"loc-glob-empty-pattern","sha":"88a01481fe736457"}
+{"q":"loc-glob-empty-pattern::l m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'globs' index 0 expects a String[1] value, got String"},"r":"error-message-text"}
+{"scn":"loc-glob-escape","sha":"1bea727f134c8478"}
+{"q":"loc-glob-escape::l","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/ab/[ab].yaml): did not find expected ',' or ']' while parsing a flow sequence at line 2 column 4"}}
+{"q":"loc-glob-escape::who","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/ab/[ab].yaml): did not find expected ',' or ']' while parsing a flow sequence at line 2 column 4"}}
+{"scn":"loc-glob-interp","sha":"bcdebc83bf5c9f08"}
+{"q":"loc-glob-interp::l m=unique","p":{"status":"found","value":["glob/web-1","glob/web-2","ab/a","ab/b","glob/10","glob/9","glob/Z","glob/_x","glob/a","glob/b","glob/\u00e9"]}}
+{"scn":"loc-glob-literal","sha":"be42eb1ee804385d"}
+{"q":"loc-glob-literal::l","p":{"status":"found","value":["glob/a"]}}
+{"scn":"loc-glob-order","sha":"edebccb7d89b392c"}
+{"q":"loc-glob-order::nope","p":{"status":"not_found"}}
+{"scn":"loc-glob-recursive","sha":"1f2daff2d6fa1edf"}
+{"q":"loc-glob-recursive::who","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/ab/[ab].yaml): did not find expected ',' or ']' while parsing a flow sequence at line 2 column 4"}}
+{"scn":"loc-glob-trailing-slash","sha":"1e401296bf72ba9a"}
+{"q":"loc-glob-trailing-slash::h","p":{"status":"found","value":{"common":1}}}
+{"q":"loc-glob-trailing-slash::l m=unique","p":{"status":"found","value":["common"]}}
+{"scn":"loc-globs-many","sha":"913541d4e49541c3"}
+{"q":"loc-globs-many::h","p":{"status":"found","value":{"glob_web_1":1}}}
+{"q":"loc-globs-many::who m=unique","p":{"status":"found","value":["glob/web-1","glob/web-2","glob/a","glob/b","glob/10","glob/9","glob/Z","glob/_x","dir.yaml/inner","glob/sub/deep","glob/sub/deeper/x","glob/\u00e9","glob/c.json","common"]}}
+{"q":"loc-globs-many::nope","p":{"status":"not_found"}}
+{"scn":"loc-hocon-first","sha":"d6b149f0636a33a4"}
+{"q":"loc-hocon-first::k","p":{"status":"found","value":"common.conf"}}
+{"q":"loc-hocon-first::h m=hash","p":{"status":"found","value":{"common":1,"hc":1}}}
+{"scn":"loc-mapped-array","sha":"01e8c58b90a576df"}
+{"q":"loc-mapped-array::h","p":{"status":"found","value":{"roles_web":1}}}
+{"q":"loc-mapped-array::h m=hash","p":{"status":"found","value":{"common":1,"roles_we_b":1,"roles_db":1,"roles_web":1}}}
+{"q":"loc-mapped-array::who m=unique","p":{"status":"found","value":["roles/web","roles/db","roles/we b","common"]}}
+{"scn":"loc-mapped-bad-types","sha":"a24e3d2f9f4344e9"}
+{"q":"loc-mapped-bad-types::h","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'mapped_paths' index 1 expects a String value, got Integer"},"r":"error-message-text"}
+{"scn":"loc-mapped-fn","sha":"da15bd66fae8d2f9"}
+{"q":"loc-mapped-fn::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Syntax error in string: mapped_path[0]"}}
+{"q":"loc-mapped-fn::h","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Syntax error in string: mapped_path[0]"}}
+{"q":"loc-mapped-fn::nope","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Syntax error in string: mapped_path[0]"}}
+{"scn":"loc-mapped-interp-var","sha":"9ad4c6ac81254e76"}
+{"q":"loc-mapped-interp-var::who","p":{"status":"found","value":"common"}}
+{"scn":"loc-mapped-nested","sha":"faec686202ba4d91"}
+{"q":"loc-mapped-nested::who m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'k' from key 'r.k'"}}
+{"scn":"loc-mapped-other-vars","sha":"1ebf30ad0e81406f"}
+{"q":"loc-mapped-other-vars::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'r.x'"}}
+{"q":"loc-mapped-other-vars::l","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'r.x'"}}
+{"q":"loc-mapped-other-vars::h m=hash","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'r.x'"}}
+{"scn":"loc-mapped-scalar","sha":"fc0059b9406ef3b0"}
+{"q":"loc-mapped-scalar::nope","p":{"status":"error","message":"undefined method 'empty?' for an instance of Integer"},"r":"error-message-text"}
+{"scn":"loc-mapped-topscope","sha":"6956942fd0a3a15f"}
+{"q":"loc-mapped-topscope::h","p":{"status":"found","value":{"roles_web":1}}}
+{"scn":"loc-mapped-var-forms","sha":"614e209db8348cac"}
+{"q":"loc-mapped-var-forms::nope","p":{"status":"not_found"}}
+{"scn":"loc-mix-all","sha":"000dd5aea35551ae"}
+{"q":"loc-mix-all::l m=unique --strict error","p":{"status":"found","value":["nodes/alpha","roles/web","roles/db","roles/we b","glob/10","glob/9","glob/Z","glob/_x","glob/a","glob/b","glob/web-1","glob/web-2","glob/\u00e9","web.json","common.json","common.conf","alt/web","alt/common","common"]}}
+{"scn":"loc-path-pct-fact","sha":"7185954581009a72"}
+{"q":"loc-path-pct-fact::l","p":{"status":"found","value":["web"]}}
+{"q":"loc-path-pct-fact::l m=unique","p":{"status":"found","value":["web","sub/inner","outside","common"]}}
+{"q":"loc-path-pct-fact::l m=unique --strict error","p":{"status":"found","value":["web","sub/inner","outside","common"]}}
+{"scn":"loc-paths-empty","sha":"c8ce85063a914bf9"}
+{"q":"loc-paths-empty::who","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'paths' expects size to be at least 1, got 0"},"r":"error-message-text"}
+{"q":"loc-paths-empty::nope","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: The Lookup Configuration at '<case>/hiera.yaml' has wrong type, entry 'hierarchy' index 0 entry 'paths' expects size to be at least 1, got 0"},"r":"error-message-text"}
+{"scn":"loc-paths-order","sha":"6a75537df00418bc"}
+{"q":"loc-paths-order::nope","p":{"status":"not_found"}}
+{"q":"loc-paths-order::l m=unique --strict error","p":{"status":"found","value":["common","web"]}}
+{"scn":"loc-same-file-twice","sha":"ee26ce914977d89a"}
+{"q":"loc-same-file-twice::nope","p":{"status":"not_found"}}
+{"scn":"loc-two-locations","sha":"3cbe9549a8293e40"}
+{"q":"loc-two-locations::h","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'both' (file: <case>/hiera.yaml)"}}
+{"q":"loc-two-locations::l m=unique","p":{"status":"error","message":"Only one of path, paths, glob, globs, uri, uris, or mapped_paths can be defined in hierarchy 'both' (file: <case>/hiera.yaml)"}}
+{"scn":"loc-uri-level","sha":"4d6517bd4557fda2"}
+{"q":"loc-uri-level::h","p":{"status":"error","message":"'yaml_data' one of 'path', 'paths' 'glob', 'globs' or 'mapped_paths' must be declared in hiera.yaml when using this data_hash function"}}
+{"scn":"loc-wrong-format2","sha":"a6d64219e6848e2f"}
+{"q":"loc-wrong-format2::h","p":{"status":"found","value":{"cj":1}}}
+{"q":"loc-wrong-format2::who","p":{"status":"found","value":"common.json"}}
+{"q":"loc-wrong-format2::h m=hash","p":{"status":"found","value":{"cj":1}}}
+{"scn":"loc-wrong-format3","sha":"c297cb50577ab48b"}
+{"q":"loc-wrong-format3::nope","p":{"status":"not_found"}}

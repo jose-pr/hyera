@@ -1,0 +1,83 @@
+{"format":1,"area":"interp_sweep","seed":1,"count":200,"agree":60,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
+{"scn":"interp-sweep-00","sha":"907db0469cfe11ab"}
+{"q":"interp-sweep-00::t000 alone: %{fa}","p":{"status":"found","value":"FA"}}
+{"q":"interp-sweep-00::t006 alone: %{::facts.fa}","p":{"status":"found","value":"FA"}}
+{"q":"interp-sweep-00::t009 embedded: pre-%{facts.os.family}-post","p":{"status":"found","value":"pre-RedHat-post"}}
+{"q":"interp-sweep-00::t014 alone: %{facts.os.release.major}","p":{"status":"found","value":"9"}}
+{"q":"interp-sweep-00::t018 alone: %{facts.list.0}","p":{"status":"found","value":"a"}}
+{"q":"interp-sweep-00::t022 alone: %{facts.list.2}","p":{"status":"found","value":"[\"c\", \"d\"]"}}
+{"q":"interp-sweep-00::t046 alone: %{dot.ted}","p":{"status":"found","value":""}}
+{"scn":"interp-sweep-01","sha":"6687b60363560328"}
+{"q":"interp-sweep-01::t057 embedded: pre-%{facts.fa.0}-post","p":{"status":"error","message":"Lookup of key 't057' failed: Data Provider type mismatch: Got String when a hash-like object was expected to access value using '0' from key 'facts.fa.0'"}}
+{"q":"interp-sweep-01::t058 alone: %{facts.n.x}","p":{"status":"error","message":"undefined method 'include?' for an instance of Integer"},"r":"error-message-text"}
+{"q":"interp-sweep-01::t059 embedded: pre-%{facts.n.x}-post","p":{"status":"error","message":"undefined method 'include?' for an instance of Integer"},"r":"error-message-text"}
+{"q":"interp-sweep-01::t075 embedded: pre-%{'fa'}-post","p":{"status":"found","value":"pre-FA-post"}}
+{"q":"interp-sweep-01::t078 alone: %{'facts'.os.family}","p":{"status":"found","value":"RedHat"}}
+{"scn":"interp-sweep-02","sha":"ef2364c4359bb22c"}
+{"q":"interp-sweep-02::t109 embedded: pre-%{trusted.authenticated}-post","p":{"status":"found","value":"pre-local-post"}}
+{"q":"interp-sweep-02::t139 embedded: pre-%{flt}-post","p":{"status":"found","value":"pre-1.5-post"}}
+{"q":"interp-sweep-02::t142 alone: %{facts.big}","p":{"status":"found","value":"12345678901234567890123"}}
+{"q":"interp-sweep-02::t148 alone: %{facts.h.'0'}","p":{"status":"found","value":"szero"}}
+{"scn":"interp-sweep-03","sha":"cb03fd883b9b454d"}
+{"q":"interp-sweep-03::t155 embedded: pre-%{facts.h.\"q'q\"}-post","p":{"status":"found","value":"pre-quote-post"}}
+{"q":"interp-sweep-03::t159 embedded: pre-%{empty}-post","p":{"status":"found","value":"pre--post"}}
+{"q":"interp-sweep-03::t160 alone: %{pct}","p":{"status":"found","value":"FA"}}
+{"q":"interp-sweep-03::t162 alone: %{facts.pct}","p":{"status":"found","value":"FA"}}
+{"q":"interp-sweep-03::t170 alone: %{tricky}","p":{"status":"found","value":"a\"b\\c\n#{d}\t\u2028"}}
+{"q":"interp-sweep-03::t178 alone: %{::::fa}","p":{"status":"found","value":"FA"},"k":"VALUE","r":"interpolation-key-shapes"}
+{"q":"interp-sweep-03::t179 embedded: pre-%{::::fa}-post","p":{"status":"found","value":"pre-FA-post"},"k":"VALUE","r":"interpolation-key-shapes"}
+{"q":"interp-sweep-03::t189 embedded: pre-%{facts.os.release}-post","p":{"status":"found","value":"pre-{\"major\" => \"9\", \"minor\" => 3}-post"}}
+{"q":"interp-sweep-03::t191 embedded: pre-%{h}-post","p":{"status":"found","value":"pre-{\"k.k\" => \"v\", \"0\" => \"szero\", \" sp \" => \"spaced\", \"q'q\" => \"quote\"}-post"}}
+{"q":"interp-sweep-03::t193 embedded: pre-%{module_name}-post","p":{"status":"found","value":"pre--post"}}
+{"q":"interp-sweep-03::t194 alone: %{clientcert}","p":{"status":"found","value":""}}
+{"scn":"interp-sweep-04","sha":"c8526f79370f24c3"}
+{"q":"interp-sweep-04::t219 embedded: pre-%{lookup('h.a')}-post","p":{"status":"found","value":"pre-A-post"}}
+{"q":"interp-sweep-04::t226 alone: %{lookup('h.b.d.e')}","p":{"status":"found","value":""}}
+{"q":"interp-sweep-04::t239 embedded: pre-%{lookup('h.list.-1')}-post","p":{"status":"found","value":"pre--post"}}
+{"q":"interp-sweep-04::t240 alone: %{lookup('h.list.x')}","p":{"status":"error","message":"Lookup of key 't240' failed: Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'h.list.x'"}}
+{"q":"interp-sweep-04::t241 embedded: pre-%{lookup('h.list.x')}-post","p":{"status":"error","message":"Lookup of key 't241' failed: Data Provider type mismatch: Got Array when a hash-like object was expected to access value using 'x' from key 'h.list.x'"}}
+{"scn":"interp-sweep-05","sha":"ccc09357fb42cc98"}
+{"q":"interp-sweep-05::t261 embedded: pre-%{lookup('arr.4')}-post","p":{"status":"found","value":"pre--post"}}
+{"q":"interp-sweep-05::t264 alone: %{lookup('n')}","p":{"status":"found","value":"42"}}
+{"q":"interp-sweep-05::t269 embedded: pre-%{lookup('big')}-post","p":{"status":"found","value":"pre-12345678901234567890123-post"}}
+{"q":"interp-sweep-05::t282 alone: %{lookup('n.x')}","p":{"status":"error","message":"undefined method 'include?' for an instance of Integer"},"r":"error-message-text"}
+{"q":"interp-sweep-05::t283 embedded: pre-%{lookup('n.x')}-post","p":{"status":"error","message":"undefined method 'include?' for an instance of Integer"},"r":"error-message-text"}
+{"q":"interp-sweep-05::t286 alone: %{lookup( 's' )}","p":{"status":"error","message":"Lookup of key 't286' failed: Syntax error in string: %{lookup( 's' )}"}}
+{"q":"interp-sweep-05::t299 embedded: pre-%{xlookup('s')}-post","p":{"status":"error","message":"Unknown interpolation method 'xlookup'"}}
+{"scn":"interp-sweep-06","sha":"b03062500faa9587"}
+{"q":"interp-sweep-06::t307 embedded: pre-%{alias('arr')}-post","p":{"status":"error","message":"'alias' interpolation is only permitted if the expression is equal to the entire string"}}
+{"scn":"interp-sweep-07","sha":"cc46d033e60a708f"}
+{"q":"interp-sweep-07::t371 embedded: pre-%{lookup('s\"')}-post","p":{"status":"error","message":"Lookup of key 't371' failed: Syntax error in key: 's\"'"}}
+{"q":"interp-sweep-07::t380 alone: %{lookup('0.a')}","p":{"status":"error","message":"undefined method 'index' for an instance of Integer"},"r":"error-message-text"}
+{"q":"interp-sweep-07::t382 alone: %{lookup('lookup_options')}","p":{"status":"found","value":""}}
+{"scn":"interp-sweep-08","sha":"1bc1c14c7d815bb0"}
+{"q":"interp-sweep-08::t401 embedded: pre-%{lookup(\"s')}-post","p":{"status":"error","message":"Lookup of key 't401' failed: Syntax error in string: pre-%{lookup(\"s')}-post"}}
+{"q":"interp-sweep-08::t404 alone: %{alias('h.b')}","p":{"status":"found","value":{"c":"C","d.e":"DE","0":"szero"}}}
+{"q":"interp-sweep-08::t407 embedded: pre-%{alias('arr.0')}-post","p":{"status":"error","message":"'alias' interpolation is only permitted if the expression is equal to the entire string"}}
+{"q":"interp-sweep-08::t409 embedded: pre-%{literal(\"%{fa}\")}-post","p":{"status":"error","message":"Lookup of key 't409' failed: Syntax error in string: pre-%{literal(\"%{fa}\")}-post"}}
+{"q":"interp-sweep-08::t412 alone: %{lookup('%{fa}')}","p":{"status":"error","message":"Lookup of key 't412' failed: Syntax error in string: %{lookup('%{fa}')}"}}
+{"q":"interp-sweep-08::t420 in array","p":{"status":"found","value":["FA","xFA"]}}
+{"q":"interp-sweep-08::t427 leading percent: %%{lookup('s')}","p":{"status":"found","value":"%str"}}
+{"q":"interp-sweep-08::t435 dig after interp","p":{"status":"found","value":"str"}}
+{"q":"interp-sweep-08::t447 dig after interp","p":{"status":"found","value":"str"}}
+{"scn":"interp-sweep-09","sha":"3a19b48b1a8e7488"}
+{"q":"interp-sweep-09::t455 no percent: {literal('%')}%","p":{"status":"found","value":"{literal('%')}%"}}
+{"q":"interp-sweep-09::t467 no percent: {nope}%","p":{"status":"found","value":"{nope}%"}}
+{"q":"interp-sweep-09::t477 nested open: %{%{lookup('arr')}}","p":{"status":"error","message":"Lookup of key 't477' failed: Syntax error in string: %{%{lookup('arr')}}"}}
+{"q":"interp-sweep-09::t483 dig after interp","p":{"status":"found","value":"[\"a\", 1, [\"x\", \"y\"], {\"k\" => \"v\"}, nil, true, 1.5]"}}
+{"q":"interp-sweep-09::t492 in array","p":{"status":"found","value":["","x"]}}
+{"q":"interp-sweep-09::t496 index after interp","p":{"status":"found","value":""}}
+{"scn":"interp-sweep-10","sha":"052aee8566ec8baf"}
+{"q":"interp-sweep-10::t505 hash value","p":{"status":"found","value":{"k":"[\"a\", \"b\", [\"c\", \"d\"]]"}}}
+{"q":"interp-sweep-10::t507 dig after interp","p":{"status":"found","value":"[\"a\", \"b\", [\"c\", \"d\"]]"}}
+{"q":"interp-sweep-10::t516 in array","p":{"status":"found","value":["{\"a\" => \"A\", \"b\" => {\"c\" => \"C\", \"d.e\" => \"DE\", \"0\" => \"szero\"}, \"list\" => [\"l0\", \"l1\", {\"x\" => \"X\"}], \"nilv\" => nil, \"falsev\" => false}","x{\"a\" => \"A\", \"b\" => {\"c\" => \"C\", \"d.e\" => \"DE\", \"0\" => \"szero\"}, \"list\" => [\"l0\", \"l1\", {\"x\" => \"X\"}], \"nilv\" => nil, \"falsev\" => false}"]}}
+{"q":"interp-sweep-10::t518 hash key","p":{"status":"found","value":{"{\"a\" => \"A\", \"b\" => {\"c\" => \"C\", \"d.e\" => \"DE\", \"0\" => \"szero\"}, \"list\" => [\"l0\", \"l1\", {\"x\" => \"X\"}], \"nilv\" => nil, \"falsev\" => false}":"v"}}}
+{"q":"interp-sweep-10::t539 no percent: {}%","p":{"status":"found","value":"{}%"}}
+{"q":"interp-sweep-10::t541 hash value","p":{"status":"found","value":{"k":""}}}
+{"q":"interp-sweep-10::t548 alias array as key","p":{"status":"found","value":{"[\"a\", 1, [\"x\", \"y\"], {\"k\" => \"v\"}, nil, true, 1.5]":1}},"k":"STATUS","r":"interpolation-key-shapes"}
+{"q":"interp-sweep-10::t549 alias hash as key","p":{"status":"found","value":{"{\"a\" => \"A\", \"b\" => {\"c\" => \"C\", \"d.e\" => \"DE\", \"0\" => \"szero\"}, \"list\" => [\"l0\", \"l1\", {\"x\" => \"X\"}], \"nilv\" => nil, \"falsev\" => false}":1}},"k":"STATUS","r":"interpolation-key-shapes"}
+{"scn":"interp-sweep-11","sha":"8634230614b87f70"}
+{"q":"interp-sweep-11::t550 alias int as key beside string 42","p":{"status":"found","value":{"42":2},"text":"{\"42\":1,\"42\":2}\n"},"k":"RENDER","r":"json-float-spelling"}
+{"q":"interp-sweep-11::t551 alias nil as key","p":{"status":"found","value":{"":1}}}
+{"q":"interp-sweep-11::t558 alias with trailing space: %{alias('s')} ","p":{"status":"error","message":"'alias' interpolation is only permitted if the expression is equal to the entire string"}}
+{"q":"interp-sweep-11::t562 literal then brace: %{literal('%')}{fa}","p":{"status":"found","value":"%{fa}"}}
