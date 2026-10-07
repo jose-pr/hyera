@@ -100,6 +100,10 @@ its data lives under `examples/data/` and a matching fact file sits at
 {'alice': {'shell': '/bin/bash', 'uid': 1001}}
 >>> "motd" in h
 True
+>>> h.keys()
+['nginx::workers', 'users', 'packages::manager', 'ntp::servers', 'motd']
+>>> h.to_dict()["nginx::workers"]
+8
 
 ```
 
@@ -370,6 +374,22 @@ below is that forcing, not merely "the default":
 | `hiera_array('key')` | `h.lookup('key', None, 'unique')` |
 | `hiera_hash('key')` | `h.lookup('key', None, 'hash')` |
 | `hiera_include('key')` | not supported (applies classes to a catalog) |
+
+#### Listing keys
+
+```python
+h.keys()      # every top-level key the data_hash levels hold, in precedence order
+h.to_dict()   # {key: h.lookup((key,)) for key in h.keys()}
+h.to_dict(merge="deep")   # one merge strategy for every key
+```
+
+`keys()` lists what the scope's `data_hash` levels hold: the global
+hierarchy, the environment's, each module's own (only keys in its
+namespace), then each module's `default_hierarchy`. A key appears once;
+`lookup_options` is never listed. A `lookup_key` or `data_dig` level cannot
+be listed and adds nothing. `to_dict()` runs one exact-key lookup per key, so
+each value is interpolated and converted as `lookup` returns it, and a key
+whose lookup misses is left out.
 
 #### Navigating values
 

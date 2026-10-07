@@ -444,6 +444,32 @@ since Hiera data is dynamic.
     next one; with `revalidate=False` the listing is kept until
     `clear_cache()`.
   - ```python
+    Hiera.keys()
+    ```
+
+    The top-level keys the instance's `data_hash` levels hold for its bound
+    scope, as a new `list` of `str`: the global hierarchy first, then the
+    environment's, then each module's own (in name order; only keys in the
+    module's namespace, as a lookup allows), then each module's
+    `default_hierarchy`. A key appears once, at its first place;
+    `lookup_options` and a non-`str` key are never listed. A `lookup_key` or
+    `data_dig` level cannot be listed and adds nothing. Files are read
+    through the same store a lookup uses, so `revalidate` applies and a data
+    file that cannot be parsed raises `BackendError`; a layer's invalid
+    configuration raises `ConfigError`. Every listed key satisfies
+    `(key,) in h` (the tuple form, since a key may contain a dot). Use
+    `h.scoped(...)` to list another scope's keys.
+  - ```python
+    Hiera.to_dict(*, merge=None)
+    ```
+
+    `{key: h.lookup((key,), merge=merge)}` for each key of `.keys()`, in that
+    order, as a new dict that shares nothing with cached data. Each value is
+    what a lookup returns (interpolated, `convert_to` applied; a `Sensitive`
+    stays one). `merge=None` leaves each key to its own `lookup_options`; a
+    key whose lookup misses is left out; any other error (the first met)
+    propagates unchanged. It runs one lookup per key.
+  - ```python
     Hiera.format(text)
     ```
 

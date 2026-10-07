@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `Hiera.keys()` lists the top-level keys the `data_hash` levels of the
+  instance's scope hold, and `Hiera.to_dict(*, merge=None)` returns each of
+  them with its looked-up value. A `lookup_key` or `data_dig` level cannot be
+  listed.
 - An API reference page for `hyera.exceptions`.
 - `BackendTimeoutError`, a `BackendError` that is also a `TimeoutError`, raised
   when `sops` or `facter` exceeds its time limit. The child and every process

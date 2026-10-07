@@ -30,6 +30,7 @@ from ._config.hiera_config import HieraLevel
 from ._lookup.function_provider import _EnvironmentContext
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
+from ._lookup import enumeration as _enumeration
 from ._lookup import layer_walk as _layer_walk
 from ._lookup.locations import _LocationStore
 from ._lookup.providers import files_for
@@ -572,6 +573,41 @@ class Hiera:
     #: call ``[0]``, ``[1]``, ... and never see ``IndexError``. A ``Hiera`` is not a
     #: sequence; ``iter(h)`` raises ``TypeError``.
     __iter__ = None
+
+    def keys(self) -> _ty.List[str]:
+        """The top-level keys this instance can answer for its bound scope.
+
+        Lists every key held by a ``data_hash`` level: the global hierarchy,
+        the environment's, each module's own (only keys in its namespace, in
+        name order), then each module's ``default_hierarchy``. A key appears
+        once, at its first place in that order; ``lookup_options`` is never
+        listed. A ``lookup_key`` or ``data_dig`` level cannot be listed and
+        adds nothing. Files are read as a lookup reads them, so
+        ``revalidate`` applies. Use ``h.scoped(...)`` for another scope.
+
+        :returns: a new list of key names.
+        :raises BackendError: a data file could not be read or parsed.
+        :raises ConfigError: a layer's configuration is invalid.
+        """
+        return _enumeration.keys(self)
+
+    def to_dict(self, *, merge: MergeSpec = None) -> _ty.Dict[str, _ty.Any]:
+        """Every listed key with its looked-up value, in :meth:`keys` order.
+
+        Runs one exact-key ``lookup((key,), merge=merge)`` per key, so each
+        value is interpolated and converted as a lookup returns it (a
+        ``convert_to: Sensitive`` key stays a :class:`~hyera.Sensitive`). A key
+        whose lookup misses is left out. The result is a new dict that shares
+        nothing with cached data.
+
+        :param merge: a merge strategy applied to every key; ``None`` uses each
+            key's own ``lookup_options``, as :meth:`lookup` does.
+        :returns: a new dict of key to value.
+        :raises HieraLookupError: resolving a key failed; the first error met
+            propagates unchanged (an :class:`~hyera.InterpolationError` among
+            them).
+        """
+        return _enumeration.to_dict(self, merge)
 
     def dig(
         self,
