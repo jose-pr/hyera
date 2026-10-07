@@ -245,8 +245,7 @@ def test_options_nested_data_value_reaches_the_provider(
     make_tree, backends, calls, script
 ):
     # A Data value can nest scalars inside a list inside a hash -- every
-    # branch of the hiera.yaml schema's own _is_data recursion, none of
-    # them raising.
+    # branch of the hiera.yaml schema's Data type, none of them raising.
     root = make_tree(
         {
             "hierarchy": [

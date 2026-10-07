@@ -61,8 +61,8 @@ def _function_of(entry: dict, defaults: dict):
     ``defaults``); kept total rather than assuming that here too.
 
     The ``defaults`` loop's own ``hiera3_backend`` case can never match:
-    ``defaults`` only ever reaches here after ``_check_defaults_type``
-    rejected any key outside ``_DEFAULTS_KEYS``, which excludes
+    ``defaults`` only ever reaches here after the schema's type check
+    rejected any key outside its ``defaults`` struct, which excludes
     ``hiera3_backend`` -- the same restriction Puppet's own ``defaults``
     struct type places on it (``hiera_config.rb``'s ``@@CONFIG_TYPE``;
     conformance case ``config-defaults-hiera3-backend-key``). Puppet's own

@@ -33,6 +33,7 @@ from .compound_types import (
     Array,
     Collection,
     Hash,
+    Runtime,
     Struct,
     Tuple,
     TypeAlias,
@@ -41,7 +42,7 @@ from .compound_types import (
 )
 from .variant_merge import variant_of
 
-__all__ = ["assert_instance_of"]
+__all__ = ["assert_instance_of", "describe_instance_of", "format_mismatches"]
 
 #: Types whose formatter/short_name keeps one bare level of their contained type's name
 #: (``type_mismatch_describer.rb`` ``short_name``, ``type_formatter.rb``'s ``string_P*``
@@ -138,10 +139,22 @@ def _actual_text(types, a):
     return short_name(a)
 
 
-class _VariantElement(str):
-    """A ``variant N`` path element: left out of a mismatch's canonical path."""
+class _Step(str):
+    """A path element's text; ``step`` is the key or index it walks into
+    the value and ``of_key`` whether it names the entry's key."""
 
-    __slots__ = ()
+    step: object
+    of_key: bool
+
+    def __new__(cls, text, step=None, of_key=False):
+        obj = super().__new__(cls, text)
+        obj.step = step
+        obj.of_key = of_key
+        return obj
+
+
+class _VariantElement(_Step):
+    """A ``variant N`` path element: left out of a mismatch's canonical path."""
 
 
 def _canonical(path):
@@ -184,6 +197,15 @@ class _Mismatch:
             return _Mismatch(self.path, "size", (lo, hi), self.actual)
         expected = variant_of([self.expected, other.expected])
         return _Mismatch(self.path, self.kind, expected, self.actual)
+
+    def location(self):
+        """Where in the value this mismatch points: the keys and indexes walked
+        into it, and whether it points at the last key itself rather than its value."""
+        walked = [p for p in self.path if not isinstance(p, _VariantElement)]
+        steps = tuple(p.step for p in walked)
+        if self.kind == "extra_key":
+            return steps + (self.key,), True
+        return steps, bool(walked) and walked[-1].of_key
 
     def chopped(self, index):
         """Puppet's ``chop_path``: a copy without the path element at ``index``."""
@@ -282,6 +304,15 @@ def _actual_literal(actual_type):
 # ------------------------------------------------------------- describe
 
 
+def _infer(value):
+    """The type Puppet infers for ``value``; a value of no Puppet type reads as
+    a Runtime named for its Python class."""
+    try:
+        return infer_set(value)
+    except TypeError:
+        return Runtime("python", type(value).__name__)
+
+
 def _describe(expected, value, path, original=None):
     """Every reason ``value`` is not an instance of ``expected``, as a list
     of :class:`_Mismatch` (empty when it IS an instance). ``original`` is the
@@ -291,19 +322,19 @@ def _describe(expected, value, path, original=None):
     if isinstance(expected, str):
         if value == expected:
             return []
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
 
     if isinstance(expected, Optional):
         if value is None:
             return []
         if expected.contained is None:
-            return [_Mismatch(path, "type", expected, infer_set(value))]
+            return [_Mismatch(path, "type", expected, _infer(value))]
         wrapper = original if isinstance(original, TypeAlias) else expected
         return _describe(expected.contained, value, path, wrapper)
 
     if isinstance(expected, NotUndef):
         if value is None:
-            return [_Mismatch(path, "type", expected, infer_set(value))]
+            return [_Mismatch(path, "type", expected, _infer(value))]
         if expected.contained is None:
             return []
         # NotUndef[T] on a non-None value describes exactly as T does (its
@@ -328,7 +359,7 @@ def _describe(expected, value, path, original=None):
     if isinstance(expected, (Enum, Pattern)):
         if expected.instance(value):
             return []
-        return [_Mismatch(path, "pattern", original, infer_set(value))]
+        return [_Mismatch(path, "pattern", original, _infer(value))]
 
     if isinstance(expected, TypeReference):
         return [_Mismatch(path, "unresolved", ref=expected.text)]
@@ -343,12 +374,12 @@ def _describe(expected, value, path, original=None):
 
     if _type_instance(expected, value):
         return []
-    return [_Mismatch(path, "type", original, infer_set(value))]
+    return [_Mismatch(path, "type", original, _infer(value))]
 
 
 def _describe_variant(expected, value, path, original):
     if not expected.types:
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     types = list(expected.types)
     if isinstance(original, Optional):
         types.insert(0, UNDEF)
@@ -361,7 +392,7 @@ def _describe_variant(expected, value, path, original):
     descriptions = _merge_descriptions(len(path), per_branch)
     if isinstance(original, TypeAlias) and len(descriptions) == 1:
         # Every branch of an aliased Variant failed: one mismatch on the alias.
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     return descriptions
 
 
@@ -406,7 +437,7 @@ def _size_text(from_, to_):
 
 def _describe_array(expected, value, path, original):
     if not isinstance(value, (list, tuple)):
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     n = len(value)
     lo = expected.size_from if expected.size_from is not None else 0
     hi = expected.size_to
@@ -421,7 +452,7 @@ def _describe_array(expected, value, path, original):
 
 def _describe_tuple(expected, value, path, original):
     if not isinstance(value, (list, tuple)):
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     lo, hi = expected._bounds()
     n = len(value)
     if n < lo or (hi is not None and n > hi):
@@ -438,7 +469,7 @@ def _describe_tuple(expected, value, path, original):
 
 
 def _idx(i):
-    return "index {}".format(i)
+    return _Step("index {}".format(i), i)
 
 
 def _struct_shaped(value):
@@ -450,14 +481,14 @@ def _struct_shaped(value):
 def _hash_type_of(value):
     """The Hash type Puppet infers for a dict that is not struct-shaped."""
     return Hash(
-        variant_of([infer_set(k) for k in value]),
-        variant_of([infer_set(v) for v in value.values()]),
+        variant_of([_infer(k) for k in value]),
+        variant_of([_infer(v) for v in value.values()]),
     )
 
 
 def _describe_hash(expected, value, path, original):
     if not isinstance(value, dict):
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     n = len(value)
     lo = expected.size_from if expected.size_from is not None else 0
     hi = expected.size_to
@@ -477,16 +508,16 @@ def _describe_hash(expected, value, path, original):
 
 
 def _entry(k):
-    return "entry {}".format(puppet_quote(k))
+    return _Step("entry {}".format(puppet_quote(k)), k)
 
 
 def _key_of(k):
-    return "key of entry {}".format(puppet_quote(k))
+    return _Step("key of entry {}".format(puppet_quote(k)), k, of_key=True)
 
 
 def _describe_struct(expected, value, path, original):
     if not isinstance(value, dict):
-        return [_Mismatch(path, "type", original, infer_set(value))]
+        return [_Mismatch(path, "type", original, _infer(value))]
     if expected.instance(value):
         return []
     if not _struct_shaped(value):
@@ -521,11 +552,33 @@ def assert_instance_of(subject, expected, value, nil_ok=False):
     :class:`hyera.HieraLookupError` with Puppet's mismatch text."""
     if value is None and nil_ok:
         return value
-    mismatches = _describe(expected, value, [])
+    mismatches = describe_instance_of(expected, value)
     if not mismatches:
         return value
+    raise HieraLookupError(format_mismatches(subject, mismatches))
+
+
+def describe_instance_of(expected, value):
+    """Every reason ``value`` is not an instance of ``expected``.
+
+    :param expected: the type to check against
+    :param value: the value to check
+    :return: the mismatches in Puppet's order, empty when ``value`` is an instance;
+        each has a ``location()`` naming where in ``value`` it points
+    """
+    return _describe(expected, value, [])
+
+
+def format_mismatches(subject, mismatches, annotate=None):
+    """Puppet's text for ``mismatches``: one line each, the later ones indented.
+
+    :param subject: what was checked, as in ``The Lookup Configuration at 'x'``
+    :param mismatches: the result of :func:`describe_instance_of`
+    :param annotate: called with each mismatch, returns text to end its line with
+    :return: the message
+    """
     name = subject + " has wrong type,"
-    if len(mismatches) == 1:
-        raise HieraLookupError(_format_one(name, mismatches[0]).strip())
-    text = "\n ".join(_format_one(name, m) for m in mismatches)
-    raise HieraLookupError(text)
+    lines = [
+        _format_one(name, m) + (annotate(m) if annotate else "") for m in mismatches
+    ]
+    return lines[0].strip() if len(lines) == 1 else "\n ".join(lines)

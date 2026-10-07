@@ -9,11 +9,14 @@ file/line suffix of ``issues.rb``.
 
 from __future__ import annotations
 
+import functools
 import re
 import typing as _ty
 
+import yaml
 from pathlib_next import Path
 
+from .._types.mismatch import describe_instance_of, format_mismatches
 from ..backends._psych import RubySymbol
 from ..exceptions import ConfigError
 
@@ -62,6 +65,110 @@ def _type_error(source: "_ConfigSource", detail: str, line=None) -> ConfigError:
         message = "{} (line: {})".format(message, line)
     path = source.path if source else None
     return ConfigError(message, path=path, line=line)
+
+
+@functools.lru_cache(maxsize=8)
+def _compose(text: str):
+    try:
+        return yaml.compose(text, Loader=yaml.SafeLoader)
+    except yaml.YAMLError:
+        return None
+
+
+def _config_line(text, where: "_ty.Tuple", *, key: bool = False):
+    """The 1-based line of the node at ``where`` in ``text`` (a hiera.yaml's
+    raw source): a mapping key when ``key=True``, else its value (or a
+    sequence item for an ``int`` step). ``None`` when there is no text, on a
+    YAML error, or when ``where`` does not resolve (compose only runs when
+    actually needed -- the happy path never pays for this).
+    """
+    if not text or not where:
+        return None
+    node = _compose(text)
+    if node is None:
+        return None
+
+    def _step(node, step):
+        if isinstance(step, int):
+            if not isinstance(node, yaml.SequenceNode):
+                return None
+            try:
+                return (None, node.value[step])
+            except IndexError:
+                return None
+        if not isinstance(node, yaml.MappingNode):
+            return None
+        for k_node, v_node in node.value:
+            if getattr(k_node, "value", None) == step:
+                return (k_node, v_node)
+        return None
+
+    for step in where[:-1]:
+        found = _step(node, step)
+        if found is None:
+            return None
+        node = found[1]
+
+    found = _step(node, where[-1])
+    if found is None:
+        return None
+    # `_step` returns (None, an item node) for an int step and (a key node, a value
+    # node) for a mapping entry, so `target` is never None here.
+    k_node, v_node = found
+    target = k_node if key and k_node is not None else v_node
+    return target.start_mark.line + 1
+
+
+class _NotYaml:
+    """Stands in for a tuple: a value of no Puppet type."""
+
+
+def _hide_tuples(value):
+    """``value`` with each tuple replaced by a :class:`_NotYaml`: a tuple is Python's,
+    never YAML's, and a hiera.yaml's arrays are lists."""
+    if isinstance(value, tuple):
+        return _NotYaml()
+    if isinstance(value, list):
+        items = [_hide_tuples(v) for v in value]
+        return items if any(a is not b for a, b in zip(items, value)) else value
+    if isinstance(value, dict):
+        entries = {k: _hide_tuples(v) for k, v in value.items()}
+        changed = any(entries[k] is not v for k, v in value.items())
+        return entries if changed else value
+    return value
+
+
+def _check_config_type(
+    source: "_ConfigSource", config_type, data, *, lines: bool = True
+) -> None:
+    """Puppet's ``TypeAsserter.assert_instance_of`` on a hiera.yaml
+    (``hiera_config.rb``'s ``validate_config``): raise a :class:`ConfigError` listing
+    every mismatch of ``data`` with ``config_type``, in Puppet's text.
+
+    With ``lines``, each mismatch ends with the ``(line: N)`` of the YAML node it
+    points at and the error's ``line`` is the first mismatch's.
+    """
+    mismatches = describe_instance_of(config_type, _hide_tuples(data))
+    if not mismatches:
+        return
+    label = source.label if source else "<dict>"
+    text = source.text if source and lines else None
+    found: "_ty.List[_ty.Optional[int]]" = []
+
+    def annotate(mismatch) -> str:
+        steps, of_key = mismatch.location()
+        line = _config_line(text, steps, key=of_key)
+        found.append(line)
+        return " (line: {})".format(line) if line else ""
+
+    message = format_mismatches(
+        "The Lookup Configuration at '{}'".format(label), mismatches, annotate
+    )
+    raise ConfigError(
+        message,
+        path=source.path if source else None,
+        line=found[0] if found else None,
+    )
 
 
 def _ruby_type_name(value) -> str:

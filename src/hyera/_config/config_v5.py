@@ -4,18 +4,22 @@
 """Hiera 5 hiera.yaml schema validation.
 
 Ports the ``validate_config`` checks of Puppet's ``pops/lookup/hiera_config.rb``
-with the messages ``issues.rb`` defines.
+with the messages ``issues.rb`` defines: the type of the whole document is checked
+by the package's own type describer, the rest by hand.
 """
 
 from __future__ import annotations
 
-import re
 import typing as _ty
 
-import yaml
-
+from .._types.parser import parse_type
 from ..backends import has_hocon
-from .config_source import _ConfigSource, _config_error, _ruby_type_name, _type_error
+from .config_source import (
+    _check_config_type,
+    _config_error,
+    _config_line,
+    _ConfigSource,
+)
 
 #: ``hiera_config.rb:71-73``.
 _FUNCTION_KEYS = ("data_hash", "lookup_key", "data_dig", "hiera3_backend")
@@ -23,31 +27,9 @@ _ALL_FUNCTION_KEYS = _FUNCTION_KEYS + ("v4_data_hash",)
 _LOCATION_KEYS = ("path", "paths", "glob", "globs", "uri", "uris", "mapped_paths")
 #: ``hiera_config.rb:726``.
 _RESERVED_OPTION_KEYS = ("path", "uri")
-#: Puppet's option-name pattern (``hiera_config.rb:580``), kept verbatim --
-#: including its own ``(:?`` (an optional literal ``:``, not a non-capturing
-#: group). Matched with ``fullmatch``, so no ``\A``/``\z`` anchors needed.
-_OPTION_NAME_RE = re.compile(r"[A-Za-z](:?[0-9A-Za-z_-]*[0-9A-Za-z])?")
-
-_TOP_KEYS = ("version", "defaults", "hierarchy", "plan_hierarchy", "default_hierarchy")
-_DEFAULTS_KEYS = ("data_hash", "lookup_key", "data_dig", "datadir", "options")
-_ENTRY_KEYS = ("name", "options", "datadir") + _ALL_FUNCTION_KEYS + _LOCATION_KEYS
-
-
-def _is_data(value) -> bool:
-    """Puppet's ``Data`` type: ``Undef``, ``Boolean``, ``Numeric``, ``String``,
-    an ``Array`` of ``Data``, or a ``String``-keyed ``Hash`` of ``Data``."""
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return True
-    if isinstance(value, list):
-        return all(_is_data(v) for v in value)
-    if isinstance(value, dict):
-        return all(isinstance(k, str) and _is_data(v) for k, v in value.items())
-    return False
 
 
 def _where(path: "_ty.Tuple") -> str:
-    """Puppet's dotted-path rendering: ``("hierarchy", 0, "paths", 1)`` ->
-    ``"entry 'hierarchy' index 0 entry 'paths' index 1"``."""
     return " ".join(
         "index {}".format(step) if isinstance(step, int) else "entry '{}'".format(step)
         for step in path
@@ -59,241 +41,75 @@ def _msg(where: "_ty.Tuple", tail: str) -> str:
     return "{} {}".format(prefix, tail) if prefix else tail
 
 
-def _config_line(text, where: "_ty.Tuple", *, key: bool = False):
-    """The 1-based line of the node at ``where`` in ``text`` (a hiera.yaml's
-    raw source): a mapping key when ``key=True``, else its value (or a
-    sequence item for an ``int`` step). ``None`` when there is no text, on a
-    YAML error, or when ``where`` does not resolve (compose only runs when
-    actually needed -- the happy path never pays for this).
-    """
-    if not text or not where:
-        return None
-    try:
-        node = yaml.compose(text, Loader=yaml.SafeLoader)
-    except yaml.YAMLError:
-        return None
-
-    def _step(node, step):
-        if isinstance(step, int):
-            if not isinstance(node, yaml.SequenceNode):
-                return None
-            try:
-                return (None, node.value[step])
-            except IndexError:
-                return None
-        if not isinstance(node, yaml.MappingNode):
-            return None
-        for k_node, v_node in node.value:
-            if getattr(k_node, "value", None) == step:
-                return (k_node, v_node)
-        return None
-
-    for step in where[:-1]:
-        found = _step(node, step)
-        if found is None:
-            return None
-        node = found[1]
-
-    found = _step(node, where[-1])
-    if found is None:
-        return None
-    # `_step` returns (None, an item node) for an int step and (a key node, a value
-    # node) for a mapping entry, so `target` is never None here.
-    k_node, v_node = found
-    target = k_node if key and k_node is not None else v_node
-    return target.start_mark.line + 1
+def _struct(*members: str) -> str:
+    return "Struct[{" + ", ".join(members) + "}]"
 
 
-def _check_string(value, where: "_ty.Tuple", source, *, nonempty: bool = False) -> None:
-    if not isinstance(value, str):
-        raise _type_error(
-            source,
-            _msg(
-                where, "expects a String value, got {}".format(_ruby_type_name(value))
+def _optional(key: str, type_: str) -> str:
+    return "Optional[{}] => {}".format(key, type_)
+
+
+#: ``hiera_config.rb:574``, the ``nes_t`` of every string the schema names.
+_NES = "String[1]"
+#: ``hiera_config.rb:580``, kept verbatim including its own ``(:?`` (an optional
+#: literal ``:``, not a non-capturing group).
+_OPTION_NAME = r"Pattern[/\A[A-Za-z](:?[0-9A-Za-z_-]*[0-9A-Za-z])?\z/]"
+_OPTIONS = "Hash[{}, Data]".format(_OPTION_NAME)
+
+#: ``hiera_config.rb:582-601``.
+_HIERARCHY = "Array[{}]".format(
+    _struct(
+        "name => " + _NES,
+        _optional("options", _OPTIONS),
+        _optional("data_hash", _NES),
+        _optional("lookup_key", _NES),
+        _optional("hiera3_backend", _NES),
+        _optional("v4_data_hash", _NES),
+        _optional("data_dig", _NES),
+        _optional("path", _NES),
+        _optional("paths", "Array[{}, 1]".format(_NES)),
+        _optional("glob", _NES),
+        _optional("globs", "Array[{}, 1]".format(_NES)),
+        _optional("uri", _NES),
+        _optional("uris", "Array[{}, 1]".format(_NES)),
+        _optional("mapped_paths", "Array[{}, 3, 3]".format(_NES)),
+        _optional("datadir", _NES),
+    )
+)
+
+#: ``hiera_config.rb:603-618``.
+_CONFIG_TYPE = parse_type(
+    _struct(
+        "version => Integer[5, 5]",
+        _optional(
+            "defaults",
+            _struct(
+                _optional("data_hash", _NES),
+                _optional("lookup_key", _NES),
+                _optional("data_dig", _NES),
+                _optional("datadir", _NES),
+                _optional("options", _OPTIONS),
             ),
-            line=_config_line(source.text, where),
-        )
-    if nonempty and value == "":
-        raise _type_error(
-            source,
-            _msg(where, "expects a String[1] value, got String"),
-            line=_config_line(source.text, where),
-        )
-
-
-def _check_string_array(
-    value, where: "_ty.Tuple", source, *, size: int = None, min_size: int = None
-) -> None:
-    if not isinstance(value, list):
-        raise _type_error(
-            source,
-            _msg(
-                where, "expects an Array value, got {}".format(_ruby_type_name(value))
-            ),
-            line=_config_line(source.text, where),
-        )
-    if size is not None and len(value) != size:
-        raise _type_error(
-            source,
-            _msg(where, "expects size to be {}, got {}".format(size, len(value))),
-            line=_config_line(source.text, where),
-        )
-    if min_size is not None and len(value) < min_size:
-        raise _type_error(
-            source,
-            _msg(
-                where,
-                "expects size to be at least {}, got {}".format(min_size, len(value)),
-            ),
-            line=_config_line(source.text, where),
-        )
-    for i, item in enumerate(value):
-        _check_string(item, where + (i,), source, nonempty=True)
-
-
-def _check_options(value, where: "_ty.Tuple", source) -> None:
-    if not isinstance(value, dict):
-        raise _type_error(
-            source,
-            _msg(where, "expects a Hash value, got {}".format(_ruby_type_name(value))),
-            line=_config_line(source.text, where),
-        )
-    for k, v in value.items():
-        if not isinstance(k, str) or not _OPTION_NAME_RE.fullmatch(k):
-            raise _type_error(
-                source,
-                _msg(
-                    where,
-                    "key of entry '{}' expects a match for Pattern[/\\A[A-Za-z]"
-                    "(:?[0-9A-Za-z_-]*[0-9A-Za-z])?\\z/], got '{}'".format(k, k),
-                ),
-                line=_config_line(source.text, where + (k,), key=True),
-            )
-        if not _is_data(v):
-            raise _type_error(
-                source,
-                _msg(
-                    where,
-                    "entry '{}' expects a Data value, got {}".format(
-                        k, _ruby_type_name(v)
-                    ),
-                ),
-                line=_config_line(source.text, where + (k,)),
-            )
-
-
-def _check_entry(entry, where: "_ty.Tuple", source) -> None:
-    if not isinstance(entry, dict):
-        raise _type_error(
-            source,
-            _msg(
-                where, "expects a Struct value, got {}".format(_ruby_type_name(entry))
-            ),
-            line=_config_line(source.text, where),
-        )
-    for k in entry:
-        if k not in _ENTRY_KEYS:
-            raise _type_error(
-                source,
-                _msg(where, "unrecognized key '{}'".format(k)),
-                line=_config_line(source.text, where + (k,), key=True),
-            )
-    if "name" not in entry:
-        raise _type_error(
-            source,
-            _msg(where, "expects a value for key 'name'"),
-            line=_config_line(source.text, where),
-        )
-    # Every key here is in _ENTRY_KEYS (checked above) and the branches below cover
-    # _ENTRY_KEYS exactly, so the loop never falls through unmatched.
-    for key, value in entry.items():
-        if key == "name":
-            _check_string(value, where + ("name",), source, nonempty=True)
-        elif key == "datadir":
-            _check_string(value, where + ("datadir",), source, nonempty=True)
-        elif key == "options":
-            _check_options(value, where + ("options",), source)
-        elif key in ("path", "glob", "uri"):
-            _check_string(value, where + (key,), source, nonempty=True)
-        elif key in ("paths", "globs", "uris"):
-            _check_string_array(value, where + (key,), source, min_size=1)
-        elif key == "mapped_paths":
-            _check_string_array(value, where + (key,), source, size=3)
-        elif key in _ALL_FUNCTION_KEYS:
-            _check_string(value, where + (key,), source, nonempty=True)
-
-
-def _check_hierarchy_type(value, where: "_ty.Tuple", source) -> None:
-    if not isinstance(value, list):
-        raise _type_error(
-            source,
-            _msg(
-                where, "expects an Array value, got {}".format(_ruby_type_name(value))
-            ),
-            line=_config_line(source.text, where),
-        )
-    for i, entry in enumerate(value):
-        _check_entry(entry, where + (i,), source)
-
-
-def _check_defaults_type(value, where: "_ty.Tuple", source) -> None:
-    if not isinstance(value, dict):
-        raise _type_error(
-            source,
-            _msg(
-                where, "expects a Struct value, got {}".format(_ruby_type_name(value))
-            ),
-            line=_config_line(source.text, where),
-        )
-    for k in value:
-        if k not in _DEFAULTS_KEYS:
-            raise _type_error(
-                source,
-                _msg(where, "unrecognized key '{}'".format(k)),
-                line=_config_line(source.text, where + (k,), key=True),
-            )
-    # Every key here is in _DEFAULTS_KEYS (checked above) and the branches below cover
-    # it exactly (hiera3_backend never reaches here: see _function_of).
-    for key, v in value.items():
-        if key == "datadir":
-            _check_string(v, where + ("datadir",), source, nonempty=True)
-        elif key == "options":
-            _check_options(v, where + ("options",), source)
-        elif key in _FUNCTION_KEYS:
-            _check_string(v, where + (key,), source, nonempty=True)
-
-
-def _check_top(data: dict, source: "_ConfigSource") -> None:
-    for k in data:
-        if k not in _TOP_KEYS:
-            raise _type_error(
-                source,
-                _msg((), "unrecognized key '{}'".format(k)),
-                line=_config_line(source.text, (k,), key=True),
-            )
-    # Every key here is in _TOP_KEYS (checked above) and the branches below cover it
-    # exactly, so the loop never falls through unmatched.
-    for key, value in data.items():
-        if key == "version":
-            continue  # already validated by _config_version
-        if key == "defaults":
-            _check_defaults_type(value, ("defaults",), source)
-        elif key in ("hierarchy", "plan_hierarchy", "default_hierarchy"):
-            _check_hierarchy_type(value, (key,), source)
+        ),
+        _optional("hierarchy", _HIERARCHY),
+        _optional("plan_hierarchy", _HIERARCHY),
+        _optional("default_hierarchy", _HIERARCHY),
+    )
+)
 
 
 def _validate_defaults_issues(defaults: dict, source: "_ConfigSource") -> None:
     """``validate_defaults`` (``hiera_config.rb:802-816``).
 
-    ``hiera3_backend`` is one of ``_FUNCTION_KEYS`` but not of
-    ``_DEFAULTS_KEYS``, so ``defaults`` can never actually carry it by the
-    time this runs -- ``_check_defaults_type`` already rejected it as an
-    unrecognized key. This mirrors Puppet's own ``validate_defaults``
-    exactly: its ``FUNCTION_KEYS`` list (and so this error's own message
-    text) names ``hiera3_backend`` too, even though Puppet's own
-    ``defaults`` struct type excludes it the same way (``hiera_config.rb``'s
-    ``@@CONFIG_TYPE``; conformance case ``config-defaults-hiera3-backend-key``)
-    -- kept as written, rather than narrowed, to stay a literal port.
+    ``hiera3_backend`` is one of ``_FUNCTION_KEYS`` but not a key of the
+    ``defaults`` struct, so ``defaults`` can never actually carry it by the
+    time this runs -- the type check already rejected it as an unrecognized
+    key. This mirrors Puppet's own ``validate_defaults`` exactly: its
+    ``FUNCTION_KEYS`` list (and so this error's own message text) names
+    ``hiera3_backend`` too, even though Puppet's own ``defaults`` struct type
+    excludes it the same way (``hiera_config.rb``'s ``@@CONFIG_TYPE``;
+    conformance case ``config-defaults-hiera3-backend-key``) -- kept as
+    written, rather than narrowed, to stay a literal port.
     """
     if sum(1 for k in _FUNCTION_KEYS if k in defaults) > 1:
         raise _config_error(
@@ -404,10 +220,10 @@ def _check_duplicate_names(entries: list, area: str, source: "_ConfigSource") ->
 
 def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") -> None:
     """Validate ``data`` against Puppet's hiera.yaml version 5 schema, in
-    Puppet's own order: the whole-document type pass, then ``defaults``'
-    issues, then each hierarchy's issues, then duplicate names. Reports only
-    the first mismatch; assumes :func:`_fill_v5_defaults`
-    already ran, so ``defaults``/``hierarchy`` are present.
+    Puppet's own order: the whole-document type pass (every mismatch is
+    reported), then ``defaults``' issues, then each hierarchy's issues, then
+    duplicate names. Assumes :func:`_fill_v5_defaults` already ran, so
+    ``defaults``/``hierarchy`` are present.
 
     ``layer`` (``"global"``/``"environment"``/``"module"``) gates two rules
     that differ by layer here: ``hiera3_backend`` is global-only, and
@@ -417,7 +233,7 @@ def _validate_v5(data: dict, source: "_ConfigSource", *, layer: str = "global") 
     non-module-owned ``default_hierarchy`` is rejected before its
     (possibly also invalid) entries are ever inspected.
     """
-    _check_top(data, source)
+    _check_config_type(source, _CONFIG_TYPE, data)
     defaults = data.get("defaults") or {}
     _validate_defaults_issues(defaults, source)
     _validate_hierarchy_issues(

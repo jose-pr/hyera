@@ -253,12 +253,12 @@ _BASE_V5 = {
                         "path": "one.yaml",
                         "data_hash": "yaml_data",
                         # A dict config skips the YAML loader, so any Python object
-                        # can reach here, not only the types _is_data names.
+                        # can reach here, not only the types Data names.
                         "options": {"ok": object()},
                     }
                 ],
             },
-            "entry 'ok' expects a Data value, got object",
+            "entry 'ok' expects a Data value, got Runtime",
         ),
     ],
     ids=[
@@ -282,6 +282,73 @@ def test_malformed_config_raises_config_error(cfg, expected):
         Hiera(cfg)
 
     assert expected in str(exc.value)
+
+
+_PREFIX = "The Lookup Configuration at '<dict>' has wrong type,"
+
+
+def test_every_schema_mismatch_is_reported_in_the_order_puppet_lists_them():
+    cfg = {
+        **_BASE_V5,
+        "hierarchy": [{"name": "c", "bogus": 1, "path": 5}],
+    }
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert str(exc.value) == (
+        _PREFIX + " entry 'hierarchy' index 0 entry 'path' expects a String value, "
+        "got Integer\n " + _PREFIX + " entry 'hierarchy' index 0 unrecognized key "
+        "'bogus'"
+    )
+    assert exc.value.line is None
+
+
+def test_schema_mismatches_each_name_their_line_and_the_first_sets_the_error_line(
+    tmp_path,
+):
+    (tmp_path / "hiera.yaml").write_text(
+        "version: 5\n"
+        "defaults:\n"
+        "  datadir: data\n"
+        "  data_hash: yaml_data\n"
+        "hierarchy:\n"
+        "  - name: c\n"
+        "    bogus: 1\n"
+        "    path: 5\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError) as exc:
+        Hiera(tmp_path / "hiera.yaml")
+
+    label = str(tmp_path / "hiera.yaml")
+    prefix = "The Lookup Configuration at '{}' has wrong type,".format(label)
+    assert str(exc.value) == (
+        prefix + " entry 'hierarchy' index 0 entry 'path' expects a String value, "
+        "got Integer (line: 8)\n " + prefix + " entry 'hierarchy' index 0 "
+        "unrecognized key 'bogus' (line: 7)"
+    )
+    assert exc.value.line == 8
+
+
+def test_a_hash_with_a_non_string_option_key_is_one_mismatch_on_the_options():
+    cfg = {
+        **_BASE_V5,
+        "hierarchy": [{"name": "c", "path": "c.yaml", "options": {5: "x"}}],
+    }
+    with pytest.raises(ConfigError) as exc:
+        Hiera(cfg)
+
+    assert str(exc.value) == (
+        _PREFIX + " entry 'hierarchy' index 0 entry 'options' expects a "
+        "Hash[Pattern[/\\A[A-Za-z](:?[0-9A-Za-z_-]*[0-9A-Za-z])?\\z/], Data] value, "
+        "got Hash[Integer[5, 5], String]"
+    )
+
+
+def test_a_tuple_is_not_a_hiera_yaml_array():
+    cfg = {**_BASE_V5, "hierarchy": [{"name": "c", "paths": ("a.yaml", "b.yaml")}]}
+    with pytest.raises(ConfigError, match="entry 'paths' expects an Array value"):
+        Hiera(cfg)
 
 
 def test_unexpected_exception_during_build_wrapped_as_config_error(monkeypatch):
