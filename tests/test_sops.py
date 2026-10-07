@@ -12,7 +12,15 @@ import pytest
 
 import hyera.backends
 from hyera import BackendTimeoutError, ConfigError, Hiera, Scope
-from hyera.backends import Backend, BackendError, RubySymbol, SopsBackend
+from hyera.backends import (
+    Backend,
+    BackendError,
+    LookupContext,
+    RubySymbol,
+    SopsBackend,
+)
+
+_CTX = LookupContext.for_testing()
 
 
 def _install_recorder(monkeypatch, tmp_path, stdout=b"k: v\n"):
@@ -47,7 +55,7 @@ def test_sops_success_argv_and_value(monkeypatch, tmp_path):
     backend = SopsBackend({})
     secret = tmp_path / "secret.yaml"
 
-    result = backend.data_hash(secret, {})
+    result = backend.data_hash(secret, {}, _CTX)
 
     assert len(calls) == 1
     args, kwargs = calls[0]
@@ -120,7 +128,7 @@ def test_sops_runs_a_real_program_and_passes_the_argv(fake_program, tmp_path):
         + 'sys.stdout.write("k: v\\n")\n',
     )
     secret = tmp_path / "-rf.yaml"
-    assert SopsBackend({}).data_hash(secret, {}) == {"k": "v"}
+    assert SopsBackend({}).data_hash(secret, {}, _CTX) == {"k": "v"}
     with open(log) as fh:
         logged = json.load(fh)
     assert logged == [
@@ -136,7 +144,7 @@ def test_sops_missing_binary(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))
     monkeypatch.chdir(tmp_path)
     with pytest.raises(BackendError, match="sops executable not found") as excinfo:
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert excinfo.value.path == str(tmp_path / "secret.yaml")
 
 
@@ -149,7 +157,7 @@ def test_sops_start_failure_wraps_oserror(tmp_path, monkeypatch):
     program.chmod(0o755)
     monkeypatch.setenv("PATH", str(bindir))
     with pytest.raises(BackendError, match="Failed to run sops"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
 
 
 def test_sops_nonzero_exit_keeps_a_bounded_stderr_tail_and_no_stdout(
@@ -165,7 +173,7 @@ def test_sops_nonzero_exit_keeps_a_bounded_stderr_tail_and_no_stdout(
         """,
     )
     with pytest.raises(BackendError, match="sops failed \\(exit 128\\)") as excinfo:
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     message = str(excinfo.value)
     assert message.endswith("decryption failed: no key")
     assert "HUNTER2" not in message
@@ -199,7 +207,7 @@ def test_sops_timeout_kills_the_whole_process_group(
     fake_program("sops", process_tree.source)
     # Long enough that the fake has started its grandchild before the kill.
     with pytest.raises(BackendTimeoutError, match="sops timed out after 6s") as e:
-        SopsBackend({}, timeout=6).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}, timeout=6).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert isinstance(e.value, TimeoutError) and isinstance(e.value, BackendError)
     assert e.value.__cause__ is None and e.value.__context__ is None
     process_tree.assert_killed()
@@ -212,7 +220,7 @@ def test_assigning_the_package_timeout_takes_effect(
     monkeypatch.setattr(hyera.backends, "SOPS_TIMEOUT", 0.5)
     started = time.monotonic()
     with pytest.raises(BackendTimeoutError, match="after 0.5s"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert time.monotonic() - started < 10
 
 
@@ -227,7 +235,7 @@ def test_sops_invalid_utf8_from_a_real_program(fake_program, tmp_path):
         "sops", "import sys\nsys.stdout.buffer.write(b'k: \\xff HUNTER2\\n')\n"
     )
     with pytest.raises(BackendError, match="invalid UTF-8 at byte offset 3") as e:
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert "HUNTER2" not in str(e.value)
 
 
@@ -246,7 +254,7 @@ def test_sops_stdin_is_the_null_device(fake_program, tmp_path):
     saved = os.dup(0)
     os.dup2(read_end, 0)
     try:
-        data = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        data = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     finally:
         os.dup2(saved, 0)
         os.close(saved)
@@ -265,7 +273,7 @@ def test_sops_refuses_a_relative_path_entry(fake_program, tmp_path, monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PATH", "rel")
     with pytest.raises(BackendError, match="relative"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert not marker.exists()
 
 
@@ -279,7 +287,7 @@ def test_sops_refuses_a_batch_shim(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("PATH", str(bindir))
     with pytest.raises(BackendError, match="batch"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert not marker.exists()
 
 
@@ -294,7 +302,7 @@ def test_sops_never_runs_a_batch_file_from_the_current_directory(tmp_path, monke
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))
     monkeypatch.chdir(tmp_path)
     with pytest.raises(BackendError):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert not marker.exists()
 
 
@@ -346,7 +354,7 @@ def test_sops_parse_error_strips_quoted_tokens(monkeypatch, tmp_path, bad):
     backend = SopsBackend({})
 
     with pytest.raises(BackendError) as excinfo:
-        backend.data_hash(tmp_path / "secret.yaml", {})
+        backend.data_hash(tmp_path / "secret.yaml", {}, _CTX)
 
     e = excinfo.value
     assert "HUNTER2" not in str(e)
@@ -402,7 +410,7 @@ def test_sops_parse_error_has_no_plaintext(monkeypatch, tmp_path):
     backend = SopsBackend({})
 
     with pytest.raises(BackendError) as excinfo:
-        backend.data_hash(tmp_path / "secret.yaml", {})
+        backend.data_hash(tmp_path / "secret.yaml", {}, _CTX)
 
     e = excinfo.value
     assert "hunter2-SECRET" not in str(e)
@@ -503,7 +511,7 @@ def test_sops_data_format_inference_accepted(
     )
     path = tmp_path / name
     try:
-        SopsBackend({}).data_hash(path, {})
+        SopsBackend({}).data_hash(path, {}, _CTX)
     except BackendError:
         pass  # empty/garbage stdout may fail to parse; only the argv matters here
     assert calls, "sops should have been invoked"
@@ -517,7 +525,7 @@ def test_sops_data_format_inference_rejected(monkeypatch, tmp_path, name):
     calls, _which = _install_recorder(monkeypatch, tmp_path)
     path = tmp_path / name
     with pytest.raises(ConfigError, match="has no .yaml/.yml/.json/.env/.ini suffix"):
-        SopsBackend({}).data_hash(path, {})
+        SopsBackend({}).data_hash(path, {}, _CTX)
     assert not calls, "sops must not be invoked when the format can't be inferred"
 
 
@@ -560,7 +568,7 @@ _ENV_NATIVE = (
 
 def test_sops_data_yaml_recorded_pair(monkeypatch, tmp_path):
     _install_recorder(monkeypatch, tmp_path, stdout=_YAML_NATIVE_NO_DATE)
-    result = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+    result = SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert result == {
         "a": 1,
         "b": {"c": ["x", "y"]},
@@ -577,18 +585,18 @@ def test_sops_data_yaml_recorded_pair(monkeypatch, tmp_path):
 def test_sops_data_yaml_date_shaped_value_is_disallowed(monkeypatch, tmp_path):
     _install_recorder(monkeypatch, tmp_path, stdout=_YAML_NATIVE_WITH_DATE)
     with pytest.raises(BackendError, match="unspecified class: Time"):
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
 
 
 def test_sops_data_json_recorded_pair(monkeypatch, tmp_path):
     _install_recorder(monkeypatch, tmp_path, stdout=_JSON_NATIVE)
-    result = SopsBackend({}).data_hash(tmp_path / "secret.json", {})
+    result = SopsBackend({}).data_hash(tmp_path / "secret.json", {}, _CTX)
     assert result == {"a": 1, "b": {"c": ["x", "y"]}, "n": None, "f": 1.5}
 
 
 def test_sops_data_ini_recorded_pair(monkeypatch, tmp_path):
     calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=_INI_AS_JSON)
-    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {})
+    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {}, _CTX)
     assert result == {
         "DEFAULT": {"top": "1"},
         "sec1": {"k": "v", "num": "42", "q": "quoted value", "sp": "lead"},
@@ -608,13 +616,13 @@ def test_sops_data_ini_writer_ambiguity_is_not_reachable(monkeypatch, tmp_path):
         b'{"note": "x\\"\\"\\"\\n[db]\\npassword = attacker\\nq = \\"\\"\\""}}\n'
     )
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
-    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {})
+    result = SopsBackend({}).data_hash(tmp_path / "secret.ini", {}, _CTX)
     assert result["db"]["password"] == "real-secret"
 
 
 def test_sops_data_dotenv_recorded_pair(monkeypatch, tmp_path):
     _install_recorder(monkeypatch, tmp_path, stdout=_ENV_NATIVE)
-    result = SopsBackend({}).data_hash(tmp_path / "secret.env", {})
+    result = SopsBackend({}).data_hash(tmp_path / "secret.env", {}, _CTX)
     assert result == {
         "K1": "v1",
         "K2": "has=eq",
@@ -643,7 +651,7 @@ def test_sops_data_secret_free_for_json_ini_dotenv(
     _install_recorder(monkeypatch, tmp_path, stdout=stdout)
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(BackendError, match=match) as excinfo:
-            SopsBackend({}).data_hash(tmp_path / "secret.{}".format(ext), {})
+            SopsBackend({}).data_hash(tmp_path / "secret.{}".format(ext), {}, _CTX)
     exc = excinfo.value
     seen = []
     while exc is not None:
@@ -661,7 +669,7 @@ def test_sops_data_invalid_utf8_reports_byte_offset_only(monkeypatch, tmp_path):
     with pytest.raises(
         BackendError, match=r"invalid UTF-8 at byte offset \d+"
     ) as excinfo:
-        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {})
+        SopsBackend({}).data_hash(tmp_path / "secret.yaml", {}, _CTX)
     assert "\\x80" not in str(excinfo.value)
 
 
@@ -697,7 +705,7 @@ def test_sops_format_pattern_forces_format_regardless_of_extension(
 ):
     calls, _which = _install_recorder(monkeypatch, tmp_path, stdout=b'{"a": 1}\n')
     path = tmp_path / "secrets.enc"
-    result = Backend.new("sops_json", {}).data_hash(path, {})
+    result = Backend.new("sops_json", {}).data_hash(path, {}, _CTX)
     assert result == {"a": 1}
     args, _kwargs = calls[-1]
     assert "--input-type=json" in args
@@ -711,7 +719,7 @@ def test_sops_format_pattern_overrides_extension_inference(monkeypatch, tmp_path
         monkeypatch, tmp_path, stdout=b'{"DEFAULT": {}, "s": {"k": "v"}}\n'
     )
     path = tmp_path / "secret.yaml"
-    result = Backend.new("sops_ini", {}).data_hash(path, {})
+    result = Backend.new("sops_ini", {}).data_hash(path, {}, _CTX)
     assert result == {"DEFAULT": {}, "s": {"k": "v"}}
     args, _kwargs = calls[-1]
     assert "--input-type=ini" in args
@@ -723,6 +731,6 @@ def test_sops_timeout_resolution_order(monkeypatch, tmp_path):
     calls, _program = _install_recorder(monkeypatch, tmp_path)
     secret = tmp_path / "secret.yaml"
     monkeypatch.setattr(hyera.backends, "SOPS_TIMEOUT", 7)
-    SopsBackend({}).data_hash(secret, {})
-    SopsBackend({}, timeout=3).data_hash(secret, {})
+    SopsBackend({}).data_hash(secret, {}, _CTX)
+    SopsBackend({}, timeout=3).data_hash(secret, {}, _CTX)
     assert [kwargs["timeout"] for _argv, kwargs in calls] == [7, 3]

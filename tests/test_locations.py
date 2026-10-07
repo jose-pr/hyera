@@ -100,7 +100,7 @@ def _level(conf):
     from hyera.backends import Backend
 
     class _StubBackend(Backend):
-        def data_hash(self, path, options):
+        def data_hash(self, path, options, context):
             return {}
 
     return HieraLevel.new(

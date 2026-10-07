@@ -1101,7 +1101,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
 - **Hiera 5 provider hooks**
 
   ```python
-  Backend.data_hash(path, options)
+  Backend.data_hash(path, options, context)
   Backend.lookup_key(key, options, context)
   Backend.data_dig(key_segments, options, context)
   ```
@@ -1114,7 +1114,11 @@ is a `Backend` subclass, found by name rather than passed around directly.
   besides `path`); `.lookup_key` /
   `.data_dig` raise `NotImplementedError`
   in the base; a backend that overrides either is called per key and per
-  location with a `hyera.LookupContext` as `context` (below). Neither
+  location with a `hyera.LookupContext` as `context` (below), and
+  `.data_hash` is called with one too, per location, on a cache miss. A
+  `data_hash` that still takes two parameters fails with Python's own
+  `TypeError`; calling `context.not_found()` inside `.data_hash` raises
+  `BackendError`. Neither
   hook's return value is interpolated by the engine — call
   `context.interpolate(value)` yourself; signal a miss with
   `context.not_found()`, never a sentinel return value. A hook's return
@@ -1313,7 +1317,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   an explicit `True`/`False` overrides `conf`. From hiera.yaml, set it with
   `options: {hocon_includes: false}` on a `hocon_data` entry or in
   `defaults: {options: ...}` (a bare `hocon_includes:` key is not valid
-  hiera.yaml): `.data_hash(path, options)` takes it from `options`, raises
+  hiera.yaml): `.data_hash(path, options, context)` takes it from `options`, raises
   `ConfigError` when it is not a Boolean, and still raises the usual
   "one of 'path' ..." `ConfigError` for any other option (Puppet 8.10
   refuses every `options` key on `hocon_data`; this one is hyera's
@@ -1359,7 +1363,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `NAMES = {"function": ("sops_data", "sops", NamePattern("sops_<yaml|json|ini|dotenv>", ...))}`.
   Not a `YAMLBackend` subclass; `format` is set by the `NamePattern`
   capture, else inferred.
-  `.data_hash(path, options)` infers the format from the file's extension
+  `.data_hash(path, options, context)` infers the format from the file's extension
   with **sops's own rule**, case-sensitive (`cmd/sops/formats/formats.go`):
   `.yaml`/`.yml` → yaml, `.json` → json, `.env` → dotenv, `.ini` → ini,
   anything else → `ConfigError` (sops would read it as binary, which is
@@ -1477,6 +1481,15 @@ tuple comes back as a list).
   `NOT_FOUND`. `options` is the hierarchy entry's `options` (none when
   omitted); `context` is the `LookupContext` passed to the hook
   (`LookupContext.for_testing()` when omitted).
+- ```python
+  data_hash(backend, path=None, options=None, *, context=None)
+  ```
+
+  Call the `data_hash` hook and return its hash, with tuples read as
+  lists. The hook receives `options` with `path` added when `path` is
+  given, as the engine passes it. A non-hash result or a call to
+  `context.not_found()` raises `BackendError`; a value outside Puppet's
+  data types raises `HieraLookupError` naming the key.
 
 ## Differences from Puppet
 

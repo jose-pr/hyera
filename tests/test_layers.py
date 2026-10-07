@@ -673,13 +673,13 @@ def test_two_locationless_module_levels_serve_their_own_data(
     class FnA(Backend):
         NAMES = {"function": ("layers_fn_a",)}
 
-        def data_hash(self, path, options):
+        def data_hash(self, path, options, context):
             return {"m::a": "from-A"}
 
     class FnB(Backend):
         NAMES = {"function": ("layers_fn_b",)}
 
-        def data_hash(self, path, options):
+        def data_hash(self, path, options, context):
             return {"m::b": "from-B"}
 
     base = _global(make_tree)

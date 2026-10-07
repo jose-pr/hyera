@@ -58,7 +58,7 @@ def backends(_isolated_registry, calls, script):
     class TestDataHashBackend(Backend):
         NAMES = {"function": ("test_data_hash",)}
 
-        def data_hash(self, path, options):
+        def data_hash(self, path, options, context):
             calls.append(("data_hash", path, dict(options)))
             return script["data_hash"](path, options)
 

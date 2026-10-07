@@ -11,12 +11,16 @@ import typing as _ty
 from ._lookup.function_provider import (
     LookupContext,
     _check_kind_implemented,
+    _data_hash_not_found,
     _NotFound,
+    _tuples_to_lists,
+    _validate_data_hash,
     _validate_provider_value,
 )
+from ._lookup.lookup_adapter import validate_data_value
 from .backends._base import Backend
 
-__all__ = ["NOT_FOUND", "data_dig", "lookup_key"]
+__all__ = ["NOT_FOUND", "data_dig", "data_hash", "lookup_key"]
 
 
 class _NotFoundType:
@@ -102,3 +106,49 @@ def data_dig(
     except _NotFound:
         return NOT_FOUND
     return _validate_provider_value(value, "data_dig", backend.name, None)
+
+
+def data_hash(
+    backend: _ty.Union[Backend, _ty.Type[Backend]],
+    path: _ty.Optional[str] = None,
+    options: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+    *,
+    context: _ty.Optional[LookupContext] = None,
+) -> _ty.Dict[str, _ty.Any]:
+    """Call ``backend``'s ``data_hash`` hook as the engine does.
+
+    The hook must return a hash whose values are Puppet data.
+
+    :param backend: a backend instance, or a class to instantiate with no
+        arguments.
+    :param path: the location's file path, or ``None`` for a location-less
+        entry.
+    :param options: the hierarchy entry's ``options``; none when omitted. The
+        hook receives them with ``path`` added, as the engine does for a located
+        entry.
+    :param context: the context passed to the hook;
+        :meth:`LookupContext.for_testing() <hyera.LookupContext.for_testing>`
+        when omitted.
+    :returns: the hash, with tuples read as lists.
+    :raises ConfigError: the backend does not implement ``data_hash``.
+    :raises BackendError: the hook returned something other than a hash, or
+        called ``context.not_found()``.
+    :raises HieraLookupError: a value of the hash is outside Puppet's data
+        types.
+    """
+    backend = _instance(backend)
+    _check_kind_implemented(backend, "data_hash")
+    if context is None:
+        context = LookupContext.for_testing()
+    label = None if path is None else str(path)
+    merged = dict(options or {})
+    if label is not None:
+        merged["path"] = label
+    try:
+        data = backend.data_hash(path, merged, context)
+    except _NotFound:
+        raise _data_hash_not_found(backend.name, label) from None
+    _validate_data_hash(data, backend.name, label)
+    for key, value in data.items():
+        validate_data_value(value, backend.name, label, key)
+    return {key: _tuples_to_lists(value) for key, value in data.items()}

@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from hyera import Hiera, KeyNotFoundError, Scope
+from hyera import Hiera, KeyNotFoundError, LookupContext, Scope
 from hyera._lookup import locations
 from hyera.backends import YAMLBackend
 
@@ -102,14 +102,15 @@ def test_load_file_cached_entry_vanishing_before_a_revalidation_probe(make_tree)
     path = root / "data" / "a.yaml"
     backend = YAMLBackend()
 
-    first = h._store.load_file(path, backend, {})
+    context = LookupContext.for_testing()
+    first = h._store.load_file(path, backend, {}, None, context)
     assert first == {"k": "v"}
     cache_key = (path, backend.strict, "{}")
     assert cache_key in h._store._file_cache
     assert path in h._store._loaded_paths
 
     os.remove(str(path))
-    second = h._store.load_file(path, backend, {})
+    second = h._store.load_file(path, backend, {}, None, context)
     assert second is _MISSING
     assert cache_key not in h._store._file_cache
     assert path not in h._store._loaded_paths

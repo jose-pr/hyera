@@ -490,6 +490,7 @@ class Backend:
         self,
         path: "Path",
         options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
     ) -> _ty.Dict[str, _ty.Any]:
         """The ``data_hash`` provider hook: parse the whole file at
         ``path`` and adapt it into hiera data (see :meth:`_as_data_hash`).
@@ -501,6 +502,8 @@ class Backend:
 
         :param path: the location's file path.
         :param options: the hierarchy entry's ``options``.
+        :param context: the per-location :class:`LookupContext`; calling its
+            ``not_found()`` is an error here.
         :returns: the parsed data, adapted into a hash.
         :raises ConfigError: ``options`` carries anything besides ``path``.
         :raises BackendError: the file could not be read or parsed.

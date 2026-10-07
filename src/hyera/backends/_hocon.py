@@ -18,6 +18,7 @@ import typing as _ty
 
 from .._config.confinement import check_include
 from ..exceptions import BackendError, ConfigError, _one_line
+from .._lookup.function_provider import LookupContext
 from ._base import Backend, _Names
 from ._hocon_includes import _allow_hocon_includes, _refuse_hocon_includes
 from ._hocon_limits import install_substitution_bound
@@ -354,6 +355,7 @@ class HOCONBackend(Backend):
         self,
         path: _ty.Any,
         options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
     ) -> _ty.Dict[str, _ty.Any]:
         """The ``data_hash`` hook. Besides ``path``, the hierarchy options
         accepted are ``hocon_includes`` (a Boolean), which selects the include
@@ -363,6 +365,7 @@ class HOCONBackend(Backend):
 
         :param path: the location's file path.
         :param options: the hierarchy entry's ``options``.
+        :param context: the per-location :class:`LookupContext`.
         :returns: the parsed data.
         :raises ConfigError: ``hocon_includes`` or ``hocon_env`` is not a Boolean, or
             ``options`` carries anything else besides ``path``.
@@ -389,7 +392,7 @@ class HOCONBackend(Backend):
             }
             settings.update(chosen)
             backend = type(self)(self.conf, strict=self._strict, **settings)
-        return super(HOCONBackend, backend).data_hash(path, rest)
+        return super(HOCONBackend, backend).data_hash(path, rest, context)
 
     @classmethod
     def check_available(cls) -> None:

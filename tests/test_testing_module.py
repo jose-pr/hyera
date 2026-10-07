@@ -11,7 +11,7 @@ import pytest
 import hyera
 from hyera import BackendError, LookupContext, Scope
 from hyera.backends import Backend
-from hyera.testing import NOT_FOUND, data_dig, lookup_key
+from hyera.testing import NOT_FOUND, data_dig, data_hash, lookup_key
 
 
 class _Greeter(Backend):
@@ -154,3 +154,48 @@ def test_importing_hyera_does_not_import_hyera_testing_or_pytest():
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=120
     )
     assert out.returncode == 0, out.stderr
+
+
+class _Hasher(Backend):
+    def data_hash(self, path, options, context):
+        return {"path": path, "seen": dict(options), "env": context.environment_name}
+
+
+class _BadHasher(Backend):
+    def data_hash(self, path, options, context):
+        if path == "values":
+            return {"ok": 1, "bad": object()}
+        if path == "tuples":
+            return {"t": ("a", ("b",))}
+        if path == "miss":
+            context.not_found()
+        return ["not", "a", "hash"]
+
+
+def test_data_hash_runs_the_hook_with_a_context_and_the_path_in_options():
+    got = data_hash(_Hasher(), "x.yaml", {"k": 1})
+    assert got == {
+        "path": "x.yaml",
+        "seen": {"k": 1, "path": "x.yaml"},
+        "env": "production",
+    }
+
+
+def test_data_hash_without_a_path_adds_none_to_options():
+    assert data_hash(_Hasher())["seen"] == {}
+
+
+def test_data_hash_reads_a_tuple_as_a_list():
+    assert data_hash(_BadHasher(), "tuples") == {"t": ["a", ["b"]]}
+
+
+def test_data_hash_validates_its_result():
+    with pytest.raises(BackendError, match="expects a Hash"):
+        data_hash(_BadHasher(), "other")
+    with pytest.raises(hyera.HieraLookupError, match="has wrong type"):
+        data_hash(_BadHasher(), "values")
+
+
+def test_data_hash_not_found_is_an_error():
+    with pytest.raises(BackendError, match="not_found"):
+        data_hash(_BadHasher(), "miss")

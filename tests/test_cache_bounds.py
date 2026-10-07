@@ -102,7 +102,7 @@ def test_internal_keyerror_is_not_a_miss(make_tree, monkeypatch):
     )
     h = Hiera(str(root / "hiera.yaml"))
 
-    def broken_data_hash(self, path, options):
+    def broken_data_hash(self, path, options, context):
         raise KeyError("boom")
 
     monkeypatch.setattr(YAMLBackend, "data_hash", broken_data_hash)

@@ -19,6 +19,7 @@ from .function_provider import (
     _NotFound,
     _Result,
     _check_kind_implemented,
+    _data_hash_not_found,
     _recording_location,
     _tuples_to_lists,
     _validate_data_hash,
@@ -172,7 +173,13 @@ class _DataHashProvider(_FunctionProvider):
                 path = str(location.location)
                 if self._revalidate or ctx.data_hash is None:
                     options = self.options_for(location)
-                    data = self._load_file(path, self.backend, options, invocation)
+                    data = self._load_file(
+                        path,
+                        self.backend,
+                        options,
+                        invocation,
+                        LookupContext(ctx, invocation),
+                    )
                     if data is _MISSING:
                         return _MISSING
                     label = path
@@ -192,7 +199,12 @@ class _DataHashProvider(_FunctionProvider):
                 if ctx.data_hash is None:
                     options = self.options_for(location)
                     label = None if location is None else str(location.location)
-                    raw = self.backend.data_hash(None, options)
+                    try:
+                        raw = self.backend.data_hash(
+                            None, options, LookupContext(ctx, invocation)
+                        )
+                    except _NotFound:
+                        raise _data_hash_not_found(self.backend.name, label) from None
                     _validate_data_hash(raw, self.backend.name, label)
                     if self._prune is not None:
                         raw = self._prune(

@@ -159,6 +159,20 @@ def _validate_data_hash(data, name, location) -> None:
     )
 
 
+def _data_hash_not_found(name, location) -> BackendError:
+    """The error for a ``data_hash`` hook that called ``context.not_found()``,
+    which only ``lookup_key`` and ``data_dig`` hooks may do. ``location`` is
+    ``None`` for a location-less entry."""
+    text = (
+        "data_hash function '{}'{} called context.not_found(); only a lookup_key "
+        "or data_dig function may signal a miss".format(
+            name,
+            "" if location is None else ", when using location '{}',".format(location),
+        )
+    )
+    return BackendError(text, path=None if location is None else str(location))
+
+
 def _tuples_to_lists(value):
     """``value`` with every tuple, at any depth, replaced by a list; a value
     holding no tuple is returned as is."""

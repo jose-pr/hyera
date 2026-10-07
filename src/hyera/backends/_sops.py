@@ -15,6 +15,7 @@ import typing as _ty
 from pathlib_next import Path
 
 from ..exceptions import BackendError, ConfigError
+from .._lookup.function_provider import LookupContext
 from .._subprocess import run as _run
 from ._base import Backend, NamePattern, _Names
 
@@ -208,7 +209,10 @@ class SopsBackend(Backend):
         self._timeout = timeout
 
     def data_hash(
-        self, path: "Path", options: _ty.Mapping[str, _ty.Any]
+        self,
+        path: "Path",
+        options: _ty.Mapping[str, _ty.Any],
+        context: LookupContext,
     ) -> _ty.Dict[str, _ty.Any]:
         """Decrypt ``path`` with the ``sops`` CLI and parse the plaintext
         in the format sops itself reports for it (or the ``format``
@@ -216,6 +220,7 @@ class SopsBackend(Backend):
 
         :param path: the encrypted file's location.
         :param options: the hierarchy entry's ``options``.
+        :param context: the per-location :class:`LookupContext`.
         :returns: the decrypted, parsed data.
         :raises ConfigError: ``path`` has no recognized suffix and no
             ``format`` was given, or ``options`` carries anything besides

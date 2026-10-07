@@ -236,7 +236,7 @@ def test_a_backend_reads_the_limits_of_the_read_in_progress(make_tree, monkeypat
     class Probe(hyera.Backend):
         NAMES = {"function": ("probe_data",)}
 
-        def data_hash(self, path, options):
+        def data_hash(self, path, options, context):
             seen.append(self.limits)
             return {"k": 1}
 

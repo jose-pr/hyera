@@ -8,7 +8,14 @@ import re
 
 import pytest
 
-from hyera import BackendError, ConfigError, Hiera, HieraError, KeyNotFoundError
+from hyera import (
+    BackendError,
+    ConfigError,
+    Hiera,
+    HieraError,
+    KeyNotFoundError,
+    LookupContext,
+)
 from hyera._lookup.function_provider import _EnvironmentContext
 from hyera._lookup.provider_classes import _FunctionProvider
 from hyera._lookup.navigation import _MISSING
@@ -297,7 +304,7 @@ def test_data_hash_load_file_missing_is_not_found(make_tree, monkeypatch):
     monkeypatch.setattr(
         h._store,
         "load_file",
-        lambda path, backend, options, invocation=None: _MISSING,
+        lambda path, backend, options, invocation, context: _MISSING,
     )
     with pytest.raises(KeyNotFoundError):
         h.lookup("k")
@@ -394,9 +401,9 @@ def test_file_data_hash_takes_only_path(monkeypatch, cls):
 
     backend = cls({}) if cls is not SopsBackend else cls({})
     with pytest.raises(ConfigError, match="one of 'path'"):
-        backend.data_hash(None, {})
+        backend.data_hash(None, {}, LookupContext.for_testing())
     with pytest.raises(ConfigError, match="one of 'path'"):
-        backend.data_hash("x.yaml", {"foo": "bar"})
+        backend.data_hash("x.yaml", {"foo": "bar"}, LookupContext.for_testing())
 
 
 # --- eyaml: missing optional dependency -----------------------------------

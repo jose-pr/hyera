@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import functools
 
+from .function_provider import LookupContext
 from .provider_classes import PROVIDER_CLASSES
 from .interpolation import interpolate
 from .invocation import Invocation
+from .navigation import _MISSING
 from .._config.data_provider import prune_module_data
 
 
@@ -23,6 +25,12 @@ def _no_option_lookup(key, invocation):
     sub-lookup would ever be attempted -- before it could reach this
     callable."""
     raise RuntimeError("hierarchy options never perform a sub-lookup")
+
+
+def _no_sub_lookup(key, invocation):
+    """The ``lookup`` callable for ``sources()``, which resolves no key: a
+    ``%{lookup()}`` a hook interpolates there is a miss."""
+    return _MISSING
 
 
 def resolved_locations_for(hiera, hierarchy, index, base_path, scope, tag, invocation):
@@ -194,7 +202,18 @@ def files_for(hiera, hierarchy, base_path, scope, tag, invocation=None):
                 continue
             path = loc.location
             hiera._store.load_file(
-                path, level.backend, provider.options_for(loc), invocation
+                path,
+                level.backend,
+                provider.options_for(loc),
+                invocation,
+                LookupContext(
+                    provider._context(loc),
+                    (
+                        Invocation(scope, _no_sub_lookup)
+                        if invocation is None
+                        else invocation
+                    ),
+                ),
             )
             if path in hiera._store._loaded_paths:
                 paths.append(path)

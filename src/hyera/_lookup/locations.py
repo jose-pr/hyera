@@ -13,7 +13,11 @@ import os
 import typing as _ty
 
 from .cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
-from .function_provider import _validate_data_hash
+from .function_provider import (
+    _NotFound,
+    _data_hash_not_found,
+    _validate_data_hash,
+)
 from .navigation import _MISSING
 from .._config.confinement import (
     _INCLUDE_ROOT,
@@ -207,8 +211,8 @@ class _LocationStore:
             self._paths.update(live)
             self._paths_limit[0] = max(_PATHS_FLOOR, 2 * len(live))
 
-    def load_file(self, path, backend, options, invocation=None):
-        """Load ``path`` via ``backend.data_hash(path, options)``, returning
+    def load_file(self, path, backend, options, invocation, context):
+        """Load ``path`` via ``backend.data_hash(path, options, context)``, returning
         the parsed, cached data, or :data:`~hyera._lookup.navigation._MISSING` when
         ``revalidate=True`` and ``path`` has vanished since it was last
         cached (a materialized location whose ``exist`` was true earlier in
@@ -217,11 +221,10 @@ class _LocationStore:
         always-absent location is).
 
         With ``revalidate=True`` (the default), one probe -- through
-        ``invocation``'s memo when given, a fresh one-off otherwise -- either
-        confirms a cached parse is still current (its signature unchanged)
-        or triggers a re-read, logged at debug level; ``invocation=None``
-        (``sources()``) still revalidates, just without sharing the probe
-        with anything else. With
+        ``invocation``'s memo -- either confirms a cached parse is still
+        current (its signature unchanged) or triggers a re-read, logged at
+        debug level; ``invocation`` may be ``None`` (``sources()``), which
+        probes afresh. ``context`` is what the hook receives. With
         ``revalidate=False``, a cached entry is returned untouched, and a
         first read is cached with no signature at all, so it is never
         reconsidered short of :meth:`~hyera.Hiera.clear_cache`.
@@ -287,7 +290,9 @@ class _LocationStore:
 
         tokens = self._bind(path)
         try:
-            data = backend.data_hash(path, dict(options))
+            data = backend.data_hash(path, dict(options), context)
+        except _NotFound:
+            raise _data_hash_not_found(backend.name, path) from None
         except BackendError as e:
             if e.path is None:
                 raise BackendError(
