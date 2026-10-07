@@ -451,3 +451,17 @@ def test_format_backend_dumps_and_dump():
     buf2 = io.StringIO()
     json_backend.dump({"a": 1}, buf2)
     assert buf2.getvalue() == '{"a": 1}'
+
+
+@pytest.mark.parametrize("backend", [YAMLBackend, JSONBackend], ids=["yaml", "json"])
+def test_loading_a_missing_file_raises_backend_error_naming_the_path(backend, tmp_path):
+    missing = tmp_path / "gone.data"
+    with pytest.raises(BackendError, match="Unable to read") as excinfo:
+        backend().load(missing)
+    assert excinfo.value.path == str(missing)
+    assert isinstance(excinfo.value.__cause__, OSError)
+
+
+def test_loading_a_directory_raises_backend_error(tmp_path):
+    with pytest.raises(BackendError, match="Unable to read"):
+        YAMLBackend().load(tmp_path)

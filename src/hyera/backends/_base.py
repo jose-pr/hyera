@@ -437,8 +437,9 @@ class Backend:
 
         :param source: a path-like, or an already-open file object.
         :returns: the parsed value.
-        :raises BackendError: ``source`` could not be decoded as UTF-8 or
-            parsed by :meth:`loads`.
+        :raises BackendError: ``source`` could not be read, decoded as UTF-8 or
+            parsed by :meth:`loads`; an unreadable ``source`` reads
+            ``Unable to read (<path>): <reason>``.
         """
         is_file_obj = hasattr(source, "read")
         path = getattr(source, "name", "<unknown>") if is_file_obj else source
@@ -460,6 +461,10 @@ class Backend:
             problem = str(e)
         except BackendError as e:
             problem = str(e)
+        except OSError as e:
+            raise BackendError(
+                "Unable to read ({}): {}".format(path, e.strerror or e), path=str(path)
+            ) from e
         raise BackendError(
             "Unable to parse ({}): {}".format(path, problem), path=str(path)
         )
