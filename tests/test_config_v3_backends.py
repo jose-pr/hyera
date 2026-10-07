@@ -155,9 +155,8 @@ def test_v3_unknown_backend_raises(make_tree, name):
 
 
 def test_v3_unknown_backend_via_file_like_source_has_line_but_no_path():
-    # _config_error's "line but no path" branch (v5 validation uses _type_error): a
-    # file-like source has readable text, so _find_line_matching finds a line, but no
-    # filesystem path.
+    # _config_error's "line but no path" branch: a file-like source has readable
+    # text, so _find_line_matching finds a line, but no filesystem path.
     stream = io.StringIO("backends: unknown_v3_backend\nhierarchy:\n  - common\n")
     with pytest.raises(ConfigError) as exc:
         Hiera(stream)

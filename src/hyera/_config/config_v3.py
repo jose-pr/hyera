@@ -19,7 +19,6 @@ from pathlib_next import Path
 
 from .._lookup.interpolation import _to_puppet_str
 from .._types.compound_types import Struct, StructElement
-from .._types.mismatch import type_name_of
 from .._types.parser import parse_type
 from .config_source import (
     _NES,
@@ -28,7 +27,6 @@ from .config_source import (
     _ConfigSource,
     _optional,
     _struct,
-    _type_error,
 )
 from .hiera_config import V3_DEFAULT_CONFIG_HASH, _warn_deprecated
 from .level_builder import _build_level, _v3_backend_class
@@ -69,24 +67,17 @@ _V3_CONFIG_TYPE = parse_type(
 )
 #: ``hiera_config.rb:455``: a backend's own config.
 _V3_BACKEND_CONFIG = parse_type("Hash[{}, Any]".format(_NES))
+#: What ``Pathname(backend_config['datadir'])`` takes (``hiera_config.rb:403``).
+_V3_DATADIR_TYPE = parse_type(_struct("datadir => String"))
 
 
 def _v3_backend_names(value) -> "_ty.List[str]":
     """Distinct backend names from a ``backends`` value, in first-appearance
-    order -- ``[]`` when it is not validly shaped (the type check reports that).
-    Used to know which dynamic per-backend config keys are allowed top-level keys
-    here, and (a later phase) to build one provider per name."""
-    if isinstance(value, str):
-        items = [value] if value else []
-    elif isinstance(value, list):
-        items = [v for v in value if isinstance(v, str) and v]
-    else:
-        items = []
-    seen: "list" = []
-    for name in items:
-        if name not in seen:
-            seen.append(name)
-    return seen
+    order -- ``[]`` when it is not validly shaped (the type check reports that)."""
+    items = [value] if isinstance(value, str) else value
+    if not isinstance(items, list):
+        return []
+    return list(dict.fromkeys(v for v in items if isinstance(v, str) and v))
 
 
 def _v3_config_type(data: dict) -> Struct:
@@ -193,15 +184,14 @@ def _v3_level_specs(data: dict, source: "_ConfigSource", codedir: Path) -> "list
 
         conf = data.get(b) or {}
         if conf.get("datadir") is not None:
-            datadir_value = conf["datadir"]
-            if not isinstance(datadir_value, str):
-                raise _type_error(
-                    source,
-                    "entry '{}' entry 'datadir' expects a String value, got "
-                    "{}".format(b, type_name_of(datadir_value)),
-                    line=line,
-                )
-            datadir = datadir_value
+            datadir = conf["datadir"]
+            _check_config_type(
+                source,
+                Struct([StructElement(b, False, _V3_DATADIR_TYPE)]),
+                {b: {"datadir": datadir}},
+                lines=False,
+                line=line,
+            )
         else:
             datadir = "{}/environments/%{{::environment}}/hieradata".format(
                 codedir.as_posix()

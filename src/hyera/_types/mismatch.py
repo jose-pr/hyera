@@ -45,7 +45,6 @@ __all__ = [
     "assert_instance_of",
     "describe_instance_of",
     "format_mismatches",
-    "type_name_of",
 ]
 
 #: Types whose formatter/short_name keeps one bare level of their contained type's name
@@ -558,15 +557,6 @@ def assert_instance_of(subject, expected, value, nil_ok=False):
     if not mismatches:
         return value
     raise HieraLookupError(format_mismatches(subject, mismatches))
-
-
-def type_name_of(value):
-    """The type name Puppet reports for ``value`` in a mismatch.
-
-    :param value: any value
-    :return: for example ``"Integer"``, ``"Tuple"``, ``"Struct"`` or ``"Runtime"``
-    """
-    return short_name(_infer(value))
 
 
 def describe_instance_of(expected, value):

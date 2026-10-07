@@ -54,19 +54,6 @@ def _config_error(source: "_ConfigSource", message: str, line=None) -> ConfigErr
     return ConfigError(message, path=path, line=line)
 
 
-def _type_error(source: "_ConfigSource", detail: str, line=None) -> ConfigError:
-    """Puppet's ``The Lookup Configuration at '<label>' has wrong type, ...``
-    (``hiera_config.rb``'s ``Types::TypeMismatchDescriber`` on ``CONFIG_TYPE``)."""
-    label = source.label if source else "<dict>"
-    message = "The Lookup Configuration at '{}' has wrong type, {}".format(
-        label, detail
-    )
-    if line:
-        message = "{} (line: {})".format(message, line)
-    path = source.path if source else None
-    return ConfigError(message, path=path, line=line)
-
-
 #: ``hiera_config.rb:574``, the ``nes_t`` of every string the schemas name.
 _NES = "String[1]"
 #: The ``version`` entry of every schema, without its range (``hiera_config.rb:363``,
@@ -156,14 +143,20 @@ def _hide_tuples(value):
 
 
 def _check_config_type(
-    source: "_ConfigSource", config_type, data, *, lines: bool = True
+    source: "_ConfigSource",
+    config_type,
+    data,
+    *,
+    lines: bool = True,
+    line: "_ty.Optional[int]" = None,
 ) -> None:
     """Puppet's ``TypeAsserter.assert_instance_of`` on a hiera.yaml
     (``hiera_config.rb``'s ``validate_config``): raise a :class:`ConfigError` listing
     every mismatch of ``data`` with ``config_type``, in Puppet's text.
 
     With ``lines``, each mismatch ends with the ``(line: N)`` of the YAML node it
-    points at and the error's ``line`` is the first mismatch's.
+    points at and the error's ``line`` is the first mismatch's. A given ``line``
+    stands for every mismatch instead.
     """
     mismatches = describe_instance_of(config_type, _hide_tuples(data))
     if not mismatches:
@@ -174,9 +167,9 @@ def _check_config_type(
 
     def annotate(mismatch) -> str:
         steps, of_key = mismatch.location()
-        line = _config_line(text, steps, key=of_key)
-        found.append(line)
-        return " (line: {})".format(line) if line else ""
+        at = line or _config_line(text, steps, key=of_key)
+        found.append(at)
+        return " (line: {})".format(at) if at else ""
 
     message = format_mismatches(
         "The Lookup Configuration at '{}'".format(label), mismatches, annotate
