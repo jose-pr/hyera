@@ -130,6 +130,16 @@ def _build_scope(case_dir: Path, args: List[str]):
         raise _Rejected(str(e)) from e
 
 
+def _crash(e: BaseException) -> dict:
+    """The result for an exception that is not an outcome of the lookup."""
+    return {
+        "status": "crash",
+        "exc": type(e).__name__,
+        "message": str(e)[:300],
+        "trace": traceback.format_exc()[-1200:],
+    }
+
+
 def run_api(job: dict, case_dir: Path) -> dict:
     """One query through ``Hiera.lookup``.
 
@@ -166,13 +176,14 @@ def run_api(job: dict, case_dir: Path) -> dict:
         return {"status": "error", "message": str(e), "exc": "Rejected"}
     except HieraError as e:
         return {"status": "error", "message": str(e), "exc": type(e).__name__}
+    except (TypeError, ValueError) as e:
+        # a --type or --merge value the library refuses as a bad argument is the
+        # command's error, as it is for `puppet lookup`; anything else is a crash
+        if kwargs["value_type"] is None and kwargs["merge"] is None:
+            return _crash(e)
+        return {"status": "error", "message": str(e), "exc": type(e).__name__}
     except BaseException as e:  # noqa: BLE001 - a non-HieraError is itself a result
-        return {
-            "status": "crash",
-            "exc": type(e).__name__,
-            "message": str(e)[:300],
-            "trace": traceback.format_exc()[-1200:],
-        }
+        return _crash(e)
     try:
         return {"status": "found", "value": _jsonable(value)}
     except ValueError as e:
