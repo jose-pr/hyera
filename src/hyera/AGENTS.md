@@ -8,8 +8,8 @@ project overview is the shipped `README.md`; development documentation
 lives with the source at <https://github.com/jose-pr/hyera>.
 
 Import as `import hyera`; import every public name from `hyera` itself, or
-from the public modules `hyera.exceptions`, `hyera.types`, `hyera.backends`
-and `hyera.cli` — `hyera._*` modules are private engine internals with no
+from the public modules `hyera.exceptions`, `hyera.types`, `hyera.backends`,
+`hyera.testing` and `hyera.cli` — `hyera._*` modules are private engine internals with no
 stability contract.
 
 Install as `hyera` (`pip install hyera`); extras: `pip install "hyera[cli]"`
@@ -1142,6 +1142,19 @@ is a `Backend` subclass, found by name rather than passed around directly.
   the `Hiera`/`h.scoped(...)` view the lookup runs against (never shared
   with another view, same as the provider itself):
   - ```python
+    LookupContext.for_testing(*, scope=None, module_name=None, data=None)
+    ```
+
+    A classmethod: a context to call a hook with outside a lookup, for a
+    unit test (see `hyera.testing`). `scope` is a `hyera.Scope` (an empty
+    `Scope()` when omitted) that `.interpolate` reads variables from and
+    `.environment_name` is taken from; `module_name` is what `.module_name`
+    reports; `data` is a mapping whose keys `lookup()`, `alias()` and
+    `hiera()` resolve in `.interpolate`, by dotted navigation (a key it
+    lacks is a miss, as in a lookup). `.cache`, `.cached_file_data` and
+    `.explain` behave as in a lookup, except that `.explain` never calls its
+    producer.
+  - ```python
     LookupContext.interpolate(value)
     ```
 
@@ -1443,6 +1456,27 @@ is a `Backend` subclass, found by name rather than passed around directly.
   key-source variables apply. `SOPS_TIMEOUT` is a module attribute, not an
   env var — set it directly (`hyera.backends.SOPS_TIMEOUT = 60`) to change
   the default sops timeout; it is in `hyera.backends.__all__`. See "Environment variables" below for the fixed-name variables.
+
+## Testing backends (`hyera.testing`)
+
+Importing `hyera` does not import this module; it imports neither `pytest`
+nor an optional dependency. Each function takes a backend instance, or a
+class that it instantiates with no arguments, and calls the hook through the
+checks a lookup applies: the hook must be implemented (`ConfigError`
+otherwise) and its value must be Puppet data (`BackendError` otherwise; a
+tuple comes back as a list).
+
+- `NOT_FOUND` — what a runner returns when the hook called
+  `context.not_found()`. Compare with `is`.
+- ```python
+  lookup_key(backend, key, options=None, *, context=None)
+  data_dig(backend, segments, options=None, *, context=None)
+  ```
+
+  Call the `lookup_key` or `data_dig` hook and return its value, or
+  `NOT_FOUND`. `options` is the hierarchy entry's `options` (none when
+  omitted); `context` is the `LookupContext` passed to the hook
+  (`LookupContext.for_testing()` when omitted).
 
 ## Differences from Puppet
 

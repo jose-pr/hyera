@@ -18,7 +18,7 @@ per-feature fidelity table is
 
 | Shipped header | Covers |
 | --- | --- |
-| [`src/hyera/AGENTS.md`](src/hyera/AGENTS.md) | the whole public API: `hyera`, `hyera.exceptions`, `hyera.types`, `hyera.backends` and `hyera.cli` with every signature, argument, contract and gotcha, the exception classes, the environment variables and the differences from Puppet |
+| [`src/hyera/AGENTS.md`](src/hyera/AGENTS.md) | the whole public API: `hyera`, `hyera.exceptions`, `hyera.types`, `hyera.backends`, `hyera.testing` and `hyera.cli` with every signature, argument, contract and gotcha, the exception classes, the environment variables and the differences from Puppet |
 
 ## Layout
 
@@ -26,6 +26,7 @@ per-feature fidelity table is
 src/hyera/
 ├── __init__.py            # public re-exports (see src/hyera/AGENTS.md for the header)
 ├── types.py                 # hyera.types: the public Puppet type objects (Integer, Optional, Struct, ...)
+├── testing.py                # hyera.testing: run a backend's hooks the way the engine does (public)
 ├── _enums.py                  # the base of the public string enums (Merge, Strict, FunctionKind, BackendKind, RenderAs)
 ├── _digits.py                   # decimal integer parsing/formatting independent of Python's 4300-digit limit
 ├── _subprocess.py                 # the one place sops and facter run: timeout, process-tree kill, closed stdin
@@ -97,7 +98,8 @@ src/hyera/
 │   ├── explain_refs.py       # the provider and location references a node carries, and the value dump (explainer.rb, configured_data_provider.rb)
 │   └── render.py             # s/json/yaml CLI render backends: puppet lookup --render-as output
 └── backends/                 # self-registering Backend registry (same import path: hyera.backends)
-    ├── __init__.py           # Backend, registry, default_backends; re-exports every public backend class
+    ├── __init__.py           # re-exports every public backend name and SOPS_TIMEOUT
+    ├── _base.py              # Backend, BackendKind, NamePattern, the registry, default_backends (functions/yaml_data.rb)
     ├── _yaml.py              # YAMLBackend, Puppet-only (functions/yaml_data.rb)
     ├── _json.py              # JSONBackend
     ├── _hocon.py             # HOCONBackend, has_hocon (the private pyhocon parser copy)
@@ -251,7 +253,7 @@ error), `130` on an interrupt.
 
 `hyera._*` modules are private engine internals mirroring Puppet's own file
 split; import public names from `hyera` itself, or from the public modules
-`hyera.exceptions`, `hyera.types`, `hyera.backends` and `hyera.cli`, never
+`hyera.exceptions`, `hyera.types`, `hyera.backends`, `hyera.testing` and `hyera.cli`, never
 from a `hyera._*` module. `src/hyera/AGENTS.md` is the shipped API header (see
 [Packaging](#packaging) below) — every export with its exact signature,
 arguments and gotchas, so a consuming agent skips the source.

@@ -195,6 +195,7 @@ what a backend you allow does. The plain command has no such flags.
 | `hyera` | hyera: a Python implementation of Puppet Hiera data lookup. | https://jose-pr.github.io/hyera/api/hyera/ |
 | `hyera.types` | Public Puppet type objects (`Integer`, `Optional`, `Struct`, ...). | https://jose-pr.github.io/hyera/api/types/ |
 | `hyera.backends` | Data backends: a self-registering `Backend` registry. | https://jose-pr.github.io/hyera/api/backends/ |
+| `hyera.testing` | Helpers for testing a backend: run its hooks the way the engine does. | https://jose-pr.github.io/hyera/api/testing/ |
 | `hyera.cli` | Command-line interface for hyera, built on duho. | https://jose-pr.github.io/hyera/api/cli/ |
 | `hyera` (command) / `python -m hyera` | Runs a lookup from the command line, taking `puppet lookup`'s flags. | [#command-line](#command-line) |
 

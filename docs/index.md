@@ -83,6 +83,7 @@ $ python -m hyera classes --hiera_config hiera.yaml --facts facts.yaml --environ
 - [hyera.exceptions](api/exceptions.md)
 - [hyera.types](api/types.md)
 - [hyera.backends](api/backends.md)
+- [hyera.testing](api/testing.md)
 - [hyera.cli](api/cli.md)
 - [Changelog](changelog.md)
 - <https://github.com/jose-pr/hyera>

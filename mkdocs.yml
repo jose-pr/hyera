@@ -33,6 +33,7 @@ nav:
       - hyera.exceptions: api/exceptions.md
       - hyera.types: api/types.md
       - hyera.backends: api/backends.md
+      - hyera.testing: api/testing.md
       - hyera.cli: api/cli.md
   - Changelog: changelog.md
 

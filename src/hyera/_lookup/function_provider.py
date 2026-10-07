@@ -19,8 +19,10 @@ import os
 import typing as _ty
 
 from .._output.explain_refs import _LocationRef
+from .._scope.scope import Scope
 from .interpolation import interpolate
 from .invocation import Invocation
+from .navigation import _MISSING, parse_lookup_key, sub_lookup
 from ..exceptions import BackendError, ConfigError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
@@ -308,7 +310,7 @@ class LookupContext:
     backend hook (Puppet's public ``Context`` API, ``context.rb:126-206``).
 
     Built by the engine for each call; a backend never constructs one
-    itself.
+    itself. A test builds one with :meth:`for_testing`.
 
     :param function_context: the per-location state to read/write through.
     :param invocation: the current lookup's per-lookup state.
@@ -322,6 +324,44 @@ class LookupContext:
         #: ``(path, stamp)`` of every file read through
         #: :meth:`cached_file_data` by this call.
         self._deps: _ty.List[_ty.Tuple[str, _ty.Any]] = []
+
+    @classmethod
+    def for_testing(
+        cls,
+        *,
+        scope: _ty.Optional[Scope] = None,
+        module_name: _ty.Optional[str] = None,
+        data: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
+    ) -> "LookupContext":
+        """A context to call a hook with outside a lookup.
+
+        :meth:`cache`, :meth:`cached_file_data` and :meth:`explain` behave as
+        in a lookup, except that :meth:`explain` never calls its producer.
+
+        :param scope: what :meth:`interpolate` reads variables from, and the
+            source of :attr:`environment_name`; an empty :class:`~hyera.Scope`
+            when omitted.
+        :param module_name: the value of :attr:`module_name`.
+        :param data: the keys ``lookup()``, ``alias()`` and ``hiera()`` resolve
+            in :meth:`interpolate`, by dotted navigation; a key absent from it
+            is a miss, as in a lookup. No keys when omitted.
+        :returns: the new context.
+        """
+        scope = Scope() if scope is None else scope
+        keys = {} if data is None else data
+
+        def lookup(key, invocation):
+            root, segments = parse_lookup_key(key)
+            if root not in keys:
+                return _MISSING
+            if not segments:
+                return keys[root]
+            return sub_lookup(key, segments, keys[root])
+
+        function_context = _FunctionContext(
+            _EnvironmentContext(), scope.environment, module_name
+        )
+        return cls(function_context, Invocation(scope, lookup))
 
     def interpolate(self, value: _ty.Any) -> _ty.Any:
         """Interpolate ``value`` (methods allowed) against the current
