@@ -216,6 +216,33 @@ def test_environment_directory_spelled_as_asked_is_found(tmp_path, make_tree):
     assert h.lookup("env_only") == "stage"
 
 
+@pytest.mark.parametrize(
+    "config",
+    ["version: 5\nhierarchy: 7\n", "version: 6\nhierarchy: []\n"],
+    ids=["bad-schema", "version-6"],
+)
+def test_reserved_key_is_a_miss_with_an_unusable_environment_layer(
+    tmp_path, make_tree, config
+):
+    base = _global(make_tree)
+    _write(tmp_path / "envs" / "e1" / "hiera.yaml", config)
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[tmp_path / "envs"],
+        scope=Scope(environment="e1"),
+    )
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("lookup_options")
+    with pytest.raises(KeyNotFoundError):
+        h.lookup("lookup_options.g")
+    assert h.lookup("lookup_options", default_value="d") == "d"
+    for options in (False, True):
+        explained = h.explain("lookup_options", explain_options=options)
+        assert explained.text().splitlines()[0] == 'Invalid key "lookup_options"'
+    with pytest.raises(ConfigError):
+        h.lookup("g")
+
+
 def test_known_module_with_no_data_provider(tmp_path, make_tree):
     # A module directory known to modulepath with no hiera.yaml and no default data
     # file has no usable provider: report_module_provider_not_found fires (for the
@@ -321,14 +348,15 @@ def test_hiera3_backend_only_in_global_layer(tmp_path, make_tree, place):
     )
     if place == "environment":
         _write(tmp_path / "envs" / "e1" / "hiera.yaml", text)
+        h = Hiera(
+            str(base / "hiera.yaml"),
+            environmentpath=[tmp_path / "envs"],
+            scope=Scope(environment="e1"),
+        )
         with pytest.raises(
             ConfigError, match="'hiera3_backend' is only allowed in the global layer"
         ) as exc_info:
-            Hiera(
-                str(base / "hiera.yaml"),
-                environmentpath=[tmp_path / "envs"],
-                scope=Scope(environment="e1"),
-            )
+            h.lookup("g")
     else:
         _write(tmp_path / "modules" / "hb" / "hiera.yaml", text)
         h = Hiera(str(base / "hiera.yaml"), basemodulepath=[tmp_path / "modules"])
@@ -539,14 +567,15 @@ def test_default_hierarchy_rejected_outside_module_layer_environment(
         "version: 5\nhierarchy:\n  - {name: c, path: c.yaml}\n"
         "default_hierarchy:\n  - {name: d, path: d.yaml}\n",
     )
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[tmp_path / "envs"],
+        scope=Scope(environment="e1"),
+    )
     with pytest.raises(
         ConfigError, match="'default_hierarchy' is only allowed in the module layer"
     ) as exc_info:
-        Hiera(
-            str(base / "hiera.yaml"),
-            environmentpath=[tmp_path / "envs"],
-            scope=Scope(environment="e1"),
-        )
+        h.lookup("g")
     assert exc_info.value.line == 4
 
 

@@ -1,0 +1,67 @@
+description: >-
+  The reserved key lookup_options is a miss before any layer configuration is
+  read: an environment whose hiera.yaml fails the schema, or is version 6, still
+  answers a miss for that key -- also with --default and with --explain -- while
+  every other key in the same environment fails as it does without the reserved
+  key.
+queries:
+  - id: badschema-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "badschema"]
+  - id: badschema-lookup_options-default
+    key: lookup_options
+    default: "dflt"
+    puppet_args: ["--environment", "badschema"]
+  - id: badschema-lookup_options-dotted
+    key: lookup_options.g_only
+    puppet_args: ["--environment", "badschema"]
+  - id: badschema-lookup_options-explain
+    key: lookup_options
+    explain: data
+    ordered: true
+    puppet_args: ["--environment", "badschema"]
+  - id: badschema-lookup_options-explain-options
+    key: lookup_options
+    explain: options
+    ordered: true
+    puppet_args: ["--environment", "badschema"]
+  - id: badschema-g_only
+    key: g_only
+    puppet_args: ["--environment", "badschema"]
+    error_match: "has wrong type"
+    error_class: ConfigError
+  - id: v6env-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "v6env"]
+  - id: v6env-g_only
+    key: g_only
+    puppet_args: ["--environment", "v6env"]
+  - id: syntaxerr-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "syntaxerr"]
+  - id: syntaxerr-g_only
+    key: g_only
+    puppet_args: ["--environment", "syntaxerr"]
+    error_class: ConfigError
+  - id: dhenv-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "dhenv"]
+  - id: dhenv-g_only
+    key: g_only
+    puppet_args: ["--environment", "dhenv"]
+    error_match: "'default_hierarchy' is only allowed in the module layer"
+    error_class: ConfigError
+  - id: h3b-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "h3b"]
+  - id: h3b-g_only
+    key: g_only
+    puppet_args: ["--environment", "h3b"]
+    error_match: "'hiera3_backend' is only allowed in the global layer"
+    error_class: ConfigError
+  - id: okenv-lookup_options
+    key: lookup_options
+    puppet_args: ["--environment", "okenv"]
+  - id: okenv-g_only
+    key: g_only
+    puppet_args: ["--environment", "okenv"]

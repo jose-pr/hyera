@@ -85,10 +85,11 @@ def test_hiera3_backend_only_in_global_layer(make_tree):
             ),
         },
     )
+    h = Hiera(str(root / "hiera.yaml"), environmentpath=[root / "environments"])
     with pytest.raises(
         ConfigError, match="'hiera3_backend' is only allowed in the global layer"
     ) as excinfo:
-        Hiera(str(root / "hiera.yaml"), environmentpath=[root / "environments"])
+        h.lookup("k")
     assert excinfo.value.line == 4
 
 

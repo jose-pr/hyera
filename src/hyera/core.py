@@ -20,7 +20,6 @@ from ._lookup.cache import _ScopeKeyedCache
 from ._config.data_provider import (
     environment_for,
     load_global_layer,
-    module_name_of,
     split_path_setting,
 )
 from ._output import explain as _explain
@@ -44,8 +43,8 @@ from ._lookup.lookup_function import (
     parse_call,
     recursion_bound,
 )
-from ._lookup.merge_strategy import MergeLike, MergeStrategy
-from ._lookup.navigation import _MISSING, LOOKUP_OPTIONS, split_key
+from ._lookup.merge_strategy import MergeLike
+from ._lookup.navigation import _MISSING, split_key
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
 from .backends._base import Backend, default_backends
@@ -255,9 +254,9 @@ class Hiera:
             self._codedir,
         )
         self._base_path: Path = self._global.root
-        # Puppet fails every lookup on a broken environment config; loading
-        # the construction scope's own environment now gives the same
-        # failure at construction instead.
+        # Puppet fails at startup for an environment that does not exist, so
+        # the construction scope's environment is resolved here; its own
+        # hiera.yaml is read by the first lookup that needs it.
         environment_for(self, self._scope.environment)
 
     @property
@@ -391,6 +390,7 @@ class Hiera:
 
     _lookup_levels = _layer_walk._lookup_levels
     _lookup_layers = _layer_walk._lookup_layers
+    _explain_options = _layer_walk._explain_options
     _search_and_merge = _layer_walk._search_and_merge
     _sub_lookup = _layer_walk._sub_lookup
 
@@ -924,20 +924,7 @@ class Hiera:
         error = None
         try:
             if invocation.only_explain_options:
-                # lookup_adapter.rb:61-63: look up "lookup_options" through the layer
-                # stack like any key, not via `retrieve_lookup_options`'s own combining
-                # (no `merge` explain node); swallow what it finds or misses.
-                first_name = call.names[0] if call.names else None
-                first_root = (
-                    first_name[0] if isinstance(first_name, tuple) else first_name
-                )
-                module_name = module_name_of(first_root) if first_root else None
-                self._lookup_layers(
-                    LOOKUP_OPTIONS,
-                    module_name,
-                    invocation,
-                    MergeStrategy.strategy("hash"),
-                )
+                self._explain_options(call, invocation)
             else:
                 _lookup_call(call, invocation, self._search_and_merge)
         except RecursionError as exc:

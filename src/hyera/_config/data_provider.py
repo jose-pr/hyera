@@ -232,6 +232,9 @@ class _EnvironmentState:
     provider (or ``None``/:class:`_IgnoredConfig`), its modulepath, and the
     per-module providers discovered/loaded from it so far.
 
+    The layer provider is read from disk on first use, so an environment whose
+    own ``hiera.yaml`` is broken fails the lookups that need it and no other
+    (``lookup_adapter.rb:47-52``: the reserved key never reaches a provider).
     Cached on :class:`~hyera.core.Hiera` per environment name and shared with
     every :meth:`~hyera.core.Hiera.scoped` view.
     """
@@ -239,19 +242,38 @@ class _EnvironmentState:
     __slots__ = (
         "name",
         "root",
-        "provider",
+        "_provider",
+        "_loaded",
+        "_backends",
+        "_scope",
         "modulepath",
         "_modules",
         "module_providers",
     )
 
-    def __init__(self, name, root, provider, modulepath):
+    def __init__(self, name, root, modulepath, backends, scope):
         self.name = name
         self.root = root
-        self.provider = provider
+        self._provider = None
+        self._loaded = False
+        self._backends = backends
+        self._scope = scope
         self.modulepath = modulepath
         self._modules: "_ty.Optional[_ty.Dict[str, Path]]" = None
         self.module_providers: dict = {}
+
+    @property
+    def provider(self):
+        if not self._loaded:
+            self._provider = (
+                None
+                if self.root is None
+                else load_layer_provider(
+                    "Environment", self.root, self._backends, self._scope
+                )
+            )
+            self._loaded = True
+        return self._provider
 
     def modules(self) -> "_ty.Dict[str, Path]":
         if self._modules is None:
@@ -290,11 +312,6 @@ def environment_for(hiera, name):
                 )
             )
 
-    provider = (
-        load_layer_provider("Environment", root, hiera._backends, hiera._scope)
-        if root is not None
-        else None
-    )
     if hiera._modulepath_override is not None:
         modulepath = hiera._modulepath_override
     elif root is not None:
@@ -302,7 +319,7 @@ def environment_for(hiera, name):
     else:
         modulepath = hiera._basemodulepath
 
-    state = _EnvironmentState(name, root, provider, modulepath)
+    state = _EnvironmentState(name, root, modulepath, hiera._backends, hiera._scope)
     hiera._environments[name] = state
     return state
 

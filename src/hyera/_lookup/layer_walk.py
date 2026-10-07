@@ -22,7 +22,7 @@ from .._config.data_provider import (
 )
 from .._output.explain import _debug_preamble
 from .._output.explain_refs import _ProviderRef, _provider_ref
-from ..exceptions import HieraLookupError, _escapes
+from ..exceptions import HieraLookupError, KeyNotFoundError, _escapes
 from .lookup_adapter import convert_result, extract_lookup_options_for_key
 from .lookup_options import (
     lookup_default_in_module,
@@ -225,6 +225,27 @@ def _lookup_layers(self, root, module_name, invocation, strategy, segments=()):
         if getattr(e, "_in_layer", False):
             raise
         raise _escapes(e)
+
+
+def _explain_options(self, call, invocation):
+    """The ``--explain-options`` walk: ``lookup_options`` is looked up through the
+    layer stack like any key, not via ``retrieve_lookup_options``'s own combining
+    (``lookup_adapter.rb:61-63``, no ``merge`` explain node), and what it finds or
+    misses is swallowed. The reserved key itself is an invalid key before any layer
+    is read (``lookup_adapter.rb:47-52``), and a miss.
+    """
+    first_name = call.names[0] if call.names else None
+    first_root = first_name[0] if isinstance(first_name, tuple) else first_name
+    if first_root == LOOKUP_OPTIONS or (
+        isinstance(first_name, str) and first_name.startswith(LOOKUP_OPTIONS + ".")
+    ):
+        with invocation.recording("invalid_key", LOOKUP_OPTIONS):
+            pass
+        raise KeyNotFoundError(list(call.names)) from None
+    module_name = module_name_of(first_root) if first_root else None
+    self._lookup_layers(
+        LOOKUP_OPTIONS, module_name, invocation, MergeStrategy.strategy("hash")
+    )
 
 
 def _search_and_merge(self, key, invocation, merge, parsed=None):

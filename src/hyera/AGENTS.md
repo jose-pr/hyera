@@ -1687,6 +1687,12 @@ tuple comes back as a list).
 - **difference** `environment-trailing-slash` — `--environment
   production/` is accepted by Puppet and rejected by hyera as an unknown
   environment.
+- **deviation** `global-config-error-at-construction` — A global
+  `hiera.yaml` that cannot be loaded (version 4, or a schema error) raises
+  `ConfigError` from `Hiera(...)`; Puppet answers a miss for the reserved key
+  `lookup_options` and fails every other key. An environment or module layer
+  that cannot be loaded fails only the lookups that read it, and
+  `lookup_options` is a miss, as in Puppet.
 - **difference** `dir-glob-ruby-quirks` — A brace group directly after
   `**/` is matched per directory in sorted order by Ruby (hyera expands it
   first, in written order, so such a `glob` level's files can be searched

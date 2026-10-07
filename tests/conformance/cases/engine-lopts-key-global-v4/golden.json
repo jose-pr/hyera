@@ -1,0 +1,51 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "7f30cc6d2dc4e32ba3dc60e9f2439f4e33a31fcd47ca8a3b29fed4106059f725",
+  "results": {
+    "lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "lookup_options-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "dflt",
+        "lookup_options"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "dflt"
+    },
+    "g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "warnings": [
+        "<case>/hiera.yaml: Use of 'hiera.yaml' version 4 is deprecated. It should be converted to version 5"
+      ],
+      "status": "error",
+      "message": "hiera.yaml version 4 cannot be used in the global layer (file: <case>/hiera.yaml)"
+    }
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "22d7e070d69cce25f98a3a50316bcc82958c135e96b4fdd8e705f3d1c564500a",
+  "results": {
+    "badschema-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "badschema-lookup_options-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "--default",
+        "dflt",
+        "lookup_options"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "dflt"
+    },
+    "badschema-lookup_options-dotted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "lookup_options.g_only"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "badschema-lookup_options-explain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "--explain",
+        "lookup_options"
+      ],
+      "exit_status": 0,
+      "status": "explained",
+      "tree": {
+        "key": "lookup_options",
+        "type": "invalid_key"
+      },
+      "text": [
+        "Invalid key \"lookup_options\"",
+        "Function lookup() did not find a value for the name 'lookup_options'"
+      ]
+    },
+    "badschema-lookup_options-explain-options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "--explain-options",
+        "lookup_options"
+      ],
+      "exit_status": 0,
+      "status": "explained",
+      "tree": {
+        "key": "lookup_options",
+        "type": "invalid_key"
+      },
+      "text": [
+        "Invalid key \"lookup_options\"",
+        "Function lookup() did not find a value for the name 'lookup_options'"
+      ]
+    },
+    "badschema-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "badschema",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The Lookup Configuration at <case>/environments/badschema/hiera.yaml' has wrong type, entry 'hierarchy' expects an Array value, got Integer"
+    },
+    "v6env-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v6env",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "v6env-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "v6env",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "This runtime does not support hiera.yaml version 6 (file: <case>/environments/v6env/hiera.yaml)"
+    },
+    "syntaxerr-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "syntaxerr",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "syntaxerr-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "syntaxerr",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "<case>/environments/syntaxerr/hiera.yaml): did not find expected ',' or ']' while parsing a flow sequence at line 2 column 12\nWrapped exception:\n<case>/environments/syntaxerr/hiera.yaml): did not find expected ',' or ']' while parsing a flow sequence at line 2 column 12"
+    },
+    "dhenv-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "dhenv",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "dhenv-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "dhenv",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "'default_hierarchy' is only allowed in the module layer (file: <case>/environments/dhenv/hiera.yaml, line: 4)"
+    },
+    "h3b-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "h3b",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "h3b-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "h3b",
+        "g_only"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "'hiera3_backend' is only allowed in the global layer (file: <case>/environments/h3b/hiera.yaml, line: 3)"
+    },
+    "okenv-lookup_options": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "okenv",
+        "lookup_options"
+      ],
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "okenv-g_only": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--environment",
+        "okenv",
+        "g_only"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "g"
+    }
+  }
+}

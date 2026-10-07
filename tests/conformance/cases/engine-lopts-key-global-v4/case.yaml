@@ -1,0 +1,22 @@
+description: >-
+  The reserved key lookup_options is a miss when the global hiera.yaml is
+  version 4, while an ordinary key is not found in that configuration.
+queries:
+  - id: lookup_options
+    key: lookup_options
+    deviation: &dev
+      id: global-config-error-at-construction
+      reason: >-
+        hyera reads the global hiera.yaml when the Hiera object is built, so a
+        global layer that cannot be loaded raises ConfigError there and no key,
+        the reserved lookup_options included, is looked up; Puppet reads the
+        file only for a key that needs it and answers a miss for lookup_options.
+      expect:
+        status: error
+        message: "hiera.yaml version 4 cannot be used in the global layer"
+  - id: lookup_options-default
+    key: lookup_options
+    default: "dflt"
+    deviation: *dev
+  - id: g_only
+    key: g_only

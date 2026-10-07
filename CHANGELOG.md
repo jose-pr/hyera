@@ -51,6 +51,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** the `hiera.yaml` of the construction scope's environment is
+  read by the first lookup that needs it, not by `Hiera(...)`; a broken one
+  raises `ConfigError` from that lookup. A missing environment still raises
+  at construction.
 - **Breaking:** a caller's bad argument raises a plain `ValueError` or
   `TypeError`, never a `HieraError`. An unknown `merge` strategy or invalid
   merge options (`h.lookup("k", merge="bogus")`, once `MergeError`), an
@@ -166,6 +170,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Looking up the reserved key `lookup_options` is a miss, with `--default` and
+  with `explain`, whatever state an environment layer's `hiera.yaml` is in (a
+  schema error, version 6, a syntax error), as in Puppet. A global
+  `hiera.yaml` that cannot be loaded still raises at construction.
 - `Backend.load` raises `BackendError` (`Unable to read (<path>): <reason>`) for
   a file that is missing or is a directory; `FileNotFoundError` and
   `PermissionError` leaked out of it.

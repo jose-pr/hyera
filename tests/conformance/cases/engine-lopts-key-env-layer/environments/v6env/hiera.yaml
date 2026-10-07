@@ -1,0 +1,3 @@
+version: 6
+hierarchy:
+  - {name: c, path: common.yaml}

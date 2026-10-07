@@ -1097,6 +1097,14 @@ cannot record a golden for.
 - **`--environment` takes the name literally.** `--environment production/`
   is accepted by Puppet and names no environment in hyera, which reports the
   missing environment. (id: `environment-trailing-slash`)
+- **A global `hiera.yaml` that cannot be loaded fails at construction, even
+  for `lookup_options`.** `Hiera(...)` reads the global configuration when it
+  is built, so a global layer in version 4, or one failing the schema, raises
+  `ConfigError` there; Puppet reads it only for a key that needs it and
+  answers a miss for the reserved key `lookup_options`. An environment or
+  module layer that cannot be loaded is read by the first lookup that needs
+  it, and the reserved key answers a miss before that, as in Puppet.
+  (id: `global-config-error-at-construction`)
 - **Three Ruby `Dir.glob` behaviours are not matched.** A brace group
   directly after `**/` (`**/{b,a}.yaml`) is matched per directory in sorted
   order by Ruby, where hyera expands it first and keeps the written order,
