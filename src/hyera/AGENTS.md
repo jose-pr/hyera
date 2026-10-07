@@ -114,10 +114,9 @@ since Hiera data is dynamic.
     explicit `version: 3`, are the same dialect to Puppet) is read and
     validated against Puppet's own v3 schema (`backends`, `logger`,
     `merge_behavior`, `deep_merge_options`, `hierarchy`, plus one config
-    key per listed backend), reporting **every** mismatch — not just the
-    first, unlike the version 5 schema below — each as its own "The Lookup
-    Configuration ... has wrong type, ..." line, newline-joined into one
-    `ConfigError`. A hiera.yaml that exists but does not parse to a YAML
+    key per listed backend), reporting **every** mismatch, like the version 5
+    schema below, each as its own "The Lookup Configuration ... has wrong
+    type, ..." line, newline-joined into one `ConfigError`. A hiera.yaml that exists but does not parse to a YAML
     hash at all (empty, a list, ...) logs Puppet's own warning and falls
     back to Puppet's Hiera 3 default configuration
     (`backends: [yaml]`, `hierarchy: ['nodes/%{::trusted.certname}',
@@ -171,7 +170,8 @@ since Hiera data is dynamic.
   - **Version 5** is the schema described above: an unrecognized key
     anywhere, a missing/duplicate/non-string `name`, more than one function
     or location key, a malformed `options` entry, and the like — reporting
-    only the first mismatch.
+    every mismatch, each ending with the `(line: N)` of the node it points
+    at; `ConfigError.line` is the first one's.
   - **Layers.** `hiera.yaml` (`base_config`) is the *global* layer. Two more,
     optional, keyword-only layers sit alongside it, exactly as `puppet
     lookup` reads them: an *environment* layer, `<environmentpath>/
@@ -1492,9 +1492,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   global-layer version 4 refusal has no `(file: ...)` suffix, and
   `--explain` of a version 3 config with a relative `:datadir:` shows
   absolute paths where Puppet shows them as written.
-- **difference** `schema-error-line-suffix` — Schema errors carry
-  `(line: N)`, which Puppet never prints, and report only the first
-  mismatch where Puppet lists all of them.
+- **difference** `schema-error-line-suffix` — Schema errors of a version 5
+  `hiera.yaml` carry `(line: N)` on each mismatch, which Puppet never
+  prints.
 - **difference** `puppet-crashes-hyera-answers` — `puppet lookup --type
   Data k` (any type alias), an Integer key in `lookup_options` or module
   data, and `Float.new("0")` crash Puppet 8.10; hyera returns a value,

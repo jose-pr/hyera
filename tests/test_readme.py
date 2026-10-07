@@ -119,7 +119,7 @@ DOC_ONLY = {
     ),
     "schema-error-line-suffix": (
         "the harness holds an error to its status, not its text, so a "
-        "line suffix or the count of mismatches reported is never compared"
+        "line suffix is never compared"
     ),
     "puppet-crashes-hyera-answers": (
         "a golden records Puppet's answer, and Puppet crashes on these "

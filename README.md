@@ -978,10 +978,10 @@ cannot record a golden for.
   `--explain` of a version 3 config with a relative `:datadir:` shows
   absolute paths where Puppet shows them as written. Match on the exception
   class, not its text. (id: `error-message-text`)
-- **Schema errors carry `(line: N)` and report only the first mismatch.**
-  Puppet never prints a line number and, for a `hiera.yaml` with several
-  mismatches, lists them all; hyera stops at the first and names its line in
-  the message and in `ConfigError.line`. (id: `schema-error-line-suffix`)
+- **Schema errors of a version 5 `hiera.yaml` carry `(line: N)`.** Puppet
+  never prints a line number; hyera ends each mismatch with the line of the
+  node it points at, and puts the first one's in `ConfigError.line`. Both
+  list every mismatch. (id: `schema-error-line-suffix`)
 - **Some inputs that crash Puppet 8.10 work in hyera.** `puppet lookup
   --type Data k` (or any type alias) fails in Puppet and returns the value
   here; an Integer key in `lookup_options` or in module data fails every

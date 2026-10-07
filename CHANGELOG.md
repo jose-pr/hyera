@@ -35,6 +35,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   gone.
 - The `eyaml` extra accepts `cryptography` 42.0 and every later release; it
   was limited to the 50.x series.
+- A `hiera.yaml` with several schema mismatches reports all of them, in the
+  order and text Puppet gives (version 3, 4 and 5 alike); a version 5 file
+  used to report only the first. A type assertion with a `Variant`, a `Struct`
+  holding unrecognized keys, an `Optional` or a `Hash` with a non-String key
+  names its mismatches as Puppet does.
 - The shipped `AGENTS.md` API header gives every signature in a code block and
   ends with the sections Exceptions, Command line, Environment variables and
   Gotchas; the README's Command line is its own section.
