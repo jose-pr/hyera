@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple
 
 from record import _leak_scan
 
-from .generate import build, make_jobs
-from .scenario import Scn
+from .generate import build
 
 CORPUS = Path(__file__).resolve().parent / "corpus"
 FORMAT = 1
@@ -30,29 +30,34 @@ SIZE_LIMIT = 1_000_000
 
 
 class Plan(NamedTuple):
-    """The fixed inputs of one area's corpus."""
+    """The fixed inputs of one area's corpus.
+
+    ``agree`` queries that agree plainly and ``per_rule`` queries of each
+    classified kind of disagreement are kept, chosen by seed from the whole area.
+    """
 
     seed: int
     count: int
-    max_queries: int
+    agree: int
+    per_rule: int
 
 
-#: area -> the seed, the scenarios kept and the queries kept per scenario.
+#: area -> seed, scenarios generated, plain agreements kept, queries kept per rule.
 PLAN: Dict[str, Plan] = {
-    "backends": Plan(1, 14, 6),
-    "config": Plan(1, 24, 3),
-    "extra": Plan(1, 14, 4),
-    "interp": Plan(1, 8, 12),
-    "interp_sweep": Plan(1, 3, 40),
-    "keys": Plan(1, 3, 40),
-    "layers": Plan(1, 10, 8),
-    "locations": Plan(1, 12, 6),
-    "lopts": Plan(1, 14, 5),
-    "strategies": Plan(1, 24, 6),
-    "yaml_data": Plan(1, 24, 3),
+    "backends": Plan(1, 200, 60, 5),
+    "config": Plan(1, 200, 60, 5),
+    "extra": Plan(1, 200, 40, 5),
+    "interp": Plan(1, 200, 60, 5),
+    "interp_sweep": Plan(1, 200, 60, 5),
+    "keys": Plan(1, 200, 60, 5),
+    "layers": Plan(1, 200, 60, 5),
+    "locations": Plan(1, 200, 50, 5),
+    "lopts": Plan(1, 200, 60, 5),
+    "strategies": Plan(1, 200, 75, 5),
+    "yaml_data": Plan(1, 200, 75, 5),
 }
-#: The merge area: the seed and the number of ``values`` cases.
-MERGE_PLAN = Plan(1, 300, 0)
+#: The merge area: the seed and the number of ``values`` cases; all are kept.
+MERGE_PLAN = Plan(1, 300, 0, 0)
 
 
 class Recording:
@@ -79,19 +84,22 @@ class MergeRecording:
 
 
 def _line(obj) -> str:
-    return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return json.dumps(obj, ensure_ascii=True, separators=(",", ":"))
 
 
-def sample_queries(scn: Scn, area: str, seed: int, max_queries: int) -> List[str]:
-    """The ids of the queries kept for a scenario: all of them, or a seeded
-    sample in the scenario's own order."""
-    ids = [q["id"] for q in scn.queries]
-    if len(ids) <= max_queries:
-        return ids
-    pick = random.Random("{}:{}:{}:q".format(seed, area, scn.name)).sample(
-        range(len(ids)), max_queries
-    )
-    return [ids[i] for i in sorted(pick)]
+def select(rows: list, plan: Plan, area: str) -> set:
+    """The ids of the jobs a corpus keeps: a seeded sample of the plain
+    agreements, and a seeded few of each (kind, rule) group."""
+    groups: Dict[tuple, List[str]] = {}
+    for row in rows:
+        groups.setdefault((row.kind, row.rule or ""), []).append(row.job["id"])
+    kept: set = set()
+    for key in sorted(groups):
+        ids = sorted(groups[key])
+        want = plan.agree if key == ("AGREE", "") else plan.per_rule
+        label = "{}:{}:{}:{}".format(plan.seed, area, key[0], key[1])
+        kept.update(random.Random(label).sample(ids, min(want, len(ids))))
+    return kept
 
 
 def _short_id(job: dict) -> str:
@@ -106,7 +114,8 @@ def header(area: str, plan: Plan, versions: dict) -> dict:
         "area": area,
         "seed": plan.seed,
         "count": plan.count,
-        "max_queries": plan.max_queries,
+        "agree": plan.agree,
+        "per_rule": plan.per_rule,
         "puppet": v["puppet"],
         "ruby": v["ruby"],
         "gems": v["gems"],
@@ -114,18 +123,32 @@ def header(area: str, plan: Plan, versions: dict) -> dict:
     }
 
 
-def scenario_lines(rec: Recording, plan: Plan) -> List[str]:
-    """The corpus lines for a scenario area's run."""
+def scenario_lines(rec: Recording, plan: Plan, identities: tuple) -> List[str]:
+    """The corpus lines for a scenario area's run.
+
+    A query whose answer the leak scan refuses (a path-like string in the data,
+    a host's name) is left out and named on standard error: it stays covered by
+    a live run, and the scan still guards everything that is written.
+    """
     scenarios = {s.name: s for s in build(rec.area, rec.seed, rec.count)}
-    keep: Dict[str, set] = {
-        name: set(sample_queries(s, rec.area, rec.seed, plan.max_queries))
-        for name, s in scenarios.items()
-    }
+    clean = []
+    for row in rec.rows:
+        if row.job.get("volatile"):
+            continue
+        if _leak_scan(row.puppet, "", identities):
+            print(
+                "not recorded, the answer looks like a path or a host:",
+                row.job["id"],
+                file=sys.stderr,
+            )
+        else:
+            clean.append(row)
+    keep = select(clean, plan, rec.area)
     lines: List[str] = []
     current = None
-    for row in rec.rows:
+    for row in clean:
         job = row.job
-        if job["qid"] not in keep[job["scn"]]:
+        if job["id"] not in keep:
             continue
         if job["scn"] != current:
             current = job["scn"]
@@ -172,8 +195,8 @@ def write(recordings: list, versions: dict) -> None:
             body = merge_lines(rec)
         else:
             plan = PLAN[rec.area]
-            body = scenario_lines(rec, plan)
-        head = header(rec.area, Plan(rec.seed, rec.count, plan.max_queries), versions)
+            body = scenario_lines(rec, plan, versions["identities"])
+        head = header(rec.area, plan, versions)
         for line in body:
             hits = _leak_scan(json.loads(line), "", versions["identities"])
             if hits:
@@ -195,7 +218,7 @@ def write(recordings: list, versions: dict) -> None:
 def read(area: str) -> Tuple[dict, List[dict]]:
     """The header and the remaining lines of ``corpus/<area>.jsonl``."""
     path = CORPUS / (area + ".jsonl")
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = path.read_bytes().decode("utf-8").split("\n")[:-1]
     return json.loads(lines[0]), [json.loads(line) for line in lines[1:]]
 
 

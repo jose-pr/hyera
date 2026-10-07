@@ -97,6 +97,10 @@ class Scn:
         self.queries: List[dict] = []
         #: extra ``--render-as`` formats every query is also run under.
         self.render: tuple = ()
+        #: the answers depend on the Python version, the stack depth, an
+        #: environment variable or the platform's path rules, so a corpus
+        #: leaves the scenario out.
+        self.volatile = False
         self._ids: set = set()
 
     def file(self, rel: str, content) -> "Scn":
@@ -205,6 +209,7 @@ class Scn:
             h.update(b"\0")
         h.update(json.dumps(self.queries, sort_keys=True).encode("utf-8"))
         h.update(json.dumps(list(self.render)).encode("utf-8"))
+        h.update(b"V" if self.volatile else b"S")
         return h.hexdigest()
 
 

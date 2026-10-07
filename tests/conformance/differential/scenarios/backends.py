@@ -331,6 +331,8 @@ RENDER_VALUES = d("""\
 def backends(ctx):
     for name, (content, keys) in JSON_FILES.items():
         s = Scn("json-" + name, "json", "json_data file: " + name)
+        # the answer depends on how deep the interpreter's stack already is
+        s.volatile = name == "deep-nesting"
         s.hiera(
             "version: 5\ndefaults:\n  datadir: data\n  data_hash: json_data\nhierarchy:\n  - name: subject\n    path: subject.json\n  - name: fallback\n    path: fallback.json\n"
         )
@@ -341,6 +343,8 @@ def backends(ctx):
         yield s
     for name, (content, keys) in HOCON_FILES.items():
         s = Scn("hocon-" + name, "hocon", "hocon_data file: " + name)
+        # ${HOME} is set on some platforms and not on others
+        s.volatile = name == "subst-env"
         s.hiera(
             "version: 5\ndefaults:\n  datadir: data\n  data_hash: hocon_data\nhierarchy:\n  - name: subject\n    path: subject.conf\n  - name: fallback\n    path: fallback.conf\n"
         )

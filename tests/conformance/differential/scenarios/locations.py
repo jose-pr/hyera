@@ -47,7 +47,7 @@ def _tree(s):
         "roles/we b",
         "glob/a",
         "glob/b",
-        "glob/B",
+        "glob/Z",
         "glob/_x",
         "glob/.hidden",
         "glob/sub/deep",
@@ -175,7 +175,7 @@ HIERARCHIES = {
 """,
     "glob-braces-nested": """\
   - name: g
-    globs: ["glob/{a,{b,B}}.yaml", "glob/{web-{1,2},9}.yaml", "glob/{a,}.yaml", "{glob,ab}/a.yaml", "glob/{a.yaml,b.yaml}"]
+    globs: ["glob/{a,{b,Z}}.yaml", "glob/{web-{1,2},9}.yaml", "glob/{a,}.yaml", "{glob,ab}/a.yaml", "glob/{a.yaml,b.yaml}"]
 """,
     "glob-classes": """\
   - name: g
@@ -425,6 +425,9 @@ HIERARCHIES = {
 def locations(ctx):
     for name, hier in HIERARCHIES.items():
         s = Scn("loc-" + name, "locations", "location kinds: " + name)
+        # Windows drops a trailing space, and case-insensitive filesystems match
+        # a literal segment in any case
+        s.volatile = name in ("path-with-space", "glob-case")
         s.facts(FACTS)
         s.hiera(
             "version: 5\ndefaults:\n  datadir: data\n  data_hash: yaml_data\nhierarchy:\n"

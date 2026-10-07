@@ -87,5 +87,7 @@ def make_jobs(scenarios: List[Scn]) -> List[dict]:
                 }
                 if render:
                     job["render"] = render
+                if scn.volatile:
+                    job["volatile"] = True
                 jobs.append(job)
     return jobs

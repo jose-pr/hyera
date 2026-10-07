@@ -107,11 +107,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     recordings = []
     try:
         for area in areas:
-            seed, count, limit = args.seed, args.count, None
+            seed, count = args.seed, args.count
             if args.record_corpus:
                 plan = corpus.MERGE_PLAN if area == MERGE_AREA else corpus.PLAN[area]
                 seed, count = plan.seed, plan.count
-                limit = plan.max_queries or None
             try:
                 if area == MERGE_AREA:
                     stats, bad, record = merge_run.run(
@@ -127,7 +126,6 @@ def main(argv: Optional[List[str]] = None) -> int:
                         args.puppet_workers,
                         args.hyera_workers,
                         echo,
-                        limit,
                     )
                     stats = batch.summarize(rows)
                     bad = [batch.describe(r) for r in rows if r.unclassified]

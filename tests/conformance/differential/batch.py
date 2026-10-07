@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, NamedTuple, Optional
 
 from . import drive_hyera, outcomes, reference
-from .corpus import sample_queries
 from .generate import build, make_jobs, write_area
 from .rules import OPEN_PREFIX, judge
 
@@ -69,20 +68,13 @@ def run_area(
     puppet_workers: int = 8,
     hyera_workers: int = 1,
     progress: Optional[Callable[[str], None]] = None,
-    max_queries: Optional[int] = None,
 ) -> List[Row]:
     """Generate ``area``, run Puppet and hyera over it and judge every query.
 
     :param root: where the trees and the driver files are written.
-    :param max_queries: keep only this many queries per scenario (the seeded
-        sample a corpus records).
     :raises reference.ReferenceError: when the reference cannot be run.
     """
     scenarios = build(area, seed, count)
-    if max_queries is not None:
-        for scn in scenarios:
-            kept = set(sample_queries(scn, area, seed, max_queries))
-            scn.queries = [q for q in scn.queries if q["id"] in kept]
     write_area(scenarios, root)
     jobs = make_jobs(scenarios)
     puppet_jobs = [puppet_job(j, root) for j in jobs]

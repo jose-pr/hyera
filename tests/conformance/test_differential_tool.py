@@ -8,12 +8,13 @@ the hyera driver answers a hand-built scenario.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from pathlib import Path
 
 import pytest
 
-from differential import corpus, drive_hyera, outcomes, batch
+from differential import batch, corpus, drive_hyera, outcomes
 from differential.generate import build, make_jobs, write_area
 from differential.merge import gen as merge_gen
 from differential.merge import ours as merge_ours
@@ -27,17 +28,17 @@ README = ROOT / "README.md"
 #: seed 1, count 5: the digest of each area's scenarios, joined. A change here
 #: means the generated trees changed, on some platform or interpreter.
 AREA_DIGESTS = {
-    "backends": "a4e12c041a5b4ed947e2845c12397a62f9545434a0d8df08917ea8117d5d783f",
-    "config": "98566819de7349b71b3a1d809943f2e009609d8635820bc9590a9991d2e58bdb",
-    "extra": "d0d72c0d5dac103575441c25337b267318884b46eca3019aec4a56c3adb0e226",
-    "interp": "53a55f578c0f7a46d8a307265b6fef7827e022af796b3eb62bf9e486b2ec10b6",
-    "interp_sweep": "b2c795014d8f99fa06031fb35f10c8eef1f21e3eba837ad83704bd09b60b696c",
-    "keys": "5b5a457c4f2719cbde4444aab5f8c2b36f2a5e76ae4d782fde01ecebcaeb8e14",
-    "layers": "28650be4f27ccaece9552598b61ba198e3da3098abc997a802616395cc87ba4f",
-    "locations": "4c92631822602b302b585660c45d59eef5e772dcaafca2929ac38658772a33d4",
-    "lopts": "5bb7c8b6b784a4b56437076341ef4b107ac5a8095e963a0472a9a463c3f70a74",
-    "strategies": "5609fae284631f786e315f0e5e3fb21c84d230a4dc67704c9d2b2ff0d393acbe",
-    "yaml_data": "abb4af318e8bc20155c4ce018d1a39e9add02ca986389e36d80e76618a2a6b03",
+    "backends": "c17bd7a107c1e8238d17b5840d5268dd7cadb763a06df9db6fa6b7d4e13f8d11",
+    "config": "83c765b5588e6ccb60deb838af3226b2e05b5d1e799196e1454e7485d0c3e093",
+    "extra": "10d069e19d5836e1fc457856a33fce99bb705593aaf4effd633304809a9dc983",
+    "interp": "33a153f84ac46e4aa111f592bba6b9b1144316437f306dd7376d0a363ec71717",
+    "interp_sweep": "08df50ce7a2e607ad697085202f04c759e1ff99b14693ec17a182ccd6f282702",
+    "keys": "89c337daae93acd29fb8bb2e392f6348927853fdfd26f29e3e3a00cd509886cb",
+    "layers": "934617525cf560c79732edb696a546d8a969a14b62cccd80e4dd1909778c4382",
+    "locations": "67413490f16cef82015cfc8e526342ccbb07f8446eb1440d107775a8cdf8c6d4",
+    "lopts": "08c479a787edab6449c9cb27c8cf0aeee61f9ced1d002f67ddae43629baec6d9",
+    "strategies": "5cf1fe899ed41312c7497e6c62fa3d2f8fa8a626279e6cbb8c1055ed22e545ff",
+    "yaml_data": "ab0d9720acb655c9d7afea4014d3b80956fb3d6e0b3fd1f1a61735f82bd7a243",
 }
 
 MERGE_DIGEST = "70791ae62450e8a6f26d154e1fc564dbef876f95315da5da4b4bd18e89990668"
@@ -94,6 +95,14 @@ def test_scenario_trees_hold_only_lf_text_and_no_absolute_path(area, tmp_path):
         if b"\r" in data or b"\xef\xbb\xbf" in data or path.suffix == ".raw":
             continue
         assert str(tmp_path).encode("utf-8") not in data
+
+
+@pytest.mark.parametrize("area", AREAS)
+def test_a_scenario_holds_no_two_paths_that_differ_only_in_case(area):
+    for scn in build(area, 1, 400):
+        folded = [rel.lower() for rel in scn.files]
+        assert len(folded) == len(set(folded)), scn.name
+        assert all(len(rel) < 80 for rel in scn.files), scn.name
 
 
 def test_job_ids_are_unique_and_relative(tmp_path):
@@ -427,6 +436,59 @@ def test_hash_keys_python_cannot_tell_apart_are_detected():
     case = {"variants": [{"h": [[1, "a"]]}, {"h": [[{"f": "1.0"}, "b"]]}]}
     assert merge_ours.has_python_equal_keys(case)
     assert not merge_ours.has_python_equal_keys({"variants": [{"h": [["a", 1]]}]})
+
+
+_SCN = build("config", 1, 200)[0].name
+
+
+def _row(n, kind="AGREE", rule=None, **job):
+    ident = "config/{}::q{:03d}".format(_SCN, n)
+    job = dict({"id": ident, "scn": _SCN, "qid": "q%03d" % n}, **job)
+    return batch.Row(job, _found(n), _both(_found(n)), kind, rule)
+
+
+def test_a_corpus_keeps_a_few_of_every_kind_and_a_seeded_sample_of_the_rest():
+    rows = [_row(n) for n in range(100)]
+    rows += [_row(100 + n, "STATUS", "puppet-crashes-hyera-answers") for n in range(9)]
+    rows += [_row(200, "VALUE", "hocon-pyhocon-parser")]
+    plan = corpus.Plan(1, 200, 10, 3)
+    kept = corpus.select(rows, plan, "area")
+    assert len(kept) == 10 + 3 + 1
+    assert _row(200).job["id"] in kept
+    assert kept == corpus.select(rows, plan, "area")
+    assert kept != corpus.select(rows, plan._replace(seed=2), "area")
+
+
+def test_a_stored_line_keeps_the_key_order_of_puppets_value():
+    line = corpus._line({"q": "x", "p": {"value": {"b": 1, "a": 2}}})
+    assert line.index('"b"') < line.index('"a"')
+    assert "\u2028" not in corpus._line({"p": "a\u2028b"})
+
+
+def test_a_volatile_scenario_is_marked_on_its_jobs_and_left_out_of_a_corpus():
+    jobs = [j for j in make_jobs(build("backends", 1, 200)) if j.get("volatile")]
+    assert {j["scn"] for j in jobs} == {"json-deep-nesting", "hocon-subst-env"}
+    rec = corpus.Recording("config", 1, 200, [_row(1, volatile=True), _row(2)])
+    lines = corpus.scenario_lines(rec, corpus.Plan(1, 200, 5, 3), ())
+    assert [json.loads(l).get("q") for l in lines if '"q"' in l] == [
+        "{}::q002".format(_SCN)
+    ]
+
+
+def test_a_query_whose_answer_looks_like_a_path_is_not_recorded():
+    row = batch.Row(
+        {"id": "area/s::q1", "scn": "s", "qid": "q1"},
+        _found("c:\\path"),
+        _both(_found("c:\\path")),
+        "AGREE",
+        None,
+    )
+    rec = corpus.Recording("backends", 1, 200, [row])
+    assert not [
+        l
+        for l in corpus.scenario_lines(rec, corpus.Plan(1, 200, 5, 3), ())
+        if '"q"' in l
+    ]
 
 
 def test_the_corpus_plan_covers_every_area():

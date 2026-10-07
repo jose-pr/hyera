@@ -23,6 +23,7 @@ from typing import Callable, List, NamedTuple, Optional
 from .outcomes import (
     Verdict,
     aio,
+    canon,
     disagreement,
     json_text,
     message_differs,
@@ -262,13 +263,15 @@ def _nesting_bound(f: Facts) -> bool:
 
 
 def _json_float_spelling(f: Facts) -> bool:
+    """Same values in the same order, spelled differently."""
     if f.render in ("yaml", "s") or f.kind != "RENDER":
         return False
     try:
-        same = json.loads(json_text(f.puppet)) == json.loads(json_text(f.cli))
+        ours = canon(json.loads(json_text(f.cli)), True)
+        theirs = canon(json.loads(json_text(f.puppet)), True)
     except ValueError:
         return False
-    return same and aio(json_text(f.puppet)) != aio(json_text(f.cli))
+    return ours == theirs and aio(json_text(f.puppet)) != aio(json_text(f.cli))
 
 
 def _empty_environment(f: Facts) -> bool:

@@ -203,6 +203,12 @@ def lopts_precedence(ctx):
     }
     for name, lo in bad.items():
         s = Scn("lopts-shape-" + name, "lopts-shapes", "lookup_options shape: " + name)
+        # Python 3.9 and 3.10 cannot compile possessive quantifiers or atomic groups
+        s.volatile = name in (
+            "regex-possessive",
+            "regex-atomic",
+            "regex-lazy-possessive",
+        )
         s.facts("a: alpha\nkname: k\nmergename: deep\n")
         s.simple(["top", "common"])
         s.file("data/top.yaml", "k: {a: 1, l: [t]}\nh: {a: 1}\nplain: p\n")
