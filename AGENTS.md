@@ -125,6 +125,13 @@ tests/
     ├── test_golden_lint.py          # the golden linter's rules
     ├── test_record.py                # the recorder's own logic (needs no Puppet)
     ├── puppet_modules/hyera_fixture/  # Puppet module the apply channel loads: emit() and a facts terminus
+    ├── test_differential_tool.py      # the differential tool's own checks (needs no Puppet)
+    ├── test_differential_corpus.py     # replay of the differential corpus (needs no Puppet)
+    ├── differential/                    # dev tool: generated scenarios compared with real Puppet (README.md)
+    │   ├── run.py                         # the one command: generate, drive both sides, classify, report
+    │   ├── scenarios/                      # one module per area; the @scenario builders
+    │   ├── merge/                           # the merge-strategy harness (generator, Ruby oracle, hyera side)
+    │   └── corpus/<area>.jsonl               # recorded Puppet answers for fixed seeds, under 1 MB
     └── cases/<area>-<topic>/        # a hand-written case.yaml + a generated golden.json per case
 
 benchmarks/
@@ -233,6 +240,13 @@ error), `130` on an interrupt.
   `merge`, `default`, `type`, `explain` or `hash_inspect`, and is recorded
   like any case (`record.py --runner wsl apply-lookup-forms`). The `apply-*`
   cases hold these queries.
+- **Differential comparison** (`tests/conformance/differential/`, see its
+  `README.md`): generated scenarios run through Puppet and hyera, every
+  disagreement classified under a published difference id. Needs Puppet:
+  `<py> tests/conformance/differential/run.py --runner {local|wsl} --area all
+  --seed 1 --count 200` (exit 0 clean, 1 unclassified, 2 reference unavailable);
+  `--record-corpus` rewrites `corpus/`, which the ordinary test run replays
+  without Puppet. Re-record after a Puppet release or a new difference id.
 - Format: the exact command CI runs —
   `<py> -m black --check src/ tests/ benchmarks/ examples/` — on the newest
   interpreter (the 3.14 venv) only: the 3.9 venv has no black, and an older
