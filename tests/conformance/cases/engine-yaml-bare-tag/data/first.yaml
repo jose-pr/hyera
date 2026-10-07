@@ -1,0 +1,13 @@
+---
+bang: !
+bang_x: ! x
+bang_int: ! 12
+bang_true: ! true
+bang_quoted: ! "q"
+bang_squoted: ! '12'
+bang_str: !!str
+bang_seq: ! [1, 2]
+bang_map: ! {a: 1}
+bang_literal: ! |
+  text
+plain: p

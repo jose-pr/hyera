@@ -1,0 +1,11 @@
+---
+k: !ruby/encoding UTF-8
+other: 1
+lower: !ruby/encoding utf-8
+ascii: !ruby/encoding US-ASCII
+inlist:
+  - !ruby/encoding UTF-8
+  - 2
+internal: !ruby/encoding internal
+locale: !ruby/encoding Locale
+seq: !ruby/encoding [1, 2]

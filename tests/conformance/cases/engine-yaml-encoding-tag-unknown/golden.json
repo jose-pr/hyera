@@ -1,0 +1,47 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "42ad3a01e07a35862de4ec08efe0c6fb663dc35cf76c02693a8f67747a15e373",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse unknown encoding name - NoSuchEncoding"
+    },
+    "other": {
+      "argv": [
+        "--strict",
+        "warning",
+        "other"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse unknown encoding name - NoSuchEncoding"
+    },
+    "fromcommon": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromcommon"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'lookup_options' failed: Unable to parse unknown encoding name - NoSuchEncoding"
+    }
+  }
+}

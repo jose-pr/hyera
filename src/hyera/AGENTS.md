@@ -1271,10 +1271,15 @@ is a `Backend` subclass, found by name rather than passed around directly.
   is normalized to a plain string automatically (a symbol *value* survives
   as `RubySymbol` and is not a valid Puppet lookup value — see the
   RichData gotcha). An unknown tag is tokenized/listed/dict-built like an
-  untagged node of the same kind (not a parse error); `!ruby/object`/
-  `!ruby/regexp`/etc. (other than `!ruby/sym(bol)`/`!ruby/string`) raises
-  the same disallowed-class `BackendError`, naming the class from the tag
-  text. `!!set` is always disallowed; `!!omap` builds a `dict` from its
+  untagged node of the same kind (not a parse error); a scalar tagged with
+  the bare `!` resolves like a plain one (`! 12` is `12`, an empty one is
+  `null`); `!ruby/object`/`!ruby/regexp`/etc. (other than
+  `!ruby/sym(bol)`/`!ruby/string`/`!ruby/encoding`) raises the same
+  disallowed-class `BackendError`, naming the class from the tag text.
+  `!ruby/encoding NAME` loads when `NAME` is an encoding name Ruby knows
+  (any letter case; `internal` is `null`): the value is not Puppet data, so
+  a lookup that finds one raises, while the file's other keys answer; an
+  unknown name fails the whole file. `!!set` is always disallowed; `!!omap` builds a `dict` from its
   pairs. A duplicate mapping key: the last one wins; an unhashable key (a
   list/dict from a complex `? ... : ...` key) is frozen into a hashable
   tuple, recursively.

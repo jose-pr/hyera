@@ -1,0 +1,110 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "be6432d8f16d194c245b1a14891924c4af81e77075d3037846f5702f12eae5d4",
+  "results": {
+    "k": {
+      "argv": [
+        "--strict",
+        "warning",
+        "k"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'k' failed: Value for key 'k', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Encoding']"
+    },
+    "other": {
+      "argv": [
+        "--strict",
+        "warning",
+        "other"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "lower": {
+      "argv": [
+        "--strict",
+        "warning",
+        "lower"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'lower' failed: Value for key 'lower', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Encoding']"
+    },
+    "ascii": {
+      "argv": [
+        "--strict",
+        "warning",
+        "ascii"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'ascii' failed: Value for key 'ascii', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Encoding']"
+    },
+    "inlist": {
+      "argv": [
+        "--strict",
+        "warning",
+        "inlist"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'inlist' failed: Value for key 'inlist', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Array[Any, 2, 2]"
+    },
+    "fromcommon": {
+      "argv": [
+        "--strict",
+        "warning",
+        "fromcommon"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "fallback-from-common"
+    },
+    "internal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "internal"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "locale": {
+      "argv": [
+        "--strict",
+        "warning",
+        "locale"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Lookup of key 'locale' failed: Value for key 'locale', in hash returned from data_hash function 'yaml_data', when using location <case>/data/first.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Encoding']"
+    },
+    "seq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "seq"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    }
+  }
+}

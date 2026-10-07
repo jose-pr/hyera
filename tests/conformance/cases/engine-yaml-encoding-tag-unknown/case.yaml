@@ -1,0 +1,7 @@
+description: >-
+  A YAML !ruby/encoding tag naming no encoding fails the whole file, so every
+  lookup that reads it fails.
+queries:
+  - key: k
+  - key: other
+  - key: fromcommon

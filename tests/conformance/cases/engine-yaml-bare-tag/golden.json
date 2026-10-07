@@ -1,0 +1,144 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "30fa477835b27cf61156c18cf22d2bdd0f9359e6e38650785b35ab3d13b8e340",
+  "results": {
+    "bang": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "bang-default": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--default",
+        "dflt",
+        "bang"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "bang_x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_x"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "x"
+    },
+    "bang_int": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_int"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 12
+    },
+    "bang_true": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_true"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "bang_quoted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_quoted"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "q"
+    },
+    "bang_squoted": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_squoted"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 12
+    },
+    "bang_str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_str"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": ""
+    },
+    "bang_seq": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_seq"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "bang_map": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_map"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "bang_literal": {
+      "argv": [
+        "--strict",
+        "warning",
+        "bang_literal"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "text\n"
+    },
+    "plain": {
+      "argv": [
+        "--strict",
+        "warning",
+        "plain"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "p"
+    }
+  }
+}

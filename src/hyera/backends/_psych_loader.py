@@ -19,7 +19,8 @@ import typing as _ty
 import yaml
 
 from ..exceptions import BackendError
-from ._psych import RubySymbol, _disallowed, _tokenize
+from ._psych import RubyEncoding, RubySymbol, _disallowed, _tokenize
+from ._ruby_encodings import ENCODING_NAMES
 
 __all__ = ["safe_load"]
 
@@ -41,14 +42,16 @@ class _PsychResolverMixin:
     constructor for :data:`_PLAIN_TAG` calls :func:`_tokenize` instead,
     which is Ruby/Psych-flavored. An untagged ``<<`` scalar, plain or
     quoted, resolves to the merge tag; only an explicit ``!!str`` keeps it
-    from merging (``_revive_hash``).
+    from merging (``_revive_hash``). A scalar tagged with the bare ``!`` is
+    tokenized like a plain one (``to_ruby.rb:68,127``); libyaml reports an
+    empty one as neither plain nor quoted, which is the same case.
     """
 
     def resolve(self, kind, value, implicit):
         if kind is yaml.nodes.ScalarNode:
             if value == _MERGE_SCALAR:
                 return _MERGE_TAG
-            if implicit[0]:
+            if implicit[0] or tuple(implicit) == (False, False):
                 return _PLAIN_TAG
         return super().resolve(kind, value, implicit)
 
@@ -100,6 +103,19 @@ def _construct_float(loader, node):
 
 def _construct_ruby_symbol(loader, node):
     return RubySymbol(loader.construct_scalar(node))
+
+
+def _construct_ruby_encoding(loader, node):
+    """``!ruby/encoding NAME`` is ``Encoding.find(NAME)`` with no class check
+    (``to_ruby.rb:89-90``): a known name (any letter case) builds an Encoding,
+    ``internal`` is ``nil``, any other name fails the file."""
+    if not isinstance(node, yaml.nodes.ScalarNode):
+        return _construct_unknown(loader, None, node)
+    name = loader.construct_scalar(node)
+    folded = name.lower()
+    if folded not in ENCODING_NAMES:
+        raise BackendError("unknown encoding name in a !ruby/encoding tag")
+    return None if folded == "internal" else RubyEncoding(name)
 
 
 def _construct_ruby_disallowed(loader, tag_suffix, node):
@@ -266,6 +282,7 @@ def _make_loader_class(base, *mixins):
         _Loader.add_constructor(prefix, _construct_float)
     _Loader.add_constructor("!ruby/sym", _construct_ruby_symbol)
     _Loader.add_constructor("!ruby/symbol", _construct_ruby_symbol)
+    _Loader.add_constructor("!ruby/encoding", _construct_ruby_encoding)
     for prefix in ("!omap", "tag:yaml.org,2002:omap"):
         _Loader.add_constructor(prefix, _construct_omap)
     for prefix in ("!set", "tag:yaml.org,2002:set"):

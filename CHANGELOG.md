@@ -170,6 +170,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A YAML `!ruby/encoding NAME` tag loads, as in Puppet: the key that holds the
+  Encoding object fails the lookup and the other keys of the file answer, and a
+  name Ruby does not know fails the file. A scalar tagged with the bare `!` is
+  resolved like a plain one, so an empty `k: !` is `null`, not the empty string.
 - Looking up the reserved key `lookup_options` is a miss, with `--default` and
   with `explain`, whatever state an environment layer's `hiera.yaml` is in (a
   schema error, version 6, a syntax error), as in Puppet. A global

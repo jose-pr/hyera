@@ -1,0 +1,20 @@
+description: >-
+  A bare ! (non-specific) YAML tag on a scalar resolves the scalar like an
+  untagged plain one, whatever its quoting style: an empty value is null, 12 and
+  '12' are integers, true is a boolean; on a collection it changes nothing; the
+  explicit !!str on an empty value is the empty string.
+queries:
+  - key: bang
+  - key: bang
+    id: bang-default
+    default: "dflt"
+  - key: bang_x
+  - key: bang_int
+  - key: bang_true
+  - key: bang_quoted
+  - key: bang_squoted
+  - key: bang_str
+  - key: bang_seq
+  - key: bang_map
+  - key: bang_literal
+  - key: plain

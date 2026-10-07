@@ -11,7 +11,7 @@ import yaml
 
 from hyera.backends import BackendError, YAMLBackend
 from hyera.exceptions import ConfigError
-from hyera.backends._psych import RubySymbol, symkeys_to_string
+from hyera.backends._psych import RubyEncoding, RubySymbol, symkeys_to_string
 from hyera.backends._psych_loader import (
     _C_LOADER,
     _PURE_LOADER,
@@ -902,3 +902,48 @@ def test_ruby_symbol_survives_pickle_and_copy(protocol):
         assert clone == symbol
         assert clone.name == "a b"
         assert repr(clone) == ":a b"
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_ruby_encoding_tag_builds_an_encoding_for_any_known_name(loader):
+    data = _load_with(loader, "a: !ruby/encoding UTF-8\nb: !ruby/encoding utf-8\n")
+    assert data["a"] == RubyEncoding("UTF-8") == data["b"]
+    assert not isinstance(data["a"], str)
+    assert repr(data["a"]) == "#<Encoding:UTF-8>"
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+def test_ruby_encoding_tag_internal_is_null_and_a_collection_is_untouched(loader):
+    data = _load_with(loader, "a: !ruby/encoding internal\nb: !ruby/encoding [1, 2]\n")
+    assert data == {"a": None, "b": [1, 2]}
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+@pytest.mark.parametrize("name", ["NoSuchEncoding", "", " UTF-8"])
+def test_ruby_encoding_tag_with_an_unknown_name_fails_the_file(loader, name):
+    with pytest.raises(BackendError, match="unknown encoding name") as excinfo:
+        _load_with(loader, "k: !ruby/encoding '{}'\n".format(name))
+    assert "NoSuch" not in str(excinfo.value)
+
+
+def test_ruby_encoding_names_are_the_reference_list():
+    from hyera.backends._ruby_encodings import ENCODING_NAMES
+
+    assert len(ENCODING_NAMES) == 175
+    assert {"utf-8", "ascii-8bit", "internal", "locale"} <= ENCODING_NAMES
+
+
+@pytest.mark.parametrize("loader", _LOADERS)
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("k: !\nj: 1\n", {"k": None, "j": 1}),
+        ("k: ! \n", {"k": None}),
+        ("- !\n- ! x\n- ! 12\n", [None, "x", 12]),
+        ("k: ! '12'\n", {"k": 12}),
+        ("k: !!str\n", {"k": ""}),
+        ("k: ''\n", {"k": ""}),
+    ],
+)
+def test_bare_non_specific_tag_tokenizes_like_a_plain_scalar(loader, text, expected):
+    assert _load_with(loader, text) == expected

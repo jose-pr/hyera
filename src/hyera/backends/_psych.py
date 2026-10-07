@@ -56,6 +56,34 @@ class RubySymbol:
         return ":{}".format(self.name)
 
 
+class RubyEncoding:
+    """A Ruby ``Encoding`` object (``!ruby/encoding NAME``). It is not Puppet data:
+    a lookup that finds one in a value fails, as Puppet's does, and the rest of the
+    file stays usable.
+
+    :param name: the name as written in the file.
+    """
+
+    __slots__ = ("name",)
+
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RubyEncoding):
+            return NotImplemented
+        return self.name.lower() == other.name.lower()
+
+    def __hash__(self) -> int:
+        return hash((RubyEncoding, self.name.lower()))
+
+    def __reduce__(self) -> "tuple[type, tuple[str]]":
+        return (RubyEncoding, (self.name,))
+
+    def __repr__(self) -> str:
+        return "#<Encoding:{}>".format(self.name)
+
+
 def symkeys_to_string(obj):
     """Recursively turn ``RubySymbol`` dict keys into their plain-string
     names (``hiera_config.rb``'s ``symkeys_to_string``, applied to a parsed

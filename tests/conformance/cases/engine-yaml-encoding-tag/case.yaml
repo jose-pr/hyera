@@ -1,0 +1,14 @@
+description: >-
+  A YAML !ruby/encoding tag loads: the file is usable, a key that holds an
+  Encoding object (directly, or inside an array) is refused as a value of the
+  wrong type, and the other keys answer.
+queries:
+  - key: k
+  - key: other
+  - key: lower
+  - key: ascii
+  - key: inlist
+  - key: fromcommon
+  - key: internal
+  - key: locale
+  - key: seq
