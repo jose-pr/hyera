@@ -356,6 +356,15 @@ def test_the_paths_in_a_message_are_normalised_in_every_slash_form():
     )
 
 
+def test_a_ruby_object_address_is_normalised():
+    text = (
+        "private method 'load' called for #<Puppet::Parser::Scope:0x0000f43089b701e8>"
+    )
+    assert outcomes.normalize(text) == (
+        "private method 'load' called for #<Puppet::Parser::Scope:0x0>"
+    )
+
+
 def test_ruby_hash_inspect_spacing_is_compared_in_the_ruby_32_form():
     assert outcomes.canon({"a": '{"k" => 1}'}) == outcomes.canon({"a": '{"k"=>1}'})
     assert outcomes.canon({"a": "'k' => 1"}) != outcomes.canon({"a": "'k'=>1"})

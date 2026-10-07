@@ -21,6 +21,8 @@ from typing import Dict, List, Optional, Tuple
 
 _NOT_FOUND = re.compile(r"did not find a value for (the name|any of the names)")
 _KEY_PREFIX = re.compile(r"Lookup of key '.*?' failed: ")
+#: A Ruby object's address in an inspect text, which differs on every run.
+_ADDRESS = re.compile(r"0x[0-9a-f]{12,16}\b")
 _ISO = re.compile(r"/tmp/hyera-differential-\d+/\d+")
 _CASE_TAIL = re.compile(r"<case>[^\s'\")]*")
 _LOG_PREFIX = re.compile(
@@ -33,7 +35,8 @@ MESSAGE_LIMIT = 300
 
 def normalize(text: str, *dirs: str) -> str:
     """Replace each scenario directory (in any slash form) with ``<case>``,
-    the isolation root with ``<iso>``, and use ``/`` inside ``<case>`` paths."""
+    the isolation root with ``<iso>``, a Ruby object address with ``0x0``, and use
+    ``/`` inside ``<case>`` paths."""
     if not text:
         return text
     for directory in dirs:
@@ -42,6 +45,7 @@ def normalize(text: str, *dirs: str) -> str:
         for form in {directory, directory.replace("\\", "/")}:
             text = text.replace(form, "<case>")
     text = _ISO.sub("<iso>", text)
+    text = _ADDRESS.sub("0x0", text)
     return _CASE_TAIL.sub(lambda m: m.group(0).replace("\\", "/"), text)
 
 

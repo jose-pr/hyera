@@ -19,7 +19,7 @@
 {"q":"extra-types::str t=Enum[hello, true]","p":{"status":"found","value":"hello"}}
 {"q":"extra-types::str t=Optional[Pattern[/x/]]","p":{"status":"error","message":"Found value has wrong type, expects an undef value or a match for Pattern[/x/], got 'hello'"}}
 {"q":"extra-types::str t=Scalar","p":{"status":"found","value":"hello"}}
-{"q":"extra-types::str t=Data","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0000f7431eb22b28>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"q":"extra-types::str t=Data","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"extra-types::str t=Variant[Integer[1, 2], String[1, 2]]","p":{"status":"error","message":"Found value has wrong type, expects a value of type Integer[1, 2] or String[1, 2], got String"},"r":"error-message-text"}
 {"q":"extra-types::int t=Integer[-0x10]","p":{"status":"found","value":42}}
 {"q":"extra-types::int t=Integer[1e1, 50]","p":{"status":"found","value":42},"k":"STATUS","r":"open:type-forms-puppet-accepts"}
@@ -32,11 +32,11 @@
 {"q":"extra-types::hash t=Struct[{a => Integer, b => String}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
 {"q":"extra-types::hash t=Struct[{a => Integer, b => String, c => Optional[String]}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
 {"q":"extra-types::hash t=Struct[{a => Integer, b => String, c => Any}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
-{"q":"extra-types::hash t=Struct[{a => Integer, b => String, c => Data}]","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0000f7431e981238>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"q":"extra-types::hash t=Struct[{a => Integer, b => String, c => Data}]","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"extra-types::hash t=Struct[{Optional[a] => Integer, b => String}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
 {"q":"extra-types::hash t=Struct[{a => Integer, b => String,}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
 {"q":"extra-types::hash t=Struct[{a => Integer, a => Integer, b => String}]","p":{"status":"found","value":{"a":1,"b":"two"}}}
-{"q":"extra-types::hash t=Hash[Scalar, Data]","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0000f7431eb80ac0>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"q":"extra-types::hash t=Hash[Scalar, Data]","p":{"status":"error","message":"private method 'load' called for #<Puppet::Parser::Scope:0x0>"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"extra-types::hash_e t=Hash[String, Integer, 1]","p":{"status":"error","message":"Found value has wrong type, expects size to be at least 1, got 0"}}
 {"q":"extra-types::hash_e t=Hash[0, 0]","p":{"status":"found","value":{}},"k":"STATUS","r":"open:type-forms-puppet-accepts"}
 {"q":"extra-types::nil t=Collection","p":{"status":"error","message":"Found value has wrong type, expects a Collection value, got Undef"}}
