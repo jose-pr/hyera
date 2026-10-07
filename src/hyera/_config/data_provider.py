@@ -21,6 +21,7 @@ import typing as _ty
 
 from pathlib_next import Path
 
+from ..backends._base import Backend
 from .hiera_config import (
     _fill_v5_defaults,
     _read_base_config,
@@ -395,9 +396,15 @@ def load_global_layer(base_config, base_path, backends, scope, codedir):
     wrapped for the provider-aware stack walk.
 
     Raises :class:`ConfigError` for a missing, unreadable or invalid
-    ``hiera.yaml``.
+    ``hiera.yaml``, and :class:`TypeError` for ``backends`` that is not a
+    sequence of :class:`~hyera.backends.Backend` subclasses.
     """
     backends = list(backends)
+    for backend in backends:
+        if not (isinstance(backend, type) and issubclass(backend, Backend)):
+            raise TypeError(
+                "backends must hold Backend subclasses, not {!r}".format(backend)
+            )
     # Captured before reading the config: a relative version 3 datadir follows the cwd
     # at construction (``location_resolver.rb:56-66``), never a later lookup's cwd.
     cwd = Path(os.getcwd())

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import collections.abc as _abc
 import logging
 import os
 import re
@@ -19,6 +20,7 @@ from .._lookup.function_provider import LookupContext
 from .._scope.scope import Strict
 from .._enums import _StrEnum, _plain
 from ._entry_points import load as _load_entry_points
+from ._registry_checks import check_kind, unknown_backend
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +125,10 @@ class Backend:
         *,
         strict: _ty.Optional[_ty.Union[Strict, str]] = None,
     ) -> None:
+        if conf is not None and not isinstance(conf, _abc.Mapping):
+            raise TypeError(
+                "conf must be a mapping or None, not {}".format(type(conf).__name__)
+            )
         self.conf: _ty.Mapping[str, _ty.Any] = conf or {}
         if strict is not None and strict not in _STRICT_VALUES:
             raise ValueError(
@@ -231,8 +237,10 @@ class Backend:
     @classmethod
     def _match(cls, name, kind="function"):
         _load_entry_points()
-        kind = _plain(kind)
-        registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
+        if not isinstance(name, str):
+            raise TypeError("name must be a str, not {}".format(type(name).__name__))
+        kind = check_kind(kind, cls.KINDS)
+        registry = cls._REGISTRY[kind]
         found = registry["exact"].get(name)
         if found is not None:
             return found, {}
@@ -251,6 +259,9 @@ class Backend:
         :param name: the registered name (or a matching pattern) to find.
         :param kind: the namespace to search.
         :returns: the class, or ``None`` when unregistered.
+        :raises TypeError: ``name`` is not a ``str``, or ``kind`` is neither a
+            :class:`BackendKind` nor a ``str``.
+        :raises ValueError: ``kind`` names no namespace.
         """
         found, _captures = cls._match(name, kind)
         return found
@@ -261,24 +272,24 @@ class Backend:
     ) -> "_ty.Type[Backend]":
         """The registered, available class for ``name`` in ``kind``.
 
-        Raises :class:`BackendError` for an unknown name (listing the known
-        names) or, via :meth:`check_available`, for a registered backend
-        whose optional dependency is missing.
+        Raises :class:`ValueError` for an unknown name (listing the known
+        names) and, via :meth:`check_available`, :class:`BackendError` for a
+        registered backend whose optional dependency is missing.
 
         :param name: the registered name (or a matching pattern) to get.
         :param kind: the namespace to search.
         :returns: the class.
-        :raises BackendError: ``name`` is unregistered in ``kind``, or is
-            registered but unusable (a missing optional dependency).
+        :raises TypeError: ``name`` is not a ``str``, or ``kind`` is neither a
+            :class:`BackendKind` nor a ``str``.
+        :raises ValueError: ``name`` is unregistered in ``kind``, or ``kind``
+            names no namespace.
+        :raises BackendError: ``name`` is registered but unusable (a missing
+            optional dependency).
         """
-        kind = _plain(kind)
+        kind = check_kind(kind, cls.KINDS)
         found = cls.find(name, kind)
         if found is None:
-            raise BackendError(
-                "Unknown {} backend {!r}; known: {}".format(
-                    kind, name, ", ".join(cls.names(kind))
-                )
-            )
+            raise unknown_backend(kind, name, cls.names(kind))
         found.check_available()
         return found
 
@@ -304,17 +315,17 @@ class Backend:
         :param kind: the namespace to search.
         :param strict: passed to the backend's constructor.
         :returns: the new instance.
-        :raises BackendError: ``name`` is unregistered in ``kind``, or is
-            registered but unusable (a missing optional dependency).
+        :raises TypeError: ``name`` is not a ``str``, ``kind`` is neither a
+            :class:`BackendKind` nor a ``str``, or ``conf`` is not a mapping.
+        :raises ValueError: ``name`` is unregistered in ``kind``, ``kind``
+            names no namespace, or ``strict`` is not a strictness.
+        :raises BackendError: ``name`` is registered but unusable (a missing
+            optional dependency).
         """
-        kind = _plain(kind)
+        kind = check_kind(kind, cls.KINDS)
         found, captures = cls._match(name, kind)
         if found is None:
-            raise BackendError(
-                "Unknown {} backend {!r}; known: {}".format(
-                    kind, name, ", ".join(cls.names(kind))
-                )
-            )
+            raise unknown_backend(kind, name, cls.names(kind))
         found.check_available()
         instance = found(conf, strict=strict, **captures)
         instance.name = name
@@ -327,10 +338,12 @@ class Backend:
 
         :param kind: the namespace to list.
         :returns: the registered names.
+        :raises TypeError: ``kind`` is neither a :class:`BackendKind` nor a ``str``.
+        :raises ValueError: ``kind`` names no namespace.
         """
         _load_entry_points()
-        kind = _plain(kind)
-        registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
+        kind = check_kind(kind, cls.KINDS)
+        registry = cls._REGISTRY[kind]
         return list(registry["exact"].keys()) + [
             pattern.display for pattern, _klass in registry["patterns"]
         ]

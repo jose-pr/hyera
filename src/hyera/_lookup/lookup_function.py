@@ -108,6 +108,22 @@ def check_merge(fn_name, merge):
         raise ValueError("{}(): merge: {}".format(fn_name, e)) from None
 
 
+def check_flag(fn_name, name, value):
+    """Require a caller's flag argument to be a ``bool``.
+
+    :param fn_name: the public function named in the message.
+    :param name: the argument's name.
+    :param value: the value given.
+    :raises TypeError: ``value`` is not a ``bool``.
+    """
+    if not isinstance(value, bool):
+        raise TypeError(
+            "{}(): {} must be a bool, not {}".format(
+                fn_name, name, type(value).__name__
+            )
+        )
+
+
 def check_call(fn_name, value_type, block):
     """Validate the arguments ``get()``/``dig()`` share with ``lookup()``
     before anything is resolved: ``block`` must be callable and

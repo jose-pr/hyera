@@ -43,8 +43,8 @@ since Hiera data is dynamic.
   change what it resolves against. A file-like object is read as given;
   `Hiera` never closes it and `.base_config` keeps that same object. A
   `dict` is deep-copied at construction — `Hiera` never mutates or replaces
-  the caller's own dict. `backends`: list of `Backend` classes, defaults to
-  `default_backends()`. `base_path`: root that relative `datadir`/paths
+  the caller's own dict. `backends`: list of `Backend` classes (anything else is a
+  `TypeError`), defaults to `default_backends()`. `base_path`: root that relative `datadir`/paths
   resolve against (defaults to the config file's directory, or `os.getcwd()`
   for a `dict`/file-like/`None` config); also made absolute at construction.
   `scope`: the bound `hyera.Scope` for this instance's lifetime (keyword-only);
@@ -1088,10 +1088,14 @@ is a `Backend` subclass, found by name rather than passed around directly.
 
   `.find` (exact
   names win, then patterns in registration order; `None` if unregistered);
-  `.get` (raises `BackendError` for an unknown
-  name, and via `.check_available()` for a registered-but-unusable one,
-  e.g. missing `pyhocon`); `.new`
-  (instantiates, passing any `NamePattern` captures as keywords);
+  `.get` (raises `ValueError` for an unknown name, and `BackendError` via
+  `.check_available()` for a registered-but-unusable one, e.g. missing
+  `pyhocon`); `.new`
+  (instantiates, passing any `NamePattern` captures as keywords; the same
+  `ValueError`/`BackendError` as `.get`, and `TypeError` for a `conf` that is
+  not a mapping or `None`); every one of these takes a `kind` that is a
+  `BackendKind` or a `str` (`TypeError` otherwise, `ValueError` for a name
+  outside the four) and a `name` that is a `str` (`TypeError` otherwise);
   `.names` (exact names, then pattern displays, as a
   `list[str]`); `.for_path` (`format`-kind class with the
   longest case-sensitive `EXTENSIONS` suffix match, or `None`);
@@ -1279,8 +1283,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `!ruby/encoding NAME` loads when `NAME` is an encoding name Ruby knows
   (any letter case; `internal` is `null`): the value is not Puppet data, so
   a lookup that finds one raises, while the file's other keys answer; an
-  unknown name fails the whole file. `!!set` is always disallowed; `!!omap` builds a `dict` from its
-  pairs. A duplicate mapping key: the last one wins; an unhashable key (a
+  unknown name fails the whole file. `!!set` is always disallowed;
+  `!!omap` builds a `dict` from its pairs. A duplicate mapping key: the last one wins; an unhashable key (a
   list/dict from a complex `? ... : ...` key) is frozen into a hashable
   tuple, recursively.
 

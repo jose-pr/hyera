@@ -11,6 +11,7 @@ import pytest
 import hyera
 from hyera import Hiera, HieraError, HieraLookupError, MergeError
 from hyera import types as T
+from hyera.backends import Backend, JSONBackend, YAMLBackend
 
 
 @pytest.fixture
@@ -212,3 +213,62 @@ def test_a_valid_merge_and_type_still_work(hiera):
     assert hiera.get("h.a", value_type="Integer", merge="hash") == 1
     assert hiera.dig("h", "a", value_type=T.Integer, merge="deep") == 1
     assert hiera.to_dict(merge="first")["k"] == "v"
+
+
+def test_backends_holding_anything_but_a_backend_class_is_a_plain_type_error(
+    make_tree,
+):
+    root = make_tree({"hierarchy": [{"name": "one", "path": "one.yaml"}]})
+    for bad in ([5], ["yaml_data"], [YAMLBackend()], [int], 5):
+        with pytest.raises(TypeError) as excinfo:
+            Hiera(str(root / "hiera.yaml"), backends=bad)
+        _plain(excinfo, TypeError)
+    assert Hiera(str(root / "hiera.yaml"), backends=[YAMLBackend])
+
+
+@pytest.mark.parametrize("flag", [5, "yes", None, 1.0])
+def test_explain_options_that_is_not_a_bool_is_a_plain_type_error(hiera, flag):
+    with pytest.raises(TypeError) as excinfo:
+        hiera.explain("k", explain_options=flag)
+    _plain(excinfo, TypeError)
+
+
+def test_explain_options_bool_still_works(hiera):
+    assert hiera.explain("k", explain_options=False).error is None
+    hiera.explain("k", explain_options=True)
+
+
+def test_backend_find_with_an_unusable_kind_or_name_is_a_plain_error():
+    with pytest.raises(ValueError) as excinfo:
+        Backend.find("yaml_data", kind="bogus")
+    _plain(excinfo, ValueError)
+    for call in (Backend.get, Backend.new):
+        with pytest.raises(ValueError) as excinfo:
+            call("yaml_data", kind="bogus")
+        _plain(excinfo, ValueError)
+    with pytest.raises(ValueError) as excinfo:
+        Backend.names("bogus")
+    _plain(excinfo, ValueError)
+    for call in (Backend.find, Backend.get, Backend.new):
+        with pytest.raises(TypeError) as excinfo:
+            call("yaml_data", kind=5)
+        _plain(excinfo, TypeError)
+        with pytest.raises(TypeError) as excinfo:
+            call(5)
+        _plain(excinfo, TypeError)
+
+
+@pytest.mark.parametrize("conf", [5, "x", ["a"], 1.5])
+def test_backend_conf_that_is_not_a_mapping_is_a_plain_type_error(conf):
+    for backend in (YAMLBackend, JSONBackend):
+        with pytest.raises(TypeError) as excinfo:
+            backend(conf)
+        _plain(excinfo, TypeError)
+    with pytest.raises(TypeError) as excinfo:
+        Backend.new("yaml_data", conf)
+    _plain(excinfo, TypeError)
+
+
+def test_backend_conf_none_and_a_mapping_still_work():
+    assert YAMLBackend().conf == {}
+    assert YAMLBackend({"a": 1}).conf == {"a": 1}

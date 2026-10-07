@@ -55,6 +55,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   read by the first lookup that needs it, not by `Hiera(...)`; a broken one
   raises `ConfigError` from that lookup. A missing environment still raises
   at construction.
+- **Breaking:** `Backend.get(name)` and `Backend.new(name)` raise `ValueError`,
+  not `BackendError`, for a name that is not registered; an unknown function
+  name in `hiera.yaml` still raises the same `ConfigError`. `Backend.find`,
+  `get`, `new` and `names` raise `TypeError` for a `name` that is not a `str`
+  or a `kind` of another type, and `ValueError` for a `kind` that is not one
+  of the four namespaces.
+- **Breaking:** `Hiera(backends=[5])`, `explain(..., explain_options=5)` and a
+  backend built with a `conf` that is not a mapping (`YAMLBackend(5)`) raise
+  `TypeError` at the call; they were accepted and failed later or never.
 - **Breaking:** a caller's bad argument raises a plain `ValueError` or
   `TypeError`, never a `HieraError`. An unknown `merge` strategy or invalid
   merge options (`h.lookup("k", merge="bogus")`, once `MergeError`), an

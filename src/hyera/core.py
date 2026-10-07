@@ -37,6 +37,7 @@ from ._lookup.providers import files_for
 from ._lookup.lookup_options import _ExplainOptionsMemo
 from ._lookup.lookup_function import (
     check_call,
+    check_flag,
     check_merge,
     depth_error,
     lookup as _lookup_call,
@@ -156,7 +157,8 @@ class Hiera:
         ``hiera.yaml``, or an environment named by ``scope.environment``
         that ``environmentpath`` cannot find.
     :raises TypeError: for a ``scope``/``cache_size``/``revalidate`` of
-        the wrong type.
+        the wrong type, or ``backends`` holding anything but ``Backend``
+        subclasses.
     :raises ValueError: for a negative ``cache_size``.
     """
 
@@ -883,8 +885,7 @@ class Hiera:
         lookup error left unhandled by the *global* layer's own data)
         raises instead, same as `.lookup()`; a :class:`~hyera.ConfigError`
         always raises, even where ``puppet lookup --explain`` would print
-        it as its own last line -- our configs are read before the lookup
-        starts, so there is never one to report mid-lookup.
+        it as its own last line.
 
         :param name: as :meth:`lookup`.
         :param value_type: as :meth:`lookup`.
@@ -902,10 +903,12 @@ class Hiera:
         :raises ConfigError: the base configuration is invalid (never
             reachable mid-lookup, but kept for parity with ``lookup()``).
         :raises TypeError: the arguments do not match one of the five call
-            forms `.lookup()` accepts, or one has the wrong type.
+            forms `.lookup()` accepts, one has the wrong type, or
+            ``explain_options`` is not a ``bool``.
         :raises ValueError: ``merge`` names an unknown strategy or has invalid
             options, or ``value_type`` is a string that does not parse.
         """
+        check_flag("explain", "explain_options", explain_options)
         call = parse_call(
             name, value_type, merge, default_value, default_values_hash, override, block
         )

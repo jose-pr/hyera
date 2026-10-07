@@ -465,3 +465,55 @@ def test_loading_a_missing_file_raises_backend_error_naming_the_path(backend, tm
 def test_loading_a_directory_raises_backend_error(tmp_path):
     with pytest.raises(BackendError, match="Unable to read"):
         YAMLBackend().load(tmp_path)
+
+
+@pytest.mark.parametrize("call", [Backend.get, Backend.new], ids=["get", "new"])
+def test_a_callers_unknown_backend_name_is_a_plain_value_error(call):
+    with pytest.raises(
+        ValueError, match="Unknown function backend 'nope'; known: "
+    ) as e:
+        call("nope")
+    assert type(e.value) is ValueError
+    assert not isinstance(e.value, BackendError)
+    assert "yaml_data" in str(e.value)
+
+
+def test_an_unknown_function_name_in_hiera_yaml_stays_a_configuration_error(
+    make_tree,
+):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "data_hash": "nonsense", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"))
+    with pytest.raises(ConfigError) as excinfo:
+        h.lookup("k")
+    assert type(excinfo.value) is ConfigError
+    assert str(excinfo.value).startswith(
+        "Unable to find 'data_hash' function named 'nonsense'; known: yaml_data"
+    )
+
+
+def test_an_unknown_hiera3_backend_in_hiera_yaml_stays_a_configuration_error(
+    make_tree,
+):
+    root = make_tree(
+        ":backends: [nonsense]\n:hierarchy: [common]\n",
+        files={"data/common.yaml": "k: v\n"},
+        raw=True,
+    )
+    with pytest.raises(
+        ConfigError, match="Hiera 3 backend 'nonsense' is not available"
+    ):
+        Hiera(str(root / "hiera.yaml")).lookup("k")
+
+
+def test_a_registered_backend_that_is_unusable_stays_a_backend_error(monkeypatch):
+    monkeypatch.setattr(
+        YAMLBackend,
+        "check_available",
+        classmethod(lambda cls: (_ for _ in ()).throw(BackendError("missing"))),
+    )
+    for call in (Backend.get, Backend.new):
+        with pytest.raises(BackendError, match="missing"):
+            call("yaml_data")
