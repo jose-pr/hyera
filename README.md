@@ -104,6 +104,9 @@ True
 ['nginx::workers', 'users', 'packages::manager', 'ntp::servers', 'motd']
 >>> h.to_dict()["nginx::workers"]
 8
+>>> from hyera import lookup
+>>> lookup("examples/hiera.yaml", "nginx::workers", facts=load_facts("examples/facts.yaml"))
+8
 
 ```
 
@@ -374,6 +377,20 @@ below is that forcing, not merely "the default":
 | `hiera_array('key')` | `h.lookup('key', None, 'unique')` |
 | `hiera_hash('key')` | `h.lookup('key', None, 'hash')` |
 | `hiera_include('key')` | not supported (applies classes to a catalog) |
+
+#### One-shot lookup
+
+```python
+import hyera
+
+hyera.lookup("hiera.yaml", "ntp::servers", facts={"os": {"family": "Debian"}})
+```
+
+`hyera.lookup(base_config, name, ..., facts=None, scope=None)` builds a
+`Hiera` and returns its `lookup`; every other argument is `Hiera.lookup`'s
+own. It builds a new instance on every call and caches nothing between
+calls, so a loop uses the class. `facts` and `scope` are exclusive, and no
+other `Hiera` option (layers, backends, cache control) is reachable from it.
 
 #### Listing keys
 

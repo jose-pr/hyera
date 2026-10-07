@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instance's scope hold, and `Hiera.to_dict(*, merge=None)` returns each of
   them with its looked-up value. A `lookup_key` or `data_dig` level cannot be
   listed.
+- `hyera.lookup(base_config, name, ..., *, facts=None, scope=None)`, a one-shot
+  lookup that builds a `Hiera` and returns its `lookup`.
 - An API reference page for `hyera.exceptions`.
 - `BackendTimeoutError`, a `BackendError` that is also a `TimeoutError`, raised
   when `sops` or `facter` exceeds its time limit. The child and every process

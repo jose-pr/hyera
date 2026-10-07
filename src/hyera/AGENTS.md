@@ -548,6 +548,21 @@ since Hiera data is dynamic.
     multiple threads are safe on GIL builds, where they only mutate the
     shared caches under one lock per instance (untested on free-threaded
     builds).
+- ```python
+  lookup(base_config, name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, facts=None, scope=None)
+  ```
+
+  The one-shot form of `Hiera(base_config, scope=...).lookup(name, ...)`:
+  it builds a new `Hiera` on every call and returns its result, so a caller
+  that looks up more than one name uses the class. `base_config` is the
+  `Hiera` argument of that name; `name` through `block` are `Hiera.lookup`'s
+  own parameters, with the same meaning and defaults. `facts`: a mapping, used
+  as `Scope(facts=facts)` (a facts file is read with `load_facts` first);
+  `scope`: a `Scope` used as given; passing both raises `TypeError`, and
+  passing neither uses `Scope()`. No other `Hiera` option is reachable: use
+  the class for layers (`environmentpath`, `modulepath`), `backends` or
+  cache control. Raises what `Hiera(...)` and `Hiera.lookup` raise: a miss
+  without a default is `KeyNotFoundError`.
 - **`hyera.FunctionKind`** (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`) — which
   Puppet Hiera 5 provider hook a level's backend implements; see
   `HieraLevel.kind`/`.new` below.

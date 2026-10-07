@@ -372,3 +372,88 @@ def test_to_dict_leaves_out_a_key_whose_lookup_misses(make_tree):
 
     h.lookup = lookup
     assert h.to_dict() == {"kept": 1}
+
+
+# --- hyera.lookup ----------------------------------------------------
+
+
+def _one_shot_tree(make_tree):
+    return make_tree(
+        {"hierarchy": [{"name": "n", "path": "%{facts.host}.yaml"}]},
+        files={"data/n1.yaml": "k: v\ngreeting: 'hi %{facts.host}'\n"},
+    )
+
+
+def test_the_one_shot_equals_the_class_for_a_path(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = str(root / "hiera.yaml")
+    scope = Scope(facts={"host": "n1"})
+    assert hyera.lookup(config, "k", scope=scope) == Hiera(config, scope=scope)("k")
+
+
+def test_the_one_shot_accepts_a_dict_as_base_config(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = {
+        "version": 5,
+        "defaults": {"datadir": str(root / "data"), "data_hash": "yaml_data"},
+        "hierarchy": [{"name": "n", "path": "n1.yaml"}],
+    }
+    assert hyera.lookup(config, "k") == "v"
+
+
+def test_the_one_shot_accepts_none_as_base_config():
+    with pytest.raises(KeyNotFoundError):
+        hyera.lookup(None, "nothing_anywhere")
+
+
+def test_the_one_shot_facts_reach_interpolation(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = str(root / "hiera.yaml")
+    assert hyera.lookup(config, "greeting", facts={"host": "n1"}) == "hi n1"
+
+
+def test_the_one_shot_uses_the_scope_as_given(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = str(root / "hiera.yaml")
+    scope = Scope(facts={"host": "n1"})
+    assert hyera.lookup(config, "greeting", scope=scope) == "hi n1"
+
+
+def test_the_one_shot_rejects_facts_together_with_a_scope(make_tree):
+    root = _one_shot_tree(make_tree)
+    with pytest.raises(TypeError):
+        hyera.lookup(str(root / "hiera.yaml"), "k", facts={"host": "n1"}, scope=Scope())
+
+
+def test_the_one_shot_miss_raises_and_honours_default_value(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = str(root / "hiera.yaml")
+    facts = {"host": "n1"}
+    with pytest.raises(KeyNotFoundError):
+        hyera.lookup(config, "absent", facts=facts)
+    assert hyera.lookup(config, "absent", default_value=7, facts=facts) == 7
+
+
+def test_the_one_shot_forwards_every_lookup_option(make_tree):
+    root = _one_shot_tree(make_tree)
+    config = str(root / "hiera.yaml")
+    facts = {"host": "n1"}
+    assert hyera.lookup(config, "k", "String", facts=facts) == "v"
+    assert hyera.lookup(config, "k", override={"k": "o"}, facts=facts) == "o"
+    assert hyera.lookup(config, "absent", default_values_hash={"absent": 1}) == 1
+    assert hyera.lookup(config, "absent", block=lambda name: name + "!") == "absent!"
+
+
+def test_the_one_shot_signature_repeats_the_class_lookup_parameters():
+    one_shot = list(inspect.signature(hyera.lookup).parameters.values())
+    method = list(inspect.signature(Hiera.lookup).parameters.values())[1:]
+    assert one_shot[0].name == "base_config"
+    tail = one_shot[1:]
+    extra = {"facts", "scope"}
+    assert [p for p in tail if p.name not in extra] == method
+    assert [p.name for p in tail if p.name in extra] == ["facts", "scope"]
+    assert all(
+        p.kind is inspect.Parameter.KEYWORD_ONLY and p.default is None
+        for p in tail
+        if p.name in extra
+    )
