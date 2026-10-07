@@ -30,6 +30,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** a caller's bad argument raises a plain `ValueError` or
+  `TypeError`, never a `HieraError`. An unknown `merge` strategy or invalid
+  merge options (`h.lookup("k", merge="bogus")`, once `MergeError`), an
+  unparsable `value_type` (`h.lookup("k", "Bogus[")`, once
+  `HieraLookupError`) and an empty `merge` string (once `TypeError`) now raise
+  `ValueError` from `lookup`, `explain`, `dig`, `get`, `to_dict`, `h[...]` and
+  `hyera.lookup`, before any data is read. A bad subscript or conversion of a
+  `hyera.types` class (`Integer[2, 1]`, `Integer("x")`) raises `ValueError`
+  instead of `HieraLookupError`, and `facts_from_facter` raises `TypeError` or
+  `ValueError` for a bad `timeout` instead of failing on facter. The same
+  strategy or type in a data file's `lookup_options` or `convert_to`, and a
+  valid `value_type` the found value does not match, still raise `MergeError`
+  and `HieraLookupError`. `explain` no longer reports a bad `merge` in its
+  result; it raises. The command still ends a bad `--merge` or `--type` with
+  one error line and exit status 2.
+- **Breaking:** `Hiera.scope` is a read-only property; assigning it raises
+  `AttributeError`. Use `h.scoped(...)` for another scope.
 - **Breaking:** `hyera.MergeSpec` is renamed `hyera.MergeLike` and
   `hyera.types.TypeSpec` is renamed `hyera.types.TypeLike`; the old names are
   gone.

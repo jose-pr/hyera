@@ -75,9 +75,10 @@ since Hiera data is dynamic.
   `repr(h)` is one line, `Hiera(config='<label>', environment='<name>')`:
   the config's absolute path (or `<dict>`, `<default>`, a stream's name or
   `<stream>`) and the scope's environment, never data or scope values.
-  `self.scope` is set before the config loads, so a hierarchy path template
-  referencing it (`%{trusted.certname}`, `%{environment}`) resolves against
-  it from the first lookup onward. A missing or `null`/`false`
+  `Hiera.scope` (a read-only property: assigning it raises `AttributeError`;
+  use `.scoped(...)` for another scope) is set before the config loads, so a
+  hierarchy path template referencing it (`%{trusted.certname}`,
+  `%{environment}`) resolves against it from the first lookup onward. A missing or `null`/`false`
   `defaults`/`hierarchy` is filled with Puppet's own defaults
   (`{datadir: data, data_hash: yaml_data}` / `[{name: Common, path:
   common.yaml}]`) rather than raising; a hierarchy entry's own `datadir`
@@ -276,7 +277,10 @@ since Hiera data is dynamic.
     ("Found value has wrong type, …", "Default value has wrong type, …",
     "Value found for key '<k>' in override hash has wrong type, …", "… in
     default values hash has wrong type, …", "Value returned from default
-    block has wrong type, …"). `merge`: a `hyera.MergeLike` (see "Types"
+    block has wrong type, …"). A `value_type` that is not a type spec raises
+    `TypeError` and one that does not parse raises `ValueError`, before any
+    data is read; a valid one the found value does not match stays
+    `HieraLookupError`. `merge`: a `hyera.MergeLike` (see "Types"
     below) — a `hyera.Merge` member (`FIRST`/`UNIQUE`/`HASH`/`DEEP`) or the
     same plain string (`Merge.DEEP == "deep"`) — an explicit `merge=`
     overrides only the merge `lookup_options` would have picked; an
@@ -300,10 +304,11 @@ since Hiera data is dynamic.
     naming every name that was tried ("… for the name 'x'" for one, "… for
     any of the names [...]" otherwise, including an empty list). A
     non-`str`/non-`list`/non-`tuple` `name`, a malformed tuple path (empty,
-    a non-`str` root, or a `bool`/other element past the root), an
-    unparsable `value_type`'s call shape, an empty-string `merge`, a
-    non-callable `block`, or an unknown/malformed option raises
-    `TypeError`.
+    a non-`str` root, or a `bool`/other element past the root), a
+    `value_type` or `merge` of the wrong type, a non-callable `block`, or an
+    unknown/malformed option raises `TypeError`. An empty-string or unknown
+    `merge` strategy, an unrecognized or mistyped merge option and an
+    unparsable `value_type` raise `ValueError`. Neither is a `HieraError`.
   - ```python
     Hiera.__call__(name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None)
     Hiera.__getitem__(item)
@@ -339,8 +344,10 @@ since Hiera data is dynamic.
     counts from the end; out of range is `None`); a `dict` key matches
     only a key of the identical kind (`True` is never `1`, `1` is never
     `1.0`). `value_type`, when given, asserts the final result with the
-    subject "Found value" and is checked before the lookup runs. Needs at
-    least one key, the first a `str`, else `TypeError`.
+    subject "Found value" and is parsed before the lookup runs. Needs at
+    least one key, the first a `str`, else `TypeError`; a `merge` or
+    `value_type` of the wrong type raises `TypeError`, an unknown strategy
+    or an unparsable type `ValueError`.
   - ```python
     Hiera.get(dotted, default_value=None, block=None, *, value_type=None, merge=None, default_values_hash=None, override=None)
     ```
@@ -355,9 +362,10 @@ since Hiera data is dynamic.
     must be a non-empty `str` (there is no whole-data value to return),
     else `HieraLookupError("Syntax error in dotted-navigation string")`,
     the same error a malformed one raises; a non-`str` `dotted`, a
-    `block` that is not callable and a `value_type` that is not a type
-    spec raise `TypeError` ("get(): block must be callable") before
-    anything is resolved. `value_type` asserts the final result with the
+    `block` that is not callable and a `value_type` or `merge` that is not
+    a spec raise `TypeError` ("get(): block must be callable") before
+    anything is resolved, and an unknown `merge` strategy or an unparsable
+    `value_type` string raises `ValueError`. `value_type` asserts the final result with the
     subject that says where it came from ("Found value", "Default value"
     or "Value returned from block").
   - ```python
@@ -409,8 +417,9 @@ since Hiera data is dynamic.
     `lookup_options` value, a failed `convert_to`, an interpolation syntax
     error, a sub-key navigated into a non-hash, or a `HieraLookupError`
     raised from *environment or module* data (not the *global* layer's
-    own). Everything else raises exactly as `.lookup()` does: a `--type`
-    mismatch, a `HieraLookupError` left unhandled by the *global* layer's
+    own). Everything else raises exactly as `.lookup()` does: a bad `merge`
+    or `value_type` argument (`ValueError`/`TypeError`, before anything is
+    explained), a `--type` mismatch, a `HieraLookupError` left unhandled by the *global* layer's
     own data (Puppet's own boundary — the same recursive-lookup error is
     reported from environment data and escapes from global data), a
     `BackendError` (an unreadable or unparsable data file, from any
@@ -468,7 +477,9 @@ since Hiera data is dynamic.
     what a lookup returns (interpolated, `convert_to` applied; a `Sensitive`
     stays one). `merge=None` leaves each key to its own `lookup_options`; a
     key whose lookup misses is left out; any other error (the first met)
-    propagates unchanged. It runs one lookup per key.
+    propagates unchanged. It runs one lookup per key. A `merge` of the wrong
+    type raises `TypeError` and an unknown strategy `ValueError`, before any
+    key is listed.
   - ```python
     Hiera.format(text)
     ```
@@ -562,7 +573,8 @@ since Hiera data is dynamic.
   passing neither uses `Scope()`. No other `Hiera` option is reachable: use
   the class for layers (`environmentpath`, `modulepath`), `backends` or
   cache control. Raises what `Hiera(...)` and `Hiera.lookup` raise: a miss
-  without a default is `KeyNotFoundError`.
+  without a default is `KeyNotFoundError`, a bad `merge` or `value_type`
+  argument is `ValueError` or `TypeError`.
 - **`hyera.FunctionKind`** (`DATA_HASH`, `LOOKUP_KEY`, `DATA_DIG`) — which
   Puppet Hiera 5 provider hook a level's backend implements; see
   `HieraLevel.kind`/`.new` below.
@@ -811,7 +823,9 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   `facter` that `PATH` resolves relative to the current directory, a
   non-zero exit (the last 2,000 characters of stderr), or output that isn't
   a JSON object raise `BackendError` (a `.bat` facter at an absolute path
-  is allowed). `__context__` never carries the (possibly partial) output.
+  is allowed). `__context__` never carries the (possibly partial) output. A
+  `timeout` that is not a number (a `bool` included) raises `TypeError` and
+  one that is not positive raises `ValueError`, before facter runs.
 
 ## Types (`hyera`)
 
@@ -825,7 +839,8 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
   deep variants, `keep_array_duplicates`, `overwrite_arrays`,
   `unpack_arrays`, `extend_existing_arrays`, `merge_nil_values`,
   `preserve_unmergeables`), or `None` for the level's own `lookup_options`
-  default (an unrecognized name/shape raises `hyera.MergeError`). See
+  default (an unrecognized name/shape raises `ValueError`, or
+  `hyera.MergeError` when it comes from a data file's `lookup_options`). See
   "Merges" under Gotchas for the exact semantics of each strategy.
 - **`hyera.Merge`** (`FIRST`, `UNIQUE`, `HASH`, `DEEP`) — Puppet's own four
   public strategy names (`MergeStrategy.strategy_keys()`), as a `str`-mixin
@@ -915,7 +930,10 @@ by how it is used:
   only `T`'s generalized type (`Sensitive[Integer[1, 3]]` is
   `Sensitive[Integer]`). Subscripting builds through the same builders as the
   text form, so a nested argument keeps every parameter
-  (`Optional[Integer[1, 3]]` renders and matches as written). A type object
+  (`Optional[Integer[1, 3]]` renders and matches as written). An argument of
+  the wrong kind raises `TypeError`; arguments that do not make a valid type
+  (a reversed range, the wrong number of parameters, a malformed pattern, an
+  unparsable nested type string) raise `ValueError`, never a `HieraError`. A type object
   is immutable: assigning to one of its attributes raises
   `AttributeError`, so a cached or shared object cannot be altered through
   any reference; it compares equal to other type objects of the same value
@@ -924,8 +942,9 @@ by how it is used:
   (`int` for `Integer`, `str` for `String`, `list` for `Array`, `dict` for
   `Hash`, ... — `Sensitive("x")` is the one exception, staying its existing
   value wrapper, unaffected by anything here), never an instance of the
-  class itself; a type with no Puppet `new()` raises the same
-  `HieraLookupError` `convert_to` already does.
+  class itself; a value that cannot be converted, and a type with no Puppet
+  `new()`, raise `ValueError` (the same conversion in a data file's
+  `convert_to` raises `HieraLookupError`).
 
 Every bare or subscripted form answers `isinstance` the Puppet way
 (`isinstance(5, Integer[1, 10])`, `isinstance(None, Optional[String])`,
@@ -1566,14 +1585,26 @@ subclasses:
   `TimeoutError`: `sops` or `facter` did not finish within its time limit
   and was killed with its child processes. Message: `<program> timed out
   after <n>s`.
+- **Argument errors are not package errors.** A caller's bad argument to a
+  public function, method or constructor raises plain `TypeError` (wrong
+  type) or `ValueError` (right type, unusable value, decidable from the
+  argument alone: an unknown merge strategy, an unparsable `value_type`, a
+  reversed type range, a non-positive timeout), never a `HieraError`. The
+  same content arriving from data (`lookup_options`, `convert_to`, a data
+  file) and what depends on data found during the lookup (a value that does
+  not match a valid `value_type`, a missing key, a malformed key name,
+  unmergeable values) raise the package errors below. `MergeError` and
+  `InterpolationError` are also `ValueError`: test for the exact class or
+  `HieraError`, not `ValueError` alone.
 - **`HieraLookupError`** — Puppet's `LookupError`: a failure while resolving
   a key, including a `convert_to` whose type cannot be parsed or whose
   conversion/result-type assertion fails (see "Types" above and the
   `convert_to` Gotcha below for the two message forms). →
   - **`InterpolationError`** (also a `ValueError`) — a `%{...}`
     interpolation or function call could not be resolved.
-  - **`MergeError`** (also a `ValueError`) — an unknown or invalid merge
-    strategy.
+  - **`MergeError`** (also a `ValueError`) — values found in data could
+    not be merged, or a `lookup_options` entry names an unknown or invalid
+    merge strategy. A caller's own bad `merge=` is a plain `ValueError`.
   - ```python
     KeyNotFoundError(name)
     ```
@@ -1845,9 +1876,11 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   order included. `sort_merged_arrays` raises `MergeError` when Ruby's
   `<=>` cannot order two elements of an array it actually merged (nil vs. a
   number, a Boolean vs. anything, mismatched numeric/string types).
-  Invalid `merge=` input (an unknown strategy name, a strategy hash with no
-  `strategy` key, an unrecognized or mistyped option) raises
-  `hyera.MergeError`, never a bare `ValueError`/`TypeError`.
+  Invalid `merge=` input from a caller (an unknown strategy name, a
+  strategy hash with no `strategy` key, an unrecognized or mistyped option)
+  raises a plain `ValueError` (`TypeError` for the wrong type), never a
+  `HieraError`; the same input in a `lookup_options` entry of a data file
+  raises `hyera.MergeError`.
 - A `lookup_options` key is a **regex only when it starts with `^`**
   (Hiera 5's rule); anything else is matched literally, so a key containing
   `.` cannot shadow-match unrelated keys. Patterns use Ruby syntax

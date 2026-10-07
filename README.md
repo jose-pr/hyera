@@ -666,8 +666,14 @@ hierarchy:
 
 ### Errors and exit codes
 
-Everything raised derives from `HieraError` (`.path` names the file
-concerned, where there is one):
+What goes wrong at run time derives from `HieraError` (`.path` names the
+file concerned, where there is one). A caller's bad argument is not one: it
+raises a plain `TypeError` (wrong type) or `ValueError` (right type, unusable
+value), such as `h.lookup("k", merge="bogus")` or `h.lookup("k", "Bogus[")`.
+The same strategy or type in a data file's `lookup_options` or `convert_to`
+raises the package error. `MergeError` and `InterpolationError` are also
+`ValueError`, so test for `HieraError` or the exact class, not `ValueError`
+alone.
 
 - `ConfigError` -- `hiera.yaml` is missing, unreadable, unparsable, or
   violates Puppet's version 5 schema. `.line` names the 1-based line in
@@ -677,7 +683,8 @@ concerned, where there is one):
 - `HieraLookupError` -- a failure while resolving a key, with subclasses
   `InterpolationError` (an unknown interpolation method, a misplaced
   `%{alias(...)}`, a recursive lookup, or an undefined variable under
-  `strict="error"`), `MergeError` (an unknown or invalid merge strategy),
+  `strict="error"`), `MergeError` (values that cannot be merged, or an unknown or invalid
+  strategy in a data file's `lookup_options`),
   and `KeyNotFoundError` (also a `KeyError`) -- `lookup()`'s miss, with no
   default given.
 
