@@ -4,7 +4,8 @@ usage: python record.py [--runner local|wsl|wsl:<distro>] [--jobs N]
                          [--check] [--list-markers] [CASE ...]
 
 Each query in ``cases/<case>/case.yaml`` is one isolated ``puppet lookup`` run
-(Puppet 8.10); ``--check`` diffs in memory and prints ``DRIFT <case>::<id>``.
+(Puppet 8.10), or, for an ``expression`` query, one ``puppet apply`` run;
+``--check`` diffs in memory and prints ``DRIFT <case>::<id>``.
 """
 
 import argparse
@@ -19,11 +20,13 @@ from pathlib import Path
 from _golden import (
     CASES,
     DEFAULT_PUPPET_ARGS,
+    FIXTURE_MODULES,
     FORMAT,
     GEMS,
     NODE,
     ORACLE,
     aio_inspect,
+    apply_argv,
     case_dirs,
     input_digest,
     load_case,
@@ -31,6 +34,7 @@ from _golden import (
     normalize_message,
     normalize_paths,
     normalize_tree_paths,
+    parse_emitted,
     query_id,
     read_golden,
     string_leaves,
@@ -146,9 +150,88 @@ def _query_root(root: str, case_dir: Path, query: dict) -> str:
     return "/".join([root, case_dir.name, slug])
 
 
+def _runner_path(runner: str, path: Path) -> str:
+    """``path`` as the program run by ``runner`` names it: a ``/mnt/<drive>/...``
+    path for a WSL runner, the path itself for a local one."""
+    if not runner.startswith("wsl"):
+        return str(path)
+    parts = path.resolve().as_posix().split(":", 1)
+    if len(parts) != 2:
+        return path.as_posix()
+    return "/mnt/" + parts[0].lower() + parts[1]
+
+
+def _apply_command(runner: str, case: dict, query: dict, iso: list) -> list:
+    """The ``puppet apply`` arguments for an expression query: the isolation
+    settings, the case's own module directory plus the fixture module, and the
+    facts terminus that reads ``./facts.yaml``."""
+    modules = "./modules:" + _runner_path(runner, FIXTURE_MODULES)
+    iso = [modules if a == "./modules" else a for a in iso]
+    expression = "hyera_fixture::emit({})".format(query["expression"])
+    return (
+        ["apply", "--color", "false"]
+        + iso
+        + [
+            "--facts_terminus",
+            "hyera_file",
+            "--hiera_config",
+            "./hiera.yaml",
+            "--node_name_value",
+            NODE,
+        ]
+        + apply_argv(case, query)
+        + ["-e", expression]
+    )
+
+
+def record_apply_query(
+    runner: str, case_dir: Path, case: dict, query: dict, root: str, identities: "tuple"
+) -> dict:
+    """One expression query: ``puppet apply`` evaluates it and the fixture function
+    writes the value (Puppet's own rich-data conversion) between two marker lines."""
+    root = _query_root(root, case_dir, query)
+    args = _apply_command(runner, case, query, _iso_args(root))
+    rc, out, err = _run(runner, case_dir, args)
+    result = {"channel": "apply", "exit_status": rc}
+    warnings = [
+        normalize_message(l, case_dir, root)
+        for l in err.splitlines()
+        if l.startswith("Warning:")
+    ]
+    if warnings:
+        result["warnings"] = warnings
+    emitted, value = parse_emitted(out)
+    if rc == 0 and emitted:
+        result["status"] = "found"
+        result["value"] = value
+    else:
+        text = _error_text(err.splitlines(), case_dir, root)
+        if _NOT_FOUND.search(text):
+            result["status"] = "not_found"
+        else:
+            result["status"] = "error"
+            result["message"] = text or "no value was emitted (exit status {})".format(
+                rc
+            )
+    _refuse_leak(result, root, identities, case_dir, query)
+    return result
+
+
+def _refuse_leak(result, root, identities, case_dir, query) -> None:
+    hits = _leak_scan(result, root, identities)
+    if hits:
+        raise SystemExit(
+            "refusing to record a leaking result for {}::{}: {}".format(
+                case_dir.name, query_id(query), hits
+            )
+        )
+
+
 def record_query(
     runner: str, case_dir: Path, case: dict, query: dict, root: str, identities: "tuple"
 ) -> dict:
+    if "expression" in query:
+        return record_apply_query(runner, case_dir, case, query, root, identities)
     root = _query_root(root, case_dir, query)
     iso = _iso_args(root)
     tail = lookup_argv(case, query)

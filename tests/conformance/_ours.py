@@ -3,12 +3,17 @@
 Every conformance test reaches hyera through this module.
 """
 
+import base64
 import contextlib
+import datetime
 import io
 import json
 import logging
 import os
+import re
 
+import hyera
+import hyera.types as _hyera_types
 from hyera import Hiera, HieraError, KeyNotFoundError, Scope, Sensitive, load_facts
 from hyera.cli import main as _cli_main
 
@@ -164,7 +169,7 @@ def expected(query: dict, golden_result: dict) -> dict:
 
 
 def _check_common(case_dir, case, query):
-    key = query["key"]
+    key = query.get("key")
     args = _puppet_args(case, query)
     bad = _unrecognized_flags(args)
     if bad:
@@ -283,6 +288,127 @@ def run_explain(case_dir, case: dict, query: dict, golden: dict) -> dict:
     tree = _golden.normalize_tree_paths(as_puppet_json(result.to_hash()), case_dir)
     text = [_golden.normalize_paths(l, case_dir) for l in result.text().splitlines()]
     return {"status": "explained", "tree": tree, "text": text}
+
+
+#: The callables a call spec's ``block`` names (``_golden.BLOCK_NAMES``), each the
+#: counterpart of the lambda the query's expression passes.
+BLOCKS = {
+    "echo": lambda arg: arg,
+    "const": lambda _arg: "blk",
+    "undef": lambda _arg: None,
+    "message": lambda error: str(error),
+}
+
+
+def to_data(value):
+    """Project a Python value onto the data form Puppet's rich-data conversion
+    writes: ``Sensitive``, regexps, timestamps and binary as ``__ptype`` /
+    ``__pvalue`` mappings, a mapping with a non-string key as a ``Hash`` of flat
+    key/value pairs. Anything else that JSON cannot hold raises ``TypeError``."""
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
+    if isinstance(value, float):
+        if value != value or value in (float("inf"), float("-inf")):
+            raise TypeError("not representable in Puppet data: {!r}".format(value))
+        return value
+    if isinstance(value, Sensitive):
+        return {"__ptype": "Sensitive", "__pvalue": to_data(value.unwrap())}
+    if isinstance(value, re.Pattern):
+        return {"__ptype": "Regexp", "__pvalue": value.pattern}
+    if isinstance(value, datetime.datetime):
+        utc = value.astimezone(datetime.timezone.utc)
+        text = utc.strftime("%Y-%m-%dT%H:%M:%S.%f") + "000 UTC"
+        return {"__ptype": "Timestamp", "__pvalue": text}
+    if isinstance(value, (bytes, bytearray)):
+        return {"__ptype": "Binary", "__pvalue": base64.b64encode(value).decode()}
+    if isinstance(value, (list, tuple)):
+        return [to_data(v) for v in value]
+    if isinstance(value, dict):
+        plain = all(isinstance(k, str) for k in value) and not any(
+            k in ("__ptype", "__pvalue") for k in value
+        )
+        if plain:
+            return {k: to_data(v) for k, v in value.items()}
+        pairs = [to_data(x) for kv in value.items() for x in kv]
+        return {"__ptype": "Hash", "__pvalue": pairs}
+    raise TypeError("not representable in Puppet data: {!r}".format(value))
+
+
+def _call_spec(hiera, spec: dict):
+    """Make the call a query's ``python`` spec describes."""
+    args = list(spec.get("args") or [])
+    kwargs = dict(spec.get("kwargs") or {})
+    if "block" in spec:
+        kwargs["block"] = BLOCKS[spec["block"]]
+    owner = hiera if spec["target"] == "hiera" else _hyera_types
+    try:
+        target = getattr(owner, spec["method"])
+    except AttributeError as e:
+        raise AdapterUnsupported(
+            "python spec names nothing hyera has: {}".format(e)
+        ) from e
+    # A bare string in a subscript is a literal; `{type: Name}` is that type object.
+    params = [
+        (
+            getattr(_hyera_types, p["type"])
+            if isinstance(p, dict) and set(p) == {"type"}
+            else p
+        )
+        for p in spec.get("params") or []
+    ]
+    if params:
+        target = target[params[0] if len(params) == 1 else tuple(params)]
+    return target(*args, **kwargs)
+
+
+def _public_class_name(error: Exception) -> str:
+    """The name of the nearest class in ``error``'s MRO that ``hyera`` exports."""
+    for cls in type(error).__mro__:
+        if getattr(hyera, cls.__name__, None) is cls:
+            return cls.__name__
+    return type(error).__name__
+
+
+def run_expression(case_dir, case: dict, query: dict, golden: dict) -> dict:
+    """Answer an expression query through the call its ``python`` spec describes,
+    projected like the recorded ``puppet apply`` result, with the warnings logged.
+
+    A spec naming something ``hyera`` lacks is a mistake in the case, reported with
+    the query's id; a call hyera rejects with ``TypeError`` is an ``error`` outcome
+    like any other.
+    """
+    qid = _golden.query_id(query)
+    with _captured_warnings() as messages:
+        try:
+            with _chdir(case_dir):
+                hiera, _ = _build(case_dir, case, query, golden)
+                value = _call_spec(hiera, query["python"])
+        except AdapterUnsupported as e:
+            raise AdapterUnsupported("query {}: {}".format(qid, e)) from e
+        except KeyNotFoundError as e:
+            if isinstance(e.name, (list, tuple)) and len(e.name) != 1:
+                result = {"status": "error", "message": str(e)}
+            else:
+                result = {"status": "not_found"}
+            result["exc_class"] = _public_class_name(e)
+        except HieraError as e:
+            result = {
+                "status": "error",
+                "message": str(e),
+                "exc_class": _public_class_name(e),
+            }
+        except TypeError as e:
+            # hyera rejects a malformed call itself, which is an error outcome.
+            result = {"status": "error", "message": str(e), "exc_class": "TypeError"}
+        else:
+            try:
+                result = {"status": "found", "value": to_data(value)}
+            except TypeError as e:
+                raise AdapterUnsupported(
+                    "result of query {} has no data form: {}".format(qid, e)
+                ) from e
+    result["warnings"] = list(messages)
+    return result
 
 
 def run_cli(case_dir, case: dict, query: dict, golden: dict) -> dict:

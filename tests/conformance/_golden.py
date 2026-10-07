@@ -53,6 +53,8 @@ QUERY_FIELDS = (
     "deviation",
     "note",
     "explain",
+    "expression",
+    "python",
 )
 # The subset of QUERY_FIELDS that changes what is asked of Puppet; editing any
 # other field never invalidates a recording. `explain` counts only when a query
@@ -66,7 +68,46 @@ PUPPET_FIELDS = (
     "puppet_args",
     "hash_inspect",
     "explain",
+    "expression",
 )
+
+#: The fixture module the apply channel puts on Puppet's module path.
+FIXTURE_MODULES = Path(__file__).resolve().parent / "puppet_modules"
+#: Lines around the JSON document ``hyera_fixture::emit`` writes to stdout.
+EMIT_BEGIN = "@@HYERA-VALUE-BEGIN@@"
+EMIT_END = "@@HYERA-VALUE-END@@"
+#: Fields a query's ``python`` call spec may hold.
+PYTHON_SPEC_FIELDS = ("target", "method", "params", "args", "kwargs", "block")
+#: What a call spec may call: ``hiera`` methods, and ``types`` objects from
+#: ``hyera.types`` (subscripted by ``params``, then called with ``args``).
+HIERA_METHODS = ("lookup", "dig", "get", "getvar")
+TYPE_NAMES = (
+    "Any",
+    "Array",
+    "Boolean",
+    "Collection",
+    "Data",
+    "Enum",
+    "Float",
+    "Hash",
+    "Integer",
+    "NotUndef",
+    "Numeric",
+    "Optional",
+    "Pattern",
+    "Regexp",
+    "RichData",
+    "Scalar",
+    "ScalarData",
+    "Sensitive",
+    "String",
+    "Struct",
+    "Tuple",
+    "Undef",
+    "Variant",
+)
+#: The callables a call spec's ``block`` may name; ``_ours.BLOCKS`` defines them.
+BLOCK_NAMES = ("echo", "const", "undef", "message")
 # Values a query's ``explain`` field may take: ``data`` -> ``--explain``,
 # ``options`` -> ``--explain-options``. Puppet prints the same for both flags
 # together, so there is no third value.
@@ -105,9 +146,14 @@ def load_case(case_dir: Path) -> dict:
 
 
 def query_id(query: dict) -> str:
-    """A query's id: its explicit ``id``, else its key (or keys, ``|``-joined)."""
+    """A query's id: its explicit ``id``, else its key (or keys, ``|``-joined).
+
+    An expression query has no key; its id is mandatory (the schema check says so).
+    """
     if query.get("id"):
         return query["id"]
+    if "key" not in query:
+        return str(query.get("expression", ""))
     key = query["key"]
     if isinstance(key, list):
         return "|".join(str(k) for k in key)
@@ -162,12 +208,86 @@ def lookup_argv(case: dict, query: dict) -> list:
     return args
 
 
+def apply_argv(case: dict, query: dict) -> list:
+    """The ``puppet apply`` options a case and an expression query add.
+
+    The same order as :func:`lookup_argv` before the lookup-only flags:
+    DEFAULT_PUPPET_ARGS (unless a ``--strict`` replaces it), the case's
+    ``puppet_args``, then the query's.
+    """
+    case_args = case.get("puppet_args") or []
+    query_args = query.get("puppet_args") or []
+    args = []
+    if "--strict" not in case_args and "--strict" not in query_args:
+        args.extend(DEFAULT_PUPPET_ARGS)
+    args.extend(str(a) for a in case_args)
+    args.extend(str(a) for a in query_args)
+    return args
+
+
+def parse_emitted(stdout: str):
+    """The value ``hyera_fixture::emit`` wrote: ``(True, data)``, or ``(False,
+    None)`` when no complete marker-delimited JSON document is on ``stdout``."""
+    lines = stdout.splitlines()
+    try:
+        begin = lines.index(EMIT_BEGIN)
+        end = lines.index(EMIT_END, begin + 1)
+    except ValueError:
+        return False, None
+    try:
+        return True, json.loads("\n".join(lines[begin + 1 : end]))
+    except ValueError:
+        return False, None
+
+
+def python_spec_problems(spec) -> "list[str]":
+    """Why a query's ``python`` call spec is not well-formed (empty when it is)."""
+    if not isinstance(spec, dict):
+        return ["python must be a mapping"]
+    problems = []
+    unknown = set(spec) - set(PYTHON_SPEC_FIELDS)
+    if unknown:
+        problems.append("python: unknown fields {}".format(sorted(unknown)))
+    target = spec.get("target")
+    if target == "hiera":
+        if spec.get("method") not in HIERA_METHODS:
+            problems.append(
+                "python: hiera method must be one of {}".format(HIERA_METHODS)
+            )
+        if "params" in spec:
+            problems.append("python: params belongs to a types target")
+    elif target == "types":
+        if spec.get("method") not in TYPE_NAMES:
+            problems.append("python: types method must be one of {}".format(TYPE_NAMES))
+        if "block" in spec:
+            problems.append("python: a types target takes no block")
+        if "params" in spec and not isinstance(spec["params"], list):
+            problems.append("python: params must be a list")
+    else:
+        problems.append("python: target must be hiera or types")
+    if "args" in spec and not isinstance(spec["args"], list):
+        problems.append("python: args must be a list")
+    if "kwargs" in spec and not isinstance(spec["kwargs"], dict):
+        problems.append("python: kwargs must be a mapping")
+    if "block" in spec and spec["block"] not in BLOCK_NAMES:
+        problems.append("python: block must be one of {}".format(BLOCK_NAMES))
+    return problems
+
+
+def _expression_digest_files() -> "list[Path]":
+    return sorted(
+        (p for p in FIXTURE_MODULES.rglob("*") if p.is_file()),
+        key=lambda p: p.relative_to(FIXTURE_MODULES).as_posix(),
+    )
+
+
 def input_digest(case_dir: Path) -> str:
     """sha256 over everything Puppet saw when a case was recorded.
 
     That is DEFAULT_PUPPET_ARGS, NODE, the case's own ``puppet_args``, the
     PUPPET_FIELDS of every query, and every file in the case dir except
-    ``golden.json``/``case.yaml``. Line endings are normalized to LF first
+    ``golden.json``/``case.yaml``; a case with an expression query adds the
+    fixture module's files. Line endings are normalized to LF first
     (except in a ``.raw.`` file, whose bytes are exact on purpose), so a
     CRLF checkout on Windows hashes the same as the LF checkout a golden
     was recorded from.
@@ -196,6 +316,11 @@ def input_digest(case_dir: Path) -> str:
             data = data.replace(b"\r\n", b"\n")
         h.update(rel.encode("utf-8") + b"\0")
         h.update(data + b"\0")
+    if any("expression" in q for q in case["queries"]):
+        for path in _expression_digest_files():
+            rel = "fixture/" + path.relative_to(FIXTURE_MODULES).as_posix()
+            h.update(rel.encode("utf-8") + b"\0")
+            h.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")
     return h.hexdigest()
 
 
@@ -378,6 +503,60 @@ def _format2_problems(golden: dict) -> "list[str]":
     return problems
 
 
+#: Fields that only a key query (``puppet lookup``) can use.
+_KEY_ONLY_FIELDS = ("merge", "default", "type", "explain", "hash_inspect")
+
+
+def _expression_problems(index, query: dict) -> "list[str]":
+    """The key-versus-expression rules for one query (``index`` names it before its
+    id is known)."""
+    label = query.get("id") or index
+    has_key, has_expr = "key" in query, "expression" in query
+    if has_key == has_expr:
+        return ["query {}: exactly one of key and expression".format(label)]
+    if not has_expr:
+        if "python" in query:
+            return ["query {}: python belongs to an expression query".format(label)]
+        return []
+    problems = []
+    if not isinstance(query["expression"], str) or not query["expression"].strip():
+        problems.append("query {}: expression must be a non-empty string".format(label))
+    if not query.get("id"):
+        problems.append("query {}: an expression query needs an id".format(label))
+    for field in _KEY_ONLY_FIELDS:
+        if field in query:
+            problems.append(
+                "query {}: {} not allowed with expression".format(label, field)
+            )
+    if "--modulepath" in (query.get("puppet_args") or []):
+        problems.append(
+            "query {}: --modulepath not allowed with expression".format(label)
+        )
+    if "python" not in query:
+        problems.append("query {}: expression needs a python call spec".format(label))
+    else:
+        problems.extend(
+            "query {}: {}".format(label, p)
+            for p in python_spec_problems(query["python"])
+        )
+    return problems
+
+
+def _apply_result_problems(qid, res) -> "list[str]":
+    """What an expression query's recorded result must hold."""
+    problems = []
+    if res.get("channel") != "apply":
+        problems.append("query {}: expression result needs channel apply".format(qid))
+    status = res.get("status")
+    if status not in ("found", "not_found", "error"):
+        problems.append("query {}: apply result status {!r}".format(qid, status))
+    if status == "found" and "value" not in res:
+        problems.append("query {}: found result has no value".format(qid))
+    if status == "error" and not isinstance(res.get("message"), str):
+        problems.append("query {}: error result must have a message".format(qid))
+    return problems
+
+
 def lint_case(case_dir: Path) -> "list[str]":
     """Every reason `case_dir` is not a valid, current, safe-to-ship case.
 
@@ -402,8 +581,7 @@ def lint_case(case_dir: Path) -> "list[str]":
         unknown = set(q) - set(QUERY_FIELDS)
         if unknown:
             problems.append("query {}: unknown fields {}".format(i, sorted(unknown)))
-        if "key" not in q:
-            problems.append("query {}: missing key".format(i))
+        problems.extend(_expression_problems(i, q))
         ids.append(query_id(q))
         if q.get("default") is not None and not isinstance(q["default"], str):
             problems.append("query {}: default must be a string".format(query_id(q)))
@@ -504,6 +682,10 @@ def lint_case(case_dir: Path) -> "list[str]":
         qid = query_id(q)
         res = results.get(qid, {})
         status = res.get("status")
+        if "expression" in q:
+            problems.extend(_apply_result_problems(qid, res))
+        elif res.get("channel") == "apply":
+            problems.append("query {}: a key query never has channel apply".format(qid))
         if q.get("explain"):
             if status == "explained":
                 if not isinstance(res.get("tree"), dict):

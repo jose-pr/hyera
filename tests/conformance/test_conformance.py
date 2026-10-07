@@ -27,6 +27,7 @@ from _ours import (
     is_ordered,
     missing_warnings,
     run_api,
+    run_expression,
     run_explain,
 )
 
@@ -93,13 +94,16 @@ def test_api_matches_puppet(case_dir, case, query):
     golden = read_golden(case_dir)
     golden_result = golden["results"][query_id(query)]
     want = expected(query, golden_result)
-    runner = run_explain if query.get("explain") else run_api
+    if "expression" in query:
+        runner = run_expression
+    else:
+        runner = run_explain if query.get("explain") else run_api
     try:
         actual = runner(case_dir, case, query, golden)
     except AdapterUnsupported as e:
         pytest.fail("adapter does not support this query yet: {}".format(e))
 
-    assert actual["status"] == want["status"], (actual, want)
+    assert actual["status"] == want["status"], (query_id(query), actual, want)
     ordered = is_ordered(query)
     if want["status"] == "found":
         assert canonical(actual["value"], ordered) == canonical(want["value"], ordered)

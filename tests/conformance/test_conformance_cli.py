@@ -33,6 +33,8 @@ def _cli_params():
         case = load_case(case_dir)
         missing = missing_requirements(case)
         for query in case["queries"]:
+            if "expression" in query:
+                continue  # the command has no form for a Puppet expression
             marks = []
             if missing:
                 marks.append(pytest.mark.skip(reason="needs " + ", ".join(missing)))
