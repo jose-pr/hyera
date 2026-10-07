@@ -1,0 +1,180 @@
+description: >-
+  The describer for NotUndef, Optional and Variant types: NotUndef[T] and
+  Optional[T] reduce to T when T already decides undef, a bare Optional
+  rejects every value it is given, and an Optional inside a Variant moves
+  out to wrap it, merging string literals into one Enum.
+queries:
+  - key: i1
+    id: i1-optional
+    type: 'Optional'
+  - key: s
+    id: s-optional
+    type: 'Optional'
+  - key: nil
+    id: nil-optional
+    type: 'Optional'
+  - key: i1
+    id: i1-notundef
+    type: 'NotUndef'
+  - key: nil
+    id: nil-notundef
+    type: 'NotUndef'
+  - key: s
+    id: s-notundef
+    type: 'NotUndef'
+  - key: i1
+    id: i1-notundef-integer
+    type: 'NotUndef[Integer]'
+  - key: nil
+    id: nil-notundef-integer
+    type: 'NotUndef[Integer]'
+    error_class: HieraLookupError
+    error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ Integer\\ value,\\ got\\ Undef"
+  - key: s
+    id: s-notundef-integer
+    type: 'NotUndef[Integer]'
+  - key: i1
+    id: i1-variant-optional-integer
+    type: 'Variant[Optional, Integer]'
+  - key: nil
+    id: nil-variant-optional-integer
+    type: 'Variant[Optional, Integer]'
+  - key: i1
+    id: i1-variant-notundef-integer
+    type: 'Variant[NotUndef, Integer]'
+  - key: nil
+    id: nil-variant-notundef-integer
+    type: 'Variant[NotUndef, Integer]'
+  - key: s
+    id: s-variant-notundef-integer
+    type: 'Variant[NotUndef, Integer]'
+  - key: i1
+    id: i1-array-optional
+    type: 'Array[Optional]'
+  - key: a1
+    id: a1-array-optional
+    type: 'Array[Optional]'
+  - key: a1
+    id: a1-array-notundef
+    type: 'Array[NotUndef]'
+  - key: h1
+    id: h1-hash-string-optional
+    type: 'Hash[String, Optional]'
+  - key: h1
+    id: h1-hash-string-notundef
+    type: 'Hash[String, NotUndef]'
+  - key: nil
+    id: nil-variant-notundef-integer-notundef-float
+    type: 'Variant[NotUndef[Integer], NotUndef[Float]]'
+  - key: s
+    id: s-variant-notundef-integer-notundef-float
+    type: 'Variant[NotUndef[Integer], NotUndef[Float]]'
+  - key: nil
+    id: nil-variant-optional-a-optional-b
+    type: 'Variant[Optional[''a''], Optional[''b'']]'
+  - key: s
+    id: s-variant-optional-a-optional-b
+    type: 'Variant[Optional[''a''], Optional[''b'']]'
+    error_class: HieraLookupError
+    error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ an\\ undef\\ value\\ or\\ a\\ match\\ for\\ Enum\\['a',\\ 'b'\\],\\ got\\ 'str'"
+  - key: s
+    id: s-variant-optional-str-optional-b
+    type: 'Variant[Optional[''str''], Optional[''b'']]'
+  - key: i1
+    id: i1-variant-optional-str-optional-b
+    type: 'Variant[Optional[''str''], Optional[''b'']]'
+  - key: nil
+    id: nil-variant-optional-str-optional-b
+    type: 'Variant[Optional[''str''], Optional[''b'']]'
+  - key: s
+    id: s-variant-optional-a-integer
+    type: 'Variant[Optional[''a''], Integer]'
+  - key: s
+    id: s-optional-integer
+    type: 'Optional[Integer]'
+  - key: s
+    id: s-optional-string
+    type: 'Optional[String]'
+  - key: s
+    id: s-optional-str
+    type: 'Optional[''str'']'
+  - key: s
+    id: s-optional-a
+    type: 'Optional[''a'']'
+  - key: s
+    id: s-notundef-str
+    type: 'NotUndef[''str'']'
+  - key: s
+    id: s-notundef-a
+    type: 'NotUndef[''a'']'
+  - key: nil
+    id: nil-notundef-a
+    type: 'NotUndef[''a'']'
+  - key: nil
+    id: nil-notundef-optional
+    type: 'NotUndef[Optional]'
+  - key: i1
+    id: i1-notundef-optional
+    type: 'NotUndef[Optional]'
+  - key: nil
+    id: nil-optional-notundef
+    type: 'Optional[NotUndef]'
+  - key: i1
+    id: i1-optional-notundef
+    type: 'Optional[NotUndef]'
+  - key: i1
+    id: i1-optional-optional
+    type: 'Optional[Optional]'
+  - key: nil
+    id: nil-optional-optional
+    type: 'Optional[Optional]'
+  - key: nil
+    id: nil-notundef-notundef-integer
+    type: 'NotUndef[NotUndef[Integer]]'
+  - key: nil
+    id: nil-notundef-optional-integer
+    type: 'NotUndef[Optional[Integer]]'
+  - key: s
+    id: s-notundef-optional-integer
+    type: 'NotUndef[Optional[Integer]]'
+  - key: s
+    id: s-optional-notundef-integer
+    type: 'Optional[NotUndef[Integer]]'
+  - key: nil
+    id: nil-optional-notundef-integer
+    type: 'Optional[NotUndef[Integer]]'
+  - key: s
+    id: s-notundef-variant-integer-string
+    type: 'NotUndef[Variant[Integer, String]]'
+  - key: nil
+    id: nil-notundef-variant-integer-string
+    type: 'NotUndef[Variant[Integer, String]]'
+  - key: a1
+    id: a1-array-notundef-integer
+    type: 'Array[NotUndef[Integer]]'
+  - key: h1
+    id: h1-hash-string-notundef-string
+    type: 'Hash[String, NotUndef[String]]'
+  - key: s
+    id: s-variant-notundef-a-notundef-b
+    type: 'Variant[NotUndef[''a''], NotUndef[''b'']]'
+  - key: s
+    id: s-variant-optional-a-optional-b-integer
+    type: 'Variant[Optional[''a''], Optional[''b''], Integer]'
+    error_class: HieraLookupError
+    error_match: "^\\s*Found\\ value\\ has\\ wrong\\ type,\\ expects\\ a\\ value\\ of\\ type\\ Undef,\\ Integer,\\ or\\ Enum\\['a',\\ 'b'\\],\\ got\\ String"
+  - key: s
+    id: s-variant-optional-a-enum-x
+    type: 'Variant[Optional[''a''], Enum[''x'']]'
+  - key: nil
+    id: nil-variant-optional-integer-optional-string
+    type: 'Variant[Optional[Integer], Optional[String]]'
+  - key: a1
+    id: a1-variant-optional-integer-optional-string
+    type: 'Variant[Optional[Integer], Optional[String]]'
+  - key: s
+    id: s-optional-any
+    type: 'Optional[Any]'
+  - key: nil
+    id: nil-notundef-any
+    type: 'NotUndef[Any]'

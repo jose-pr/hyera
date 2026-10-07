@@ -306,6 +306,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Array[String, Integer[2, 2]]`, `Hash[String, Integer, Integer[2]]`) parse
   instead of being refused or, for `Array[1, 2]`, matching any element.
   `hyera.types.Array[1, 3]` still bounds the size only.
+- A type mismatch names `NotUndef[Integer]` and `Optional[NotUndef[Integer]]`
+  as Puppet does (`expects an Integer value, got Undef`), merges `Optional`
+  members of a `Variant` into one `Optional`, and a bare `Optional` rejects a
+  value with an empty message, as Puppet's assertion does.
 
 ### Security
 

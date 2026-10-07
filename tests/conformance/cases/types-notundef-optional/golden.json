@@ -1,0 +1,693 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "9da232db724e6481887c5e6a00cd5422c6dfc744792d06b52b69771f56a0fa00",
+  "results": {
+    "i1-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional",
+        "i1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "s-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "nil-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "i1-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef",
+        "i1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "nil-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a NotUndef value, got Undef"
+    },
+    "s-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "i1-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Integer]",
+        "i1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "nil-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Integer]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got Undef"
+    },
+    "s-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got String"
+    },
+    "i1-variant-optional-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional, Integer]",
+        "i1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "nil-variant-optional-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional, Integer]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "i1-variant-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef, Integer]",
+        "i1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "nil-variant-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef, Integer]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type NotUndef or Integer, got Undef"
+    },
+    "s-variant-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef, Integer]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "i1-array-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[Optional]",
+        "i1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Array value, got Integer"
+    },
+    "a1-array-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[Optional]",
+        "a1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "a1-array-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[NotUndef]",
+        "a1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "x"
+      ]
+    },
+    "h1-hash-string-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[String, Optional]",
+        "h1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "h1-hash-string-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[String, NotUndef]",
+        "h1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "nil-variant-notundef-integer-notundef-float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef[Integer], NotUndef[Float]]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Integer or Float, got Undef"
+    },
+    "s-variant-notundef-integer-notundef-float": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef[Integer], NotUndef[Float]]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Integer or Float, got String"
+    },
+    "nil-variant-optional-a-optional-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['a'], Optional['b']]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "s-variant-optional-a-optional-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['a'], Optional['b']]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an undef value or a match for Enum['a', 'b'], got 'str'"
+    },
+    "s-variant-optional-str-optional-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['str'], Optional['b']]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "i1-variant-optional-str-optional-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['str'], Optional['b']]",
+        "i1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an undef value or a match for Enum['b', 'str'], got Integer"
+    },
+    "nil-variant-optional-str-optional-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['str'], Optional['b']]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "s-variant-optional-a-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['a'], Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef, String, or Integer, got String"
+    },
+    "s-optional-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef or Integer, got String"
+    },
+    "s-optional-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[String]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "s-optional-str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional['str']",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "s-optional-a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional['a']",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef or String, got String"
+    },
+    "s-notundef-str": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef['str']",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "s-notundef-a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef['a']",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a String value, got String"
+    },
+    "nil-notundef-a": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef['a']",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a String value, got Undef"
+    },
+    "nil-notundef-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Optional]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a NotUndef value, got Undef"
+    },
+    "i1-notundef-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Optional]",
+        "i1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "nil-optional-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[NotUndef]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "i1-optional-notundef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[NotUndef]",
+        "i1"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "i1-optional-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Optional]",
+        "i1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "nil-optional-optional": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Optional]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "nil-notundef-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[NotUndef[Integer]]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got Undef"
+    },
+    "nil-notundef-optional-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Optional[Integer]]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got Undef"
+    },
+    "s-notundef-optional-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Optional[Integer]]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an Integer value, got String"
+    },
+    "s-optional-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[NotUndef[Integer]]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef or Integer, got String"
+    },
+    "nil-optional-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[NotUndef[Integer]]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "s-notundef-variant-integer-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Variant[Integer, String]]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "nil-notundef-variant-integer-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Variant[Integer, String]]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Integer or String, got Undef"
+    },
+    "a1-array-notundef-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[NotUndef[Integer]]",
+        "a1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, index 0 expects an Integer value, got String"
+    },
+    "h1-hash-string-notundef-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Hash[String, NotUndef[String]]",
+        "h1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, entry 'a' expects a String value, got Integer"
+    },
+    "s-variant-notundef-a-notundef-b": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[NotUndef['a'], NotUndef['b']]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum['a', 'b'], got 'str'"
+    },
+    "s-variant-optional-a-optional-b-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['a'], Optional['b'], Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef, Integer, or Enum['a', 'b'], got String"
+    },
+    "s-variant-optional-a-enum-x": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional['a'], Enum['x']]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an undef value or a match for Enum['a', 'x'], got 'str'"
+    },
+    "nil-variant-optional-integer-optional-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional[Integer], Optional[String]]",
+        "nil"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "a1-variant-optional-integer-optional-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Optional[Integer], Optional[String]]",
+        "a1"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a value of type Undef, Integer, or String, got Tuple"
+    },
+    "s-optional-any": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Any]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "nil-notundef-any": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "NotUndef[Any]",
+        "nil"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a NotUndef value, got Undef"
+    }
+  }
+}

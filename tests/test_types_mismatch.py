@@ -147,16 +147,17 @@ def test_describe_evidence_more_branches():
 
     # NotUndef on Undef, both bare and with a contained type.
     assert err(parse_type("NotUndef[Integer]"), None) == (
-        "Found value has wrong type, expects a NotUndef[Integer] value, got Undef"
+        "Found value has wrong type, expects an Integer value, got Undef"
     )
     assert err(parse_type("NotUndef"), None) == (
         "Found value has wrong type, expects a NotUndef value, got Undef"
     )
     # A bare NotUndef (no contained type) never rejects a non-Undef value,
-    # whatever it is; a bare Optional accepts only undef.
+    # whatever it is; a bare Optional accepts only undef, and its refusal of
+    # anything else has no text (Puppet's description of it is empty).
     marker = object()
     assert assert_instance_of("Found value", parse_type("NotUndef"), marker) is marker
-    assert "expects an Optional value, got Integer" in err(parse_type("Optional"), 5)
+    assert err(parse_type("Optional"), 5) == ""
 
     # A type alias whose own `.instance()` fails collapses to one mismatch
     # on the alias itself (never the branches' own structural detail).

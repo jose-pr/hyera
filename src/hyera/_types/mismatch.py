@@ -39,7 +39,7 @@ from .compound_types import (
     TypeReference,
     Variant,
 )
-from .variant_merge import variant_of
+from .variant_merge import normalize, variant_of
 
 __all__ = [
     "assert_instance_of",
@@ -329,7 +329,7 @@ def _describe(expected, value, path, original=None):
         if value is None:
             return []
         if expected.contained is None:
-            return [_Mismatch(path, "type", expected, _infer(value))]
+            return []
         wrapper = original if isinstance(original, TypeAlias) else expected
         return _describe(expected.contained, value, path, wrapper)
 
@@ -553,10 +553,13 @@ def assert_instance_of(subject, expected, value, nil_ok=False):
     :class:`hyera.HieraLookupError` with Puppet's mismatch text."""
     if value is None and nil_ok:
         return value
-    mismatches = describe_instance_of(expected, value)
-    if not mismatches:
+    # A type can reject a value its description finds nothing wrong with
+    # (a bare Optional): the error then has no text (type_asserter.rb:35).
+    if expected.instance(value):
         return value
-    raise HieraLookupError(format_mismatches(subject, mismatches))
+    raise HieraLookupError(
+        format_mismatches(subject, describe_instance_of(expected, value))
+    )
 
 
 def describe_instance_of(expected, value):
@@ -567,7 +570,7 @@ def describe_instance_of(expected, value):
     :return: the mismatches in Puppet's order, empty when ``value`` is an instance;
         each has a ``location()`` naming where in ``value`` it points
     """
-    return _describe(expected, value, [])
+    return _describe(normalize(expected), value, [])
 
 
 def format_mismatches(subject, mismatches, annotate=None):
@@ -578,6 +581,8 @@ def format_mismatches(subject, mismatches, annotate=None):
     :param annotate: called with each mismatch, returns text to end its line with
     :return: the message
     """
+    if not mismatches:
+        return ""
     name = subject + " has wrong type,"
     lines = [
         _format_one(name, m) + (annotate(m) if annotate else "") for m in mismatches
