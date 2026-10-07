@@ -7,7 +7,7 @@ import typing as _ty
 
 __all__ = ["Limits"]
 
-_FIELDS = ("yaml_alias_nodes", "glob_patterns")
+_FIELDS = ("yaml_alias_nodes", "glob_patterns", "hocon_substitution_size")
 
 
 class Limits:
@@ -21,6 +21,9 @@ class Limits:
         through alias references (``*name``) before the load fails.
     :param glob_patterns: the most patterns one ``glob`` entry may expand to
         through ``{a,b}`` alternatives before the lookup fails.
+    :param hocon_substitution_size: the largest value one HOCON ``${...}``
+        substitution may insert before the load fails: characters of a
+        string, nodes plus characters of a list or object.
     :raises TypeError: a field is not an ``int`` or ``None``.
     :raises ValueError: a field is not positive.
     """
@@ -29,16 +32,19 @@ class Limits:
 
     yaml_alias_nodes: _ty.Optional[int]
     glob_patterns: _ty.Optional[int]
+    hocon_substitution_size: _ty.Optional[int]
 
     def __init__(
         self,
         *,
         yaml_alias_nodes: _ty.Optional[int] = None,
         glob_patterns: _ty.Optional[int] = None,
+        hocon_substitution_size: _ty.Optional[int] = None,
     ) -> None:
         for name, value in (
             ("yaml_alias_nodes", yaml_alias_nodes),
             ("glob_patterns", glob_patterns),
+            ("hocon_substitution_size", hocon_substitution_size),
         ):
             if value is None:
                 continue
@@ -52,6 +58,7 @@ class Limits:
                 raise ValueError("{} must be positive".format(name))
         object.__setattr__(self, "yaml_alias_nodes", yaml_alias_nodes)
         object.__setattr__(self, "glob_patterns", glob_patterns)
+        object.__setattr__(self, "hocon_substitution_size", hocon_substitution_size)
 
     def __setattr__(self, name: str, value: _ty.Any) -> None:
         raise AttributeError("Limits is immutable")
@@ -60,10 +67,14 @@ class Limits:
         raise AttributeError("Limits is immutable")
 
     def __reduce__(self) -> _ty.Tuple[_ty.Any, ...]:
-        return (_rebuild, (self.yaml_alias_nodes, self.glob_patterns))
+        return (_rebuild, self._key())
 
     def _key(self) -> _ty.Tuple[_ty.Optional[int], ...]:
-        return (self.yaml_alias_nodes, self.glob_patterns)
+        return (
+            self.yaml_alias_nodes,
+            self.glob_patterns,
+            self.hocon_substitution_size,
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Limits):
@@ -74,13 +85,18 @@ class Limits:
         return hash(self._key())
 
     def __repr__(self) -> str:
-        return "Limits(yaml_alias_nodes={!r}, glob_patterns={!r})".format(
-            self.yaml_alias_nodes, self.glob_patterns
-        )
+        return (
+            "Limits(yaml_alias_nodes={!r}, glob_patterns={!r}, "
+            "hocon_substitution_size={!r})"
+        ).format(*self._key())
 
 
-def _rebuild(yaml_alias_nodes, glob_patterns) -> Limits:
-    return Limits(yaml_alias_nodes=yaml_alias_nodes, glob_patterns=glob_patterns)
+def _rebuild(yaml_alias_nodes, glob_patterns, hocon_substitution_size) -> Limits:
+    return Limits(
+        yaml_alias_nodes=yaml_alias_nodes,
+        glob_patterns=glob_patterns,
+        hocon_substitution_size=hocon_substitution_size,
+    )
 
 
 #: The limits of the lookup in progress; ``Backend.limits`` reads it. Set around

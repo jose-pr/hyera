@@ -10,9 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `Hiera(confine_locations=True)` keeps data file locations inside each
   level's `datadir`, and `Hiera(limits=hyera.Limits(...))` bounds the nodes a
-  YAML document may yield through aliases (`yaml_alias_nodes`) and the
-  patterns a `glob` may expand to through braces (`glob_patterns`). Both are
-  off by default. `Backend.limits` gives a backend the active `Limits`.
+  YAML document may yield through aliases (`yaml_alias_nodes`), the patterns
+  a `glob` may expand to through braces (`glob_patterns`) and the largest
+  value one HOCON substitution may insert (`hocon_substitution_size`). All
+  are off by default. `Backend.limits` gives a backend the active `Limits`.
 - `hocon_env` (`HOCONBackend(hocon_env=False)` or `options: {hocon_env:
   false}`) stops a HOCON substitution from reading the process environment.
 - `HYERA_MCP_ROOT` and `HYERA_MCP_BACKENDS` let an operator confine the MCP

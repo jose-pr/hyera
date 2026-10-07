@@ -20,6 +20,7 @@ from .._config.confinement import check_include
 from ..exceptions import BackendError, ConfigError, _one_line
 from . import Backend, _Names
 from ._hocon_includes import _allow_hocon_includes, _refuse_hocon_includes
+from ._hocon_limits import install_substitution_bound
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -266,6 +267,7 @@ def _hocon_parser():
             mod.os = _HoconOsShim()
             mod.logger = _HoconLoggerShim(mod.logger)
             _install_hocon_include_guard(mod)
+            install_substitution_bound(mod)
             _HOCON_PARSER_MODULE = mod
     return _HOCON_PARSER_MODULE
 

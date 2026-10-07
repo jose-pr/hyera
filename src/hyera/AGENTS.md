@@ -572,7 +572,7 @@ since Hiera data is dynamic.
     shared caches under one lock per instance (untested on free-threaded
     builds).
 - ```python
-  Limits(*, yaml_alias_nodes=None, glob_patterns=None)
+  Limits(*, yaml_alias_nodes=None, glob_patterns=None, hocon_substitution_size=None)
   ```
 
   Ceilings for a caller that passes scope values or data it does not
@@ -583,10 +583,13 @@ since Hiera data is dynamic.
   `*alias` references; over it the load raises `BackendError` naming the
   limit and the file, before any node is built. `glob_patterns`: the most
   patterns one `glob` entry may expand to through `{a,b}` alternatives; over
-  it the lookup raises `BackendError` before any directory is walked. They
-  bound those two costs only, not memory in general. There is no limit for
-  HOCON substitutions: their cost grows with the expansion, not with their
-  count, so a count bounds nothing useful.
+  it the lookup raises `BackendError` before any directory is walked.
+  `hocon_substitution_size`: the largest value one HOCON `${...}`
+  substitution may insert, counted as the characters of a string or the
+  nodes plus characters of a list or object; over it the load raises
+  `BackendError` before the value is copied, so a document whose
+  substitutions double at each level is refused in bounded memory. They
+  bound those three costs only, not memory in general.
 - ```python
   lookup(base_config, name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, facts=None, scope=None)
   ```

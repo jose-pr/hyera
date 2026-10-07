@@ -750,13 +750,14 @@ do not control, turn on what applies; nothing is on by default.
   `include file(...)` outside it fails. It covers the files a level reads
   (`path`, `paths`, `glob`, `mapped_paths`); `uri` levels and what a
   `lookup_key` backend does with a path are not covered.
-- `Hiera(..., limits=hyera.Limits(...))` bounds two costs:
+- `Hiera(..., limits=hyera.Limits(...))` bounds three costs:
   `yaml_alias_nodes`, the nodes one YAML document may yield through aliases
-  (the load fails before any node is built), and `glob_patterns`, the
-  patterns one `glob` may expand to through braces (the lookup fails before
-  any directory is walked). They bound those costs and not memory in general.
-  A HOCON document's cost grows with how substitutions expand, not with how
-  many there are, so no limit is offered for it.
+  (the load fails before any node is built); `glob_patterns`, the patterns
+  one `glob` may expand to through braces (the lookup fails before any
+  directory is walked); and `hocon_substitution_size`, the largest value one
+  HOCON `${...}` substitution may insert, in characters for a string and in
+  nodes plus characters for a list or object (the load fails before the
+  value is copied). They bound those costs and not memory in general.
 - `options: {hocon_env: false}` on a `hocon_data` entry, or
   `HOCONBackend(hocon_env=False)`, stops a HOCON substitution the document
   does not define from reading the process environment.
@@ -768,7 +769,11 @@ hiera = hyera.Hiera(
     "hiera.yaml",
     scope=hyera.Scope(facts=facts_from_the_caller),
     confine_locations=True,
-    limits=hyera.Limits(yaml_alias_nodes=100_000, glob_patterns=1_000),
+    limits=hyera.Limits(
+        yaml_alias_nodes=100_000,
+        glob_patterns=1_000,
+        hocon_substitution_size=1_000_000,
+    ),
 )
 ```
 

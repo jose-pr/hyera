@@ -1,5 +1,6 @@
 """``hyera.Limits``: opt-in ceilings on YAML alias expansion and glob brace
-expansion, enforced before the cost is paid, and the ``Backend.limits`` read."""
+expansion, enforced before the cost is paid, and the ``Backend.limits`` read.
+The HOCON field has its own module."""
 
 import copy
 import pickle
@@ -62,7 +63,9 @@ def test_limits_are_keyword_only_immutable_hashable_and_comparable():
     assert limits == hyera.Limits(yaml_alias_nodes=10, glob_patterns=4)
     assert limits != hyera.Limits(yaml_alias_nodes=10)
     assert len({limits, hyera.Limits(yaml_alias_nodes=10, glob_patterns=4)}) == 1
-    assert repr(limits) == "Limits(yaml_alias_nodes=10, glob_patterns=4)"
+    assert repr(limits) == (
+        "Limits(yaml_alias_nodes=10, glob_patterns=4, hocon_substitution_size=None)"
+    )
     for clone in (pickle.loads(pickle.dumps(limits)), copy.deepcopy(limits)):
         assert clone == limits
 
