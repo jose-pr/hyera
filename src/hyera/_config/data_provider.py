@@ -290,7 +290,7 @@ def environment_for(hiera, name):
             )
 
     provider = (
-        load_layer_provider("Environment", root, hiera._backends, hiera.scope)
+        load_layer_provider("Environment", root, hiera._backends, hiera._scope)
         if root is not None
         else None
     )
@@ -320,7 +320,7 @@ def module_provider_for(hiera, state, module_name):
             "Module",
             module_dir,
             hiera._backends,
-            hiera.scope,
+            hiera._scope,
             module_name=module_name,
         )
     cache[module_name] = result

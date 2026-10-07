@@ -66,6 +66,58 @@ def test_scope_argument_must_be_a_scope(make_tree):
         Hiera(str(root / "hiera.yaml"), scope={"environment": "production"})
 
 
+def test_scope_is_read_only(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "greeting: 'hi %{who}'\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"who": "bob"}))
+    view = h.scoped(variables={"who": "eve"})
+    for target in (h, view):
+        with pytest.raises(AttributeError):
+            target.scope = Scope(variables={"who": "mallory"})
+    assert isinstance(Hiera.scope, property)
+    assert h.lookup("greeting") == "hi bob"
+    assert view.lookup("greeting") == "hi eve"
+
+
+def test_scope_of_an_instance_and_of_a_view(make_tree):
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "k: v\n"},
+    )
+    given = Scope(variables={"who": "bob"})
+    h = Hiera(str(root / "hiera.yaml"), scope=given)
+    assert h.scope is given
+    view = h.scoped(environment="staging")
+    assert view.scope.environment == "staging"
+    assert view.scope == given.derive(environment="staging")
+    assert h.scope is given
+
+
+@pytest.mark.parametrize("which", ["instance", "view"])
+@pytest.mark.parametrize("clone", ["copy", "deepcopy", "pickle"])
+def test_scope_survives_copies_and_pickles(which, clone, make_tree):
+    import copy
+    import pickle
+
+    root = make_tree(
+        {"hierarchy": [{"name": "c", "path": "common.yaml"}]},
+        files={"data/common.yaml": "greeting: 'hi %{who}'\n"},
+    )
+    h = Hiera(str(root / "hiera.yaml"), scope=Scope(variables={"who": "bob"}))
+    source = h if which == "instance" else h.scoped(variables={"who": "eve"})
+    copied = {
+        "copy": copy.copy,
+        "deepcopy": copy.deepcopy,
+        "pickle": lambda x: pickle.loads(pickle.dumps(x)),
+    }[clone](source)
+    assert copied.scope == source.scope
+    assert copied.lookup("greeting") == source.lookup("greeting")
+    with pytest.raises(AttributeError):
+        copied.scope = Scope()
+
+
 def test_source_cache_distinguishes_true_and_1(make_tree):
     root = make_tree(
         {"hierarchy": [{"name": "v", "path": "v/%{x}.yaml"}]},

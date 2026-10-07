@@ -182,7 +182,7 @@ class Hiera:
             scope = Scope()
         elif not isinstance(scope, Scope):
             raise TypeError("scope must be a hyera.Scope")
-        self.scope = scope
+        self._scope = scope
         if cache_size is not None:
             if isinstance(cache_size, bool) or not isinstance(cache_size, int):
                 raise TypeError(
@@ -231,14 +231,23 @@ class Hiera:
             self.base_config,
             base_path,
             default_backends() if backends is None else backends,
-            self.scope,
+            self._scope,
             self._codedir,
         )
         self._base_path: Path = self._global.root
         # Puppet fails every lookup on a broken environment config; loading
         # the construction scope's own environment now gives the same
         # failure at construction instead.
-        environment_for(self, self.scope.environment)
+        environment_for(self, self._scope.environment)
+
+    @property
+    def scope(self) -> Scope:
+        """The scope this instance's lookups are bound to; read-only. Use
+        :meth:`scoped` for a view bound to another scope.
+
+        :returns: the bound :class:`~hyera.Scope`.
+        """
+        return self._scope
 
     def _init_caches(self) -> None:
         """(Re)create every cache and the lock they share -- called from
@@ -309,7 +318,7 @@ class Hiera:
         return "{}(config={!r}, environment={!r})".format(
             type(self).__name__,
             self._global.source.label,  # type: ignore[attr-defined]
-            self.scope.environment,
+            self._scope.environment,
         )
 
     def __getstate__(self) -> _ty.Dict[str, _ty.Any]:
@@ -341,7 +350,7 @@ class Hiera:
         :raises InterpolationError: if a ``%{...}`` reference or function
             call could not be resolved.
         """
-        return self._format(text, self.scope)
+        return self._format(text, self._scope)
 
     def _format(self, text, scope: Scope):
         if not isinstance(text, str):
@@ -391,7 +400,7 @@ class Hiera:
         :returns: the new, bound :class:`Hiera` view.
         """
         return self._view(
-            self.scope.derive(
+            self._scope.derive(
                 variables=variables,
                 facts=facts,
                 trusted=trusted,
@@ -405,7 +414,7 @@ class Hiera:
     def _view(self, scope: Scope) -> "Hiera":
         view = object.__new__(type(self))
         view.__dict__.update(self.__dict__)
-        view.scope = scope
+        view._scope = scope
         # Never shared with the instance it came from or another view: a provider's
         # interpolated options are bound to one scope, unlike the store,
         # ``_lookup_options_cache`` and ``_environment_context``, which are scope-free.
@@ -432,7 +441,7 @@ class Hiera:
         :returns: the existing main-hierarchy ``data_hash`` file paths, in
             search order.
         """
-        return self._sources(self.scope)
+        return self._sources(self._scope)
 
     def _sources(self, scope, invocation=None):
         return files_for(
@@ -534,7 +543,7 @@ class Hiera:
             name, value_type, merge, default_value, default_values_hash, override, block
         )
         invocation = Invocation(
-            self.scope,
+            self._scope,
             self._sub_lookup,
             override_values=call.override,
             default_values=call.default_values_hash,
@@ -750,7 +759,7 @@ class Hiera:
                 root, None, merge, None, default_values_hash, override, None
             )
             invocation = Invocation(
-                self.scope,
+                self._scope,
                 self._sub_lookup,
                 override_values=call.override,
                 default_values=call.default_values_hash,
@@ -811,7 +820,7 @@ class Hiera:
             raise TypeError("getvar(): block must be callable")
         with recursion_bound():
             return unshare(
-                _data_functions.getvar(self.scope, dotted, default_value, block)
+                _data_functions.getvar(self._scope, dotted, default_value, block)
             )
 
     def explain(
@@ -881,7 +890,7 @@ class Hiera:
             _ScopeKeyedCache(threading.Lock(), self._cache_size)
         )
         invocation = Invocation(
-            self.scope,
+            self._scope,
             self._sub_lookup,
             override_values=call.override,
             default_values=call.default_values_hash,

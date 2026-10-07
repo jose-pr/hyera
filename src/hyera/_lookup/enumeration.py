@@ -80,7 +80,7 @@ def _walks(hiera, invocation):
 def keys(hiera):
     """The top-level keys of ``hiera``'s ``data_hash`` levels for its scope, in
     precedence order, each once; ``lookup_options`` is never listed."""
-    invocation = Invocation(hiera.scope, hiera._sub_lookup)
+    invocation = Invocation(hiera._scope, hiera._sub_lookup)
     found = {}
     with recursion_bound():
         for hierarchy, root, tag, module_name in _walks(hiera, invocation):
