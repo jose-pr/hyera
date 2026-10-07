@@ -71,11 +71,11 @@ def test_bare_class_repr(name):
 
 
 def test_all_lists_every_bare_name_plus_sensitive_and_typespec():
-    assert set(types.__all__) == set(BARE_NAMES) | {"Sensitive", "TypeSpec"}
+    assert set(types.__all__) == set(BARE_NAMES) | {"Sensitive", "TypeLike"}
 
 
 def test_typespec_accepts_every_form_a_type_position_takes():
-    assert types.TypeSpec is not None
+    assert types.TypeLike is not None
 
 
 def test_direct_references_for_export_coverage():

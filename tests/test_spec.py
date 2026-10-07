@@ -3,7 +3,7 @@ mapped_paths, default_hierarchy, convert_to."""
 
 import pytest
 
-from hyera import ConfigError, Hiera, MergeSpec, Scope, Sensitive
+from hyera import ConfigError, Hiera, MergeLike, Scope, Sensitive
 
 # --- version ---------------------------------------------------------
 
@@ -271,13 +271,13 @@ def test_mapped_paths(make_tree):
 
 
 def test_merge_spec_accepts_its_documented_shapes(make_tree):
-    # MergeSpec (Hiera.lookup's merge= type) is Union[str, Mapping[str,
+    # MergeLike (Hiera.lookup's merge= type) is Union[str, Mapping[str,
     # Any], None]; pin that all three shapes it documents are accepted,
     # not just whichever one an existing test happened to pass.
     root = _two_level(make_tree, "classes: [web]\n", "classes: [base]\n")
     h = Hiera(str(root / "hiera.yaml"))
 
-    def _merged(merge: MergeSpec):
+    def _merged(merge: MergeLike):
         return h.lookup("classes", merge=merge)
 
     assert _merged(None) == ["web"]

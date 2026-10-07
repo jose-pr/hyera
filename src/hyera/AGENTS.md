@@ -276,7 +276,7 @@ since Hiera data is dynamic.
     ("Found value has wrong type, …", "Default value has wrong type, …",
     "Value found for key '<k>' in override hash has wrong type, …", "… in
     default values hash has wrong type, …", "Value returned from default
-    block has wrong type, …"). `merge`: a `hyera.MergeSpec` (see "Types"
+    block has wrong type, …"). `merge`: a `hyera.MergeLike` (see "Types"
     below) — a `hyera.Merge` member (`FIRST`/`UNIQUE`/`HASH`/`DEEP`) or the
     same plain string (`Merge.DEEP == "deep"`) — an explicit `merge=`
     overrides only the merge `lookup_options` would have picked; an
@@ -815,7 +815,7 @@ bare `facter`. Neither sanitizes its result — pass it to `Scope`, which does.
 
 ## Types (`hyera`)
 
-- **`MergeSpec`** — the type of every public `merge=` argument: a
+- **`MergeLike`** — the type of every public `merge=` argument: a
   `hyera.Merge` member or strategy name (`"first"`/`"unique"`/`"hash"`/
   `"deep"`/`"default"`/`"reverse_deep"`/`"unconstrained_deep"` — the last
   three are real strategies but have no `Merge` member, since Puppet itself
@@ -956,7 +956,7 @@ at runtime, because pyright hard-codes `ClassName[args]` through
 here's dedicated metaclass) to the `Generic`/`NamedTuple` idiom's
 `type[ClassName]`, regardless of the method's declared return type.
 
-- **`TypeSpec`** — the type of a `value_type` argument's object form,
+- **`TypeLike`** — the type of a `value_type` argument's object form,
   accepted everywhere a type is taken (`lookup`/`dig`/`get`/`explain`/
   `__call__`/`__getitem__`, and a nested type argument in a subscript): a
   type object, a bare `hyera.types` class, or (as always) a Puppet

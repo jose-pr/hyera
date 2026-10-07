@@ -42,13 +42,13 @@ from ._lookup.lookup_function import (
     parse_call,
     recursion_bound,
 )
-from ._lookup.merge_strategy import MergeSpec, MergeStrategy
+from ._lookup.merge_strategy import MergeLike, MergeStrategy
 from ._lookup.navigation import _MISSING, LOOKUP_OPTIONS, split_key
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
 from .backends import Backend, default_backends
 from .exceptions import BackendError, HieraLookupError, KeyNotFoundError
-from .types import TypeSpec
+from .types import TypeLike
 
 __all__ = ["Hiera"]
 
@@ -441,8 +441,8 @@ class Hiera:
     def lookup(
         self,
         name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
-        value_type: "_ty.Union[str, TypeSpec, _ty.Mapping[str, _ty.Any], None]" = None,
-        merge: MergeSpec = None,
+        value_type: "_ty.Union[str, TypeLike, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeLike = None,
         default_value: _ty.Any = _MISSING,
         *,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
@@ -591,7 +591,7 @@ class Hiera:
         """
         return _enumeration.keys(self)
 
-    def to_dict(self, *, merge: MergeSpec = None) -> _ty.Dict[str, _ty.Any]:
+    def to_dict(self, *, merge: MergeLike = None) -> _ty.Dict[str, _ty.Any]:
         """Every listed key with its looked-up value, in :meth:`keys` order.
 
         Runs one exact-key ``lookup((key,), merge=merge)`` per key, so each
@@ -612,8 +612,8 @@ class Hiera:
     def dig(
         self,
         *keys: _ty.Any,
-        value_type: "_ty.Union[str, TypeSpec, None]" = None,
-        merge: MergeSpec = None,
+        value_type: "_ty.Union[str, TypeLike, None]" = None,
+        merge: MergeLike = None,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
     ) -> _ty.Any:
@@ -672,8 +672,8 @@ class Hiera:
         default_value: _ty.Any = None,
         block: _ty.Optional[_ty.Callable[..., _ty.Any]] = None,
         *,
-        value_type: "_ty.Union[str, TypeSpec, None]" = None,
-        merge: MergeSpec = None,
+        value_type: "_ty.Union[str, TypeLike, None]" = None,
+        merge: MergeLike = None,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
         override: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,
     ) -> _ty.Any:
@@ -804,8 +804,8 @@ class Hiera:
     def explain(
         self,
         name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
-        value_type: "_ty.Union[str, TypeSpec, _ty.Mapping[str, _ty.Any], None]" = None,
-        merge: MergeSpec = None,
+        value_type: "_ty.Union[str, TypeLike, _ty.Mapping[str, _ty.Any], None]" = None,
+        merge: MergeLike = None,
         default_value: _ty.Any = _MISSING,
         *,
         default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,

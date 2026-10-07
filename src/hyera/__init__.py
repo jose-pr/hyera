@@ -29,7 +29,7 @@ from .core import Hiera
 from ._output.explain import ExplainResult
 from ._scope.facts import facts_from_facter, load_facts
 from ._config.hiera_config import FunctionKind, HieraLevel
-from ._lookup.merge_strategy import Merge, MergeSpec
+from ._lookup.merge_strategy import Merge, MergeLike
 from ._lookup.one_shot import lookup
 from ._scope.scope import Scope, Strict
 from ._types.types import Sensitive
@@ -42,7 +42,7 @@ __all__ = [
     "ExplainResult",
     "HieraLevel",
     "Merge",
-    "MergeSpec",
+    "MergeLike",
     "Strict",
     "FunctionKind",
     "BackendKind",

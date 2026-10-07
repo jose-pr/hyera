@@ -7,16 +7,16 @@ import typing as _ty
 
 from .._scope.scope import Scope
 from ..core import Hiera
-from ..types import TypeSpec
-from .merge_strategy import MergeSpec
+from ..types import TypeLike
+from .merge_strategy import MergeLike
 from .navigation import _MISSING
 
 
 def lookup(
     base_config: "_ty.Union[str, os.PathLike[str], _ty.IO[str], _ty.IO[bytes], _ty.Dict[str, _ty.Any], None]",
     name: "_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...], _ty.Sequence[_ty.Union[str, _ty.Tuple[_ty.Union[str, int], ...]]], _ty.Mapping[str, _ty.Any]]",
-    value_type: "_ty.Union[str, TypeSpec, _ty.Mapping[str, _ty.Any], None]" = None,
-    merge: MergeSpec = None,
+    value_type: "_ty.Union[str, TypeLike, _ty.Mapping[str, _ty.Any], None]" = None,
+    merge: MergeLike = None,
     default_value: _ty.Any = _MISSING,
     *,
     default_values_hash: _ty.Optional[_ty.Mapping[str, _ty.Any]] = None,

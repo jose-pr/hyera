@@ -63,13 +63,13 @@ __all__ = [
     "Sensitive",
     "Data",
     "RichData",
-    "TypeSpec",
+    "TypeLike",
 ]
 
 #: A Puppet type wherever one is taken (``value_type``, a nested subscript argument): a
 #: type object, a bare class from this module (``Integer``, not ``Integer[1, 2]``) or a
 #: type-expression string; :func:`hyera._types.parser.as_type` normalizes all three.
-TypeSpec = _ty.Union[str, type, _priv.Any]
+TypeLike = _ty.Union[str, type, _priv.Any]
 
 
 # ------------------------------------------------------------- arguments

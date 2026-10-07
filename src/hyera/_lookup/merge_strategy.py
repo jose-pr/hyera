@@ -19,14 +19,14 @@ from .navigation import _MISSING
 from ..exceptions import MergeError
 from .._enums import _StrEnum, _plain
 
-__all__ = ["Merge", "MergeSpec"]
+__all__ = ["Merge", "MergeLike"]
 
 
 class Merge(_StrEnum):
     """A merge strategy name: the ``merge=`` argument of
     :meth:`~hyera.Hiera.lookup`/:meth:`~hyera.Hiera.dig`/
     :meth:`~hyera.Hiera.get`/:meth:`~hyera.Hiera.explain`, and the
-    ``"strategy"`` key of a :data:`MergeSpec` mapping.
+    ``"strategy"`` key of a :data:`MergeLike` mapping.
 
     These are Puppet's own four public strategies
     (``MergeStrategy.strategy_keys()``); ``default`` (``first``'s hidden
@@ -47,13 +47,13 @@ class Merge(_StrEnum):
     DEEP = "deep"
     """Recursively merge every found ``Hash``/``Array`` (Puppet's
     ``deep_merge`` gem, with ``knockout_prefix``/``sort_merged_arrays``/
-    ``merge_hash_arrays`` as extra ``MergeSpec`` mapping keys)."""
+    ``merge_hash_arrays`` as extra ``MergeLike`` mapping keys)."""
 
 
 #: The type of every public ``merge=`` argument: a strategy name or member
 #: (``Merge.DEEP``/``"deep"``/...), a ``{"strategy": ..., ...}`` mapping
 #: with Puppet's deep-merge options, or ``None`` for the level's own default.
-MergeSpec = _ty.Union[Merge, str, _ty.Mapping[str, _ty.Any], None]
+MergeLike = _ty.Union[Merge, str, _ty.Mapping[str, _ty.Any], None]
 
 #: The shared no-op context manager :meth:`MergeStrategy.lookup` uses when
 #: called with no ``invocation`` at all.

@@ -30,6 +30,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** `hyera.MergeSpec` is renamed `hyera.MergeLike` and
+  `hyera.types.TypeSpec` is renamed `hyera.types.TypeLike`; the old names are
+  gone.
 - The `eyaml` extra accepts `cryptography` 42.0 and every later release; it
   was limited to the 50.x series.
 - The shipped `AGENTS.md` API header gives every signature in a code block and
