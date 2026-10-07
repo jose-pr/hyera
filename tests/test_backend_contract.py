@@ -125,8 +125,6 @@ def _contract(backend_cls, write=None):
 class _Good(Backend):
     """A correct ``data_hash`` backend reading JSON text."""
 
-    NAMES = {"function": ("contract_good_data",)}
-
     def loads(self, text):
         try:
             return json.loads(text)
@@ -135,7 +133,10 @@ class _Good(Backend):
 
 
 def test_a_correct_third_party_backend_passes_every_check(registry, tmp_path):
-    assert _failures(_contract(_Good), tmp_path) == set()
+    class Good(_Good):
+        NAMES = {"function": ("contract_good_data",)}
+
+    assert _failures(_contract(Good), tmp_path) == set()
 
 
 def test_a_name_that_is_not_lowercase_fails_only_the_names_check(registry, tmp_path):
@@ -307,3 +308,19 @@ def test_the_suite_leaves_out_the_hook_kinds_a_backend_lacks(registry, tmp_path)
     assert LookupOnly.implements("lookup_key") and not LookupOnly.implements(
         "data_hash"
     )
+
+
+def test_the_readme_example_is_a_backend_that_passes_its_own_contract(
+    registry, tmp_path
+):
+    import re
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parents[1] / "README.md").read_text(
+        encoding="utf-8"
+    )
+    blocks = re.findall(r"```python\n(.*?)```", text, re.S)
+    (source,) = [b for b in blocks if "class TestJSONFileBackend" in b]
+    namespace = {}
+    exec(compile(source, "README.md", "exec"), namespace)
+    assert _failures(namespace["TestJSONFileBackend"], tmp_path) == set()

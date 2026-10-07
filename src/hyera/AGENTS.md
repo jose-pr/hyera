@@ -1041,6 +1041,18 @@ is a `Backend` subclass, found by name rather than passed around directly.
   become constructor keywords (used by the `sops_<format>` pattern).
   **`Backend.EXTENSIONS: tuple`** — file extensions (with the dot) this
   format answers to, used by `.for_path`.
+- **Installed backends** — a distribution registers its backends through
+  the entry-point group `hyera.backends`: each entry's value names a module
+  (`my_package.backend`), and importing it defines the `Backend` subclasses,
+  which register themselves. Every entry is imported once, under a lock, the
+  first time the registry is asked anything (`Backend.find`/`.get`/`.new`/
+  `.names`/`.for_path`, `default_backends()`), never when `hyera` is
+  imported. An entry that fails to import, or whose backend takes a name
+  another class already holds, is logged once at `WARNING` on the logger
+  `hyera.backends` (the entry, its distribution and the exception class, not
+  its text) and skipped, so one broken plugin does not stop every lookup.
+  Defining a second class for a name already registered raises `ValueError`
+  naming both classes, in the module that defines the second.
 - ```python
   Backend(conf=None, *, strict=None)
   ```
@@ -1225,7 +1237,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
 
   The distinct classes registered in the
   `function` namespace, in definition order: `[YAMLBackend, JSONBackend,
-  HOCONBackend, SopsBackend, EyamlBackend]`. `Hiera(backends=...)` takes
+  HOCONBackend, SopsBackend, EyamlBackend]`, then every installed backend. `Hiera(backends=...)` takes
   this same kind of list as an allow-list; a `data_hash`/`lookup_key` name
   whose registered class is not in it is refused exactly like an unknown
   name.

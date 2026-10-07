@@ -19,6 +19,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `HYERA_MCP_ROOT` and `HYERA_MCP_BACKENDS` let an operator confine the MCP
   tool's path arguments and data files to one directory and limit the data
   functions a hierarchy may name.
+- `hyera.testing`, a public module for backend authors: `lookup_key`,
+  `data_dig` and `data_hash` call a backend's hook as the engine does and
+  return `NOT_FOUND` for a miss, and `BackendContract` is a suite of checks
+  that a test module subclasses to run against its backend.
+- `LookupContext.for_testing(*, scope=None, module_name=None, data=None)`
+  builds a context to call a hook with outside a lookup.
+- A package registers its backends through the entry-point group
+  `hyera.backends`; each entry is imported once, on the first registry
+  question and never at `import hyera`, and one that fails to import is
+  logged at `WARNING` and skipped.
 - `Hiera.keys()` lists the top-level keys the `data_hash` levels of the
   instance's scope hold, and `Hiera.to_dict(*, merge=None)` returns each of
   them with its looked-up value. A `lookup_key` or `data_dig` level cannot be
@@ -58,6 +68,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one error line and exit status 2.
 - **Breaking:** `Hiera.scope` is a read-only property; assigning it raises
   `AttributeError`. Use `h.scoped(...)` for another scope.
+- **Breaking:** `Backend.data_hash` takes a third parameter,
+  `data_hash(self, path, options, context)`, the `LookupContext` the other two
+  hooks already receive. A backend that still takes two parameters fails with
+  Python's own `TypeError`, reported as a `BackendError`. `context.not_found()`
+  inside `data_hash` raises `BackendError`.
+- **Breaking:** an exception of a class outside `hyera` raised inside
+  `data_hash`, `lookup_key` or `data_dig` becomes a `BackendError` naming the
+  function and the location, with the original as `__cause__` and its class
+  name, not its text, in the message. A `HieraError` and anything that is not
+  an `Exception` pass through unchanged. A `lookup_key` or `data_dig` hook's own
+  exception used to propagate as it was.
+- **Breaking:** `Backend`, `BackendKind`, `NamePattern` and `default_backends`
+  are defined in `hyera.backends._base`, and `hyera.backends` only re-exports
+  them: their `__module__` is `hyera.backends._base` and no longer
+  `hyera.backends`. Every import path is unchanged.
 - **Breaking:** `hyera.MergeSpec` is renamed `hyera.MergeLike` and
   `hyera.types.TypeSpec` is renamed `hyera.types.TypeLike`; the old names are
   gone.
@@ -71,9 +96,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The shipped `AGENTS.md` API header gives every signature in a code block and
   ends with the sections Exceptions, Command line, Environment variables and
   Gotchas; the README's Command line is its own section.
-- Internal modules are reorganised so none passes 600 lines except `core.py` and
-  `backends/__init__.py`; no public import path, class `__module__` or
-  signature changed.
+- Internal modules are reorganised so none passes 600 lines except `core.py`;
+  no public import path, class `__module__` or signature changed.
 - `repr(Hiera(...))` is one line naming the class, the base config and the
   scope's environment (`Hiera(config='/etc/hiera.yaml', environment='production')`),
   and never data or scope values.
@@ -142,6 +166,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `Backend.load` raises `BackendError` (`Unable to read (<path>): <reason>`) for
+  a file that is missing or is a directory; `FileNotFoundError` and
+  `PermissionError` leaked out of it.
 - `LookupContext.module_name` is the module's name for a hook named in a
   module's `hiera.yaml`; it was always `None`.
 - A command-line option value of exactly `--` (the knockout prefix `--`) is

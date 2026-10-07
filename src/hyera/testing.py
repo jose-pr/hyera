@@ -231,7 +231,7 @@ class BackendContract:
     ) -> _ty.Mapping[str, _ty.Any]:
         """Write a source holding ``data`` under ``directory``.
 
-        :param directory: the directory to write into.
+        :param directory: the directory to write into; it exists.
         :param data: the key/value pairs the source must hold.
         :returns: the level options for the source. A ``path`` is relative to
             ``directory``; the checks make it absolute, as the engine does.
@@ -254,7 +254,7 @@ class BackendContract:
         :returns: the level options for the source, or ``None`` when the source is
             not a file.
         """
-        options = dict(self.write_source(directory, self.data))
+        options = dict(self._write(directory, self.data))
         if "path" not in options:
             return None
         with open(os.path.join(str(directory), options["path"]), "wb") as fh:
@@ -263,13 +263,19 @@ class BackendContract:
 
     # -- helpers -------------------------------------------------------
 
+    def _write(
+        self, directory: _ty.Any, data: _ty.Mapping[str, _ty.Any]
+    ) -> _ty.Mapping[str, _ty.Any]:
+        os.makedirs(str(directory), exist_ok=True)
+        return self.write_source(directory, data)
+
     def _kinds(self) -> _ty.List[str]:
         return [kind for kind in _HOOKS if self.backend.implements(kind)]
 
     def _source(
         self, directory: _ty.Any, data: _ty.Mapping[str, _ty.Any]
     ) -> _ty.Tuple[_ty.Dict[str, _ty.Any], _ty.Optional[str]]:
-        options = dict(self.write_source(directory, data))
+        options = dict(self._write(directory, data))
         path = None
         if "path" in options:
             path = os.path.join(str(directory), options["path"])
@@ -441,7 +447,7 @@ class BackendContract:
             return
         for kind in self._kinds():
             root = tmp_path / kind
-            options = dict(self.write_source(root / "data", self.data))
+            options = dict(self._write(root / "data", self.data))
             level: _ty.Dict[str, _ty.Any] = {"name": "contract", kind: names[0]}
             if "path" in options:
                 level["path"] = options.pop("path")

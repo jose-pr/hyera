@@ -100,6 +100,7 @@ src/hyera/
 └── backends/                 # self-registering Backend registry (same import path: hyera.backends)
     ├── __init__.py           # re-exports every public backend name and SOPS_TIMEOUT
     ├── _base.py              # Backend, BackendKind, NamePattern, the registry, default_backends (functions/yaml_data.rb)
+    ├── _entry_points.py      # the hyera.backends entry-point group: installed backends, loaded once and lazily
     ├── _yaml.py              # YAMLBackend, Puppet-only (functions/yaml_data.rb)
     ├── _json.py              # JSONBackend
     ├── _hocon.py             # HOCONBackend, has_hocon (the private pyhocon parser copy)

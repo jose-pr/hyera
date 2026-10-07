@@ -674,6 +674,52 @@ hierarchy:
   supported; a value using one raises the same "cannot load such file"
   error Puppet itself gives without that plugin installed.
 
+#### Writing a backend
+
+A package that ships backends needs no import in the user's code: it names the
+module that defines them in the `hyera.backends` entry-point group, and
+`hyera` imports that module the first time it looks a backend up (never at
+`import hyera`). An entry that fails to import is logged and skipped.
+
+```toml
+[project.entry-points."hyera.backends"]
+my_backend = "my_package.backend"
+```
+
+A hook (`data_hash(path, options, context)`, `lookup_key(key, options,
+context)` or `data_dig(key_segments, options, context)`) that raises an
+exception of a class outside `hyera` is reported as a `BackendError` naming
+the function and the location, with the original as its cause; raise
+`BackendError` yourself for a problem with a source. `hyera.testing` runs a
+hook without a hierarchy (`lookup_key`, `data_dig`, `data_hash`, with
+`LookupContext.for_testing()` as the context) and ships `BackendContract`,
+the checks every backend passes:
+
+```python
+import json
+
+from hyera.backends import Backend, BackendError
+from hyera.testing import BackendContract
+
+
+class JSONFileBackend(Backend):
+    NAMES = {"function": ("json_file_data",)}
+
+    def loads(self, text):
+        try:
+            return json.loads(text)
+        except ValueError as e:
+            raise BackendError("invalid JSON: " + e.msg) from None
+
+
+class TestJSONFileBackend(BackendContract):
+    backend = JSONFileBackend
+
+    def write_source(self, directory, data):
+        (directory / "a.json").write_text(json.dumps(data), encoding="utf-8")
+        return {"path": "a.json"}
+```
+
 ### Errors and exit codes
 
 What goes wrong at run time derives from `HieraError` (`.path` names the
