@@ -18,6 +18,7 @@ from .._limits import _LIMITS, Limits
 from .._lookup.function_provider import LookupContext
 from .._scope.scope import Strict
 from .._enums import _StrEnum, _plain
+from ._entry_points import load as _load_entry_points
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -229,6 +230,7 @@ class Backend:
 
     @classmethod
     def _match(cls, name, kind="function"):
+        _load_entry_points()
         kind = _plain(kind)
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
         found = registry["exact"].get(name)
@@ -326,6 +328,7 @@ class Backend:
         :param kind: the namespace to list.
         :returns: the registered names.
         """
+        _load_entry_points()
         kind = _plain(kind)
         registry = cls._REGISTRY.get(kind, {"exact": {}, "patterns": []})
         return list(registry["exact"].keys()) + [
@@ -343,6 +346,7 @@ class Backend:
         :param path: the file path to match.
         :returns: the class, or ``None`` when nothing matches.
         """
+        _load_entry_points()
         name = os.fspath(path)
         registry = cls._REGISTRY.get("format", {"exact": {}, "patterns": []})
         candidates = {klass for klass in registry["exact"].values()}
@@ -566,6 +570,7 @@ def default_backends() -> "_ty.List[_ty.Type[Backend]]":
 
     :returns: the default ``Hiera(backends=...)`` allow-list.
     """
+    _load_entry_points()
     registry = Backend._REGISTRY.get("function", {"exact": {}, "patterns": []})
     seen = []
     for cls in registry["exact"].values():
