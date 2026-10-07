@@ -20,9 +20,16 @@ def _describe(e) -> str:
 
 
 def _resolve(
-    opts: dict, scope, keys: list, merge_options, explaining: bool, only_options: bool
+    opts: dict,
+    scope,
+    keys: list,
+    merge_options,
+    explaining: bool,
+    only_options: bool,
+    boundary=None,
 ):
-    """Build the Hiera for ``opts`` and run the lookup or the explain.
+    """Build the Hiera for ``opts`` and run the lookup or the explain,
+    under the operator's ``boundary`` when there is one.
 
     Returns the value found, or the ``ExplainResult`` when explaining.
     Raises ``KeyNotFoundError`` for a miss and whatever the lookup raises.
@@ -49,6 +56,7 @@ def _resolve(
         modulepath=_paths(opts["modulepath"]),
         codedir=opts["codedir"],
         **extra,
+        **(boundary.hiera_options() if boundary is not None else {}),
     )
     names = keys[0] if len(keys) == 1 else keys
     if explaining:

@@ -29,6 +29,7 @@ except ModuleNotFoundError as _e:
 from .. import __version__
 from ..exceptions import BackendError, KeyNotFoundError
 from ..backends import Backend
+from . import _mcp_boundary
 from ._argv import _free_text, _puppet_argv
 from ._options import _merge_options
 from ._run import _describe, _render, _resolve
@@ -159,6 +160,13 @@ if duho is not None:
             except _UsageError as e:
                 return self._fail(str(e))
 
+            boundary = _mcp_boundary.active()
+            try:
+                if boundary is not None:
+                    boundary.check(opts)
+            except _UsageError as e:
+                return self._fail(str(e))
+
             explaining = self.explain or self.explain_options
             only_options = self.explain_options and not self.explain
             if not keys:
@@ -187,7 +195,7 @@ if duho is not None:
 
             try:
                 outcome = _resolve(
-                    opts, scope, keys, merge_options, explaining, only_options
+                    opts, scope, keys, merge_options, explaining, only_options, boundary
                 )
             except KeyNotFoundError as e:
                 # Puppet's own miss prints nothing and exits 1, with or
@@ -233,6 +241,11 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
     # dispatches to Lookup.__call__, whose int return becomes the exit code.
     if duho is None:
         print(_NO_CLI_EXTRA_HINT, file=_sys.stderr)
+        return 2
+    try:
+        _mcp_boundary.activate()
+    except _UsageError as e:
+        print("hyera: {}".format(e), file=_sys.stderr)
         return 2
     argv = _puppet_argv(list(_sys.argv[1:] if argv is None else argv))
     try:
