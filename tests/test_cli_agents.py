@@ -115,6 +115,64 @@ def test_mcp_tool_call_accepts_double_dash_as_the_knockout_prefix(flags_root):
     }
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"merge": "bogus"},
+        {"merge": "first", "merge_hash_arrays": True},
+        {"value_type": "Bogus["},
+        {"value_type": "Integer[10,0]"},
+    ],
+    ids=repr,
+)
+def test_mcp_tool_call_reports_a_bad_option_value_as_one_error(arguments, flags_root):
+    # The same result as the command line: one ERROR line, no traceback, and no
+    # exception class named in front of the message.
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "hyera",
+                "arguments": {
+                    "keys": ["h"],
+                    "hiera_config": str(flags_root / "hiera.yaml"),
+                    "facts": str(flags_root / "facts.yaml"),
+                    **arguments,
+                },
+            },
+        },
+    ]
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera"],
+        input="".join(json.dumps(m) + "\n" for m in messages),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HYERA_MCP": "stdio", "PYTHONPATH": _SRC},
+        timeout=120,
+    )
+
+    reply = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}[2]
+    assert reply["result"]["isError"] is True, reply
+    text = reply["result"]["content"][0]["text"]
+    assert text.endswith("exit code: 2"), text
+    assert len([line for line in text.splitlines() if "ERROR" in line]) == 1, text
+    for noise in ("Traceback", "ValueError", "TypeError"):
+        assert noise not in text + proc.stderr
+
+
 def test_mcp_trigger_follows_declared_name_not_argv0(hiera_root, monkeypatch, capsys):
     # The MCP trigger env var name comes from Lookup's `_parsername_`, not from
     # sys.argv[0]'s stem, so embedding the CLI in another script keeps HYERA_MCP.

@@ -370,6 +370,49 @@ def test_backend_timeout_is_an_ordinary_error_exit_2(
     assert "Traceback" not in capfd.readouterr().err
 
 
+@pytest.mark.parametrize(
+    "options",
+    [
+        ["--merge", "bogus"],
+        ["--merge", "first", "--merge-hash-arrays"],
+        ["--merge", "hash", "--sort-merged-arrays"],
+        ["--merge", "first", "--knock-out-prefix", "--"],
+        ["--type", "Bogus["],
+        ["--type", "integer"],
+        ["--type", "Integer[10,0]"],
+    ],
+    ids=" ".join,
+)
+def test_a_bad_option_value_is_one_error_line_and_exit_2(
+    options, flags_root, monkeypatch, caplog, capfd
+):
+    monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "h", *options))
+    assert rc == 2
+    records = _error_records(caplog)
+    assert len(records) == 1
+    assert records[0].exc_info is None
+    assert not records[0].getMessage().startswith(("ValueError", "TypeError"))
+    assert "Traceback" not in capfd.readouterr().err
+
+
+def test_a_value_error_from_a_backend_keeps_its_own_line(
+    flags_root, monkeypatch, caplog
+):
+    # Not an argument of the command: the exception's class is named, as before.
+    def broken(*args, **kwargs):
+        raise ValueError("data hook failed")
+
+    monkeypatch.setattr(hyera.Hiera, "lookup", broken)
+    with caplog.at_level(logging.ERROR):
+        rc = main(_flags_argv(flags_root, "h", "--merge", "hash", "--type", "Hash"))
+    assert rc == 2
+    assert _error_records(caplog)[-1].getMessage() == (
+        "Lookup of key 'h' failed: ValueError: data hook failed"
+    )
+
+
 def test_keyboard_interrupt_exits_130_without_a_traceback(
     flags_root, monkeypatch, capfd
 ):
