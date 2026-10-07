@@ -1,0 +1,154 @@
+description: >-
+  Hash.new from an array of pairs whose key is an Array, and the build option
+  ('tree' and 'hash_tree') that turns [path, value] entries into a nested Hash:
+  asked of puppet apply and, as a convert_to option list, of puppet lookup.
+  Covers the root entry, index assignment into an Array or a String, and the
+  arguments Puppet refuses.
+queries:
+  - id: array-key
+    expression: 'Hash.new([[["a", 1], "x"]])'
+    python: {target: types, method: Hash, args: [[[[a, 1], x]]]}
+  - id: empty-array-key
+    expression: 'Hash.new([[[], "x"]])'
+    python: {target: types, method: Hash, args: [[[[], x]]]}
+  - id: two-array-keys
+    expression: 'Hash.new([[["a", 1], "x"], [["b"], "y"]])'
+    python: {target: types, method: Hash, args: [[[[a, 1], x], [[b], y]]]}
+  - id: nested-array-key
+    expression: 'Hash.new([[[["a"], "b"], "x"]])'
+    python: {target: types, method: Hash, args: [[[[[a], b], x]]]}
+  - id: repeated-array-key-keeps-the-last
+    expression: 'Hash.new([[["a"], "x"], [["a"], "y"]])'
+    python: {target: types, method: Hash, args: [[[[a], x], [[a], y]]]}
+  - id: tree-nests-by-path
+    expression: 'Hash.new([[["a", "b"], "x"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a, b], x]], tree]}
+  - id: hash-tree-nests-by-path
+    expression: 'Hash.new([[["a", "b"], "x"]], "hash_tree")'
+    python: {target: types, method: Hash, args: [[[[a, b], x]], hash_tree]}
+  - id: tree-keeps-an-array-value
+    expression: 'Hash.new([[["a", "b"], ["p", "q"]]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a, b], [p, q]]], tree]}
+  - id: hash-tree-turns-an-array-value-into-a-hash
+    expression: 'Hash.new([[["a", "b"], ["p", "q"]]], "hash_tree")'
+    python: {target: types, method: Hash, args: [[[[a, b], [p, q]]], hash_tree]}
+  - id: hash-tree-turns-nested-arrays-into-hashes
+    expression: 'Hash.new([[["a"], [1, [2, 3]]]], "hash_tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, [2, 3]]]], hash_tree]}
+  - id: hash-tree-keeps-a-hash-value-whole
+    expression: 'Hash.new([[["a"], {"x" => [1, 2]}]], "hash_tree")'
+    python: {target: types, method: Hash, args: [[[[a], {x: [1, 2]}]], hash_tree]}
+  - id: tree-merges-entries-sharing-a-prefix
+    expression: 'Hash.new([[["a", "b", "c"], 1], [["a", "b", "d"], 2], [["a", "e"], 3]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a, b, c], 1], [[a, b, d], 2], [[a, e], 3]], tree]}
+  - id: tree-later-entry-replaces-the-value
+    expression: 'Hash.new([[["a"], 1], [["a"], 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], 1], [[a], 2]], tree]}
+  - id: tree-integer-path-elements-are-keys
+    expression: 'Hash.new([[[1, 2], "x"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[1, 2], x]], tree]}
+  - id: tree-array-as-a-path-element
+    expression: 'Hash.new([[[["x", "y"], "z"], "v"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[[x, y], z], v]], tree]}
+  - id: tree-root-hash-merges
+    expression: 'Hash.new([[[], {"r" => 1}], [["a"], 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[], {r: 1}], [[a], 2]], tree]}
+  - id: tree-root-array-becomes-a-hash
+    expression: 'Hash.new([[[], ["p", "q"]], [["a"], 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[], [p, q]], [[a], 2]], tree]}
+  - id: tree-root-empty-hash
+    expression: 'Hash.new([[[], {}]], "tree")'
+    python: {target: types, method: Hash, args: [[[[], {}]], tree]}
+  - id: tree-root-string-is-refused
+    expression: 'Hash.new([[[], "x"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[], x]], tree]}
+  - id: tree-root-integer-is-refused
+    expression: 'Hash.new([[[], 5]], "tree")'
+    python: {target: types, method: Hash, args: [[[[], 5]], tree]}
+  - id: tree-sets-an-index-of-an-array
+    expression: 'Hash.new([[["a"], [1, 2, 3]], [["a", 1], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, 2, 3]], [[a, 1], Q]], tree]}
+  - id: tree-pads-an-array-past-its-end
+    expression: 'Hash.new([[["a"], [1, 2, 3]], [["a", 5], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, 2, 3]], [[a, 5], Q]], tree]}
+  - id: tree-negative-index
+    expression: 'Hash.new([[["a"], [1, 2, 3]], [["a", -1], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, 2, 3]], [[a, -1], Q]], tree]}
+  - id: tree-index-before-the-start-is-refused
+    expression: 'Hash.new([[["a"], [1, 2, 3]], [["a", -9], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, 2, 3]], [[a, -9], Q]], tree]}
+  - id: tree-string-index-into-an-array-is-refused
+    expression: 'Hash.new([[["a"], [1, 2, 3]], [["a", "k"], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [1, 2, 3]], [[a, k], Q]], tree]}
+  - id: tree-walks-into-a-nested-array
+    expression: 'Hash.new([[["a"], [[1], 2]], [["a", 0, 0], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], [[1], 2]], [[a, 0, 0], Q]], tree]}
+  - id: tree-replaces-a-character-of-a-string
+    expression: 'Hash.new([[["a"], "xyz"], [["a", 0], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], xyz], [[a, 0], Q]], tree]}
+  - id: tree-replaces-a-substring-of-a-string
+    expression: 'Hash.new([[["a"], "xyz"], [["a", "yz"], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], xyz], [[a, yz], Q]], tree]}
+  - id: tree-substring-not-found-is-refused
+    expression: 'Hash.new([[["a"], "xyz"], [["a", "k"], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], xyz], [[a, k], Q]], tree]}
+  - id: tree-under-an-integer-is-refused
+    expression: 'Hash.new([[["a"], 1], [["a", "b"], 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], 1], [[a, b], 2]], tree]}
+  - id: tree-under-undef-is-refused
+    expression: 'Hash.new([[["a"], undef], [["a", "b"], "Q"]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], null], [[a, b], Q]], tree]}
+  - id: tree-merges-into-a-hash-value
+    expression: 'Hash.new([[["a"], {"q" => 1}], [["a", "b"], 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], {q: 1}], [[a, b], 2]], tree]}
+  - id: tree-unknown-option-is-refused
+    expression: 'Hash.new([[["a"], "x"]], "bogus")'
+    python: {target: types, method: Hash, args: [[[[a], x]], bogus]}
+  - id: tree-option-is-case-sensitive
+    expression: 'Hash.new([[["a"], "x"]], "TREE")'
+    python: {target: types, method: Hash, args: [[[[a], x]], TREE]}
+  - id: tree-undef-option-is-refused
+    expression: 'Hash.new([[["a"], "x"]], undef)'
+    python: {target: types, method: Hash, args: [[[[a], x]], null]}
+  - id: tree-integer-option-is-refused
+    expression: 'Hash.new([[["a"], "x"]], 5)'
+    python: {target: types, method: Hash, args: [[[[a], x]], 5]}
+  - id: tree-with-pairs-is-refused
+    expression: 'Hash.new([["a", "x"]], "tree")'
+    python: {target: types, method: Hash, args: [[[a, x]], tree]}
+  - id: tree-with-an-empty-array-is-refused
+    expression: 'Hash.new([], "tree")'
+    python: {target: types, method: Hash, args: [[], tree]}
+  - id: tree-with-a-hash-is-refused
+    expression: 'Hash.new({"a" => 1}, "tree")'
+    python: {target: types, method: Hash, args: [{a: 1}, tree]}
+  - id: tree-with-a-string-is-refused
+    expression: 'Hash.new("abc", "tree")'
+    python: {target: types, method: Hash, args: [abc, tree]}
+  - id: tree-entry-of-three-is-refused
+    expression: 'Hash.new([[["a"], 1, 2]], "tree")'
+    python: {target: types, method: Hash, args: [[[[a], 1, 2]], tree]}
+  - id: tree-with-a-third-argument-is-refused
+    expression: 'Hash.new([[["a"], "x"]], "tree", "extra")'
+    python: {target: types, method: Hash, args: [[[[a], x]], tree, extra]}
+  - id: array-key-through-hash-from-hash-type
+    expression: 'Hash[Array, String].new([[["a"], "x"]])'
+    python: {target: types, method: Hash, params: [{type: Array}, {type: String}], args: [[[[a], x]]]}
+  - id: convert-to-hash-with-an-array-key
+    key: c_array_key
+  - id: convert-to-hash-with-a-nested-array-key
+    key: c_nested_key
+  - id: convert-to-hash-tree
+    key: c_tree
+  - id: convert-to-hash-hash-tree
+    key: c_hash_tree
+  - id: convert-to-hash-tree-merges-entries
+    key: c_tree_merge
+  - id: convert-to-hash-tree-root
+    key: c_tree_root
+  - id: convert-to-hash-unknown-build-option
+    key: c_bogus
+  - id: convert-to-hash-tree-over-pairs
+    key: c_tree_pairs
+  - id: convert-to-hash-tree-extra-argument
+    key: c_tree_extra

@@ -37,6 +37,7 @@ from .types import (
     Sensitive,
 )
 from .compound_types import Array, Hash, Struct, Tuple, _PNamedType
+from .hash_new import freeze_key, new_tree_hash
 
 __all__ = ["new_instance"]
 
@@ -461,9 +462,7 @@ def _new_array(value, *args):
 
 def _new_hash(value, *args):
     if args:
-        raise HieraLookupError(
-            "hyera does not support the build option of the Hash new() function"
-        )
+        return new_tree_hash(value, args)
     if isinstance(value, dict):
         return dict(value)
     items = _iterate_to_list(value, "Hash")
@@ -476,8 +475,4 @@ def _new_hash(value, *args):
         raise HieraLookupError("odd number of arguments for Hash")
     else:
         pairs = [(items[i], items[i + 1]) for i in range(0, len(items), 2)]
-    try:
-        return dict(pairs)
-    except TypeError as e:
-        # Ruby allows an Array or Hash as a key; a Python dict does not.
-        raise HieraLookupError("unusable Hash key: {}".format(e)) from None
+    return {freeze_key(k): v for k, v in pairs}

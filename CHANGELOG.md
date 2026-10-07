@@ -295,6 +295,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `Struct` mismatch against a hash with a non-string key reports a size or
   type mismatch as Puppet does, and `Enum`/`Struct` members render with
   Puppet's own quoting.
+- A bare `Enum` matches no string, as in Puppet (`--type Enum` fails and
+  `convert_to: Enum` is refused); it matched every string.
+- `Hash.new` and `convert_to: Hash` take an Array as a key (it renders as
+  `["a", 1]`) and the `tree` and `hash_tree` build options.
 
 ### Security
 

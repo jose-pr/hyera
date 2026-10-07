@@ -62,6 +62,7 @@ The files ported from Puppet are:
     src/hyera/_types/variant_merge.py (from puppet/pops/types/types.rb)
     src/hyera/_types/string_converter.py (from puppet/pops/types/string_converter.rb)
     src/hyera/_types/new_function.py (from puppet/functions/new.rb)
+    src/hyera/_types/hash_new.py (from puppet/pops/types/types.rb)
     src/hyera/_scope/scope.py (from puppet/parser/compiler.rb, parser/scope.rb, node.rb,
          context/trusted_information.rb, node/facts.rb)
     src/hyera/_scope/scope_data.py (from puppet/parser/scope.rb, node/facts.rb, context/trusted_information.rb)

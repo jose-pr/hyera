@@ -102,7 +102,33 @@ def as_puppet_json(value):
             return SENSITIVE_JSON
         raise TypeError("not representable in Puppet JSON: {!r}".format(obj))
 
-    return json.loads(json.dumps(value, default=default, allow_nan=False))
+    return json.loads(json.dumps(_array_keys(value), default=default, allow_nan=False))
+
+
+def _ruby_inspect(value) -> str:
+    """Ruby's ``inspect`` of a scalar or an Array of them."""
+    if value is None:
+        return "nil"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_ruby_inspect(v) for v in value) + "]"
+    return str(value)
+
+
+def _array_keys(value):
+    """``value`` with every Array used as a Hash key spelled as Ruby's JSON
+    generator spells it: the key's ``to_s``."""
+    if isinstance(value, dict):
+        return {
+            (_ruby_inspect(k) if isinstance(k, tuple) else k): _array_keys(v)
+            for k, v in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_array_keys(v) for v in value]
+    return value
 
 
 def is_ordered(query: dict) -> bool:

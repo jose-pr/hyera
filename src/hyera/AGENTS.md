@@ -2184,6 +2184,9 @@ name is data, not a fixed hyera name) to read the eyaml private key from.
   directive following Puppet's per-type tables (negative `%x` is `..f01`,
   a Hash prints `{'a' => 1}`); anything else is the "not a valid format" or
   "Illegal format '<c>' specified for value of <Type> type" error.
+  `Hash` takes Puppet's `tree` / `hash_tree` build option over `[path, value]`
+  entries, and an Array key (`[[['a', 1], 'x']]`) converts to a key that
+  renders as `["a", 1]`; a Hash used as a key is refused.
 - `HOCONBackend`'s `include` handling matches Puppet's own `hocon_data`
   by default (see "Backends" above): `include file(...)` really reads the
   named file (cwd-relative or absolute), and a directive in value position

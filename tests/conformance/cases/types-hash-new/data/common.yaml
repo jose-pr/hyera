@@ -1,0 +1,19 @@
+lookup_options:
+  c_array_key: {convert_to: Hash}
+  c_nested_key: {convert_to: Hash}
+  c_tree: {convert_to: [Hash, tree]}
+  c_hash_tree: {convert_to: [Hash, hash_tree]}
+  c_tree_merge: {convert_to: [Hash, tree]}
+  c_tree_root: {convert_to: [Hash, hash_tree]}
+  c_bogus: {convert_to: [Hash, bogus]}
+  c_tree_pairs: {convert_to: [Hash, tree]}
+  c_tree_extra: {convert_to: [Hash, tree, extra]}
+c_array_key: [[[a, 1], x], [[b], y]]
+c_nested_key: [[[[a], b], x]]
+c_tree: [[[a, b], x]]
+c_hash_tree: [[[a, b], [p, q]]]
+c_tree_merge: [[[a, b, c], 1], [[a, b, d], 2], [[a, e], 3]]
+c_tree_root: [[[], [p, q]], [[a], [1, [2]]]]
+c_bogus: [[[a], x]]
+c_tree_pairs: [[a, x]]
+c_tree_extra: [[[a], x]]
