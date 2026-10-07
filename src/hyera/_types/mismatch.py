@@ -28,7 +28,6 @@ from .types import (
     String,
     _type_instance,
 )
-from .literal_format import puppet_quote
 from .compound_types import (
     Array,
     Collection,
@@ -42,7 +41,12 @@ from .compound_types import (
 )
 from .variant_merge import variant_of
 
-__all__ = ["assert_instance_of", "describe_instance_of", "format_mismatches"]
+__all__ = [
+    "assert_instance_of",
+    "describe_instance_of",
+    "format_mismatches",
+    "type_name_of",
+]
 
 #: Types whose formatter/short_name keeps one bare level of their contained type's name
 #: (``type_mismatch_describer.rb`` ``short_name``, ``type_formatter.rb``'s ``string_P*``
@@ -224,13 +228,11 @@ def _path_prefix(path):
 def _format_one(name, m):
     pos = _path_prefix(m.path)
     if m.kind == "missing_key":
-        return "{}{} expects a value for key {}".format(name, pos, puppet_quote(m.key))
+        return "{}{} expects a value for key '{}'".format(name, pos, m.key)
     if m.kind == "extra_key":
-        return "{}{} unrecognized key {}".format(name, pos, puppet_quote(m.key))
+        return "{}{} unrecognized key '{}'".format(name, pos, m.key)
     if m.kind == "unresolved":
-        return "{}{} references an unresolved type {}".format(
-            name, pos, puppet_quote(m.ref)
-        )
+        return "{}{} references an unresolved type '{}'".format(name, pos, m.ref)
     if m.kind == "size":
         return "{}{} expects size to be {}, got {}".format(
             name, pos, _size_text(*m.expected), m.actual
@@ -297,7 +299,7 @@ def _actual_literal(actual_type):
     literal, but Puppet's ``PatternMismatch#message`` uses ``actual.value``
     directly)."""
     if isinstance(actual_type, String) and actual_type.literal is not None:
-        return puppet_quote(actual_type.literal)
+        return "'{}'".format(actual_type.literal)
     return short_name(actual_type)
 
 
@@ -508,11 +510,11 @@ def _describe_hash(expected, value, path, original):
 
 
 def _entry(k):
-    return _Step("entry {}".format(puppet_quote(k)), k)
+    return _Step("entry '{}'".format(k), k)
 
 
 def _key_of(k):
-    return _Step("key of entry {}".format(puppet_quote(k)), k, of_key=True)
+    return _Step("key of entry '{}'".format(k), k, of_key=True)
 
 
 def _describe_struct(expected, value, path, original):
@@ -556,6 +558,15 @@ def assert_instance_of(subject, expected, value, nil_ok=False):
     if not mismatches:
         return value
     raise HieraLookupError(format_mismatches(subject, mismatches))
+
+
+def type_name_of(value):
+    """The type name Puppet reports for ``value`` in a mismatch.
+
+    :param value: any value
+    :return: for example ``"Integer"``, ``"Tuple"``, ``"Struct"`` or ``"Runtime"``
+    """
+    return short_name(_infer(value))
 
 
 def describe_instance_of(expected, value):

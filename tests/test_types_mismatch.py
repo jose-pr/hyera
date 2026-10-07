@@ -415,6 +415,15 @@ def test_hash_with_a_non_string_key_is_one_mismatch_on_the_hash():
     )
 
 
+def test_a_key_is_named_as_written_without_escaping():
+    assert _text("Struct[{a=>Integer}]", {"a": 1, "we'ird": 2}) == (
+        _W + " unrecognized key 'we'ird'"
+    )
+    assert _text("Hash[String, Integer]", {"we'ird": "x", "k": 1}) == (
+        _W + " entry 'we'ird' expects an Integer value, got String"
+    )
+
+
 def test_data_with_a_nested_failure_lists_the_variants():
     assert _text("Data", [1, {1: 2}]) == (
         _W + " variant 0 expects a ScalarData value, got Tuple\n"
