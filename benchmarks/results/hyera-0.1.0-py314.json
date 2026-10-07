@@ -1,0 +1,85 @@
+{
+  "hyera_version": "0.1.0",
+  "implementation": "CPython",
+  "iterations": {
+    "cli.run": 1,
+    "construct": 3,
+    "explain": 20,
+    "lookup.cold": 3,
+    "lookup.deep.glob500": 10,
+    "lookup.first": 200,
+    "lookup.keys100": 100,
+    "lookup.levels40": 100,
+    "lookup.miss": 200,
+    "lookup.scope.new_node": 20,
+    "lookup.scope.volatile": 50,
+    "repeat": 7
+  },
+  "metrics": {
+    "cli.run": {
+      "max_ms": 424.211251,
+      "median_ms": 418.634026,
+      "min_ms": 416.388004
+    },
+    "construct": {
+      "max_ms": 0.491593,
+      "median_ms": 0.435054,
+      "min_ms": 0.421763
+    },
+    "explain": {
+      "max_ms": 15.077368,
+      "median_ms": 13.907278,
+      "min_ms": 13.776084
+    },
+    "lookup.cold": {
+      "max_ms": 238.610531,
+      "median_ms": 235.107668,
+      "min_ms": 234.115823
+    },
+    "lookup.deep.glob500": {
+      "max_ms": 739.968198,
+      "median_ms": 736.352929,
+      "min_ms": 731.948808
+    },
+    "lookup.first": {
+      "max_ms": 5.817845,
+      "median_ms": 5.796613,
+      "min_ms": 5.784639
+    },
+    "lookup.keys100": {
+      "max_ms": 3.044088,
+      "median_ms": 3.039206,
+      "min_ms": 3.031279
+    },
+    "lookup.levels40": {
+      "max_ms": 0.416712,
+      "median_ms": 0.413889,
+      "min_ms": 0.411428
+    },
+    "lookup.miss": {
+      "max_ms": 5.826807,
+      "median_ms": 5.815465,
+      "min_ms": 5.81003
+    },
+    "lookup.scope.new_node": {
+      "max_ms": 14.798928,
+      "median_ms": 10.785579,
+      "min_ms": 10.744978
+    },
+    "lookup.scope.volatile": {
+      "max_ms": 7.411906,
+      "median_ms": 6.530928,
+      "min_ms": 6.422766
+    }
+  },
+  "name": "hyera-0.1.0-py314",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "processor": "x86_64",
+  "python": "3.14.7",
+  "revalidate": true,
+  "timestamp": "2026-10-07T12:45:36+00:00",
+  "tree": {
+    "files": 771,
+    "reachable": 523
+  }
+}
