@@ -177,6 +177,45 @@ def test_module_directory_name_matched_exactly(tmp_path, make_tree):
         h.lookup("mymod::k")
 
 
+@pytest.mark.parametrize("asked", ["staging", "STAGING", "Production", "production"])
+def test_environment_directory_name_matched_exactly(tmp_path, make_tree, asked):
+    # Puppet joins the name onto the environmentpath entry; on a case-sensitive
+    # filesystem only the exact spelling exists, so a folded name is not found.
+    base = _global(make_tree)
+    envs = tmp_path / "envs"
+    _write(envs / "Staging" / "hiera.yaml", _LEVEL)
+    _write(envs / "Staging" / "data" / "c.yaml", "env_only: stage\n")
+    _write(envs / "production" / "hiera.yaml", _LEVEL)
+    _write(envs / "production" / "data" / "c.yaml", "env_only: prod\n")
+
+    def build():
+        return Hiera(
+            str(base / "hiera.yaml"),
+            environmentpath=[envs],
+            scope=Scope(environment=asked),
+        )
+
+    if asked == "production":
+        assert build().lookup("env_only") == "prod"
+    else:
+        with pytest.raises(ConfigError, match="Could not find a directory environment"):
+            build().lookup("env_only")
+
+
+def test_environment_directory_spelled_as_asked_is_found(tmp_path, make_tree):
+    base = _global(make_tree)
+    envs = tmp_path / "envs"
+    _write(envs / "Staging" / "hiera.yaml", _LEVEL)
+    _write(envs / "Staging" / "data" / "c.yaml", "env_only: stage\n")
+
+    h = Hiera(
+        str(base / "hiera.yaml"),
+        environmentpath=[envs],
+        scope=Scope(environment="Staging"),
+    )
+    assert h.lookup("env_only") == "stage"
+
+
 def test_known_module_with_no_data_provider(tmp_path, make_tree):
     # A module directory known to modulepath with no hiera.yaml and no default data
     # file has no usable provider: report_module_provider_not_found fires (for the
