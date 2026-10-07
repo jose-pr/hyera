@@ -121,6 +121,7 @@ tests/
     ├── test_conformance_cli.py     # replay: the CLI channel
     ├── test_golden_lint.py          # the golden linter's rules
     ├── test_record.py                # the recorder's own logic (needs no Puppet)
+    ├── puppet_modules/hyera_fixture/  # Puppet module the apply channel loads: emit() and a facts terminus
     └── cases/<area>-<topic>/        # a hand-written case.yaml + a generated golden.json per case
 
 benchmarks/
@@ -218,6 +219,17 @@ error), `130` on an interrupt.
   a `deviation:` marker is a permanent, asserted-as-passing documented
   difference, tested against `README.md`'s "Differences from Puppet" list
   by `tests/test_readme.py::test_differences_match_deviations`.
+  A query with `expression:` instead of `key:` is recorded by `puppet apply`
+  rather than `puppet lookup`: the Puppet source in `expression:` is wrapped
+  in `hyera_fixture::emit(...)`, which writes its value as Puppet's own
+  rich-data JSON, and the facts come from the case's `facts.yaml` through the
+  fixture's facts terminus. Its `python:` field is a hand-written call spec
+  (`target` `hiera` or `types`, `method`, `args`, `kwargs`, `params` for a
+  subscripted type, `block` naming a callable of `_ours.BLOCKS`) that the API
+  replay runs; the command channel skips it. It needs an `id:`, takes no
+  `merge`, `default`, `type`, `explain` or `hash_inspect`, and is recorded
+  like any case (`record.py --runner wsl apply-lookup-forms`). The `apply-*`
+  cases hold these queries.
 - Format: the exact command CI runs —
   `<py> -m black --check src/ tests/ benchmarks/ examples/` — on the newest
   interpreter (the 3.14 venv) only: the 3.9 venv has no black, and an older
