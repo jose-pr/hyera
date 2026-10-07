@@ -44,9 +44,8 @@ def test_assert_matches_golden(qid, type_text, value, result):
         return
     with pytest.raises(HieraLookupError) as exc_info:
         assert_instance_of("Found value", t, value)
-    # Puppet lists one line per mismatch; hyera reports the first.
-    first = result["message"].splitlines()[0]
-    assert str(exc_info.value).splitlines()[0].strip() == first.strip()
+    want = [line.strip() for line in result["message"].splitlines()]
+    assert [line.strip() for line in str(exc_info.value).splitlines()] == want
 
 
 def test_describe_evidence():
@@ -142,7 +141,7 @@ def test_describe_evidence_more_branches():
     # short_name's wrapper-type case, with a raw-str `.contained` (never a
     # real Any -- `_bare_name`'s own str branch).
     assert err(parse_type("Variant[Optional[integer], Boolean]"), 5) == (
-        "Found value has wrong type, expects a value of type Optional[String] "
+        "Found value has wrong type, expects a value of type Undef, String, "
         "or Boolean, got Integer"
     )
 
@@ -190,11 +189,14 @@ def test_describe_evidence_more_branches():
     )
 
     # A Variant with a mix of immediate (whole-value) and deeper (nested
-    # path) failures reports the first deeper one, prefixed with its own
+    # path) failures lists every branch's, each prefixed with its own
     # "variant N" path element.
     assert err(parse_type("Variant[Hash[String,String],Array]"), {"a": 1, "b": 2}) == (
         "Found value has wrong type, variant 0 entry 'a' expects a String "
-        "value, got Integer"
+        "value, got Integer\n"
+        " Found value has wrong type, variant 0 entry 'b' expects a String "
+        "value, got Integer\n"
+        " Found value has wrong type, variant 1 expects an Array value, got Struct"
     )
 
     # `short_name`'s own top-level "expected is a raw literal string"
@@ -211,18 +213,17 @@ def test_describe_evidence_more_branches():
         "Found value has wrong type, expects a Sensitive value, got Integer"
     )
 
-    # An Optional wrapping a Variant: the "Undef" prefix (m.optional) on a
-    # list-shaped `e_render`, `_join_or`'s 3-way "a, b, or c" join.
+    # An Optional wrapping a Variant: the "Undef" branch ahead of the list-shaped
+    # expected types, `_join_or`'s 3-way "a, b, or c" join.
     assert err(parse_type("Optional[Variant[Integer,Boolean]]"), "x") == (
         "Found value has wrong type, expects a value of type Undef, "
         "Integer, or Boolean, got String"
     )
 
     # Two Variant branches that render to the *same* short name dedupe down
-    # to `_join_or`'s single-item return (no "or" at all).
-    assert err(parse_type("Variant[Optional[integer], Optional[foo]]"), 5) == (
-        "Found value has wrong type, expects a value of type "
-        "Optional[String], got Integer"
+    # to a single type (no "or" at all).
+    assert err(parse_type("Variant[Array[String], Array[Integer]]"), 5) == (
+        "Found value has wrong type, expects an Array value, got Integer"
     )
 
     # `_actual_literal`'s own fallback (a non-string actual value against a
@@ -246,12 +247,14 @@ def test_describe_evidence_more_branches():
     )
 
     # A Variant where the FIRST branch fails immediately (shallow) and a
-    # LATER one fails deeper: the loop must skip the immediate one to find
-    # the deep one it actually reports.
+    # LATER one fails deeper: both are listed, in branch order.
     assert err(
         parse_type("Variant[Boolean, Hash[String,String]]"), {"a": 1, "b": 2}
     ) == (
-        "Found value has wrong type, variant 1 entry 'a' expects a String "
+        "Found value has wrong type, variant 0 expects a Boolean value, got Struct\n"
+        " Found value has wrong type, variant 1 entry 'a' expects a String "
+        "value, got Integer\n"
+        " Found value has wrong type, variant 1 entry 'b' expects a String "
         "value, got Integer"
     )
 
@@ -312,3 +315,109 @@ def test_struct_of_non_string_keys_reports_a_hash_type_mismatch():
     )
     with pytest.raises(HieraLookupError, match="expects size to be between 1 and 2"):
         assert_instance_of("Found value", t, {})
+
+
+def _text(type_text, value):
+    with pytest.raises(HieraLookupError) as info:
+        assert_instance_of("Found value", parse_type(type_text), value)
+    return str(info.value)
+
+
+_W = "Found value has wrong type,"
+
+
+def test_struct_lists_unrecognized_keys_after_entry_mismatches():
+    t = "Struct[{a=>Integer, Optional[b]=>String}]"
+    assert _text(t, {"a": "x", "b": 3, "z": 1}) == (
+        _W + " entry 'a' expects an Integer value, got String\n"
+        " " + _W + " entry 'b' expects a String value, got Integer\n"
+        " " + _W + " unrecognized key 'z'"
+    )
+
+
+def test_struct_lists_a_missing_key_before_an_unrecognized_one():
+    t = "Variant[Struct[{a=>String}], String]"
+    assert _text(t, {"b": 1}) == (
+        _W + " variant 0 expects a value for key 'a'\n"
+        " " + _W + " variant 0 unrecognized key 'b'\n"
+        " " + _W + " variant 1 expects a String value, got Struct"
+    )
+
+
+def test_variant_lists_the_mismatches_of_every_branch():
+    t = "Variant[String[1], Array[String[1]]]"
+    assert _text(t, [5, ""]) == (
+        _W + " variant 0 expects a String value, got Tuple\n"
+        " " + _W + " variant 1 index 0 expects a String value, got Integer\n"
+        " " + _W + " variant 1 index 1 expects a String[1] value, got String"
+    )
+    assert _text("Variant[Struct[{a=>String}], String]", {"a": 1}) == (
+        _W + " variant 0 entry 'a' expects a String value, got Integer\n"
+        " " + _W + " variant 1 expects a String value, got Struct"
+    )
+
+
+def test_optional_variant_has_an_undef_branch_of_its_own():
+    t = "Optional[Variant[String[1], Array[String[1]]]]"
+    assert _text(t, [5]) == (
+        _W + " variant 0 expects an Undef value, got Tuple\n"
+        " " + _W + " variant 1 expects a String value, got Tuple\n"
+        " " + _W + " variant 2 index 0 expects a String value, got Integer"
+    )
+
+
+def test_variant_branches_failing_on_size_merge_into_one_size_mismatch():
+    assert _text("Variant[Array[String,2], Array[String,3]]", ["a"]) == (
+        _W + " expects size to be at least 2, got 1"
+    )
+
+
+def test_variant_renders_every_expected_type_in_full_when_any_is_detailed():
+    t = "Variant[String[1], Array[String[1]]]"
+    assert _text(t, "") == (
+        _W + " expects a value of type String[1] or Array[String[1]], got String"
+    )
+    assert _text("Variant[Integer, Enum[a,b]]", "d") == (
+        _W + " expects a value of type Integer or Enum['a', 'b'], got String"
+    )
+
+
+def test_merged_enums_collapse_into_one_enum():
+    assert _text("Variant[Enum[a,b], Enum[c]]", "d") == (
+        _W + " expects a match for Enum['a', 'b', 'c'], got 'd'"
+    )
+
+
+def test_optional_wrapper_does_not_reach_a_nested_mismatch():
+    assert _text("Optional[Struct[{a=>Integer}]]", {"a": "x"}) == (
+        _W + " entry 'a' expects an Integer value, got String"
+    )
+    assert _text("Optional[Hash[String, Integer]]", {"a": "x"}) == (
+        _W + " entry 'a' expects an Integer value, got String"
+    )
+    assert _text("Struct[{a=>Optional[Integer]}]", {"a": "x"}) == (
+        _W + " entry 'a' expects a value of type Undef or Integer, got String"
+    )
+
+
+def test_hash_with_a_non_string_key_is_one_mismatch_on_the_hash():
+    assert _text("Hash[Pattern[/a/], String]", {5: "x"}) == (
+        _W + " expects a Hash[Pattern[/a/], String] value, "
+        "got Hash[Integer[5, 5], String]"
+    )
+    assert _text("Hash[String[1], Any]", {"datadir": "data", 5: "x"}) == (
+        _W + " expects a Hash[String[1], Any] value, "
+        "got Hash[Variant[String, Integer[5, 5]], Enum['data', 'x']]"
+    )
+    assert _text("Hash[String, Integer]", {5: "x", 6: "y", "z": "w"}) == (
+        _W + " expects a Hash[String, Integer] value, "
+        "got Hash[Variant[Integer[5, 6], String], Enum['w', 'x', 'y']]"
+    )
+
+
+def test_data_with_a_nested_failure_lists_the_variants():
+    assert _text("Data", [1, {1: 2}]) == (
+        _W + " variant 0 expects a ScalarData value, got Tuple\n"
+        " " + _W + " variant 1 expects a Hash value, got Tuple\n"
+        " " + _W + " variant 2 index 1 expects a Data value, got Hash"
+    )

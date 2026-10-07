@@ -17,7 +17,10 @@ from ..exceptions import HieraLookupError
 from .inference import infer_set
 from .types import (
     ANY,
+    UNDEF,
     Enum,
+    Float,
+    Integer,
     NotUndef,
     Optional,
     Pattern,
@@ -28,6 +31,7 @@ from .types import (
 from .literal_format import puppet_quote
 from .compound_types import (
     Array,
+    Collection,
     Hash,
     Struct,
     Tuple,
@@ -35,6 +39,7 @@ from .compound_types import (
     TypeReference,
     Variant,
 )
+from .variant_merge import variant_of
 
 __all__ = ["assert_instance_of"]
 
@@ -42,6 +47,18 @@ __all__ = ["assert_instance_of"]
 #: (``type_mismatch_describer.rb`` ``short_name``, ``type_formatter.rb``'s ``string_P*``
 #: methods for these three; ``Type``, the fourth in Puppet, is unparameterized here).
 _WRAPPER_TYPES = (Optional, NotUndef, SensitiveType)
+
+_STRINGS = (String, Enum, Pattern)
+#: The actual types each expected type's unparameterized form accepts
+#: (``assignable_to_default?``): the default of Array takes a Tuple, of Hash a Struct.
+_DEFAULT_TAKES = {
+    String: _STRINGS,
+    Enum: _STRINGS,
+    Pattern: _STRINGS,
+    Array: (Array, Tuple),
+    Hash: (Hash, Struct),
+    Collection: (Collection, Array, Tuple, Hash, Struct),
+}
 
 
 def _is_any(t):
@@ -72,39 +89,110 @@ def short_name(t):
     return t.name
 
 
-def _detailed(expected, actual):
-    """Puppet's ``always_fully_detailed?`` simplified to the one condition
-    every case in this subset's goldens turns on: same Ruby/Python class."""
-    if isinstance(expected, str):
+def _always_detailed(e, a):
+    """``always_fully_detailed?``: the actual is the expected's own class (or
+    a Tuple/Array, Struct/Hash pair), or either side is an alias."""
+    if isinstance(e, str):
         return False
     return (
-        type(expected) is type(actual)
-        or (isinstance(expected, Struct) and isinstance(actual, Hash))
-        or (isinstance(expected, Tuple) and isinstance(actual, Array))
+        type(e) is type(a)
+        or isinstance(e, TypeAlias)
+        or isinstance(a, TypeAlias)
+        or (isinstance(e, Struct) and isinstance(a, Hash))
+        or (isinstance(e, Tuple) and isinstance(a, Array))
     )
 
 
-def _render_pair(expected, actual):
-    """The (expected, actual) strings for one leaf type mismatch, per
-    ``report_detailed?``/``short_name``."""
-    if _detailed(expected, actual):
-        return str(expected), str(actual)
-    return short_name(expected), short_name(actual)
+def _default_takes(e, a):
+    """``assignable_to_default?``: the unparameterized form of ``e`` accepts ``a``."""
+    if isinstance(e, str):
+        return False
+    takes = _DEFAULT_TAKES.get(type(e))
+    if takes is None:
+        takes = (Float, Integer) if type(e).TYPE_NAME == "Numeric" else (type(e),)
+    return isinstance(a, takes)
+
+
+def _report_detailed(types, a):
+    return any(_always_detailed(t, a) or _default_takes(t, a) for t in types)
+
+
+def _resolved(t):
+    """``all_resolved``: an alias as the type it stands for."""
+    while isinstance(t, TypeAlias):
+        t = t.resolved_type
+    return t
+
+
+def _actual_text(types, a):
+    """``detailed_actual_to_s``: the actual in full when an expected type is its own
+    class or an unparameterized type that accepts it, else its bare name."""
+    types = [_resolved(t) for t in types]
+    if any(_always_detailed(t, a) for t in types):
+        return str(a)
+    if any(
+        _default_takes(t, a) and not isinstance(t, str) and str(t) == t.name
+        for t in types
+    ):
+        return str(a)
+    return short_name(a)
+
+
+class _VariantElement(str):
+    """A ``variant N`` path element: left out of a mismatch's canonical path."""
+
+    __slots__ = ()
+
+
+def _canonical(path):
+    return tuple(p for p in path if not isinstance(p, _VariantElement))
 
 
 class _Mismatch:
-    __slots__ = ("path", "kind", "expected", "actual", "optional", "key", "ref")
+    """One mismatch (Puppet's ``Mismatch`` family). ``kind`` is ``type``,
+    ``pattern`` (both Puppet's TypeMismatch), ``size`` (``expected`` is a
+    ``(from, to)`` pair and ``actual`` its text), ``missing_key``, ``extra_key``
+    or ``unresolved``."""
 
-    def __init__(
-        self, path, kind, expected=None, actual=None, optional=False, key=None, ref=None
-    ):
+    __slots__ = ("path", "kind", "expected", "actual", "key", "ref")
+
+    def __init__(self, path, kind, expected=None, actual=None, key=None, ref=None):
         self.path = path
         self.kind = kind
         self.expected = expected
         self.actual = actual
-        self.optional = optional
         self.key = key
         self.ref = ref
+
+    def same(self, other):
+        """Puppet's ``Mismatch#==``: the kind, the path without its variant
+        elements, and what that kind compares."""
+        if self.kind != other.kind or _canonical(self.path) != _canonical(other.path):
+            return False
+        if self.kind in ("missing_key", "extra_key"):
+            return self.key == other.key
+        if self.kind == "unresolved":
+            return self.ref == other.ref
+        return self.expected == other.expected and self.actual == other.actual
+
+    def merged(self, other):
+        """Puppet's ``Mismatch#merge``: the least restrictive of the two."""
+        if self.kind == "size":
+            lo = min(self.expected[0], other.expected[0])
+            highs = (self.expected[1], other.expected[1])
+            hi = None if None in highs else max(highs)
+            return _Mismatch(self.path, "size", (lo, hi), self.actual)
+        expected = variant_of([self.expected, other.expected])
+        return _Mismatch(self.path, self.kind, expected, self.actual)
+
+    def chopped(self, index):
+        """Puppet's ``chop_path``: a copy without the path element at ``index``."""
+        if index >= len(self.path):
+            return self
+        path = self.path[:index] + self.path[index + 1 :]
+        return _Mismatch(
+            path, self.kind, self.expected, self.actual, self.key, self.ref
+        )
 
 
 def _path_prefix(path):
@@ -123,49 +211,62 @@ def _format_one(name, m):
         )
     if m.kind == "size":
         return "{}{} expects size to be {}, got {}".format(
-            name, pos, m.expected, m.actual
+            name, pos, _size_text(*m.expected), m.actual
         )
+    expected = m.expected
+    optional = isinstance(expected, Optional) and expected.contained is not None
+    if optional:
+        expected = expected.contained
     if m.kind == "pattern":
-        e_render = (
-            str(m.expected)
-            if not isinstance(m.expected, list)
-            else _join_or([str(t) for t in m.expected])
-        )
-        prefix = "an undef value or a match" if m.optional else "a match"
+        prefix = "an undef value or a match" if optional else "a match"
         return "{}{} expects {} for {}, got {}".format(
-            name, pos, prefix, e_render, _actual_literal(m.actual)
+            name, pos, prefix, expected, _actual_literal(m.actual)
         )
     # 'type'
-    if isinstance(m.expected, list):
-        parts = [_render_pair(t, m.actual)[0] for t in m.expected]
-        if m.optional:
-            parts = ["Undef"] + parts
-        e_render = _join_or(parts)
-        detailed_any = any(_detailed(t, m.actual) for t in m.expected)
-        a_render = str(m.actual) if detailed_any else short_name(m.actual)
-        return "{}{} expects a value of type {}, got {}".format(
-            name, pos, e_render, a_render
-        )
-    e_render, a_render = _render_pair(m.expected, m.actual)
-    if m.optional:
-        return "{}{} expects a value of type Undef or {}, got {}".format(
-            name, pos, e_render, a_render
-        )
+    actual = m.actual
+    if isinstance(expected, Variant) and expected.types:
+        types = list(expected.types)
+        if _report_detailed(types, actual):
+            parts = [str(t) for t in types]
+            actual_text = _actual_text(types, actual)
+        else:
+            parts = _unique([short_name(t) for t in types])
+            actual_text = short_name(actual)
+        if optional:
+            parts.insert(0, "Undef")
+        if len(parts) > 1:
+            return "{}{} expects a value of type {}, got {}".format(
+                name, pos, _join_or(parts), actual_text
+            )
+        expected_text = parts[0]
+    else:
+        if _report_detailed([expected], actual):
+            expected_text = str(expected)
+            actual_text = _actual_text([expected], actual)
+        else:
+            expected_text = short_name(expected)
+            actual_text = short_name(actual)
+        if optional:
+            return "{}{} expects a value of type Undef or {}, got {}".format(
+                name, pos, expected_text, actual_text
+            )
     return "{}{} expects {} {} value, got {}".format(
-        name, pos, _a_an(e_render), e_render, a_render
+        name, pos, _a_an(expected_text), expected_text, actual_text
     )
 
 
-def _join_or(parts):
+def _unique(parts):
     uniq = []
     for p in parts:
         if p not in uniq:
             uniq.append(p)
-    if len(uniq) == 1:
-        return uniq[0]
-    if len(uniq) == 2:
-        return "{} or {}".format(uniq[0], uniq[1])
-    return "{}, or {}".format(", ".join(uniq[:-1]), uniq[-1])
+    return uniq
+
+
+def _join_or(parts):
+    if len(parts) == 2:
+        return "{} or {}".format(parts[0], parts[1])
+    return "{}, or {}".format(", ".join(parts[:-1]), parts[-1])
 
 
 def _actual_literal(actual_type):
@@ -181,25 +282,24 @@ def _actual_literal(actual_type):
 # ------------------------------------------------------------- describe
 
 
-def _describe(expected, value, path):
+def _describe(expected, value, path, original=None):
     """Every reason ``value`` is not an instance of ``expected``, as a list
-    of :class:`_Mismatch` (empty when it IS an instance)."""
+    of :class:`_Mismatch` (empty when it IS an instance). ``original`` is the
+    type a whole-value mismatch names: the wrapping Optional or alias."""
+    if original is None:
+        original = expected
     if isinstance(expected, str):
         if value == expected:
             return []
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
 
     if isinstance(expected, Optional):
         if value is None:
             return []
         if expected.contained is None:
             return [_Mismatch(path, "type", expected, infer_set(value))]
-        sub = _describe(expected.contained, value, path)
-        if not sub:
-            return []
-        m = sub[0]
-        m.optional = True
-        return [m]
+        wrapper = original if isinstance(original, TypeAlias) else expected
+        return _describe(expected.contained, value, path, wrapper)
 
     if isinstance(expected, NotUndef):
         if value is None:
@@ -211,83 +311,86 @@ def _describe(expected, value, path):
         return _describe(expected.contained, value, path)
 
     if isinstance(expected, Variant):
-        return _describe_variant(expected, value, path)
+        return _describe_variant(expected, value, path, original)
 
     if isinstance(expected, Array):
-        return _describe_array(expected, value, path)
+        return _describe_array(expected, value, path, original)
 
     if isinstance(expected, Tuple):
-        return _describe_tuple(expected, value, path)
+        return _describe_tuple(expected, value, path, original)
 
     if isinstance(expected, Hash):
-        return _describe_hash(expected, value, path)
+        return _describe_hash(expected, value, path, original)
 
     if isinstance(expected, Struct):
-        return _describe_struct(expected, value, path)
+        return _describe_struct(expected, value, path, original)
 
     if isinstance(expected, (Enum, Pattern)):
         if expected.instance(value):
             return []
-        return [_Mismatch(path, "pattern", expected, infer_set(value))]
+        return [_Mismatch(path, "pattern", original, infer_set(value))]
 
     if isinstance(expected, TypeReference):
         return [_Mismatch(path, "unresolved", ref=expected.text)]
 
     if isinstance(expected, TypeAlias):
-        # Puppet's own special case (``describe_PVariantType``): once every
-        # branch of an aliased Variant fails, it reports one mismatch on
-        # the alias itself, never the branches' own structural detail.
         if expected.instance(value):
             return []
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        resolved = expected.resolved_type
+        if isinstance(resolved, Variant):
+            resolved = variant_of(resolved.types)
+        return _describe(resolved, value, path, expected)
 
     if _type_instance(expected, value):
         return []
-    return [_Mismatch(path, "type", expected, infer_set(value))]
+    return [_Mismatch(path, "type", original, infer_set(value))]
 
 
-def _variant(i):
-    return "variant {}".format(i)
-
-
-def _describe_variant(expected, value, path):
+def _describe_variant(expected, value, path, original):
     if not expected.types:
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
+    types = list(expected.types)
+    if isinstance(original, Optional):
+        types.insert(0, UNDEF)
     per_branch = []
-    for i, t in enumerate(expected.types):
-        sub = _describe(t, value, path)
-        if not sub:
+    for i, t in enumerate(types):
+        found = _describe(t, value, path + [_VariantElement("variant {}".format(i))])
+        if not found:
             return []
-        per_branch.append((i, t, sub))
+        per_branch.append(found)
+    descriptions = _merge_descriptions(len(path), per_branch)
+    if isinstance(original, TypeAlias) and len(descriptions) == 1:
+        # Every branch of an aliased Variant failed: one mismatch on the alias.
+        return [_Mismatch(path, "type", original, infer_set(value))]
+    return descriptions
 
-    # Every branch failed. When every failure landed at THIS level, Puppet collapses
-    # them into one message: "a match for Variant[...]" for a pattern-shaped set, else
-    # "a value of type A, B, or C".
-    immediate = [
-        (i, t, sub) for i, t, sub in per_branch if len(sub) == 1 and sub[0].path == path
-    ]
-    if len(immediate) == len(per_branch):
-        actual = infer_set(value)
-        if any(isinstance(t, (Enum, Pattern)) for _, t, _ in per_branch):
-            return [_Mismatch(path, "pattern", expected, actual)]
-        types = [t for _, t, _ in per_branch]
-        return [_Mismatch(path, "type", types, actual)]
 
-    # Mixed immediate and nested failures: report the first branch that failed deeper,
-    # prefixed with its "variant N" element (Puppet's ``merge_descriptions``,
-    # simplified). `immediate` is short of `per_branch`, so `next()` finds one.
-    i, t, sub = next(
-        (i, t, sub) for i, t, sub in per_branch if len(sub) != 1 or sub[0].path != path
-    )
-    m = sub[0]
-    m.path = path + [_variant(i)] + m.path[len(path) :]
-    return [m]
+def _merge_descriptions(position, per_branch):
+    """Puppet's ``merge_descriptions``: when every branch fails with one mismatch of
+    the same kind at the same path, report their least restrictive merge."""
+    descriptions = [d for found in per_branch for d in found]
+    for kinds in (("size",), ("type", "pattern")):
+        mismatches = [d for d in descriptions if d.kind in kinds]
+        if len(mismatches) != len(per_branch):
+            continue
+        generic = mismatches[0]
+        for other in mismatches[1:]:
+            if _canonical(generic.path) != _canonical(other.path):
+                generic = None
+                break
+            generic = generic.merged(other)
+        if generic is not None:
+            descriptions = [generic]
+            break
+    unique = []
+    for d in descriptions:
+        if not any(d.same(u) for u in unique):
+            unique.append(d)
+    return [unique[0].chopped(position)] if len(unique) == 1 else unique
 
 
 def _size_mismatch(path, from_, to_, actual_n):
-    return _Mismatch(
-        path, "size", expected=_size_text(from_, to_), actual=str(actual_n)
-    )
+    return _Mismatch(path, "size", expected=(from_ or 0, to_), actual=str(actual_n))
 
 
 def _size_text(from_, to_):
@@ -301,9 +404,9 @@ def _size_text(from_, to_):
     return "between {} and {}".format(low, to_)
 
 
-def _describe_array(expected, value, path):
+def _describe_array(expected, value, path, original):
     if not isinstance(value, (list, tuple)):
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
     n = len(value)
     lo = expected.size_from if expected.size_from is not None else 0
     hi = expected.size_to
@@ -316,9 +419,9 @@ def _describe_array(expected, value, path):
     return descriptions
 
 
-def _describe_tuple(expected, value, path):
+def _describe_tuple(expected, value, path, original):
     if not isinstance(value, (list, tuple)):
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
     lo, hi = expected._bounds()
     n = len(value)
     if n < lo or (hi is not None and n > hi):
@@ -338,14 +441,32 @@ def _idx(i):
     return "index {}".format(i)
 
 
-def _describe_hash(expected, value, path):
+def _struct_shaped(value):
+    """Whether Puppet infers a Struct for ``value``: non-empty, every key a
+    non-empty String."""
+    return bool(value) and all(isinstance(k, str) and k for k in value)
+
+
+def _hash_type_of(value):
+    """The Hash type Puppet infers for a dict that is not struct-shaped."""
+    return Hash(
+        variant_of([infer_set(k) for k in value]),
+        variant_of([infer_set(v) for v in value.values()]),
+    )
+
+
+def _describe_hash(expected, value, path, original):
     if not isinstance(value, dict):
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
     n = len(value)
     lo = expected.size_from if expected.size_from is not None else 0
     hi = expected.size_to
     if (lo is not None and n < lo) or (hi is not None and n > hi):
         return [_size_mismatch(path, expected.size_from, expected.size_to, n)]
+    if value and not _struct_shaped(value):
+        if expected.instance(value):
+            return []
+        return [_Mismatch(path, "type", original, _hash_type_of(value))]
     key_type = expected.key_type if expected.key_type is not None else ANY
     value_type = expected.value_type if expected.value_type is not None else ANY
     descriptions = []
@@ -363,37 +484,21 @@ def _key_of(k):
     return "key of entry {}".format(puppet_quote(k))
 
 
-def _common_type(types):
-    """One type for several: itself when they are all equal, else a Variant."""
-    unique = []
-    for t in types:
-        if t not in unique:
-            unique.append(t)
-    return unique[0] if len(unique) == 1 else Variant(unique)
-
-
-def _describe_struct(expected, value, path):
+def _describe_struct(expected, value, path, original):
     if not isinstance(value, dict):
-        return [_Mismatch(path, "type", expected, infer_set(value))]
+        return [_Mismatch(path, "type", original, infer_set(value))]
     if expected.instance(value):
         return []
-    if not value or not all(isinstance(k, str) and k for k in value):
+    if not _struct_shaped(value):
         # Not struct-shaped (empty, or a non-string key): Puppet compares
         # sizes, then reports the type mismatch against a plain Hash.
         required = sum(1 for e in expected.elements if not e.optional)
         total = len(expected.elements)
         if not required <= len(value) <= total:
             return [_size_mismatch(path, required, total, len(value))]
-        hash_type = Hash(
-            _common_type(infer_set(k) for k in value),
-            _common_type(infer_set(v) for v in value.values()),
-        )
-        return [_Mismatch(path, "type", expected, hash_type)]
+        return [_Mismatch(path, "type", original, _hash_type_of(value))]
     keys = {e.key for e in expected.elements}
     descriptions = []
-    for k in value:
-        if k not in keys:
-            descriptions.append(_Mismatch(path, "extra_key", key=k))
     for e in expected.elements:
         if e.key in value:
             descriptions.extend(
@@ -401,6 +506,9 @@ def _describe_struct(expected, value, path):
             )
         elif not e.optional:
             descriptions.append(_Mismatch(path, "missing_key", key=e.key))
+    for k in value:
+        if k not in keys:
+            descriptions.append(_Mismatch(path, "extra_key", key=k))
     return descriptions
 
 
