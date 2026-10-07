@@ -1,0 +1,4 @@
+---
+role: web
+nested:
+  a: 1

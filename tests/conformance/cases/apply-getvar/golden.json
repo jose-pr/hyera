@@ -1,0 +1,187 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "0078212223d6060c6c5254eddcd1d2b20ceb22f747d51d2cd83967b5b5d5431a",
+  "results": {
+    "plain-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "web"
+    },
+    "integer-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 3
+    },
+    "boolean-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "qualified-name": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "web"
+    },
+    "hash-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "list": [
+          5,
+          6
+        ],
+        "dotted.key": "quoted"
+      }
+    },
+    "navigate-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "navigate-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 6
+    },
+    "navigate-quoted-segment": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "quoted"
+    },
+    "navigate-the-facts-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "navigate-trusted": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "local"
+    },
+    "environment-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "production"
+    },
+    "undefined-variable": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "undefined-variable-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "undefined-variable-navigation": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "null-variable-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": ""
+    },
+    "found-ignores-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "web"
+    },
+    "navigation-miss-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "navigation-miss": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "navigate-into-a-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, 'dig' parameter 'data' expects a value of type Undef or Collection, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "walk-error-block-message": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "The given data does not contain a Collection at [\"a\"], got 'Integer[1, 1]'"
+    },
+    "walk-error-block-constant": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "blk"
+    },
+    "walk-error-raises": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, The given data requires an Integer index at [\"list\", \"x\"], got 'String' (line: 1, column: 21) on node golden.example.com"
+    },
+    "name-starts-with-a-digit": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, 'getvar' The given string does not start with a valid variable name (line: 1, column: 21) on node golden.example.com"
+    },
+    "name-starts-with-a-capital": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, 'getvar' The given string does not start with a valid variable name (line: 1, column: 21) on node golden.example.com"
+    },
+    "empty-name": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, 'getvar' The given string does not start with a valid variable name (line: 1, column: 21) on node golden.example.com"
+    },
+    "trailing-dot": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "list": [
+          5,
+          6
+        ],
+        "dotted.key": "quoted"
+      }
+    }
+  }
+}

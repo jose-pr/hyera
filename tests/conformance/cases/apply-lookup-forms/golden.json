@@ -1,0 +1,228 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "859321ebde56b7a5013f35a9efda45a388be8431caaa57ecac499489d9e123dc",
+  "results": {
+    "positional-name": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "positional-type": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "positional-all-four": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "options-hash-alone": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "options-hash-after-name": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "keyword-merge-unique": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "lookup-options-merge": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "name-list-first-found": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "name-list-all-miss": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Function lookup() did not find a value for any of the names ['missing1', 'missing2']"
+    },
+    "miss-no-default": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "dotted-key-into-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "y"
+    },
+    "dotted-key-miss": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "not_found"
+    },
+    "found-null-beats-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "interpolated-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "role-web"
+    },
+    "convert-to-from-lookup-options": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 7
+    },
+    "default-value-on-miss": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 7
+    },
+    "default-undef-is-a-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "default-values-hash-hit": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 8
+    },
+    "default-values-hash-beats-default-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 8
+    },
+    "default-values-hash-second-name": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "two"
+    },
+    "default-values-hash-after-whole-hierarchy": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "from-hierarchy"
+    },
+    "default-values-hash-miss-falls-to-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "override-beats-hierarchy": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "ov"
+    },
+    "override-miss-reads-hierarchy": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "override-skips-convert-to": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "9"
+    },
+    "override-beats-default-values-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "ov"
+    },
+    "override-feeds-interpolation": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "role-ovrole"
+    },
+    "block-receives-the-name": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "missing"
+    },
+    "block-receives-the-name-list": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "m1",
+        "m2"
+      ]
+    },
+    "block-constant": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "blk"
+    },
+    "block-not-called-on-a-hit": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "block-beats-default-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "blk"
+    },
+    "default-values-hash-beats-block": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "dv"
+    },
+    "block-returning-undef": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    }
+  }
+}

@@ -1,0 +1,10 @@
+---
+h:
+  a: 1
+  b: [x, y]
+  c: {d: 2}
+  "e.f": dotted
+  n: ~
+arr: [10, 20, [30, {k: deep}]]
+s: str
+nilk: ~

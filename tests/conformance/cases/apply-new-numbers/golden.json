@@ -1,0 +1,287 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "9df1e1f14e085d19229736f8e6b39a1147b307493172bac5eb1e706bee9d23f0",
+  "results": {
+    "integer-decimal-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 42
+    },
+    "integer-negative-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": -5
+    },
+    "integer-hex-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 31
+    },
+    "integer-binary-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "integer-leading-zero-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 8
+    },
+    "integer-surrounding-space": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string '  7  ' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-from-float": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 3
+    },
+    "integer-from-negative-float": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": -3
+    },
+    "integer-from-true": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "integer-from-false": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 0
+    },
+    "integer-radix-binary": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "integer-radix-octal": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 15
+    },
+    "integer-radix-hex-prefixed": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 255
+    },
+    "integer-radix-hex-bare": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string 'ff' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-abs": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 7
+    },
+    "integer-hash-form": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 31
+    },
+    "integer-hash-form-radix-abs": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "integer-rejects-text": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string 'zz' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-rejects-empty": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string '' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-rejects-a-float-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string '1.5' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-rejects-an-exponent-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' The string '1e3' cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-rejects-undef": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' Value of type Undef cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-rejects-an-array": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' Value of type Array[Integer] cannot be converted to Integer (line: 1, column: 32) on node golden.example.com"
+    },
+    "integer-range-accepts": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 3
+    },
+    "integer-range-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from Integer[1, 5].new() has wrong type, expects an Integer[1, 5] value, got Integer[9, 9] (line: 1, column: 38) on node golden.example.com"
+    },
+    "float-decimal-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1.5
+    },
+    "float-exponent-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1000.0
+    },
+    "float-negative-exponent-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 0.01
+    },
+    "float-integer-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 12.0
+    },
+    "float-hex-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 16.0
+    },
+    "float-surrounding-space": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_float' The string '  2.5  ' cannot be converted to Float (line: 1, column: 30) on node golden.example.com"
+    },
+    "float-from-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 3.0
+    },
+    "float-from-true": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1.0
+    },
+    "float-rejects-text": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_float' The string 'abc' cannot be converted to Float (line: 1, column: 30) on node golden.example.com"
+    },
+    "float-rejects-empty": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_float' The string '' cannot be converted to Float (line: 1, column: 30) on node golden.example.com"
+    },
+    "float-rejects-undef": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_float' Value of type Undef cannot be converted to Float (line: 1, column: 30) on node golden.example.com"
+    },
+    "float-range-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from Float[0.0, 1.0].new() has wrong type, expects a Float[0.0, 1.0] value, got Float[2.5, 2.5] (line: 1, column: 40) on node golden.example.com"
+    },
+    "numeric-integer-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 42
+    },
+    "numeric-float-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 4.5
+    },
+    "numeric-hex-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 16
+    },
+    "numeric-exponent-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 100.0
+    },
+    "numeric-from-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 7
+    },
+    "numeric-from-float": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 7.5
+    },
+    "numeric-from-true": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1
+    },
+    "numeric-rejects-text": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_numeric' The string 'abc' cannot be converted to Numeric (line: 1, column: 32) on node golden.example.com"
+    }
+  }
+}

@@ -1,0 +1,157 @@
+description: >-
+  new() for the numeric types asked of puppet apply: Integer from strings in each base
+  notation, from floats and booleans, with a radix and abs, from the hash form, the
+  strings it rejects; Float and Numeric from strings, integers and booleans; a range
+  type's own new(). hyera.types.Integer(...) is Puppet's Integer.new(...).
+queries:
+  - id: integer-decimal-string
+    expression: 'Integer.new("42")'
+    python: {target: types, method: Integer, args: ["42"]}
+  - id: integer-negative-string
+    expression: 'Integer.new("-5")'
+    python: {target: types, method: Integer, args: ["-5"]}
+  - id: integer-hex-string
+    expression: 'Integer.new("0x1F")'
+    python: {target: types, method: Integer, args: ["0x1F"]}
+  - id: integer-binary-string
+    expression: 'Integer.new("0b101")'
+    python: {target: types, method: Integer, args: ["0b101"]}
+  - id: integer-leading-zero-string
+    expression: 'Integer.new("010")'
+    python: {target: types, method: Integer, args: ["010"]}
+  - id: integer-surrounding-space
+    expression: 'Integer.new("  7  ")'
+    python: {target: types, method: Integer, args: ["  7  "]}
+  - id: integer-from-float
+    expression: 'Integer.new(3.7)'
+    python: {target: types, method: Integer, args: [3.7]}
+  - id: integer-from-negative-float
+    expression: 'Integer.new(-3.7)'
+    python: {target: types, method: Integer, args: [-3.7]}
+  - id: integer-from-true
+    expression: 'Integer.new(true)'
+    python: {target: types, method: Integer, args: [true]}
+  - id: integer-from-false
+    expression: 'Integer.new(false)'
+    python: {target: types, method: Integer, args: [false]}
+  - id: integer-radix-binary
+    expression: 'Integer.new("101", 2)'
+    python: {target: types, method: Integer, args: ["101", 2]}
+  - id: integer-radix-octal
+    expression: 'Integer.new("17", 8)'
+    python: {target: types, method: Integer, args: ["17", 8]}
+  - id: integer-radix-hex-prefixed
+    expression: 'Integer.new("0xff", 16)'
+    python: {target: types, method: Integer, args: ["0xff", 16]}
+  - id: integer-radix-hex-bare
+    expression: 'Integer.new("ff", 16)'
+    python: {target: types, method: Integer, args: ["ff", 16]}
+  - id: integer-abs
+    expression: 'Integer.new("-7", 10, true)'
+    python: {target: types, method: Integer, args: ["-7", 10, true]}
+  - id: integer-hash-form
+    expression: 'Integer.new({"from" => "0x1F"})'
+    python: {target: types, method: Integer, args: [{from: "0x1F"}]}
+  - id: integer-hash-form-radix-abs
+    expression: 'Integer.new({"from" => "-101", "radix" => 2, "abs" => true})'
+    python:
+      target: types
+      method: Integer
+      args: [{from: "-101", radix: 2, abs: true}]
+  - id: integer-rejects-text
+    expression: 'Integer.new("zz")'
+    python: {target: types, method: Integer, args: [zz]}
+    error_class: HieraLookupError
+    error_match: "cannot be converted to Integer"
+  - id: integer-rejects-empty
+    expression: 'Integer.new("")'
+    python: {target: types, method: Integer, args: [""]}
+    error_class: HieraLookupError
+  - id: integer-rejects-a-float-string
+    expression: 'Integer.new("1.5")'
+    python: {target: types, method: Integer, args: ["1.5"]}
+    error_class: HieraLookupError
+  - id: integer-rejects-an-exponent-string
+    expression: 'Integer.new("1e3")'
+    python: {target: types, method: Integer, args: ["1e3"]}
+    error_class: HieraLookupError
+  - id: integer-rejects-undef
+    expression: 'Integer.new(undef)'
+    python: {target: types, method: Integer, args: [null]}
+    error_class: HieraLookupError
+  - id: integer-rejects-an-array
+    expression: 'Integer.new([1])'
+    python: {target: types, method: Integer, args: [[1]]}
+    error_class: HieraLookupError
+  - id: integer-range-accepts
+    expression: 'Integer[1, 5].new("3")'
+    python: {target: types, method: Integer, params: [1, 5], args: ["3"]}
+  - id: integer-range-rejects
+    expression: 'Integer[1, 5].new("9")'
+    python: {target: types, method: Integer, params: [1, 5], args: ["9"]}
+    error_class: HieraLookupError
+  - id: float-decimal-string
+    expression: 'Float.new("1.5")'
+    python: {target: types, method: Float, args: ["1.5"]}
+  - id: float-exponent-string
+    expression: 'Float.new("1e3")'
+    python: {target: types, method: Float, args: ["1e3"]}
+  - id: float-negative-exponent-string
+    expression: 'Float.new("1E-2")'
+    python: {target: types, method: Float, args: ["1E-2"]}
+  - id: float-integer-string
+    expression: 'Float.new("12")'
+    python: {target: types, method: Float, args: ["12"]}
+  - id: float-hex-string
+    expression: 'Float.new("0x10")'
+    python: {target: types, method: Float, args: ["0x10"]}
+  - id: float-surrounding-space
+    expression: 'Float.new("  2.5  ")'
+    python: {target: types, method: Float, args: ["  2.5  "]}
+  - id: float-from-integer
+    expression: 'Float.new(3)'
+    python: {target: types, method: Float, args: [3]}
+  - id: float-from-true
+    expression: 'Float.new(true)'
+    python: {target: types, method: Float, args: [true]}
+  - id: float-rejects-text
+    expression: 'Float.new("abc")'
+    python: {target: types, method: Float, args: [abc]}
+    error_class: HieraLookupError
+  - id: float-rejects-empty
+    expression: 'Float.new("")'
+    python: {target: types, method: Float, args: [""]}
+    error_class: HieraLookupError
+  - id: float-rejects-undef
+    expression: 'Float.new(undef)'
+    python: {target: types, method: Float, args: [null]}
+    error_class: HieraLookupError
+  - id: float-range-rejects
+    expression: 'Float[0.0, 1.0].new("2.5")'
+    python: {target: types, method: Float, params: [0.0, 1.0], args: ["2.5"]}
+    error_class: HieraLookupError
+  - id: numeric-integer-string
+    expression: 'Numeric.new("42")'
+    python: {target: types, method: Numeric, args: ["42"]}
+  - id: numeric-float-string
+    expression: 'Numeric.new("4.5")'
+    python: {target: types, method: Numeric, args: ["4.5"]}
+  - id: numeric-hex-string
+    expression: 'Numeric.new("0x10")'
+    python: {target: types, method: Numeric, args: ["0x10"]}
+  - id: numeric-exponent-string
+    expression: 'Numeric.new("1e2")'
+    python: {target: types, method: Numeric, args: ["1e2"]}
+  - id: numeric-from-integer
+    expression: 'Numeric.new(7)'
+    python: {target: types, method: Numeric, args: [7]}
+  - id: numeric-from-float
+    expression: 'Numeric.new(7.5)'
+    python: {target: types, method: Numeric, args: [7.5]}
+  - id: numeric-from-true
+    expression: 'Numeric.new(true)'
+    python: {target: types, method: Numeric, args: [true]}
+  - id: numeric-rejects-text
+    expression: 'Numeric.new("abc")'
+    python: {target: types, method: Numeric, args: [abc]}
+    error_class: HieraLookupError

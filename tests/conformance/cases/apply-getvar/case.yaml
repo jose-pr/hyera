@@ -1,0 +1,92 @@
+description: >-
+  getvar() asked of puppet apply over the top-scope variables the facts file defines:
+  plain and ::-qualified names, navigation into a hash and an array, the facts hash,
+  undefined variables with and without a default, null, the two walk errors with a
+  block, and names that are not valid variable names.
+queries:
+  - id: plain-variable
+    expression: 'getvar("role")'
+    python: {target: hiera, method: getvar, args: [role]}
+  - id: integer-variable
+    expression: 'getvar("num")'
+    python: {target: hiera, method: getvar, args: [num]}
+  - id: boolean-variable
+    expression: 'getvar("flag")'
+    python: {target: hiera, method: getvar, args: [flag]}
+  - id: qualified-name
+    expression: 'getvar("::role")'
+    python: {target: hiera, method: getvar, args: ["::role"]}
+  - id: hash-variable
+    expression: 'getvar("nested")'
+    python: {target: hiera, method: getvar, args: [nested]}
+  - id: navigate-hash
+    expression: 'getvar("nested.a")'
+    python: {target: hiera, method: getvar, args: [nested.a]}
+  - id: navigate-array
+    expression: 'getvar("nested.list.1")'
+    python: {target: hiera, method: getvar, args: [nested.list.1]}
+  - id: navigate-quoted-segment
+    expression: >-
+      getvar('nested."dotted.key"')
+    python: {target: hiera, method: getvar, args: ['nested."dotted.key"']}
+  - id: navigate-the-facts-hash
+    expression: 'getvar("facts.nested.a")'
+    python: {target: hiera, method: getvar, args: [facts.nested.a]}
+  - id: navigate-trusted
+    expression: 'getvar("trusted.authenticated")'
+    python: {target: hiera, method: getvar, args: [trusted.authenticated]}
+  - id: environment-variable
+    expression: 'getvar("environment")'
+    python: {target: hiera, method: getvar, args: [environment]}
+  - id: undefined-variable
+    expression: 'getvar("nope")'
+    python: {target: hiera, method: getvar, args: [nope]}
+  - id: undefined-variable-default
+    expression: 'getvar("nope", "d")'
+    python: {target: hiera, method: getvar, args: [nope, d]}
+  - id: undefined-variable-navigation
+    expression: 'getvar("nope.x", "d")'
+    python: {target: hiera, method: getvar, args: [nope.x, d]}
+  - id: null-variable-default
+    expression: 'getvar("empty", "d")'
+    python: {target: hiera, method: getvar, args: [empty, d]}
+  - id: found-ignores-default
+    expression: 'getvar("role", "d")'
+    python: {target: hiera, method: getvar, args: [role, d]}
+  - id: navigation-miss-default
+    expression: 'getvar("nested.zz", "d")'
+    python: {target: hiera, method: getvar, args: [nested.zz, d]}
+  - id: navigation-miss
+    expression: 'getvar("nested.zz")'
+    python: {target: hiera, method: getvar, args: [nested.zz]}
+  - id: navigate-into-a-string
+    expression: 'getvar("role.x")'
+    python: {target: hiera, method: getvar, args: [role.x]}
+    error_class: HieraLookupError
+  - id: walk-error-block-message
+    expression: 'getvar("nested.a.x") |$e| { $e.msg }'
+    python: {target: hiera, method: getvar, args: [nested.a.x], block: message}
+  - id: walk-error-block-constant
+    expression: 'getvar("nested.list.x") |$e| { "blk" }'
+    python: {target: hiera, method: getvar, args: [nested.list.x], block: const}
+  - id: walk-error-raises
+    expression: 'getvar("nested.list.x")'
+    python: {target: hiera, method: getvar, args: [nested.list.x]}
+    error_class: HieraLookupError
+  - id: name-starts-with-a-digit
+    expression: 'getvar("1bad")'
+    python: {target: hiera, method: getvar, args: ["1bad"]}
+    error_class: HieraLookupError
+    error_match: "does not start with a valid variable name"
+  - id: name-starts-with-a-capital
+    expression: 'getvar("Role")'
+    python: {target: hiera, method: getvar, args: ["Role"]}
+    error_class: HieraLookupError
+  - id: empty-name
+    expression: 'getvar("")'
+    python: {target: hiera, method: getvar, args: [""]}
+    error_class: HieraLookupError
+  - id: trailing-dot
+    expression: 'getvar("nested.")'
+    python: {target: hiera, method: getvar, args: ["nested."]}
+    error_class: HieraLookupError

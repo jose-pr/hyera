@@ -1,0 +1,9 @@
+---
+role: web
+num: 3
+flag: true
+empty: ~
+nested:
+  a: 1
+  list: [5, 6]
+  "dotted.key": quoted

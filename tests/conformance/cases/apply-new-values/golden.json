@@ -1,0 +1,427 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "99c22912e7f5bb44d7085a8b42179c2368b0786e6a9877b7e3b32e9d671eba5c",
+  "results": {
+    "string-from-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "42"
+    },
+    "string-from-float": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "1.500000"
+    },
+    "string-from-true": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "true"
+    },
+    "string-from-undef": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": ""
+    },
+    "string-from-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "[1, 'a']"
+    },
+    "string-from-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "{'a' => 1}"
+    },
+    "string-hex-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "ff"
+    },
+    "string-alternate-hex-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "0xff"
+    },
+    "string-binary-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "1010"
+    },
+    "string-octal-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "10"
+    },
+    "string-padded-float-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "0003.142"
+    },
+    "string-exponent-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "1.234500e+03"
+    },
+    "string-width-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "   abc"
+    },
+    "string-character-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "A"
+    },
+    "string-inspect-format": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "[1, 2]"
+    },
+    "string-format-for-the-wrong-type": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "abc"
+    },
+    "string-unknown-format": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Illegal format 'q' specified for value of Integer type - expected one of the characters 'dxXobBeEfgGaAspc' (line: 1, column: 31) on node golden.example.com"
+    },
+    "string-hash-format-with-a-string-key": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_string' expects (Convertible = Any from, Formats = Variant[Default, String[1], TypeMap = Hash[Type, Variant[Format = Pattern[/^%([\\s\\[+#0{<(|-]*)([1-9][0-9]*)?(?:\\.([0-9]+))?([a-zA-Z])$/], ContainerFormat = Struct[{Optional['format'] => Format = Pattern[/^%([\\s\\[+#0{<(|-]*)([1-9][0-9]*)?(?:\\.([0-9]+))?([a-zA-Z])$/], Optional['separator'] => String, Optional['separator2'] => String, Optional['string_formats'] => Hash[Type, Format = Pattern[/^%([\\s\\[+#0{<(|-]*)([1-9][0-9]*)?(?:\\.([0-9]+))?([a-zA-Z])$/]]}]]]] string_formats?)\nrejected: parameter 'string_formats' variant 0 expects a Default value, got Struct\nrejected: parameter 'string_formats' variant 1 expects a String value, got Struct\nrejected: parameter 'string_formats' variant 2 key of entry 'format' expects a Type value, got String (line: 1, column: 31) on node golden.example.com"
+    },
+    "string-length-range-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from String[1, 2].new() has wrong type, expects a String[1, 2] value, got String (line: 1, column: 37) on node golden.example.com"
+    },
+    "boolean-from-true-word": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-from-yes": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-from-capital-no": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": false
+    },
+    "boolean-from-y": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-from-zero": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": false
+    },
+    "boolean-from-one": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-from-true-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-from-one-point-zero": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-rejects-two": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "boolean-rejects-a-word": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_boolean' The string 'maybe' cannot be converted to Boolean (line: 1, column: 32) on node golden.example.com"
+    },
+    "boolean-rejects-undef": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new_boolean' Value of type Undef cannot be converted to Boolean (line: 1, column: 32) on node golden.example.com"
+    },
+    "array-from-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        2
+      ]
+    },
+    "array-from-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        [
+          "a",
+          1
+        ],
+        [
+          "b",
+          2
+        ]
+      ]
+    },
+    "array-from-empty-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": []
+    },
+    "array-wraps-a-scalar": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "ab"
+      ]
+    },
+    "array-wraps-an-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "array-does-not-wrap-an-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1
+      ]
+    },
+    "array-from-a-string-without-wrap": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    "array-from-an-integer-without-wrap": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        0
+      ]
+    },
+    "array-element-type-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from Array[Integer].new() has wrong type, index 0 expects an Integer value, got String (line: 1, column: 39) on node golden.example.com"
+    },
+    "hash-from-pairs": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "hash-from-integer-pairs": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Hash",
+        "__pvalue": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    "hash-from-hash": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "hash-from-empty-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {}
+    },
+    "hash-rejects-a-flat-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Hash",
+        "__pvalue": [
+          1,
+          2
+        ]
+      }
+    },
+    "hash-rejects-a-short-pair": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, odd number of arguments for Hash (line: 1, column: 29) on node golden.example.com"
+    },
+    "hash-rejects-a-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, odd number of arguments for Hash (line: 1, column: 29) on node golden.example.com"
+    },
+    "sensitive-from-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Sensitive",
+        "__pvalue": "x"
+      }
+    },
+    "sensitive-from-integer": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Sensitive",
+        "__pvalue": 1
+      }
+    },
+    "sensitive-from-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Sensitive",
+        "__pvalue": [
+          1,
+          "a"
+        ]
+      }
+    },
+    "tuple-accepts": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        1,
+        "a"
+      ]
+    },
+    "tuple-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from Tuple[Integer].new() has wrong type, index 0 expects an Integer value, got String (line: 1, column: 39) on node golden.example.com"
+    },
+    "struct-accepts": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1
+      }
+    },
+    "struct-rejects": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, Converted value from Struct[{'a' => Integer}].new() has wrong type, entry 'a' expects an Integer value, got String (line: 1, column: 49) on node golden.example.com"
+    },
+    "optional-converts-a-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "optional-keeps-undef": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "notundef-converts-a-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "notundef-rejects-undef": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Method call, 'new' Value of type Undef cannot be converted to Integer (line: 1, column: 42) on node golden.example.com"
+    },
+    "regexp-from-a-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Regexp",
+        "__pvalue": "a.b"
+      }
+    }
+  }
+}

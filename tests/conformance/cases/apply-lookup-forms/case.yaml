@@ -1,0 +1,174 @@
+description: >-
+  Every call form of lookup() asked of puppet apply: positional arguments, the
+  options hash alone and after the name, a list of names, and the order in which
+  override, the hierarchy, default_values_hash, the block and default_value
+  answer, including each kind of miss.
+queries:
+  - id: positional-name
+    expression: 'lookup("s")'
+    python: {target: hiera, method: lookup, args: [s]}
+  - id: positional-type
+    expression: 'lookup("n", Integer)'
+    python: {target: hiera, method: lookup, args: [n, Integer]}
+  - id: positional-all-four
+    expression: 'lookup("n", Integer, "first", 0)'
+    python: {target: hiera, method: lookup, args: [n, Integer, first, 0]}
+  - id: options-hash-alone
+    expression: 'lookup({"name" => "s", "value_type" => String, "merge" => "first"})'
+    python:
+      target: hiera
+      method: lookup
+      args: [{name: s, value_type: String, merge: first}]
+  - id: options-hash-after-name
+    expression: 'lookup("s", {"merge" => "first", "default_value" => "d"})'
+    python:
+      target: hiera
+      method: lookup
+      args: [s, {merge: first, default_value: d}]
+  - id: keyword-merge-unique
+    expression: 'lookup("u", Array, "unique")'
+    python: {target: hiera, method: lookup, args: [u, Array, unique]}
+  - id: lookup-options-merge
+    expression: 'lookup("u")'
+    python: {target: hiera, method: lookup, args: [u]}
+  - id: name-list-first-found
+    expression: 'lookup(["missing", "s"])'
+    python: {target: hiera, method: lookup, args: [[missing, s]]}
+  - id: name-list-all-miss
+    expression: 'lookup(["missing1", "missing2"])'
+    python: {target: hiera, method: lookup, args: [[missing1, missing2]]}
+  - id: miss-no-default
+    expression: 'lookup("missing")'
+    python: {target: hiera, method: lookup, args: [missing]}
+  - id: dotted-key-into-array
+    expression: 'lookup("h.b.1")'
+    python: {target: hiera, method: lookup, args: ["h.b.1"]}
+  - id: dotted-key-miss
+    expression: 'lookup("h.zz")'
+    python: {target: hiera, method: lookup, args: ["h.zz"]}
+  - id: found-null-beats-default
+    expression: 'lookup("nilk", {"default_value" => "d"})'
+    python:
+      target: hiera
+      method: lookup
+      args: [nilk, {default_value: d}]
+  - id: interpolated-value
+    expression: 'lookup("interp")'
+    python: {target: hiera, method: lookup, args: [interp]}
+  - id: convert-to-from-lookup-options
+    expression: 'lookup("cvint")'
+    python: {target: hiera, method: lookup, args: [cvint]}
+  - id: default-value-on-miss
+    expression: 'lookup("missing", {"default_value" => 7})'
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_value: 7}]
+  - id: default-undef-is-a-default
+    expression: 'lookup("missing", {"default_value" => undef})'
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_value: null}]
+  - id: default-values-hash-hit
+    expression: 'lookup("missing", {"default_values_hash" => {"missing" => 8}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_values_hash: {missing: 8}}]
+  - id: default-values-hash-beats-default-value
+    expression: >-
+      lookup("missing", {"default_values_hash" => {"missing" => 8},
+      "default_value" => 9})
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_values_hash: {missing: 8}, default_value: 9}]
+  - id: default-values-hash-second-name
+    expression: >-
+      lookup(["m1", "m2"], {"default_values_hash" => {"m2" => "two"}})
+    python:
+      target: hiera
+      method: lookup
+      args: [[m1, m2], {default_values_hash: {m2: two}}]
+  - id: default-values-hash-after-whole-hierarchy
+    expression: >-
+      lookup(["dvh_shadow", "other"],
+      {"default_values_hash" => {"dvh_shadow" => "from-dvh", "other" => "x"}})
+    python:
+      target: hiera
+      method: lookup
+      args:
+        - [dvh_shadow, other]
+        - default_values_hash: {dvh_shadow: from-dvh, other: x}
+  - id: default-values-hash-miss-falls-to-default
+    expression: >-
+      lookup("missing", {"default_values_hash" => {"other" => 1},
+      "default_value" => "d"})
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_values_hash: {other: 1}, default_value: d}]
+  - id: override-beats-hierarchy
+    expression: 'lookup("s", {"override" => {"s" => "ov"}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [s, {override: {s: ov}}]
+  - id: override-miss-reads-hierarchy
+    expression: 'lookup("s", {"override" => {"other" => "ov"}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [s, {override: {other: ov}}]
+  - id: override-skips-convert-to
+    expression: 'lookup("cvint", {"override" => {"cvint" => "9"}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [cvint, {override: {cvint: "9"}}]
+  - id: override-beats-default-values-hash
+    expression: >-
+      lookup("missing", {"override" => {"missing" => "ov"},
+      "default_values_hash" => {"missing" => "dv"}})
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {override: {missing: ov}, default_values_hash: {missing: dv}}]
+  - id: override-feeds-interpolation
+    expression: 'lookup("interp", {"override" => {"facts" => {"role" => "ovrole"}}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [interp, {override: {facts: {role: ovrole}}}]
+  - id: block-receives-the-name
+    expression: 'lookup("missing") |$name| { $name }'
+    python: {target: hiera, method: lookup, args: [missing], block: echo}
+  - id: block-receives-the-name-list
+    expression: 'lookup(["m1", "m2"]) |$name| { $name }'
+    python: {target: hiera, method: lookup, args: [[m1, m2]], block: echo}
+  - id: block-constant
+    expression: 'lookup("missing") |$name| { "blk" }'
+    python: {target: hiera, method: lookup, args: [missing], block: const}
+  - id: block-not-called-on-a-hit
+    expression: 'lookup("s") |$name| { "blk" }'
+    python: {target: hiera, method: lookup, args: [s], block: const}
+  - id: block-beats-default-value
+    expression: 'lookup("missing", {"default_value" => "d"}) |$name| { "blk" }'
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_value: d}]
+      block: const
+  - id: default-values-hash-beats-block
+    expression: >-
+      lookup("missing", {"default_values_hash" => {"missing" => "dv"}})
+      |$name| { "blk" }
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {default_values_hash: {missing: dv}}]
+      block: const
+  - id: block-returning-undef
+    expression: 'lookup("missing") |$name| { undef }'
+    python: {target: hiera, method: lookup, args: [missing], block: undef}

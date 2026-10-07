@@ -1,0 +1,213 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "92d32e0e284001f064bdf45173dfcac7d189f66e0c35f8ece47ce4c760945f08",
+  "results": {
+    "integer-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "integer-range-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "integer-range-misses": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects an Integer[6, 10] value, got Integer[5, 5] (line: 1, column: 21) on node golden.example.com"
+    },
+    "found-value-wrong-type": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects an Integer value, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "found-null-against-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects a String value, got Undef (line: 1, column: 21) on node golden.example.com"
+    },
+    "found-null-against-optional": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "float-against-numeric": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 1.5
+    },
+    "float-against-integer": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects an Integer value, got Float (line: 1, column: 21) on node golden.example.com"
+    },
+    "boolean-against-scalar": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": true
+    },
+    "array-element-type-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        10,
+        20,
+        30
+      ]
+    },
+    "array-element-type-misses": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call,  Found value has wrong type, index 0 expects a String value, got Integer\nFound value has wrong type, index 1 expects a String value, got Integer\nFound value has wrong type, index 2 expects a String value, got Integer (line: 1, column: 21) on node golden.example.com"
+    },
+    "array-size-misses": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects size to be at least 4, got 3 (line: 1, column: 21) on node golden.example.com"
+    },
+    "hash-value-type-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "hash-value-type-misses": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, entry 'b' expects an Integer value, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "struct-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    },
+    "struct-missing-key": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call,  Found value has wrong type, expects a value for key 'c'\nFound value has wrong type, unrecognized key 'b' (line: 1, column: 21) on node golden.example.com"
+    },
+    "variant-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "enum-misses": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects a match for Enum['a', 'b'], got 'str' (line: 1, column: 21) on node golden.example.com"
+    },
+    "pattern-holds": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "str"
+    },
+    "convert-to-sensitive": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Sensitive",
+        "__pvalue": "secret"
+      }
+    },
+    "sensitive-against-sensitive-string": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "__ptype": "Sensitive",
+        "__pvalue": "secret"
+      }
+    },
+    "sensitive-against-string": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Found value has wrong type, expects a String value, got Sensitive[String] (line: 1, column: 21) on node golden.example.com"
+    },
+    "converted-value-meets-the-type": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 12
+    },
+    "default-wrong-type": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Default value has wrong type, expects an Integer value, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "default-right-type": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 3
+    },
+    "default-undef-against-optional": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "override-value-wrong-type": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Value found for key 'n' in override hash has wrong type, expects a String value, got Integer (line: 1, column: 21) on node golden.example.com"
+    },
+    "default-values-hash-wrong-type": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Value found for key 'missing' in default values hash has wrong type, expects an Integer value, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "block-result-wrong-type": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Value returned from default block has wrong type, expects an Integer value, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "block-result-right-type": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "blk"
+    }
+  }
+}

@@ -1,0 +1,131 @@
+description: >-
+  The value_type argument of lookup() asked of puppet apply: a type that holds, a
+  type that does not for a found value, an override, a default_values_hash entry,
+  a default and a block result, and the parameterised types a mismatch text names.
+queries:
+  - id: integer-holds
+    expression: 'lookup("n", Integer)'
+    python: {target: hiera, method: lookup, args: [n, Integer]}
+  - id: integer-range-holds
+    expression: 'lookup("n", Integer[1, 10])'
+    python: {target: hiera, method: lookup, args: [n, "Integer[1, 10]"]}
+  - id: integer-range-misses
+    expression: 'lookup("n", Integer[6, 10])'
+    python: {target: hiera, method: lookup, args: [n, "Integer[6, 10]"]}
+    error_class: HieraLookupError
+  - id: found-value-wrong-type
+    expression: 'lookup("s", Integer)'
+    python: {target: hiera, method: lookup, args: [s, Integer]}
+    error_class: HieraLookupError
+    error_match: "Found value has wrong type, expects an Integer value, got String"
+  - id: found-null-against-string
+    expression: 'lookup("nilk", String)'
+    python: {target: hiera, method: lookup, args: [nilk, String]}
+    error_class: HieraLookupError
+  - id: found-null-against-optional
+    expression: 'lookup("nilk", Optional[String])'
+    python: {target: hiera, method: lookup, args: [nilk, "Optional[String]"]}
+  - id: float-against-numeric
+    expression: 'lookup("f", Numeric)'
+    python: {target: hiera, method: lookup, args: [f, Numeric]}
+  - id: float-against-integer
+    expression: 'lookup("f", Integer)'
+    python: {target: hiera, method: lookup, args: [f, Integer]}
+    error_class: HieraLookupError
+  - id: boolean-against-scalar
+    expression: 'lookup("b", Scalar)'
+    python: {target: hiera, method: lookup, args: [b, Scalar]}
+  - id: array-element-type-holds
+    expression: 'lookup("arr", Array[Integer])'
+    python: {target: hiera, method: lookup, args: [arr, "Array[Integer]"]}
+  - id: array-element-type-misses
+    expression: 'lookup("arr", Array[String])'
+    python: {target: hiera, method: lookup, args: [arr, "Array[String]"]}
+    error_class: HieraLookupError
+  - id: array-size-misses
+    expression: 'lookup("arr", Array[Integer, 4])'
+    python: {target: hiera, method: lookup, args: [arr, "Array[Integer, 4]"]}
+    error_class: HieraLookupError
+  - id: hash-value-type-holds
+    expression: 'lookup("hsi", Hash[String, Integer])'
+    python: {target: hiera, method: lookup, args: [hsi, "Hash[String, Integer]"]}
+  - id: hash-value-type-misses
+    expression: 'lookup("hmix", Hash[String, Integer])'
+    python: {target: hiera, method: lookup, args: [hmix, "Hash[String, Integer]"]}
+    error_class: HieraLookupError
+  - id: struct-holds
+    expression: 'lookup("hsi", Struct[{"a" => Integer, "b" => Integer}])'
+    python:
+      target: hiera
+      method: lookup
+      args: [hsi, "Struct[{'a' => Integer, 'b' => Integer}]"]
+  - id: struct-missing-key
+    expression: 'lookup("hsi", Struct[{"a" => Integer, "c" => Integer}])'
+    python:
+      target: hiera
+      method: lookup
+      args: [hsi, "Struct[{'a' => Integer, 'c' => Integer}]"]
+    error_class: HieraLookupError
+  - id: variant-holds
+    expression: 'lookup("s", Variant[Integer, String])'
+    python: {target: hiera, method: lookup, args: [s, "Variant[Integer, String]"]}
+  - id: enum-misses
+    expression: 'lookup("s", Enum["a", "b"])'
+    python: {target: hiera, method: lookup, args: [s, "Enum['a', 'b']"]}
+    error_class: HieraLookupError
+  - id: pattern-holds
+    expression: 'lookup("s", Pattern[/^s/])'
+    python: {target: hiera, method: lookup, args: [s, "Pattern[/^s/]"]}
+  - id: convert-to-sensitive
+    expression: 'lookup("sens")'
+    python: {target: hiera, method: lookup, args: [sens]}
+  - id: sensitive-against-sensitive-string
+    expression: 'lookup("sens", Sensitive[String])'
+    python: {target: hiera, method: lookup, args: [sens, "Sensitive[String]"]}
+  - id: sensitive-against-string
+    expression: 'lookup("sens", String)'
+    python: {target: hiera, method: lookup, args: [sens, String]}
+    error_class: HieraLookupError
+  - id: converted-value-meets-the-type
+    expression: 'lookup("num_str", Integer)'
+    python: {target: hiera, method: lookup, args: [num_str, Integer]}
+  - id: default-wrong-type
+    expression: 'lookup("missing", Integer, "first", "x")'
+    python: {target: hiera, method: lookup, args: [missing, Integer, first, x]}
+    error_class: HieraLookupError
+    error_match: "Default value has wrong type"
+  - id: default-right-type
+    expression: 'lookup("missing", Integer, "first", 3)'
+    python: {target: hiera, method: lookup, args: [missing, Integer, first, 3]}
+  - id: default-undef-against-optional
+    expression: 'lookup("missing", Optional[Integer], "first", undef)'
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, "Optional[Integer]", first, null]
+  - id: override-value-wrong-type
+    expression: 'lookup("n", {"value_type" => String, "override" => {"n" => 1}})'
+    python:
+      target: hiera
+      method: lookup
+      args: [n, {value_type: String, override: {n: 1}}]
+    error_class: HieraLookupError
+    error_match: "in override hash has wrong type"
+  - id: default-values-hash-wrong-type
+    expression: >-
+      lookup("missing", {"value_type" => Integer,
+      "default_values_hash" => {"missing" => "x"}})
+    python:
+      target: hiera
+      method: lookup
+      args: [missing, {value_type: Integer, default_values_hash: {missing: x}}]
+    error_class: HieraLookupError
+    error_match: "in default values hash has wrong type"
+  - id: block-result-wrong-type
+    expression: 'lookup("missing", Integer) |$k| { "blk" }'
+    python: {target: hiera, method: lookup, args: [missing, Integer], block: const}
+    error_class: HieraLookupError
+    error_match: "Value returned from default block has wrong type"
+  - id: block-result-right-type
+    expression: 'lookup("missing", String) |$k| { "blk" }'
+    python: {target: hiera, method: lookup, args: [missing, String], block: const}

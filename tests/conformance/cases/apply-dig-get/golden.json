@@ -1,0 +1,211 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "fa3556d6c9b7beb87a535934113b9731053167a27b88338d67975c7a9a7edb23",
+  "results": {
+    "dig-hash-path": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 2
+    },
+    "dig-array-index": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "y"
+    },
+    "dig-negative-index": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "deep"
+    },
+    "dig-out-of-range-index": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "dig-root-miss": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "dig-missing-key": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "dig-through-null": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "dig-key-holding-a-dot": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "dotted"
+    },
+    "dig-whole-root-collection": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": [
+        10,
+        20,
+        [
+          30,
+          {
+            "k": "deep"
+          }
+        ]
+      ]
+    },
+    "dig-root-not-a-collection": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, 'dig' parameter 'data' expects a value of type Undef or Collection, got String (line: 1, column: 21) on node golden.example.com"
+    },
+    "dig-string-key-against-array": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, The given data requires an Integer index at [\"b\", \"x\"], got 'String' (line: 1, column: 21) on node golden.example.com"
+    },
+    "dig-into-a-scalar-midway": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, The given data does not contain a Collection at [\"a\"], got 'Integer[1, 1]' (line: 1, column: 21) on node golden.example.com"
+    },
+    "get-hash-path": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 2
+    },
+    "get-array-index": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "y"
+    },
+    "get-numeric-segment-in-array": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "deep"
+    },
+    "get-quoted-segment": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "dotted"
+    },
+    "get-whole-value": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": {
+        "a": 1,
+        "b": [
+          "x",
+          "y"
+        ],
+        "c": {
+          "d": 2
+        },
+        "e.f": "dotted",
+        "n": null
+      }
+    },
+    "get-miss-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "get-root-miss-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "get-null-value-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "d"
+    },
+    "get-miss-without-default": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "get-walk-error-raises": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, The given data does not contain a Collection at [\"a\"], got 'Integer[1, 1]' (line: 1, column: 21) on node golden.example.com"
+    },
+    "get-walk-error-block-constant": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "blk"
+    },
+    "get-walk-error-block-message-collection": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "The given data does not contain a Collection at [\"a\"], got 'Integer[1, 1]'"
+    },
+    "get-walk-error-block-message-index": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": "The given data requires an Integer index at [\"b\", \"x\"], got 'String'"
+    },
+    "get-block-undef-keeps-undef": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "get-block-not-called-on-a-hit": {
+      "channel": "apply",
+      "exit_status": 0,
+      "status": "found",
+      "value": 2
+    },
+    "get-syntax-error": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Syntax error in dotted-navigation string (line: 1, column: 21) on node golden.example.com"
+    },
+    "get-syntax-error-ignores-the-block": {
+      "channel": "apply",
+      "exit_status": 1,
+      "status": "error",
+      "message": "Evaluation Error: Error while evaluating a Function Call, Syntax error in dotted-navigation string (line: 1, column: 21) on node golden.example.com"
+    }
+  }
+}

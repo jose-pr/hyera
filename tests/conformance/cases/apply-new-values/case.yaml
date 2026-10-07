@@ -1,0 +1,199 @@
+description: >-
+  new() for the string, boolean and collection types asked of puppet apply: String
+  with and without a format, Boolean from words and numbers, Array and Hash from
+  other collections and with wrapping, Sensitive, and the container and wrapper
+  types' own new(). A type hyera has no new() for is a declared deviation.
+queries:
+  - id: string-from-integer
+    expression: 'String.new(42)'
+    python: {target: types, method: String, args: [42]}
+  - id: string-from-float
+    expression: 'String.new(1.5)'
+    python: {target: types, method: String, args: [1.5]}
+  - id: string-from-true
+    expression: 'String.new(true)'
+    python: {target: types, method: String, args: [true]}
+  - id: string-from-undef
+    expression: 'String.new(undef)'
+    python: {target: types, method: String, args: [null]}
+  - id: string-from-array
+    expression: 'String.new([1, "a"])'
+    python: {target: types, method: String, args: [[1, a]]}
+  - id: string-from-hash
+    expression: 'String.new({"a" => 1})'
+    python: {target: types, method: String, args: [{a: 1}]}
+  - id: string-hex-format
+    expression: 'String.new(255, "%x")'
+    python: {target: types, method: String, args: [255, "%x"]}
+  - id: string-alternate-hex-format
+    expression: 'String.new(255, "%#x")'
+    python: {target: types, method: String, args: [255, "%#x"]}
+  - id: string-binary-format
+    expression: 'String.new(10, "%b")'
+    python: {target: types, method: String, args: [10, "%b"]}
+  - id: string-octal-format
+    expression: 'String.new(8, "%o")'
+    python: {target: types, method: String, args: [8, "%o"]}
+  - id: string-padded-float-format
+    expression: 'String.new(3.14159, "%08.3f")'
+    python: {target: types, method: String, args: [3.14159, "%08.3f"]}
+  - id: string-exponent-format
+    expression: 'String.new(1234.5, "%e")'
+    python: {target: types, method: String, args: [1234.5, "%e"]}
+  - id: string-width-format
+    expression: 'String.new("abc", "%6s")'
+    python: {target: types, method: String, args: [abc, "%6s"]}
+  - id: string-character-format
+    expression: 'String.new(65, "%c")'
+    python: {target: types, method: String, args: [65, "%c"]}
+  - id: string-inspect-format
+    expression: 'String.new([1, 2], "%p")'
+    python: {target: types, method: String, args: [[1, 2], "%p"]}
+  - id: string-format-for-the-wrong-type
+    expression: 'String.new("abc", "%d")'
+    python: {target: types, method: String, args: [abc, "%d"]}
+    error_class: HieraLookupError
+  - id: string-unknown-format
+    expression: 'String.new(1, "%q")'
+    python: {target: types, method: String, args: [1, "%q"]}
+    error_class: HieraLookupError
+  - id: string-hash-format-with-a-string-key
+    expression: 'String.new(255, {"format" => "%x"})'
+    python: {target: types, method: String, args: [255, {format: "%x"}]}
+    error_class: HieraLookupError
+  - id: string-length-range-rejects
+    expression: 'String[1, 2].new("abcd")'
+    python: {target: types, method: String, params: [1, 2], args: [abcd]}
+    error_class: HieraLookupError
+  - id: boolean-from-true-word
+    expression: 'Boolean.new("true")'
+    python: {target: types, method: Boolean, args: ["true"]}
+  - id: boolean-from-yes
+    expression: 'Boolean.new("yes")'
+    python: {target: types, method: Boolean, args: ["yes"]}
+  - id: boolean-from-capital-no
+    expression: 'Boolean.new("NO")'
+    python: {target: types, method: Boolean, args: ["NO"]}
+  - id: boolean-from-y
+    expression: 'Boolean.new("y")'
+    python: {target: types, method: Boolean, args: [y]}
+  - id: boolean-from-zero
+    expression: 'Boolean.new(0)'
+    python: {target: types, method: Boolean, args: [0]}
+  - id: boolean-from-one
+    expression: 'Boolean.new(1)'
+    python: {target: types, method: Boolean, args: [1]}
+  - id: boolean-from-true-value
+    expression: 'Boolean.new(true)'
+    python: {target: types, method: Boolean, args: [true]}
+  - id: boolean-from-one-point-zero
+    expression: 'Boolean.new(1.0)'
+    python: {target: types, method: Boolean, args: [1.0]}
+  - id: boolean-rejects-two
+    expression: 'Boolean.new(2)'
+    python: {target: types, method: Boolean, args: [2]}
+    error_class: HieraLookupError
+  - id: boolean-rejects-a-word
+    expression: 'Boolean.new("maybe")'
+    python: {target: types, method: Boolean, args: [maybe]}
+    error_class: HieraLookupError
+  - id: boolean-rejects-undef
+    expression: 'Boolean.new(undef)'
+    python: {target: types, method: Boolean, args: [null]}
+    error_class: HieraLookupError
+  - id: array-from-array
+    expression: 'Array.new([1, 2])'
+    python: {target: types, method: Array, args: [[1, 2]]}
+  - id: array-from-hash
+    expression: 'Array.new({"a" => 1, "b" => 2})'
+    python: {target: types, method: Array, args: [{a: 1, b: 2}]}
+  - id: array-from-empty-hash
+    expression: 'Array.new({})'
+    python: {target: types, method: Array, args: [{}]}
+  - id: array-wraps-a-scalar
+    expression: 'Array.new("ab", true)'
+    python: {target: types, method: Array, args: [ab, true]}
+  - id: array-wraps-an-integer
+    expression: 'Array.new(1, true)'
+    python: {target: types, method: Array, args: [1, true]}
+  - id: array-does-not-wrap-an-array
+    expression: 'Array.new([1], true)'
+    python: {target: types, method: Array, args: [[1], true]}
+  - id: array-from-a-string-without-wrap
+    expression: 'Array.new("ab")'
+    python: {target: types, method: Array, args: [ab]}
+  - id: array-from-an-integer-without-wrap
+    expression: 'Array.new(1)'
+    python: {target: types, method: Array, args: [1]}
+    error_class: HieraLookupError
+  - id: array-element-type-rejects
+    expression: 'Array[Integer].new(["a"])'
+    python: {target: types, method: Array, params: [Integer], args: [[a]]}
+    error_class: HieraLookupError
+  - id: hash-from-pairs
+    expression: 'Hash.new([["a", 1], ["b", 2]])'
+    python: {target: types, method: Hash, args: [[[a, 1], [b, 2]]]}
+  - id: hash-from-integer-pairs
+    expression: 'Hash.new([[1, 2], [3, 4]])'
+    python: {target: types, method: Hash, args: [[[1, 2], [3, 4]]]}
+  - id: hash-from-hash
+    expression: 'Hash.new({"a" => 1})'
+    python: {target: types, method: Hash, args: [{a: 1}]}
+  - id: hash-from-empty-array
+    expression: 'Hash.new([])'
+    python: {target: types, method: Hash, args: [[]]}
+  - id: hash-rejects-a-flat-array
+    expression: 'Hash.new([1, 2])'
+    python: {target: types, method: Hash, args: [[1, 2]]}
+    error_class: HieraLookupError
+  - id: hash-rejects-a-short-pair
+    expression: 'Hash.new([["a"]])'
+    python: {target: types, method: Hash, args: [[[a]]]}
+    error_class: HieraLookupError
+  - id: hash-rejects-a-string
+    expression: 'Hash.new("a")'
+    python: {target: types, method: Hash, args: [a]}
+    error_class: HieraLookupError
+  - id: sensitive-from-string
+    expression: 'Sensitive.new("x")'
+    python: {target: types, method: Sensitive, args: [x]}
+  - id: sensitive-from-integer
+    expression: 'Sensitive.new(1)'
+    python: {target: types, method: Sensitive, args: [1]}
+  - id: sensitive-from-array
+    expression: 'Sensitive.new([1, "a"])'
+    python: {target: types, method: Sensitive, args: [[1, a]]}
+  - id: tuple-accepts
+    expression: 'Tuple[Integer, String].new([1, "a"])'
+    python: {target: types, method: Tuple, params: [Integer, String], args: [[1, a]]}
+  - id: tuple-rejects
+    expression: 'Tuple[Integer].new(["x"])'
+    python: {target: types, method: Tuple, params: [Integer], args: [[x]]}
+    error_class: HieraLookupError
+  - id: struct-accepts
+    expression: 'Struct[{"a" => Integer}].new({"a" => 1})'
+    python: {target: types, method: Struct, params: [{a: Integer}], args: [{a: 1}]}
+  - id: struct-rejects
+    expression: 'Struct[{"a" => Integer}].new({"a" => "x"})'
+    python: {target: types, method: Struct, params: [{a: Integer}], args: [{a: x}]}
+    error_class: HieraLookupError
+  - id: optional-converts-a-value
+    expression: 'Optional[Integer].new("5")'
+    python: {target: types, method: Optional, params: [{type: Integer}], args: ["5"]}
+  - id: optional-keeps-undef
+    expression: 'Optional[Integer].new(undef)'
+    python: {target: types, method: Optional, params: [{type: Integer}], args: [null]}
+  - id: notundef-converts-a-value
+    expression: 'NotUndef[Integer].new("5")'
+    python: {target: types, method: NotUndef, params: [{type: Integer}], args: ["5"]}
+  - id: notundef-rejects-undef
+    expression: 'NotUndef[Integer].new(undef)'
+    python: {target: types, method: NotUndef, params: [{type: Integer}], args: [null]}
+    error_class: HieraLookupError
+  - id: regexp-from-a-string
+    expression: 'Regexp.new("a.b")'
+    python: {target: types, method: Regexp, args: ["a.b"]}
+    deviation:
+      id: convert-to-unsupported-type
+      reason: hyera has no new() for Regexp, which Puppet converts.
+      expect: {status: error}

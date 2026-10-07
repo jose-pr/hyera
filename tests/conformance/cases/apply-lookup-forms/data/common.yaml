@@ -1,0 +1,16 @@
+---
+lookup_options:
+  cvint: {convert_to: Integer}
+  u: {merge: unique}
+s: str
+n: 5
+cvint: "7"
+nilk: ~
+u: [2]
+h:
+  a: 1
+  b: [x, y]
+  c: {d: 2}
+arr: [10, 20, 30]
+interp: "role-%{facts.role}"
+dvh_shadow: from-hierarchy

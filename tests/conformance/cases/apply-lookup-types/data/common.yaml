@@ -1,0 +1,14 @@
+---
+lookup_options:
+  sens: {convert_to: Sensitive}
+  num_str: {convert_to: Integer}
+n: 5
+s: str
+nilk: ~
+num_str: "12"
+sens: secret
+f: 1.5
+b: true
+arr: [10, 20, 30]
+hsi: {a: 1, b: 2}
+hmix: {a: 1, b: x}

@@ -1,0 +1,108 @@
+description: >-
+  dig() and get() asked of puppet apply over a looked-up value: hits through hashes
+  and arrays, negative and out-of-range indexes, misses, undef along the way, the two
+  walk errors with and without a block, a default, and a malformed navigation string.
+  The Puppet side is get(lookup(root, undef default), path) where hyera's Hiera.get
+  and Hiera.dig take the root as their first segment.
+queries:
+  - id: dig-hash-path
+    expression: 'dig(lookup("h", {"default_value" => undef}), "c", "d")'
+    python: {target: hiera, method: dig, args: [h, c, d]}
+  - id: dig-array-index
+    expression: 'dig(lookup("h", {"default_value" => undef}), "b", 1)'
+    python: {target: hiera, method: dig, args: [h, b, 1]}
+  - id: dig-negative-index
+    expression: 'dig(lookup("arr", {"default_value" => undef}), -1, 1, "k")'
+    python: {target: hiera, method: dig, args: [arr, -1, 1, k]}
+  - id: dig-out-of-range-index
+    expression: 'dig(lookup("h", {"default_value" => undef}), "b", 9)'
+    python: {target: hiera, method: dig, args: [h, b, 9]}
+  - id: dig-root-miss
+    expression: 'dig(lookup("missing", {"default_value" => undef}), "x")'
+    python: {target: hiera, method: dig, args: [missing, x]}
+  - id: dig-missing-key
+    expression: 'dig(lookup("h", {"default_value" => undef}), "zz", "y")'
+    python: {target: hiera, method: dig, args: [h, zz, y]}
+  - id: dig-through-null
+    expression: 'dig(lookup("h", {"default_value" => undef}), "n", "x")'
+    python: {target: hiera, method: dig, args: [h, "n", x]}
+  - id: dig-key-holding-a-dot
+    expression: 'dig(lookup("h", {"default_value" => undef}), "e.f")'
+    python: {target: hiera, method: dig, args: [h, e.f]}
+  - id: dig-whole-root-collection
+    expression: 'dig(lookup("arr", {"default_value" => undef}))'
+    python: {target: hiera, method: dig, args: [arr]}
+  - id: dig-root-not-a-collection
+    expression: 'dig(lookup("s", {"default_value" => undef}), "x")'
+    python: {target: hiera, method: dig, args: [s, x]}
+    error_class: HieraLookupError
+  - id: dig-string-key-against-array
+    expression: 'dig(lookup("h", {"default_value" => undef}), "b", "x")'
+    python: {target: hiera, method: dig, args: [h, b, x]}
+    error_class: HieraLookupError
+    error_match: "requires an Integer index"
+  - id: dig-into-a-scalar-midway
+    expression: 'dig(lookup("h", {"default_value" => undef}), "a", "x")'
+    python: {target: hiera, method: dig, args: [h, a, x]}
+    error_class: HieraLookupError
+    error_match: "does not contain a Collection"
+  - id: get-hash-path
+    expression: 'get(lookup("h", {"default_value" => undef}), "c.d")'
+    python: {target: hiera, method: get, args: ["h.c.d"]}
+  - id: get-array-index
+    expression: 'get(lookup("h", {"default_value" => undef}), "b.1")'
+    python: {target: hiera, method: get, args: ["h.b.1"]}
+  - id: get-numeric-segment-in-array
+    expression: 'get(lookup("arr", {"default_value" => undef}), "2.1.k")'
+    python: {target: hiera, method: get, args: ["arr.2.1.k"]}
+  - id: get-quoted-segment
+    expression: 'get(lookup("h", {"default_value" => undef}), "\"e.f\"")'
+    python: {target: hiera, method: get, args: ['h."e.f"']}
+  - id: get-whole-value
+    expression: 'get(lookup("h", {"default_value" => undef}), "")'
+    python: {target: hiera, method: get, args: [h]}
+  - id: get-miss-default
+    expression: 'get(lookup("h", {"default_value" => undef}), "zz", "d")'
+    python: {target: hiera, method: get, args: [h.zz, d]}
+  - id: get-root-miss-default
+    expression: 'get(lookup("missing", {"default_value" => undef}), "x", "d")'
+    python: {target: hiera, method: get, args: [missing.x, d]}
+  - id: get-null-value-default
+    expression: 'get(lookup("h", {"default_value" => undef}), "n", "d")'
+    python: {target: hiera, method: get, args: ["h.n", d]}
+  - id: get-miss-without-default
+    expression: 'get(lookup("h", {"default_value" => undef}), "zz")'
+    python: {target: hiera, method: get, args: [h.zz]}
+  - id: get-walk-error-raises
+    expression: 'get(lookup("h", {"default_value" => undef}), "a.x")'
+    python: {target: hiera, method: get, args: [h.a.x]}
+    error_class: HieraLookupError
+  - id: get-walk-error-block-constant
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "a.x") |$e| { "blk" }
+    python: {target: hiera, method: get, args: [h.a.x], block: const}
+  - id: get-walk-error-block-message-collection
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "a.x") |$e| { $e.msg }
+    python: {target: hiera, method: get, args: [h.a.x], block: message}
+  - id: get-walk-error-block-message-index
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "b.x") |$e| { $e.msg }
+    python: {target: hiera, method: get, args: [h.b.x], block: message}
+  - id: get-block-undef-keeps-undef
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "a.x", "d") |$e| { undef }
+    python: {target: hiera, method: get, args: [h.a.x, d], block: undef}
+  - id: get-block-not-called-on-a-hit
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "c.d") |$e| { "blk" }
+    python: {target: hiera, method: get, args: [h.c.d], block: const}
+  - id: get-syntax-error
+    expression: 'get(lookup("h", {"default_value" => undef}), "a..b")'
+    python: {target: hiera, method: get, args: ["h.a..b"]}
+    error_class: HieraLookupError
+  - id: get-syntax-error-ignores-the-block
+    expression: >-
+      get(lookup("h", {"default_value" => undef}), "a..b") |$e| { "blk" }
+    python: {target: hiera, method: get, args: ["h.a..b"], block: const}
+    error_class: HieraLookupError
