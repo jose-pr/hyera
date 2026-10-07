@@ -487,12 +487,12 @@ PUPPET_INSTANCE_CASES = [
     ({"a": 1}, types.ScalarData, False),
     ("a", types.ScalarData, True),
     (1.5, types.ScalarData, True),
-    # Bare Optional is only undef; bare Pattern and Enum accept any String.
+    # Bare Optional is only undef; bare Pattern accepts any String, bare Enum none.
     (None, types.Optional, True),
     (5, types.Optional, False),
     ("anything", types.Pattern, True),
     (5, types.Pattern, False),
-    ("anything", types.Enum, True),
+    ("anything", types.Enum, False),
     # A trailing boolean in Enum is the case-insensitive flag.
     ("A", types.Enum["a", "b", True], True),
     ("A", types.Enum["a", "b", False], False),

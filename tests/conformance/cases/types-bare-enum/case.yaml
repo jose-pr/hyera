@@ -1,0 +1,52 @@
+description: >-
+  A bare Enum has no values and so matches no string: asserted through --type
+  alone and inside Optional, Variant and Array, and asked for as a convert_to
+  target. Pattern, Enum with values and the Variant branch that does match are
+  the neighbours that must keep answering.
+queries:
+  - key: s
+    id: bare-enum-string
+    type: Enum
+  - key: n
+    id: bare-enum-integer
+    type: Enum
+  - key: a
+    id: bare-enum-single-letter
+    type: Enum
+  - key: s
+    id: bare-pattern-string
+    type: Pattern
+  - key: s
+    id: listed-enum-miss
+    type: 'Enum[a, b]'
+  - key: a
+    id: listed-enum-hit
+    type: 'Enum[a, b]'
+  - key: s
+    id: optional-bare-enum-string
+    type: 'Optional[Enum]'
+  - key: nilk
+    id: optional-bare-enum-undef
+    type: 'Optional[Enum]'
+  - key: s
+    id: variant-bare-enum-integer-string
+    type: 'Variant[Enum, Integer]'
+  - key: n
+    id: variant-bare-enum-integer-integer
+    type: 'Variant[Enum, Integer]'
+  - key: strs
+    id: array-of-bare-enum
+    type: 'Array[Enum]'
+  - key: s
+    id: string-ranged-by-enum
+    type: 'Variant[Enum, String]'
+  - key: c_bare
+    id: convert-to-bare-enum
+  - key: c_listed
+    id: convert-to-listed-enum
+  - key: c_pattern
+    id: convert-to-bare-pattern
+  - key: c_variant
+    id: convert-to-variant-with-bare-enum
+  - key: c_optional
+    id: convert-to-optional-bare-enum

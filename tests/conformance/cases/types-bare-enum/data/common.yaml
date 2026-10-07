@@ -1,0 +1,16 @@
+lookup_options:
+  c_bare: {convert_to: Enum}
+  c_listed: {convert_to: 'Enum[a, b]'}
+  c_pattern: {convert_to: Pattern}
+  c_variant: {convert_to: 'Variant[Enum, Integer]'}
+  c_optional: {convert_to: 'Optional[Enum]'}
+s: "hello"
+n: 5
+nilk: ~
+a: "a"
+strs: [a, b]
+c_bare: "x"
+c_listed: "a"
+c_pattern: "a"
+c_variant: "a"
+c_optional: "a"

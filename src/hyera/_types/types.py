@@ -394,8 +394,7 @@ class Enum(Any):
     def instance(self, value):
         if not isinstance(value, str):
             return False
-        if not self.values:
-            return True
+        # An Enum with no values matches no string (types.rb:812).
         if self.case_insensitive:
             folded = value.translate(_ASCII_FOLD)
             return any(v.translate(_ASCII_FOLD) == folded for v in self.values)

@@ -1,0 +1,211 @@
+{
+  "format": 2,
+  "puppet_version": "8.10.0",
+  "ruby_version": "4.0.7",
+  "platform": "aarch64-linux",
+  "gems": {
+    "deep_merge": "1.2.2",
+    "hiera-eyaml": "5.0.1",
+    "hocon": "1.4.0",
+    "json": "2.19.9",
+    "psych": "5.3.1"
+  },
+  "node": "golden.example.com",
+  "inputs_sha256": "7c0ee759ded0c3290cd11e652525eef323d5e5724b49567fc87c7b92ce071641",
+  "results": {
+    "bare-enum-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum, got 'hello'"
+    },
+    "bare-enum-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum",
+        "n"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum, got Integer"
+    },
+    "bare-enum-single-letter": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum",
+        "a"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum, got 'a'"
+    },
+    "bare-pattern-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Pattern",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "hello"
+    },
+    "listed-enum-miss": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum[a, b]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Enum['a', 'b'], got 'hello'"
+    },
+    "listed-enum-hit": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Enum[a, b]",
+        "a"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "a"
+    },
+    "optional-bare-enum-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Enum]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects an undef value or a match for Enum, got 'hello'"
+    },
+    "optional-bare-enum-undef": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Optional[Enum]",
+        "nilk"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": null
+    },
+    "variant-bare-enum-integer-string": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Enum, Integer]",
+        "s"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Found value has wrong type, expects a match for Variant[Enum, Integer], got 'hello'"
+    },
+    "variant-bare-enum-integer-integer": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Enum, Integer]",
+        "n"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": 5
+    },
+    "array-of-bare-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Array[Enum]",
+        "strs"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "Could not run:"
+    },
+    "string-ranged-by-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "--type",
+        "Variant[Enum, String]",
+        "s"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "hello"
+    },
+    "convert-to-bare-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "c_bare"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'c_bare' raised error: Creation of new instance of type 'Enum' is not supported"
+    },
+    "convert-to-listed-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "c_listed"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "a"
+    },
+    "convert-to-bare-pattern": {
+      "argv": [
+        "--strict",
+        "warning",
+        "c_pattern"
+      ],
+      "exit_status": 0,
+      "status": "found",
+      "value": "a"
+    },
+    "convert-to-variant-with-bare-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "c_variant"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'c_variant' raised error: Creation of new instance of type 'Variant[Enum, Integer]' is not supported"
+    },
+    "convert-to-optional-bare-enum": {
+      "argv": [
+        "--strict",
+        "warning",
+        "c_optional"
+      ],
+      "exit_status": 1,
+      "status": "error",
+      "message": "The convert_to lookup_option for key 'c_optional' raised error: Creation of new instance of type 'Enum' is not supported"
+    }
+  }
+}
