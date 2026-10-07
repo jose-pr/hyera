@@ -898,6 +898,7 @@ For the MCP tool, see [Command line](#command-line).
 | Type aliases other than `Data`/`RichData`; `new()` for SemVer, SemVerRange, Timespan, Timestamp, Regexp, Binary, URI, Type, Object | Not supported | |
 | `hiera()`/`hiera_array()`/`hiera_hash()`/`hiera_include()` as methods | Not supported | use `.lookup()` -- see the mapping table under [Lookups](#lookups). |
 | The types `Iterable`, `Iterator`, `Init` and `Unit` in a type expression | Not supported | a `value_type` or `convert_to` naming one raises `HieraLookupError`. |
+| A `Float` bound written as a string (`Float['1', 2]`), a float among a `Tuple`'s element types (`Tuple[String, 1.0, 2]`), and a Hash used as a key by `Hash.new` | Not supported | Puppet accepts the two type expressions and builds the Hash; hyera raises (a Python `dict` cannot hold a `dict` as a key). |
 
 ## Differences from Puppet
 
