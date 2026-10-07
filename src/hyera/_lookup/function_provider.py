@@ -23,7 +23,7 @@ from .._scope.scope import Scope
 from .interpolation import interpolate
 from .invocation import Invocation
 from .navigation import _MISSING, parse_lookup_key, sub_lookup
-from ..exceptions import BackendError, ConfigError
+from ..exceptions import BackendError, ConfigError, HieraError
 
 __all__ = ["LookupContext", "PROVIDER_CLASSES"]
 
@@ -169,6 +169,20 @@ def _data_hash_not_found(name, location) -> BackendError:
             name,
             "" if location is None else ", when using location '{}',".format(location),
         )
+    )
+    return BackendError(text, path=None if location is None else str(location))
+
+
+def _hook_error(exc, hook, name, location) -> BackendError:
+    """The ``BackendError`` for an exception of a class outside the package
+    raised inside a backend's ``hook``. The message carries the class name
+    only: the text may hold document content. ``location`` is ``None`` for a
+    location-less entry."""
+    text = "{} function '{}'{} raised {}".format(
+        hook,
+        name,
+        "" if location is None else ", when using location '{}',".format(location),
+        type(exc).__name__,
     )
     return BackendError(text, path=None if location is None else str(location))
 

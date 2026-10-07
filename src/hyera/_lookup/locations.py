@@ -16,6 +16,7 @@ from .cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from .function_provider import (
     _NotFound,
     _data_hash_not_found,
+    _hook_error,
     _validate_data_hash,
 )
 from .navigation import _MISSING
@@ -233,8 +234,9 @@ class _LocationStore:
         directory walk and here) becomes ``Unable to read (<path>): ...``; a
         parse failure (a :class:`BackendError` without ``.path`` set --
         ``Backend.load`` already sets it) becomes ``Unable to parse
-        (<path>): ...``; any other non-:class:`HieraError` exception is
-        wrapped the same way, naming its type. An already-pathed
+        (<path>): ...``; any other non-:class:`HieraError` exception becomes
+        a :class:`BackendError` naming its class and the path (never its
+        text), with the original as ``__cause__``. An already-pathed
         ``BackendError`` (or any other :class:`HieraError`) propagates
         unchanged. There is no directory check here: a location
         that is a directory is caught once, when it is resolved/materialized
@@ -306,10 +308,7 @@ class _LocationStore:
                 "Unable to read ({}): {}".format(path, e.strerror or e), path=str(path)
             ) from e
         except Exception as e:
-            raise BackendError(
-                "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
-                path=str(path),
-            ) from e
+            raise _hook_error(e, "data_hash", backend.name, path) from e
         finally:
             self._unbind(tokens)
 

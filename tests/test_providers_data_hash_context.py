@@ -189,22 +189,6 @@ def test_calling_not_found_inside_data_hash_is_an_error(make_tree):
     assert not isinstance(excinfo.value, KeyNotFoundError)
 
 
-def test_a_two_parameter_data_hash_fails_with_pythons_own_type_error(make_tree):
-    class Old(Backend):
-        NAMES = {"function": ("ctx_old_hook",)}
-
-        def data_hash(self, path, options):
-            return {"k": "v"}
-
-    h = _hiera(
-        make_tree,
-        [{"name": "n", "data_hash": "ctx_old_hook"}],
-        backends=list(default_backends()) + [Old],
-    )
-    with pytest.raises(TypeError, match="positional argument"):
-        h.lookup("k")
-
-
 @pytest.mark.parametrize("backend", default_backends(), ids=lambda c: c.__name__)
 def test_every_built_in_backend_takes_the_third_parameter(backend):
     params = list(inspect.signature(backend.data_hash).parameters)

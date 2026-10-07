@@ -114,24 +114,6 @@ def test_a_tuple_from_a_data_hash_hook_reads_as_a_list(make_tree, backends, scri
 
 
 @pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
-def test_an_exception_a_hook_raises_propagates_unchanged(
-    make_tree, backends, script, kind
-):
-    root = make_tree(
-        {"hierarchy": [{"name": "s", "path": "a.yaml", kind: "test_" + kind}]},
-        files={"data/a.yaml": "x"},
-    )
-
-    def hook(*args):
-        raise ValueError("from the hook")
-
-    script[kind] = hook
-    h = Hiera(str(root / "hiera.yaml"))
-    with pytest.raises(ValueError, match="from the hook"):
-        h.lookup("k")
-
-
-@pytest.mark.parametrize("kind", ["lookup_key", "data_dig"])
 def test_a_tuple_from_a_hook_reads_as_a_list(make_tree, backends, script, kind):
     root = make_tree(
         {

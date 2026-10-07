@@ -12,6 +12,7 @@ from ._lookup.function_provider import (
     LookupContext,
     _check_kind_implemented,
     _data_hash_not_found,
+    _hook_error,
     _NotFound,
     _tuples_to_lists,
     _validate_data_hash,
@@ -19,6 +20,7 @@ from ._lookup.function_provider import (
 )
 from ._lookup.lookup_adapter import validate_data_value
 from .backends._base import Backend
+from .exceptions import HieraError
 
 __all__ = ["NOT_FOUND", "data_dig", "data_hash", "lookup_key"]
 
@@ -73,6 +75,10 @@ def lookup_key(
         value = backend.lookup_key(key, dict(options or {}), context)
     except _NotFound:
         return NOT_FOUND
+    except HieraError:
+        raise
+    except Exception as e:
+        raise _hook_error(e, "lookup_key", backend.name, None) from e
     return _validate_provider_value(value, "lookup_key", backend.name, None)
 
 
@@ -105,6 +111,10 @@ def data_dig(
         value = backend.data_dig(list(segments), dict(options or {}), context)
     except _NotFound:
         return NOT_FOUND
+    except HieraError:
+        raise
+    except Exception as e:
+        raise _hook_error(e, "data_dig", backend.name, None) from e
     return _validate_provider_value(value, "data_dig", backend.name, None)
 
 
@@ -148,6 +158,10 @@ def data_hash(
         data = backend.data_hash(path, merged, context)
     except _NotFound:
         raise _data_hash_not_found(backend.name, label) from None
+    except HieraError:
+        raise
+    except Exception as e:
+        raise _hook_error(e, "data_hash", backend.name, label) from e
     _validate_data_hash(data, backend.name, label)
     for key, value in data.items():
         validate_data_value(value, backend.name, label, key)

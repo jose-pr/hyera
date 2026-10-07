@@ -1127,8 +1127,14 @@ is a `Backend` subclass, found by name rather than passed around directly.
   tuple, read as a list at any depth); any other type (`date`, `Decimal`,
   `bytes`, `set`, ...) raises `BackendError` naming the function, the
   location and the type. A `data_hash` hook returning such a value under a
-  key raises `HieraLookupError` naming the key. An exception a
-  `lookup_key`/`data_dig` hook raises itself propagates unchanged.
+  key raises `HieraLookupError` naming the key. An exception a hook raises
+  itself (`data_hash`, `lookup_key` or `data_dig`) is translated when its
+  class is not one of this package's own: it becomes a `BackendError`
+  naming the function, the hook and the location, with the original as
+  `__cause__`; the message carries the class name and never the exception's
+  text, which may hold document content. A `HieraError` (`ConfigError`,
+  `BackendError`, `InterpolationError`, ...) propagates unchanged, as does
+  anything that is not an `Exception` (`KeyboardInterrupt`, `SystemExit`).
   `options` carries
   `path` (a `str`) or `uri` (interpolated and normalized like Ruby's
   `URI#to_s`, never fetched) for a located entry, or neither for a

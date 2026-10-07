@@ -20,6 +20,7 @@ from .function_provider import (
     _Result,
     _check_kind_implemented,
     _data_hash_not_found,
+    _hook_error,
     _recording_location,
     _tuples_to_lists,
     _validate_data_hash,
@@ -28,6 +29,7 @@ from .function_provider import (
 from .interpolation import interpolate, unshare
 from .lookup_adapter import validate_data_value
 from .navigation import _MISSING, key_to_a, undig
+from ..exceptions import HieraError
 
 
 class _FunctionProvider:
@@ -205,6 +207,12 @@ class _DataHashProvider(_FunctionProvider):
                         )
                     except _NotFound:
                         raise _data_hash_not_found(self.backend.name, label) from None
+                    except HieraError:
+                        raise
+                    except Exception as e:
+                        raise _hook_error(
+                            e, "data_hash", self.backend.name, label
+                        ) from e
                     _validate_data_hash(raw, self.backend.name, label)
                     if self._prune is not None:
                         raw = self._prune(
@@ -260,6 +268,10 @@ class _LookupKeyProvider(_FunctionProvider):
                 except _NotFound:
                     invocation.report_not_found(root)
                     return _MISSING
+                except HieraError:
+                    raise
+                except Exception as e:
+                    raise _hook_error(e, "lookup_key", self.backend.name, label) from e
                 value = _validate_provider_value(
                     value, "lookup_key", self.backend.name, label
                 )
@@ -295,6 +307,10 @@ class _DataDigProvider(_FunctionProvider):
                 except _NotFound:
                     invocation.report_not_found(root)
                     return _MISSING
+                except HieraError:
+                    raise
+                except Exception as e:
+                    raise _hook_error(e, "data_dig", self.backend.name, label) from e
                 value = _validate_provider_value(
                     value, "data_dig", self.backend.name, label
                 )
