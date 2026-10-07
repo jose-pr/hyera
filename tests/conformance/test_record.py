@@ -34,14 +34,21 @@ from _ours import (
     to_data,
 )
 from hyera import Sensitive
-from record import _apply_command, _command, _error_text, _iso_args, _runner_path
+from record import (
+    _apply_command,
+    _command,
+    _error_text,
+    _iso_args,
+    _mnt_path,
+    _runner_path,
+)
 
 
 def test_wsl_runner_uses_dash_e_not_dash_dash():
     # wsl.exe's `--` relays argv through a Linux shell that strips a lone or wrapping
     # single quote; `-e` does not (`ruby -e 'puts ARGV.inspect' "'a.b'"` delivers
     # `["a.b"]` with `--`, `["'a.b'"]` with `-e`).
-    cmd, cwd = _command("wsl:FedoraLinux-44", Path("/some/case"), ["lookup", "k"])
+    cmd, cwd = _command("wsl:SomeDistro", Path("/some/case"), ["lookup", "k"])
     assert cwd is None
     assert "--" not in cmd
     i = cmd.index("-e")
@@ -57,7 +64,7 @@ def test_wsl_runner_without_named_distro_also_uses_dash_e():
 
 
 def test_wsl_runner_passes_cd_before_the_command():
-    cmd, _cwd = _command("wsl:FedoraLinux-44", Path("/some/case"), ["lookup", "k"])
+    cmd, _cwd = _command("wsl:SomeDistro", Path("/some/case"), ["lookup", "k"])
     cd_i = cmd.index("--cd")
     e_i = cmd.index("-e")
     assert cd_i < e_i
@@ -127,10 +134,10 @@ def test_leak_scan_reads_text_not_json_escaping():
 def test_expression_command_runs_apply_with_the_fixture_module_and_facts_terminus():
     case = {"puppet_args": ["--environment", "dev"]}
     query = {"expression": 'lookup("k")'}
-    args = _apply_command("wsl:FedoraLinux-44", case, query, _iso_args("/tmp/iso"))
+    args = _apply_command("wsl:SomeDistro", case, query, _iso_args("/tmp/iso"))
     assert args[0] == "apply"
     modules = args[args.index("--basemodulepath") + 1]
-    assert modules.startswith("./modules:/mnt/")
+    assert modules == "./modules:" + _runner_path("wsl", FIXTURE_MODULES)
     assert modules.endswith("/puppet_modules")
     assert args[args.index("--facts_terminus") + 1] == "hyera_file"
     assert args[args.index("--node_name_value") + 1] == "golden.example.com"
@@ -152,9 +159,11 @@ def test_a_local_runner_names_the_fixture_directory_as_it_is():
 
 
 def test_a_wsl_runner_names_a_windows_directory_under_mnt():
-    path = _runner_path("wsl", Path("C:/a/b"))
-    assert re.match(r"^/mnt/[a-z]/", path)
-    assert path.endswith("/a/b")
+    assert _mnt_path("C:/a/b") == "/mnt/c/a/b"
+    assert _mnt_path("/home/a/b") == "/home/a/b"
+    assert _runner_path("wsl", FIXTURE_MODULES) == _mnt_path(
+        FIXTURE_MODULES.resolve().as_posix()
+    )
 
 
 def test_the_emitted_value_is_read_between_the_markers():

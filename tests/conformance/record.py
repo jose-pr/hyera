@@ -155,10 +155,16 @@ def _runner_path(runner: str, path: Path) -> str:
     path for a WSL runner, the path itself for a local one."""
     if not runner.startswith("wsl"):
         return str(path)
-    parts = path.resolve().as_posix().split(":", 1)
-    if len(parts) != 2:
-        return path.as_posix()
-    return "/mnt/" + parts[0].lower() + parts[1]
+    return _mnt_path(path.resolve().as_posix())
+
+
+def _mnt_path(posix: str) -> str:
+    """``C:/a/b`` as WSL mounts it, ``/mnt/c/a/b``; a path with no drive
+    unchanged."""
+    drive, sep, rest = posix.partition(":")
+    if not sep or len(drive) != 1:
+        return posix
+    return "/mnt/" + drive.lower() + rest
 
 
 def _apply_command(runner: str, case: dict, query: dict, iso: list) -> list:

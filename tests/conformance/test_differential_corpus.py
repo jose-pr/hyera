@@ -21,6 +21,9 @@ from differential.merge.run import build_cases
 from differential.rules import OPEN, OPEN_PREFIX, RULES, judge
 from differential.scenarios import AREAS
 
+#: The rule whose verdicts depend on the installed pyhocon release.
+_HOCON_RULE = "hocon-pyhocon-parser"
+
 RERECORD = "re-record the corpus with differential/run.py --record-corpus"
 
 
@@ -65,9 +68,18 @@ def test_replay_matches_the_recorded_verdicts(area, tmp_path):
         hyera = outcomes.hyera_outcomes(raw, local, render)
         got = judge(job, entry["p"], hyera)
         want = (entry.get("k", "AGREE"), entry.get("r"))
+        if _HOCON_RULE in (got[1], want[1]) and _either_side_of_hocon(got, want):
+            continue
         if got != want:
             wrong.append("{}: recorded {}, now {}".format(job["id"], want, got))
     assert not wrong, "\n".join(wrong[:20])
+
+
+def _either_side_of_hocon(got, want) -> bool:
+    """Whether ``got`` and ``want`` differ only by which side of the HOCON
+    parser difference they fall on: pyhocon's parse of a construct differs
+    between the releases the ``hocon`` extra allows."""
+    return all(v == ("AGREE", None) or v[1] == _HOCON_RULE for v in (got, want))
 
 
 def test_replay_of_the_merge_corpus():

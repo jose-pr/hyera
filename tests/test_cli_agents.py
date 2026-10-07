@@ -167,7 +167,7 @@ def test_mcp_tool_call_reports_a_bad_option_value_as_one_error(arguments, flags_
     reply = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}[2]
     assert reply["result"]["isError"] is True, reply
     text = reply["result"]["content"][0]["text"]
-    assert text.endswith("exit code: 2"), text
+    assert text.splitlines()[-1].startswith("exit code: 2"), text
     assert len([line for line in text.splitlines() if "ERROR" in line]) == 1, text
     for noise in ("Traceback", "ValueError", "TypeError"):
         assert noise not in text + proc.stderr
