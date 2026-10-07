@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-07
+
 ### Added
 
 - `Hiera(confine_locations=True)` keeps data file locations inside each
@@ -1299,6 +1301,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and fixed while widening the default's own capability, which makes the
   backstop's guarantee matter more, not less.
 
-[Unreleased]: https://github.com/jose-pr/hyera/compare/v0.0.0...main
+[Unreleased]: https://github.com/jose-pr/hyera/compare/v0.1.0...main
+[0.1.0]: https://github.com/jose-pr/hyera/compare/v0.0.0...v0.1.0
 [0.0.0]: https://github.com/jose-pr/hyera/compare/v0.0.0a0...v0.0.0
 [0.0.0a0]: https://github.com/jose-pr/hyera/releases/tag/v0.0.0a0

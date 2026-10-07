@@ -35,7 +35,7 @@ from ._lookup.one_shot import lookup
 from ._scope.scope import Scope, Strict
 from ._types.types import Sensitive
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
 __all__ = [
     "Hiera",
