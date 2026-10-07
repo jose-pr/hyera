@@ -46,10 +46,11 @@ cli = ["duho>=0.6.4,<0.7"]
 # text instead of datetime.timedelta -- already covered by the 0.3.62 floor
 # above, so this comment records the reason, not a higher number.
 hocon = ["pyhocon>=0.3.62,<0.4"]
-# PKCS7 decrypt uses only RSA PKCS1v15, AES-CBC and PKCS7 unpadding, present
-# in every 50.x (fetched from PyPI at pin time: 50.0.1 is latest, no newer
-# major series).
-eyaml = ["cryptography>=50.0,<51"]
+# PKCS7 decrypt uses only RSA PKCS1v15, AES-CBC and PKCS7 unpadding, which
+# cryptography has kept stable across majors. No upper bound: it ships a new
+# major every few weeks, and a cap would block installs beside each one. The
+# floor is the oldest release the test suite is run against.
+eyaml = ["cryptography>=42.0"]
 # Composes every feature extra that has tests, so ranges live only in those
 # extras -- without pyhocon/duho/cryptography the HOCON/CLI/eyaml tests
 # silently skip instead of running. `hatchling` is left out: build isolation

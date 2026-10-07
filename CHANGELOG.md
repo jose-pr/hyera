@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The `eyaml` extra accepts `cryptography` 42.0 and every later release; it
+  was limited to the 50.x series.
 - The shipped `AGENTS.md` API header gives every signature in a code block and
   ends with the sections Exceptions, Command line, Environment variables and
   Gotchas; the README's Command line is its own section.
