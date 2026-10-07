@@ -1497,6 +1497,62 @@ tuple comes back as a list).
   `context.not_found()` raises `BackendError`; a value outside Puppet's
   data types raises `HieraLookupError` naming the key.
 
+  Like a lookup, each runner translates an exception of a class outside
+  the package that the hook raises into `BackendError` (see the hook
+  contract under Backends).
+- **`BackendContract`** — the checks every backend passes, as plain `test_*` methods with no
+  `pytest` import (a check asks for the `tmp_path` fixture by parameter
+  name and fails with `assert`). A test module subclasses it, sets
+  `backend` to the class under test and implements `write_source`; pytest
+  then collects the subclass. Each check runs for every hook kind the
+  backend implements (`data_hash`, `lookup_key`, `data_dig`), and a kind it
+  does not implement is left out. The README's "Writing a backend" shows a
+  ten-line subclass.
+
+  - `backend` — the class under test. `data` — the key/value pairs a
+    generated source holds (strings, an integer, a boolean, a list and a
+    nested hash); override it when the format cannot hold some of them.
+  - ```python
+    BackendContract.write_source(directory, data)
+    ```
+
+    Write a source holding `data` under `directory` and return the level
+    options for it (`{"path": "a.json"}`). A `path` is relative to
+    `directory`; the checks make it absolute, as the engine does, and a
+    source with no `path` is not a file. Raises `NotImplementedError` until
+    the subclass implements it.
+  - ```python
+    BackendContract.write_malformed_source(directory)
+    ```
+
+    Write a source the backend cannot read and return its level options, or
+    `None` when the source is not a file. The default overwrites the file
+    `write_source` made with bytes that are not UTF-8.
+  - ```python
+    BackendContract.test_every_name_resolves_to_the_class()
+    BackendContract.test_implements_agrees_with_what_the_class_overrides()
+    BackendContract.test_check_available_returns_or_raises_backend_error()
+    BackendContract.test_a_hook_returns_the_values_of_present_keys(tmp_path)
+    BackendContract.test_a_missing_key_is_not_found(tmp_path)
+    BackendContract.test_every_returned_value_is_puppet_data(tmp_path)
+    BackendContract.test_a_malformed_source_raises_backend_error(tmp_path)
+    BackendContract.test_an_unreadable_source_raises_backend_error(tmp_path)
+    BackendContract.test_a_lookup_through_hiera_returns_the_same_values(tmp_path)
+    ```
+
+    The checks, in order: every plain name in `NAMES` is lowercase and
+    resolves to the class through the registry; `implements()` agrees with
+    the methods the class overrides and at least one hook kind is
+    implemented; `check_available()` returns or raises `BackendError`; each
+    hook returns the source's value for every key; a missing key is absent
+    from a `data_hash` result and signalled by `context.not_found()` in the
+    other two; every value a hook returns is Puppet data; a malformed or a
+    removed source raises `BackendError` and no other exception type; and a
+    `Hiera` whose hierarchy names the backend's `function` name returns the
+    same values (a backend with no plain `function` name passes this one
+    without a lookup). The checks call the hooks directly, so a defect is
+    reported by the check that names it.
+
 ## Differences from Puppet
 
 - **difference** `missing-config-raises` — A missing hiera.yaml raises
