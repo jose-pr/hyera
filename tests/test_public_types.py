@@ -274,18 +274,14 @@ def test_type_objects_compare_only_with_types():
 
 
 def test_never_parameterized_raises_puppets_own_text():
-    from hyera import HieraLookupError
-
-    with pytest.raises(HieraLookupError, match=r"Not a parameterized type <Any>"):
+    with pytest.raises(ValueError, match=r"Not a parameterized type <Any>"):
         types.Any[1]
-    with pytest.raises(HieraLookupError, match=r"Not a parameterized type <Data>"):
+    with pytest.raises(ValueError, match=r"Not a parameterized type <Data>"):
         types.Data[1]
 
 
 def test_struct_requires_a_single_dict():
-    from hyera import HieraLookupError
-
-    with pytest.raises(HieraLookupError):
+    with pytest.raises(ValueError):
         types.Struct[types.Integer]
 
 
@@ -410,8 +406,8 @@ def test_call_requires_at_least_one_argument():
         types.Integer()
 
 
-def test_call_unsupported_type_raises_hieralookuperror():
-    with pytest.raises(HieraLookupError, match="does not support new"):
+def test_call_unsupported_type_raises_valueerror():
+    with pytest.raises(ValueError, match="does not support new"):
         types.Regexp("^a")
 
 
@@ -588,7 +584,7 @@ def test_pattern_matches_as_ruby_does(source, subject, expected):
     ],
 )
 def test_pattern_rejects_with_rubys_text(source, message):
-    with pytest.raises(HieraLookupError) as info:
+    with pytest.raises(ValueError) as info:
         types.Pattern[source]
     assert str(info.value) == message
 
@@ -610,14 +606,14 @@ def test_pattern_rejects_with_rubys_text(source, message):
     ],
 )
 def test_pattern_names_an_untranslatable_ruby_construct(source, construct):
-    with pytest.raises(HieraLookupError) as info:
+    with pytest.raises(ValueError) as info:
         types.Pattern[source]
     assert construct in str(info.value)
     assert source in str(info.value)
 
 
 def test_regexp_type_rejects_an_invalid_source():
-    with pytest.raises(HieraLookupError, match="unmatched parenthesis"):
+    with pytest.raises(ValueError, match="unmatched parenthesis"):
         types.Regexp["("]
 
 

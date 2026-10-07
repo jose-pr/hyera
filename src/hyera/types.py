@@ -38,6 +38,7 @@ from ._types import types as _priv
 from ._types.parser import as_type as _as_type
 from ._types.parser import build_access as _build_access
 from ._types.parser import parse_type as _parse_type
+from .exceptions import HieraLookupError as _HieraLookupError
 
 __all__ = [
     "Any",
@@ -251,11 +252,22 @@ class _TypeMeta(type):
 
     def __getitem__(cls, item: _ty.Any) -> _priv.Any:
         """``ClassName[item]``: builds the parameterized type object --
-        see the module docstring's "Subscripted" paragraph."""
+        see the module docstring's "Subscripted" paragraph.
+
+        :param item: the subscript: one argument or a tuple of them.
+        :returns: the type object.
+        :raises TypeError: an argument is not a type, a literal or a pattern.
+        :raises ValueError: the arguments do not make a valid type (a range
+            whose bounds are reversed, the wrong number of parameters, a
+            malformed pattern).
+        """
         args = item if isinstance(item, tuple) else (item,)
         name = cls._puppet_name
-        nodes = _ARG_NODES.get(name.lower(), _nodes_mixed)(args)
-        return _build_access(name, nodes, _args_source(name, args))
+        try:
+            nodes = _ARG_NODES.get(name.lower(), _nodes_mixed)(args)
+            return _build_access(name, nodes, _args_source(name, args))
+        except _HieraLookupError as e:
+            raise ValueError(str(e)) from None
 
     def __instancecheck__(cls, value: _ty.Any) -> bool:
         """``isinstance(value, ClassName)``: Puppet's own instance check
@@ -269,7 +281,13 @@ class _TypeMeta(type):
         also what a subscripted type's own call does, e.g. ``Integer[1,
         10]("42")``). Not expressible as a per-class return type from one
         shared metaclass method -- pyright sees ``Any`` here; typed call
-        sites narrow it with an ordinary annotation or ``cast``."""
+        sites narrow it with an ordinary annotation or ``cast``.
+
+        :param args: the value to convert, then any further ``new()`` arguments.
+        :returns: the converted value.
+        :raises TypeError: a keyword argument was given, or no value.
+        :raises ValueError: the arguments cannot be converted to this type.
+        """
         if kwargs:
             raise TypeError("{}() takes no keyword arguments".format(cls._puppet_name))
         if not args:

@@ -182,10 +182,18 @@ def facts_from_facter(*, timeout: int = 30) -> _ty.Dict[str, _ty.Any]:
 
     :param timeout: seconds to wait for ``facter`` before giving up.
     :returns: the parsed facts, unsanitized.
+    :raises TypeError: ``timeout`` is not a number.
+    :raises ValueError: ``timeout`` is not positive.
     :raises BackendTimeoutError: ``facter`` did not finish in ``timeout``.
     :raises BackendError: ``facter`` is missing, refused, exits non-zero, or
         its output is not a JSON object.
     """
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+        raise TypeError(
+            "timeout must be a number of seconds, not {}".format(type(timeout).__name__)
+        )
+    if not timeout > 0:
+        raise ValueError("timeout must be positive, got {!r}".format(timeout))
     stdout = _run("facter", ["-j"], timeout=timeout)
 
     try:

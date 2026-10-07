@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 import typing as _ty
 
+from ..exceptions import HieraLookupError
 from .literal_format import _literal_str, _num_str, puppet_quote
 from .ruby_regexp import _ruby_regex
 
@@ -109,7 +110,10 @@ class Any(metaclass=_Sealing):
         default type object."""
         from .new_function import new_instance
 
-        return new_instance(self, *args)
+        try:
+            return new_instance(self, *args)
+        except HieraLookupError as e:
+            raise ValueError(str(e)) from None
 
 
 class Undef(Any):

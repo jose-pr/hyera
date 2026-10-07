@@ -56,15 +56,15 @@ queries:
   - id: string-unknown-format
     expression: 'String.new(1, "%q")'
     python: {target: types, method: String, args: [1, "%q"]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: string-hash-format-with-a-string-key
     expression: 'String.new(255, {"format" => "%x"})'
     python: {target: types, method: String, args: [255, {format: "%x"}]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: string-length-range-rejects
     expression: 'String[1, 2].new("abcd")'
     python: {target: types, method: String, params: [1, 2], args: [abcd]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: boolean-from-true-word
     expression: 'Boolean.new("true")'
     python: {target: types, method: Boolean, args: ["true"]}
@@ -96,11 +96,11 @@ queries:
   - id: boolean-rejects-a-word
     expression: 'Boolean.new("maybe")'
     python: {target: types, method: Boolean, args: [maybe]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: boolean-rejects-undef
     expression: 'Boolean.new(undef)'
     python: {target: types, method: Boolean, args: [null]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: array-from-array
     expression: 'Array.new([1, 2])'
     python: {target: types, method: Array, args: [[1, 2]]}
@@ -129,7 +129,7 @@ queries:
   - id: array-element-type-rejects
     expression: 'Array[Integer].new(["a"])'
     python: {target: types, method: Array, params: [Integer], args: [[a]]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: hash-from-pairs
     expression: 'Hash.new([["a", 1], ["b", 2]])'
     python: {target: types, method: Hash, args: [[[a, 1], [b, 2]]]}
@@ -149,11 +149,11 @@ queries:
   - id: hash-rejects-a-short-pair
     expression: 'Hash.new([["a"]])'
     python: {target: types, method: Hash, args: [[[a]]]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: hash-rejects-a-string
     expression: 'Hash.new("a")'
     python: {target: types, method: Hash, args: [a]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: sensitive-from-string
     expression: 'Sensitive.new("x")'
     python: {target: types, method: Sensitive, args: [x]}
@@ -169,14 +169,14 @@ queries:
   - id: tuple-rejects
     expression: 'Tuple[Integer].new(["x"])'
     python: {target: types, method: Tuple, params: [Integer], args: [[x]]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: struct-accepts
     expression: 'Struct[{"a" => Integer}].new({"a" => 1})'
     python: {target: types, method: Struct, params: [{a: Integer}], args: [{a: 1}]}
   - id: struct-rejects
     expression: 'Struct[{"a" => Integer}].new({"a" => "x"})'
     python: {target: types, method: Struct, params: [{a: Integer}], args: [{a: x}]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: optional-converts-a-value
     expression: 'Optional[Integer].new("5")'
     python: {target: types, method: Optional, params: [{type: Integer}], args: ["5"]}
@@ -189,7 +189,7 @@ queries:
   - id: notundef-rejects-undef
     expression: 'NotUndef[Integer].new(undef)'
     python: {target: types, method: NotUndef, params: [{type: Integer}], args: [null]}
-    error_class: HieraLookupError
+    error_class: ValueError
   - id: regexp-from-a-string
     expression: 'Regexp.new("a.b")'
     python: {target: types, method: Regexp, args: ["a.b"]}
