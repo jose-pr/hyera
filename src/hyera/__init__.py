@@ -26,6 +26,7 @@ from .exceptions import (
     MergeError,
 )
 from .core import Hiera
+from ._limits import Limits
 from ._output.explain import ExplainResult
 from ._scope.facts import facts_from_facter, load_facts
 from ._config.hiera_config import FunctionKind, HieraLevel
@@ -38,6 +39,7 @@ __version__ = "0.0.0"
 
 __all__ = [
     "Hiera",
+    "Limits",
     "lookup",
     "ExplainResult",
     "HieraLevel",

@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `Hiera(confine_locations=True)` keeps data file locations inside each
+  level's `datadir`, and `Hiera(limits=hyera.Limits(...))` bounds the nodes a
+  YAML document may yield through aliases (`yaml_alias_nodes`) and the
+  patterns a `glob` may expand to through braces (`glob_patterns`). Both are
+  off by default. `Backend.limits` gives a backend the active `Limits`.
+- `hocon_env` (`HOCONBackend(hocon_env=False)` or `options: {hocon_env:
+  false}`) stops a HOCON substitution from reading the process environment.
+- `HYERA_MCP_ROOT` and `HYERA_MCP_BACKENDS` let an operator confine the MCP
+  tool's path arguments and data files to one directory and limit the data
+  functions a hierarchy may name.
 - `Hiera.keys()` lists the top-level keys the `data_hash` levels of the
   instance's scope hold, and `Hiera.to_dict(*, merge=None)` returns each of
   them with its looked-up value. A `lookup_key` or `data_dig` level cannot be
@@ -260,6 +270,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- A caller that passes scope values or tool arguments it does not control can
+  now opt in to the protections above; the README's "Untrusted input" says
+  what each stops and what it does not. No default changed.
 - Text with many unclosed `%{` is scanned in linear time, and glob segments
   with many `*`s are matched in linear time, so a hostile value or pattern
   cannot stall a lookup.

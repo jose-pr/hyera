@@ -29,7 +29,7 @@ since Hiera data is dynamic.
 ## Lookup (`hyera`)
 
 - ```python
-  Hiera(base_config, backends=None, base_path=None, *, scope=None, environmentpath=None, basemodulepath=(), modulepath=None, cache_size=256, revalidate=True, codedir=None)
+  Hiera(base_config, backends=None, base_path=None, *, scope=None, environmentpath=None, basemodulepath=(), modulepath=None, cache_size=256, revalidate=True, codedir=None, confine_locations=False, limits=None)
   ```
 
   The main entry point. `base_config`: a file path, a file-like object, a
@@ -72,6 +72,18 @@ since Hiera data is dynamic.
   (`%ALLUSERSPROFILE%\PuppetLabs\code` on Windows, `/etc/puppetlabs/code`
   elsewhere) — never the per-user `~/.puppetlabs/etc/code` default, and
   never discovered from `puppet.conf`.
+  `confine_locations` (keyword-only `bool`, default `False`, else
+  `TypeError`): when true, a data file location (`path`, `paths`, a `glob`
+  match, `mapped_paths`) whose real path, symbolic links resolved, is not
+  inside its level's `datadir` is treated as absent — not opened, shown by
+  `explain()` as a path not found, logged once per location at `WARNING`
+  on the `hyera.core` logger. A `datadir` holding `%{...}` confines to the
+  whole directories before the first `%{`. A HOCON `include file(...)`
+  outside the root raises `BackendError`. `uri`/`uris` levels, and what a
+  `lookup_key` backend reads itself, are not files a level reads and are
+  unaffected. A `scoped()` view, a pickle and a copy keep the setting.
+  `limits`: a `hyera.Limits` or `None` (default, nothing bounded), else
+  `TypeError`; a `scoped()` view, a pickle and a copy keep it.
   `repr(h)` is one line, `Hiera(config='<label>', environment='<name>')`:
   the config's absolute path (or `<dict>`, `<default>`, a stream's name or
   `<stream>`) and the scope's environment, never data or scope values.
@@ -560,6 +572,22 @@ since Hiera data is dynamic.
     shared caches under one lock per instance (untested on free-threaded
     builds).
 - ```python
+  Limits(*, yaml_alias_nodes=None, glob_patterns=None)
+  ```
+
+  Ceilings for a caller that passes scope values or data it does not
+  control, given as `Hiera(limits=...)`. A field is `None` (unbounded, the
+  default and Puppet's behaviour) or a positive `int`, else `TypeError`/
+  `ValueError`. Immutable, hashable, compares by value, picklable.
+  `yaml_alias_nodes`: the most nodes one YAML document may yield through
+  `*alias` references; over it the load raises `BackendError` naming the
+  limit and the file, before any node is built. `glob_patterns`: the most
+  patterns one `glob` entry may expand to through `{a,b}` alternatives; over
+  it the lookup raises `BackendError` before any directory is walked. They
+  bound those two costs only, not memory in general. There is no limit for
+  HOCON substitutions: their cost grows with the expansion, not with their
+  count, so a count bounds nothing useful.
+- ```python
   lookup(base_config, name, value_type=None, merge=None, default_value=<unset>, *, default_values_hash=None, override=None, block=None, facts=None, scope=None)
   ```
 
@@ -1014,6 +1042,9 @@ is a `Backend` subclass, found by name rather than passed around directly.
   Backend(conf=None, *, strict=None)
   ```
 
+  `.limits` (read-only property): the `hyera.Limits` of the data file read in
+  progress, or `None` when nothing is bounded or no read is in progress; a
+  backend that parses untrusted text honours the fields it can.
   `.conf`. `strict` takes a
   `hyera.Strict` member or the same plain string. `.strict`
   (read-only property, always a plain `str`) is the constructor's `strict=`
@@ -1227,7 +1258,7 @@ is a `Backend` subclass, found by name rather than passed around directly.
   comment/NaN/surrogate message above, no exception chain. `.dumps(obj, **kw)`
   is `json.dumps(ensure_ascii=False)`.
 - ```python
-  HOCONBackend(conf=None, *, strict=None, hocon_includes=None)
+  HOCONBackend(conf=None, *, strict=None, hocon_includes=None, hocon_env=None)
   has_hocon()
   ```
 
@@ -1252,6 +1283,14 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `dict`/`list`. Invalid UTF-8 (handled by the base `.load`), and any other
   pyhocon parse failure, raise `BackendError` with a one-line message
   (`str(e)`, whitespace-collapsed), no exception chain.
+
+  `hocon_env` (hyera's own extension): `None` (the constructor default)
+  reads `conf.get("hocon_env", True)`. When `False`, a substitution the
+  document does not define is never taken from the process environment:
+  `${?VAR}` is absent and `${VAR}` fails with `BackendError`; a name the
+  document defines still resolves. Set from hiera.yaml with `options:
+  {hocon_env: false}` on a `hocon_data` entry; a non-Boolean raises
+  `ConfigError`, as for `hocon_includes`.
 
   `hocon_includes` (hyera's own extension, not Puppet vocabulary):
   `None` (the constructor default) reads `conf.get("hocon_includes", True)`;
@@ -1763,6 +1802,19 @@ in a way that changes visible behavior, reads by a fixed name:
   `sys.argv[0]` (so `python -m hyera.cli` or embedding `Lookup` in a
   differently-named script never changes it). The trigger is read before
   the arguments, so an MCP session never performs a command-line lookup.
+- **`HYERA_MCP_ROOT`** — read once when the command starts as an MCP server
+  (`HYERA_MCP` set), ignored otherwise: a directory. Every path-valued tool
+  argument (`facts`, `hiera_config`, `environmentpath`, `modulepath`,
+  `basemodulepath`, `codedir`; each entry of a path list) must resolve, links
+  resolved, inside it, else the call ends with exit `2` and one line naming
+  the flag, never the path's contents; a call with no `hiera_config` needs
+  the working directory inside it; `confine_locations` is on for every call.
+  A value that is not a directory stops the server at start, exit `2`.
+- **`HYERA_MCP_BACKENDS`** — likewise: a comma-separated list of function
+  names (`yaml_data,json_data`); a hierarchy naming any other function is
+  refused as an unknown backend is. An unknown name stops the server at
+  start, exit `2`. With neither variable set the tool behaves as without
+  this section.
 - **`AGENT_HELP`** / **`AGENTS_HELP`** — either truthy makes `--help` print
   duho's JSON agent-help document instead of usage text.
 - **`DUHO_TRACEBACK`** — `DUHO_TRACEBACK=1` adds a traceback to a `2`-exit

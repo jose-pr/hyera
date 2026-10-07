@@ -15,8 +15,15 @@ import typing as _ty
 from .cache import _LRU, _FileEntry, _ScopeKeyedCache, _probe
 from .function_provider import _validate_data_hash
 from .navigation import _MISSING
+from .._config.confinement import (
+    _INCLUDE_ROOT,
+    Confiner,
+    confinement_root,
+    same_anchor,
+)
 from .._config.dir_glob import glob as _dir_glob
 from .._config.location_resolver import resolve_glob_specs, resolve_locations
+from .._limits import _LIMITS, Limits
 from ..exceptions import BackendError, HieraError
 
 #: The engine's own logger, shared with ``hyera.core``.
@@ -42,6 +49,8 @@ class _Location(_ty.NamedTuple):
     location: str
     is_uri: bool
     exist: bool
+    #: The level's confinement root while locations are confined, else ``None``.
+    root: _ty.Optional[str] = None
 
 
 class _GlobLocation(_ty.NamedTuple):
@@ -54,6 +63,8 @@ class _GlobLocation(_ty.NamedTuple):
     original: str
     root: str
     pattern: str
+    #: The level's confinement root while locations are confined, else ``None``.
+    confine: _ty.Optional[str] = None
 
 
 class _LocationEntry:
@@ -112,12 +123,22 @@ class _LocationStore:
 
     ``lock`` is that shared lock; ``revalidate`` mirrors the owning
     instance's setting (``False``: nothing read is ever checked again until
-    :meth:`clear`).
+    :meth:`clear`). ``confine`` keeps every plain and glob location inside
+    its level's datadir; ``limits`` bounds what reading one costs.
     """
 
-    def __init__(self, lock, cache_size, revalidate: bool) -> None:
+    def __init__(
+        self,
+        lock,
+        cache_size,
+        revalidate: bool,
+        confine: bool = False,
+        limits: "_ty.Optional[Limits]" = None,
+    ) -> None:
         self.lock = lock
         self.revalidate = revalidate
+        self.limits = limits
+        self.confiner = Confiner() if confine else None
         #: Resolved hierarchy locations for one ``(tag, base_path)`` layer,
         #: keyed on the values of the variables their own interpolation
         #: reads, not on the whole scope -- see :meth:`location_entry_for`.
@@ -144,6 +165,8 @@ class _LocationStore:
         interned path."""
         self._location_cache.clear()
         self._glob_cache.clear()
+        if self.confiner is not None:
+            self.confiner.clear()
         with self.lock:
             self._file_cache.clear()
             self._loaded_paths.clear()
@@ -262,6 +285,7 @@ class _LocationStore:
         elif entry is not None:
             return entry.data
 
+        tokens = self._bind(path)
         try:
             data = backend.data_hash(path, dict(options))
         except BackendError as e:
@@ -281,6 +305,8 @@ class _LocationStore:
                 "Unable to parse ({}): {}: {}".format(path, type(e).__name__, e),
                 path=str(path),
             ) from e
+        finally:
+            self._unbind(tokens)
 
         _validate_data_hash(data, backend.name, path)
         if entry is not None:
@@ -289,6 +315,34 @@ class _LocationStore:
             self._file_cache[cache_key] = _FileEntry(probe.sig if probe else None, data)
             self._loaded_paths.add(path)
         return data
+
+    def _bind(self, path):
+        """Bind the limits and the include root for one file read; the tokens
+        for :meth:`_unbind`, or ``None`` when neither option is on."""
+        confiner = self.confiner
+        if self.limits is None and confiner is None:
+            return None
+        return (
+            _LIMITS.set(self.limits) if self.limits is not None else None,
+            _INCLUDE_ROOT.set(confiner.root_of(path)) if confiner else None,
+        )
+
+    @staticmethod
+    def _unbind(tokens) -> None:
+        if tokens is not None:
+            if tokens[1] is not None:
+                _INCLUDE_ROOT.reset(tokens[1])
+            if tokens[0] is not None:
+                _LIMITS.reset(tokens[0])
+
+    def _plain_exists(self, path: str, root, invocation) -> bool:
+        """:meth:`require_not_dir`, but ``False`` without a probe when
+        ``root`` is given and ``path`` is not inside it."""
+        if root is not None and not self.confiner.allowed(
+            path, root, invocation._fs_memo if invocation is not None else None
+        ):
+            return False
+        return self.require_not_dir(path, invocation)
 
     def location_entry_for(
         self, hierarchy, base_path, scope, tag, invocation=None
@@ -336,15 +390,19 @@ class _LocationStore:
         fs_memo = invocation._fs_memo if invocation is not None else None
         refs = []
         levels = []
+        confine = self.confiner is not None
         for level in hierarchy:
+            root = confinement_root(level, base_path) if confine else None
             if level.location_key in ("glob", "globs"):
                 specs = resolve_glob_specs(level, base_path, scope, refs, fs_memo)
                 locations = tuple(
-                    _GlobLocation(spec.original, spec.root, spec.pattern)
+                    _GlobLocation(spec.original, spec.root, spec.pattern, root)
                     for spec in specs
                 )
             else:
-                resolved = resolve_locations(level, base_path, scope, refs, fs_memo)
+                resolved = resolve_locations(
+                    level, base_path, scope, refs, fs_memo, confine
+                )
                 if resolved is None:
                     locations = None
                 else:
@@ -356,13 +414,9 @@ class _LocationStore:
                             )
                         else:
                             path = self.intern(loc.location)
+                            exist = self._plain_exists(path, root, invocation)
                             built.append(
-                                _Location(
-                                    loc.original,
-                                    path,
-                                    False,
-                                    self.require_not_dir(path, invocation),
-                                )
+                                _Location(loc.original, path, False, exist, root)
                             )
                     locations = tuple(built)
             levels.append(locations)
@@ -420,13 +474,17 @@ class _LocationStore:
             resolved = []
             for loc in locations:
                 if isinstance(loc, _GlobLocation):
-                    for match in self.glob_matches(loc.root, loc.pattern, invocation):
-                        resolved.append(_Location(loc.original, match, False, True))
+                    for match in self._confined_matches(loc, invocation, memo):
+                        resolved.append(
+                            _Location(loc.original, match, False, True, loc.confine)
+                        )
                 elif loc.is_uri:
                     resolved.append(loc)
                 elif self.revalidate:
-                    exist = self.require_not_dir(loc.location, invocation)
-                    resolved.append(_Location(loc.original, loc.location, False, exist))
+                    exist = self._plain_exists(loc.location, loc.root, invocation)
+                    resolved.append(
+                        _Location(loc.original, loc.location, False, exist, loc.root)
+                    )
                 else:
                     resolved.append(loc)
             levels.append(tuple(resolved))
@@ -436,6 +494,19 @@ class _LocationStore:
         elif memo is not None:
             memo[memo_key] = (entry, materialized)
         return materialized
+
+    def _confined_matches(self, loc: _GlobLocation, invocation, memo) -> tuple:
+        """:meth:`glob_matches` for ``loc``, keeping only the matches inside
+        its confinement root; no walk at all from another drive or share."""
+        if loc.confine is None:
+            return self.glob_matches(loc.root, loc.pattern, invocation)
+        if not same_anchor(loc.root, loc.confine):
+            return ()
+        return tuple(
+            m
+            for m in self.glob_matches(loc.root, loc.pattern, invocation)
+            if self.confiner.allowed(m, loc.confine, memo)
+        )
 
     def glob_matches(self, root: str, pattern: str, invocation) -> tuple:
         """The current file matches for one rooted glob pattern, memoized by
@@ -477,6 +548,7 @@ class _LocationStore:
             pattern,
             on_scandir if self.revalidate else None,
             probe_isdir if self.revalidate else None,
+            self.limits.glob_patterns if self.limits is not None else None,
         )
         matches = []
         for m in raw:

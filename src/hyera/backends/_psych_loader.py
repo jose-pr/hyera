@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import re
+import typing as _ty
 
 import yaml
 
@@ -413,27 +414,83 @@ def _anchors_may_repeat(text: str) -> bool:
     return len(set(names)) != len(names)
 
 
-def _scan_structure(text: str):
+_ALIAS = yaml.events.AliasEvent
+_OPENS = (yaml.events.SequenceStartEvent, yaml.events.MappingStartEvent)
+_CLOSES = (yaml.events.SequenceEndEvent, yaml.events.MappingEndEvent)
+
+
+class _AliasNodes:
+    """Counts, from parse events alone, the nodes a document yields through
+    alias references: each alias contributes the full size of the node it
+    names, so the count passes the limit long before the expansion is built.
+    """
+
+    def __init__(self, limit: int) -> None:
+        self._limit = limit
+        self._total = 0
+        self._sizes: dict = {}
+        self._open: list = []
+
+    def feed(self, event) -> None:
+        """Account for one parse event.
+
+        :raises BackendError: the aliases have yielded more than the limit.
+        """
+        kind = type(event)
+        frames = self._open
+        if kind is _ALIAS:
+            size = self._sizes.get(event.anchor, 1)
+            self._total += size
+            if self._total > self._limit:
+                raise BackendError(
+                    "YAML document expands to more than {} nodes through "
+                    "aliases (limits.yaml_alias_nodes)".format(self._limit)
+                )
+            if frames:
+                frames[-1][1] += size
+        elif kind is yaml.events.ScalarEvent:
+            if frames:
+                frames[-1][1] += 1
+            if event.anchor is not None:
+                self._sizes[event.anchor] = 1
+        elif kind in _OPENS:
+            frames.append([event.anchor, 1])
+        elif kind in _CLOSES:
+            anchor, size = frames.pop()
+            if anchor is not None:
+                self._sizes[anchor] = size
+            if frames:
+                frames[-1][1] += size
+
+
+def _scan_structure(text: str, alias_limit: "_ty.Optional[int]" = None):
     """Walk the first document's parse events, which the parser produces
     without recursion, before anything recursive sees it.
 
+    :param alias_limit: the most nodes the document may yield through aliases,
+        or ``None`` for no bound.
     :returns: the loader class to compose with: the pure-Python one when an
         anchor name is defined twice.
-    :raises BackendError: nesting exceeds :data:`_MAX_NESTING`.
+    :raises BackendError: nesting exceeds :data:`_MAX_NESTING`, or aliases
+        yield more than ``alias_limit`` nodes.
     """
     anchors_repeat = _anchors_may_repeat(text)
-    if not anchors_repeat and _within_nesting_limit(text):
+    count_aliases = alias_limit is not None and "*" in text
+    if not anchors_repeat and not count_aliases and _within_nesting_limit(text):
         return _LOADER
     depth = 0
     anchors = set()
     redefined = False
     track_anchors = anchors_repeat
+    aliases = _AliasNodes(alias_limit) if count_aliases else None
     scanner = _LOADER(text)
     get_event = scanner.get_event
     try:
         while True:
             event = get_event()
             kind = type(event)
+            if aliases is not None and event is not None:
+                aliases.feed(event)
             step = _DEPTH_STEP.get(kind)
             if step is not None:
                 depth += step
@@ -451,7 +508,7 @@ def _scan_structure(text: str):
     return _PURE_LOADER if redefined else _LOADER
 
 
-def safe_load(text: str):
+def safe_load(text: str, alias_limit: "_ty.Optional[int]" = None):
     """Parse ``text`` the way ``Puppet::Util::Yaml.safe_load`` does:
 
     - a leading U+FEFF (BOM) is replaced with a single space (reproduces
@@ -465,12 +522,15 @@ def safe_load(text: str):
       ``except`` block, so no ``__cause__``/``__context__`` holds PyYAML's
       own exception or a source snippet). Callers add the ``(<path>)``
       prefix once.
+
+    :param text: the YAML text.
+    :param alias_limit: the most nodes the document may yield through aliases.
     """
     if text.startswith("\ufeff"):
         text = " " + text[1:]
     problem = None
     try:
-        generator = yaml.load_all(text, _scan_structure(text))
+        generator = yaml.load_all(text, _scan_structure(text, alias_limit))
         try:
             result = next(generator)
         except StopIteration:

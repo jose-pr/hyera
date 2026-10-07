@@ -20,6 +20,7 @@ from pathlib_next import Path
 
 from ..exceptions import BackendError, ConfigError
 from .._lookup.function_provider import LookupContext
+from .._limits import _LIMITS, Limits
 from .._scope.scope import Strict
 from .._enums import _StrEnum, _plain
 from ._psych import RubySymbol
@@ -166,6 +167,14 @@ class Backend:
         call once the ContextVar-backed default lands.
         """
         return self._strict if self._strict is not None else _default_strict()
+
+    @property
+    def limits(self) -> "_ty.Optional[Limits]":
+        """The :class:`~hyera.Limits` of the read in progress, or ``None``
+        when nothing is bounded. A backend that parses untrusted text honours
+        the fields it can.
+        """
+        return _LIMITS.get()
 
     @classmethod
     def _default_name(cls):

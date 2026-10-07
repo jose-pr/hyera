@@ -28,6 +28,7 @@ from .._lookup.interpolation import (
 )
 from .._lookup.invocation import Invocation
 from ..exceptions import ConfigError
+from .confinement import confinement_root, lexically_inside
 from .dir_glob import glob
 from .pathname import (
     _is_rooted,
@@ -121,7 +122,7 @@ def _glob_datadir(entry: str, config_root: str) -> str:
     return entry[len(prefix) :] if entry.startswith(prefix) else entry
 
 
-def _resolve_paths(datadir, declared, invocation, extension=None):
+def _resolve_paths(datadir, declared, invocation, extension=None, confine_root=None):
     """``path``/``paths`` (``location_resolver.rb:56-66``): each entry
     interpolates (methods disallowed), gets ``extension`` appended unless it
     already ends with it, and joins onto ``datadir``.
@@ -133,6 +134,9 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
     is the one real probe of ``loc`` that lookup ever makes, and a caller
     checking the same path again (to tell a directory from a plain miss)
     reads the cached result instead of probing twice.
+
+    With ``confine_root``, an entry whose text lies outside it is reported as
+    absent without being probed.
     """
     results = []
     for d in declared:
@@ -140,6 +144,9 @@ def _resolve_paths(datadir, declared, invocation, extension=None):
         if extension and not p.endswith(extension):
             p = p + extension
         loc = _pathname_plus(datadir, p)
+        if confine_root is not None and not lexically_inside(loc, confine_root):
+            results.append(ResolvedLocation(d, _native(loc), False, False))
+            continue
         exists = invocation._memo_probe(loc).kind != "absent"
         results.append(ResolvedLocation(d, _native(loc), False, exists))
     return results
@@ -402,7 +409,7 @@ def _mapped_collection_items(collection, collection_var, level_name):
     )
 
 
-def _expand_mapped_paths(datadir, level, invocation):
+def _expand_mapped_paths(datadir, level, invocation, confine_root=None):
     """``mapped_paths`` (``location_resolver.rb:78-98``): the collection is
     a scope reference (dotted, ``::``-qualified, lenient); each item binds
     as one local variable layer (so an unqualified template reference reads
@@ -434,6 +441,9 @@ def _expand_mapped_paths(datadir, level, invocation):
             )
             p = _interpolate_path(template, child_inv)
             loc = _pathname_plus(datadir, p)
+            if confine_root is not None and not lexically_inside(loc, confine_root):
+                results.append(ResolvedLocation(template, _native(loc), False, False))
+                continue
             exists = child_inv._memo_probe(loc).kind != "absent"
             results.append(ResolvedLocation(template, _native(loc), False, exists))
     return results
@@ -445,6 +455,7 @@ def resolve_locations(
     scope: "Scope",
     refs: "_ty.Optional[list]" = None,
     fs_memo: "_ty.Optional[dict]" = None,
+    confine: bool = False,
 ) -> "_ty.Optional[_ty.List[ResolvedLocation]]":
     """The candidate :class:`ResolvedLocation` list for one hierarchy level
     in a bound :class:`~hyera.Scope` (``hiera_config.rb:664-687``).
@@ -476,6 +487,10 @@ def resolve_locations(
     every location this level (and the rest of the same hierarchy build)
     probes is probed at most once for the whole lookup. Omitted, each
     location probed here gets its own, unshared one-entry memo.
+
+    ``confine`` reports a ``path``/``paths``/``mapped_paths`` location whose
+    text lies outside the level's confinement root
+    (:func:`~hyera._config.confinement.confinement_root`) as absent, unprobed.
     """
     strict_inv = Invocation(
         scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
@@ -493,6 +508,7 @@ def resolve_locations(
     base = _entry_datadir(level, config_root, strict_inv)
     datadir = _glob_datadir(base, config_root)
 
+    confine_root = confinement_root(level, base_path) if confine else None
     key = level.location_key
     if key is None:
         # No location key at all: the caller (a function provider) calls
@@ -503,10 +519,12 @@ def resolve_locations(
         extension = level.extension
         if extension:
             extension = interpolate(extension, strict_inv, allow_methods=False)
-        return _resolve_paths(base, level.locations, lenient_inv, extension=extension)
+        return _resolve_paths(
+            base, level.locations, lenient_inv, extension, confine_root
+        )
     if key in ("glob", "globs"):
         return _expand_globs(config_root, datadir, level.locations, lenient_inv)
     if key == "mapped_paths":
-        return _expand_mapped_paths(base, level, lenient_inv)
+        return _expand_mapped_paths(base, level, lenient_inv, confine_root)
     # key in ("uri", "uris")
     return _expand_uris(level.locations, lenient_inv)

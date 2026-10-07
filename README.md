@@ -177,7 +177,16 @@ command line can: read any file the process can read as a facts file or a
 `hiera.yaml` (an error message can name the keys of a YAML or JSON mapping
 it finds there, and shows whether a path exists), and read any hiera data on
 disk. A hierarchy level that names `sops_data` runs the `sops` binary.
-Expose the tool only to a caller you would trust with that access.
+Expose the tool only to a caller you would trust with that access, or bound
+it with two environment variables read once when the server starts (ignored
+without `HYERA_MCP`): `HYERA_MCP_ROOT=/srv/hiera` requires every path
+argument (`facts`, `hiera_config`, `environmentpath`, `modulepath`,
+`basemodulepath`, `codedir`) to resolve, links resolved, inside that
+directory, and turns on `confine_locations` for every call;
+`HYERA_MCP_BACKENDS=yaml_data,json_data` lets a hierarchy name only those
+functions. A refused call exits `2` with one line naming the argument; a
+value that is not usable stops the server at start. Neither is a sandbox for
+what a backend you allow does. The plain command has no such flags.
 
 ## API overview
 
@@ -725,6 +734,45 @@ and a hook that read no file through it is called once per lookup, since
 hyera cannot know when its source changed. Under `revalidate=False` every
 result is kept until `clear_cache()`. A miss is never kept, and a hook's own
 `context.cache` is a separate store.
+
+### Untrusted input
+
+Like Puppet, hyera trusts what the hierarchy and the data say: a scope value
+interpolated into a `path` can climb out of the `datadir` with `..` or name
+an absolute path, a YAML document can expand aliases without bound, a `glob`
+can expand `{a,b}{a,b}...` exponentially, and a HOCON `${VAR}` reads the
+process environment. If the scope values or the data come from a caller you
+do not control, turn on what applies; nothing is on by default.
+
+- `Hiera(..., confine_locations=True)` treats a data file location outside its
+  level's `datadir` (symbolic links resolved) as absent: never opened, shown
+  by `explain()` as a path not found, logged once at `WARNING`. A HOCON
+  `include file(...)` outside it fails. It covers the files a level reads
+  (`path`, `paths`, `glob`, `mapped_paths`); `uri` levels and what a
+  `lookup_key` backend does with a path are not covered.
+- `Hiera(..., limits=hyera.Limits(...))` bounds two costs:
+  `yaml_alias_nodes`, the nodes one YAML document may yield through aliases
+  (the load fails before any node is built), and `glob_patterns`, the
+  patterns one `glob` may expand to through braces (the lookup fails before
+  any directory is walked). They bound those costs and not memory in general.
+  A HOCON document's cost grows with how substitutions expand, not with how
+  many there are, so no limit is offered for it.
+- `options: {hocon_env: false}` on a `hocon_data` entry, or
+  `HOCONBackend(hocon_env=False)`, stops a HOCON substitution the document
+  does not define from reading the process environment.
+
+One set to start from, a recommendation and not a measured bound:
+
+```python
+hiera = hyera.Hiera(
+    "hiera.yaml",
+    scope=hyera.Scope(facts=facts_from_the_caller),
+    confine_locations=True,
+    limits=hyera.Limits(yaml_alias_nodes=100_000, glob_patterns=1_000),
+)
+```
+
+For the MCP tool, see [Command line](#command-line).
 
 ## Hiera coverage
 

@@ -12,6 +12,8 @@ import os
 import stat
 import typing as _ty
 
+from ..exceptions import BackendError
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -106,7 +108,9 @@ def _link(nodes: list, tail):
     return tail
 
 
-def _expand_braces(pattern: str) -> "_ty.List[str]":
+def _expand_braces(
+    pattern: str, max_patterns: "_ty.Optional[int]" = None
+) -> "_ty.List[str]":
     """Ruby ``ruby_brace_expand``: the concatenation of ``pattern`` with
     each alternative of its first ``{...}`` group substituted in, in
     written order, recursing on every remaining group (so nested braces and
@@ -115,6 +119,9 @@ def _expand_braces(pattern: str) -> "_ty.List[str]":
     itself, escapes and all: :func:`_has_magic`/:func:`_segment_matcher`
     are what later interpret ``\\``. Iterative, so nesting depth is bounded
     by memory, not the interpreter's recursion limit.
+
+    With ``max_patterns``, expansion stops with :class:`BackendError` as soon
+    as it has produced more patterns than that, before the rest are built.
     """
     if "{" not in pattern:
         return [pattern]
@@ -134,6 +141,11 @@ def _expand_braces(pattern: str) -> "_ty.List[str]":
             break
         else:
             results.append("".join(parts))
+            if max_patterns is not None and len(results) > max_patterns:
+                raise BackendError(
+                    "A glob expands to more than {} patterns "
+                    "(limits.glob_patterns)".format(max_patterns)
+                )
     return results
 
 
@@ -479,7 +491,13 @@ def _glob_one(
     return results
 
 
-def glob(root: str, pattern: str, on_scandir=None, probe_isdir=None) -> "_ty.List[str]":
+def glob(
+    root: str,
+    pattern: str,
+    on_scandir=None,
+    probe_isdir=None,
+    max_patterns: "_ty.Optional[int]" = None,
+) -> "_ty.List[str]":
     """Ruby ``Dir.glob`` for ``pattern`` under the literal directory
     ``root``: the concatenation of :func:`_glob_one` over every brace
     alternative of ``pattern``, in written order (duplicates kept, as Ruby
@@ -487,8 +505,8 @@ def glob(root: str, pattern: str, on_scandir=None, probe_isdir=None) -> "_ty.Lis
     Results are ``os.path.join``ed absolute strings; directories are
     included here (a caller wanting files only, as every Hiera glob level
     does, filters them out itself). ``on_scandir``/``probe_isdir``: see
-    :func:`_glob_one`."""
+    :func:`_glob_one`; ``max_patterns``: see :func:`_expand_braces`."""
     results = []
-    for p in _expand_braces(pattern):
+    for p in _expand_braces(pattern, max_patterns):
         results.extend(_glob_one(root, p, on_scandir, probe_isdir))
     return results

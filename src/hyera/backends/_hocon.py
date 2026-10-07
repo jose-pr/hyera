@@ -11,10 +11,12 @@ import contextvars
 import importlib.util
 import io
 import logging
+import os
 import re
 import threading
 import typing as _ty
 
+from .._config.confinement import check_include
 from ..exceptions import BackendError, ConfigError, _one_line
 from . import Backend, _Names
 from ._hocon_includes import _allow_hocon_includes, _refuse_hocon_includes
@@ -30,6 +32,25 @@ __all__ = ["HOCONBackend", "has_hocon"]
 _HOCON_INCLUDE_GUARD: "contextvars.ContextVar[frozenset]" = contextvars.ContextVar(
     "_hocon_include_guard", default=frozenset()
 )
+
+
+#: Whether a substitution the document does not define may be taken from the
+#: process environment, while a document is parsed. Context-local.
+_HOCON_ENV: "contextvars.ContextVar[bool]" = contextvars.ContextVar(
+    "_hocon_env", default=True
+)
+
+
+class _HoconOsShim:
+    """Drop-in for the module-global ``os`` name our private ``config_parser``
+    copy reads ``os.environ`` through: an empty mapping while
+    :data:`_HOCON_ENV` is false, the real one otherwise. Everything else is
+    the real :mod:`os`."""
+
+    def __getattr__(self, name):
+        if name == "environ" and not _HOCON_ENV.get():
+            return {}
+        return getattr(os, name)
 
 
 def _guarded_hocon_classmethod(original, label):
@@ -139,6 +160,7 @@ class _HoconFileCodecsShim:
 
     @staticmethod
     def open(filename, mode="r", encoding=None, **kwargs):
+        check_include(filename)
         with open(filename, mode, encoding=encoding, **kwargs) as fd:
             text = fd.read()
         return io.StringIO(_allow_hocon_includes(text))
@@ -241,6 +263,7 @@ def _hocon_parser():
                 mod.NoneValue, mod.replace_with
             )
             mod.codecs = _HoconFileCodecsShim()
+            mod.os = _HoconOsShim()
             mod.logger = _HoconLoggerShim(mod.logger)
             _install_hocon_include_guard(mod)
             _HOCON_PARSER_MODULE = mod
@@ -292,6 +315,10 @@ class HOCONBackend(Backend):
     :param strict: overrides the call-time default.
     :param hocon_includes: ``None`` (the default) reads
         ``conf.get("hocon_includes", True)``.
+    :param hocon_env: ``None`` (the default) reads ``conf.get("hocon_env",
+        True)``. When false, a substitution the document does not define is
+        never taken from the process environment: ``${?VAR}`` is absent and
+        ``${VAR}`` fails to resolve. Hyera's own extension.
     """
 
     NAMES: _ty.ClassVar[_Names] = {"function": ("hocon_data",), "format": ("hocon",)}
@@ -308,8 +335,12 @@ class HOCONBackend(Backend):
         *,
         strict: _ty.Optional[str] = None,
         hocon_includes: _ty.Optional[bool] = None,
+        hocon_env: _ty.Optional[bool] = None,
     ) -> None:
         super().__init__(conf, strict=strict)
+        if hocon_env is None:
+            hocon_env = self.conf.get("hocon_env", True)
+        self.hocon_env: bool = bool(hocon_env)
         # No `Hiera(backend_options=...)` plumbing exists, so the opt-in reads from the
         # level's own `conf` (its hiera.yaml hierarchy-entry/`defaults` mapping) when
         # not passed directly.
@@ -322,30 +353,40 @@ class HOCONBackend(Backend):
         path: _ty.Any,
         options: _ty.Mapping[str, _ty.Any],
     ) -> _ty.Dict[str, _ty.Any]:
-        """The ``data_hash`` hook. Besides ``path``, the one hierarchy
-        option accepted is ``hocon_includes`` (a Boolean), which selects the
-        include mode for this level; any other option raises as for every
-        built-in file function.
+        """The ``data_hash`` hook. Besides ``path``, the hierarchy options
+        accepted are ``hocon_includes`` (a Boolean), which selects the include
+        mode for this level, and ``hocon_env`` (a Boolean), which allows or
+        stops reading the process environment; any other option raises as
+        for every built-in file function.
 
         :param path: the location's file path.
         :param options: the hierarchy entry's ``options``.
         :returns: the parsed data.
-        :raises ConfigError: ``hocon_includes`` is not a Boolean, or
+        :raises ConfigError: ``hocon_includes`` or ``hocon_env`` is not a Boolean, or
             ``options`` carries anything else besides ``path``.
         :raises BackendError: the file could not be read or parsed.
         """
         rest = dict(options)
-        if "hocon_includes" not in rest:
-            return super().data_hash(path, rest)
-        value = rest.pop("hocon_includes")
-        if not isinstance(value, bool):
-            raise ConfigError(
-                "'hocon_data' option 'hocon_includes' must be a Boolean, "
-                "not {}".format(type(value).__name__)
-            )
+        chosen = {}
+        for name in ("hocon_includes", "hocon_env"):
+            if name not in rest:
+                continue
+            value = rest.pop(name)
+            if not isinstance(value, bool):
+                raise ConfigError(
+                    "'hocon_data' option '{}' must be a Boolean, not {}".format(
+                        name, type(value).__name__
+                    )
+                )
+            chosen[name] = value
         backend = self
-        if value != self.hocon_includes:
-            backend = type(self)(self.conf, strict=self._strict, hocon_includes=value)
+        if any(getattr(self, name) != value for name, value in chosen.items()):
+            settings = {
+                "hocon_includes": self.hocon_includes,
+                "hocon_env": self.hocon_env,
+            }
+            settings.update(chosen)
+            backend = type(self)(self.conf, strict=self._strict, **settings)
         return super(HOCONBackend, backend).data_hash(path, rest)
 
     @classmethod
@@ -385,6 +426,7 @@ class HOCONBackend(Backend):
             text = _refuse_hocon_includes(text)
             guarded = frozenset({"file include", "URL include", "package include"})
         token = _HOCON_INCLUDE_GUARD.set(guarded)
+        env_token = _HOCON_ENV.set(self.hocon_env)
         failure = None
         try:
             mod = _hocon_parser()
@@ -394,6 +436,7 @@ class HOCONBackend(Backend):
         except Exception as e:
             failure = _one_line(str(e))
         finally:
+            _HOCON_ENV.reset(env_token)
             _HOCON_INCLUDE_GUARD.reset(token)
         if failure is not None:
             # Raised outside the handler: pyhocon's exception carries the

@@ -40,7 +40,8 @@ class YAMLBackend(Backend):
         # Psych's rules (types, BOM, one-document, symbol keys/values),
         # ported in ``_psych``: numbers/booleans/dates/symbols per
         # Ruby's ScalarScanner, not PyYAML's own Python-flavored resolver.
-        return safe_load(text)
+        limits = self.limits
+        return safe_load(text, limits.yaml_alias_nodes if limits is not None else None)
 
     def dumps(self, obj: _ty.Any, **kw: _ty.Any) -> str:
         """Render ``obj`` as YAML (block style, sorted keys off, Unicode

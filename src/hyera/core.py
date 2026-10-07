@@ -31,6 +31,7 @@ from ._lookup.function_provider import _EnvironmentContext
 from ._lookup.interpolation import interpolate, unshare
 from ._lookup.invocation import _STRICT, Invocation
 from ._lookup import enumeration as _enumeration
+from ._limits import Limits
 from ._lookup import layer_walk as _layer_walk
 from ._lookup.locations import _LocationStore
 from ._lookup.providers import files_for
@@ -145,6 +146,13 @@ class Hiera:
         glob listings it uses for changes since they were last read.
         ``False`` keeps everything as first read until :meth:`clear_cache`.
         Must be a ``bool``, else ``TypeError``.
+    :param confine_locations: when true, a data file location (``path``,
+        ``paths``, a ``glob`` match, ``mapped_paths``) outside its level's
+        ``datadir``, symbolic links resolved, is treated as absent and
+        logged once at WARNING; a HOCON ``include`` outside it fails. Off by
+        default, as in Puppet. Must be a ``bool``, else ``TypeError``.
+    :param limits: a :class:`~hyera.Limits` bounding what one data file or
+        glob pattern may cost; ``None`` (the default) bounds nothing.
     :raises ConfigError: for a missing, unreadable or invalid
         ``hiera.yaml``, or an environment named by ``scope.environment``
         that ``environmentpath`` cannot find.
@@ -166,6 +174,8 @@ class Hiera:
         cache_size: _ty.Optional[int] = 256,
         revalidate: bool = True,
         codedir: "_ty.Union[str, os.PathLike[str], None]" = None,
+        confine_locations: bool = False,
+        limits: _ty.Optional[Limits] = None,
     ) -> None:
         self.base_config: "_ty.Union[str, os.PathLike[str], _ty.IO[str], _ty.IO[bytes], _ty.Dict[str, _ty.Any], None]" = (base_config)
         #: Whether this is Puppet's default config (``Hiera(None, ...)``), the one case
@@ -198,6 +208,16 @@ class Hiera:
                 "revalidate must be a bool, not {}".format(type(revalidate).__name__)
             )
         self._revalidate: bool = revalidate
+        if not isinstance(confine_locations, bool):
+            raise TypeError(
+                "confine_locations must be a bool, not {}".format(
+                    type(confine_locations).__name__
+                )
+            )
+        if limits is not None and not isinstance(limits, Limits):
+            raise TypeError("limits must be a hyera.Limits or None")
+        self._confine_locations: bool = confine_locations
+        self._limits: _ty.Optional[Limits] = limits
 
         #: ``split_path_setting``: ``environmentpath`` is ``None`` when unset (no
         #: environment directories), ``basemodulepath`` normalizes to ``()``,
@@ -264,7 +284,11 @@ class Hiera:
         #: of this instance (unlike ``_providers``): ``base_path``, the layer's root,
         #: tells one layer's hierarchy from another's.
         self._store = _LocationStore(
-            self._cache_lock, self._cache_size, self._revalidate
+            self._cache_lock,
+            self._cache_size,
+            self._revalidate,
+            self._confine_locations,
+            self._limits,
         )
         # : The ``lookup_options`` value gathered from one layer's own hierarchy alone
         # (never merged across layers), : keyed the same way, plus the location entry it
