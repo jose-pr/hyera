@@ -32,21 +32,17 @@
 {"q":"lopts-convert-06::c27","p":{"status":"error","message":"The convert_to lookup_option for key 'c27' raised error: Converted value from Array[Integer, 3].new() has wrong type, expects size to be at least 3, got 2"}}
 {"scn":"lopts-convert-07","sha":"ed3c9a1b29aab735"}
 {"q":"lopts-convert-07::c01","p":{"status":"found","value":{"a":1,"b":2}}}
-{"q":"lopts-convert-07::c08","p":{"status":"found","value":{"[\"a\", 1]":["b"]}},"k":"STATUS","r":"open:convert-to-hash-keys-and-build"}
-{"q":"lopts-convert-07::c10","p":{"status":"found","value":{"[\"a\", 1]":"x"}},"k":"STATUS","r":"open:convert-to-hash-keys-and-build"}
-{"q":"lopts-convert-07::c12","p":{"status":"found","value":{"0":"x","1":{"a":"y"}}},"k":"STATUS","r":"open:convert-to-hash-keys-and-build"}
-{"q":"lopts-convert-07::c13","p":{"status":"found","value":{"0":"x","1":{"a":"y"}}},"k":"STATUS","r":"open:convert-to-hash-keys-and-build"}
 {"scn":"lopts-convert-08","sha":"606d37ad88aa1783"}
+{"q":"lopts-convert-08::c03","p":{"status":"found","value":null}}
 {"q":"lopts-convert-08::c05","p":{"status":"error","message":"The convert_to lookup_option for key 'c05' raised error: undefined method 'new_function' for nil"},"r":"error-message-text"}
-{"q":"lopts-convert-08::c08","p":{"status":"found","value":42}}
+{"q":"lopts-convert-08::c07","p":{"status":"found","value":42}}
 {"q":"lopts-convert-08::c11","p":{"status":"error","message":"The convert_to lookup_option for key 'c11' raised error: Converted value from NotUndef.new() has wrong type, expects a NotUndef value, got Undef"},"r":"error-message-text"}
 {"q":"lopts-convert-08::c12","p":{"status":"found","value":"Sensitive [value redacted]"}}
-{"q":"lopts-convert-08::c16","p":{"status":"found","value":"Sensitive [value redacted]"}}
-{"q":"lopts-convert-08::c28","p":{"status":"error","message":"The convert_to lookup_option for key 'c28' raised error: Creation of new instance of type 'Undef' is not supported"}}
+{"q":"lopts-convert-08::c24","p":{"status":"found","value":"abc"}}
 {"scn":"lopts-convert-09","sha":"3ad92a9daaca2fc2"}
 {"q":"lopts-convert-09::c02","p":{"status":"found","value":"abc"},"k":"STATUS","r":"unrunnable-types"}
-{"q":"lopts-convert-09::c04","p":{"status":"error","message":"The convert_to lookup_option for key 'c04' raised error: Creation of new instance of type 'Enum' is not supported"},"k":"STATUS","r":"open:bare-enum-matches-any-string"}
-{"q":"lopts-convert-09::c10","p":{"status":"error","message":"The convert_to lookup_option for key 'c10' raised error: Creation of new instance of type 'TypeReference['Bogus']' is not supported"}}
+{"q":"lopts-convert-09::c03","p":{"status":"found","value":"abc"}}
+{"q":"lopts-convert-09::c26","p":{"status":"found","value":42}}
 {"q":"lopts-convert-09::c27","p":{"status":"found","value":42},"k":"STATUS","r":"unrunnable-types"}
 {"scn":"lopts-convert-10","sha":"9cc7a9773d5b20e8"}
 {"q":"lopts-convert-10::c00","p":{"status":"found","value":"1.2.3"},"k":"STATUS","r":"convert-to-unsupported-type"}
@@ -54,56 +50,57 @@
 {"q":"lopts-convert-10::c03","p":{"status":"found","value":"http://x"},"k":"STATUS","r":"convert-to-unsupported-type"}
 {"q":"lopts-convert-10::c04","p":{"status":"found","value":"1-00:00:00.0"},"k":"STATUS","r":"convert-to-unsupported-type"}
 {"q":"lopts-convert-10::c06","p":{"status":"found","value":"Integer"},"k":"STATUS","r":"convert-to-unsupported-type"}
-{"q":"lopts-convert-10::c12","p":{"status":"error","message":"The convert_to lookup_option for key 'c12' raised error: Converted value from Array[Integer].new() has wrong type, index 0 expects an Integer value, got String"}}
 {"scn":"lopts-convert-combos","sha":"564630ffee0623fa"}
-{"q":"lopts-convert-combos::dotted.port m=first","p":{"status":"found","value":["9","9"]}}
-{"q":"lopts-convert-combos::ref_alias","p":{"status":"found","value":8080}}
-{"q":"lopts-convert-combos::nums.0 m=first","p":{"status":"error","message":"The convert_to lookup_option for key 'nums.0' raised error: Converted value from Array[Integer].new() has wrong type, index 0 expects an Integer value, got String"}}
-{"q":"lopts-convert-combos::h.0","p":{"status":"not_found"}}
+{"q":"lopts-convert-combos::h","p":{"status":"found","value":[["b","2"],["a","1"]]}}
+{"q":"lopts-convert-combos::top_only_opt m=deep","p":{"status":"found","value":9}}
+{"q":"lopts-convert-combos::dotted m=first","p":{"status":"found","value":[["port","99"]]}}
+{"q":"lopts-convert-combos::ref","p":{"status":"found","value":"8080"}}
+{"q":"lopts-convert-combos::nope t=Integer","p":{"status":"not_found"}}
 {"scn":"lopts-precedence","sha":"27483da57de447ea"}
-{"q":"lopts-precedence::app::s","p":{"status":"found","value":["scalar"]}}
-{"q":"lopts-precedence::only_low","p":{"status":"found","value":["t","m","c"]}}
-{"q":"lopts-precedence::we.ird m=first","p":{"status":"not_found"}}
-{"q":"lopts-precedence::'we.ird' m=first","p":{"status":"found","value":["t"]}}
+{"q":"lopts-precedence::app::a m=deep","p":{"status":"found","value":["c","t","m"]}}
+{"q":"lopts-precedence::str_entry","p":{"status":"found","value":["t"]}}
+{"q":"lopts-precedence::lookup_options m=hash","p":{"status":"not_found"}}
 {"scn":"lopts-shape-alias-whole","sha":"37496f8271b5e1a6"}
-{"q":"lopts-shape-alias-whole::plain","p":{"status":"found","value":"p"}}
+{"q":"lopts-shape-alias-whole::h","p":{"status":"found","value":{"a":1}}}
+{"scn":"lopts-shape-bad-regex","sha":"32a57c9a2204eeaf"}
+{"q":"lopts-shape-bad-regex::k","p":{"status":"error","message":"end pattern with unmatched parenthesis: /^k(/"}}
 {"scn":"lopts-shape-convert-and-merge","sha":"d69ea54d952f5a54"}
 {"q":"lopts-shape-convert-and-merge::h","p":{"status":"found","value":{"a":1}}}
-{"q":"lopts-shape-convert-and-merge::plain","p":{"status":"found","value":"p"}}
+{"scn":"lopts-shape-entry-empty","sha":"51534b6418f331da"}
+{"q":"lopts-shape-entry-empty::plain","p":{"status":"found","value":"p"}}
 {"scn":"lopts-shape-entry-int","sha":"cdd87f18a075d50a"}
 {"q":"lopts-shape-entry-int::k m=first","p":{"status":"error","message":"no implicit conversion of String into Integer"},"r":"error-message-text"}
 {"scn":"lopts-shape-entry-list","sha":"27ac98cf28638934"}
 {"q":"lopts-shape-entry-list::h","p":{"status":"found","value":{"a":1}}}
-{"scn":"lopts-shape-entry-null","sha":"468439a0e858ac3c"}
-{"q":"lopts-shape-entry-null::k","p":{"status":"found","value":{"a":1,"l":["t"]}}}
 {"scn":"lopts-shape-key-nonstring","sha":"3f2b721296750b74"}
 {"q":"lopts-shape-key-nonstring::k","p":{"status":"error","message":"undefined method 'start_with?' for an instance of Integer"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"lopts-shape-key-nonstring::h","p":{"status":"error","message":"undefined method 'start_with?' for an instance of Integer"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"lopts-shape-key-nonstring::plain","p":{"status":"error","message":"undefined method 'start_with?' for an instance of Integer"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"lopts-shape-key-nonstring::k m=first","p":{"status":"error","message":"undefined method 'start_with?' for an instance of Integer"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
 {"q":"lopts-shape-key-nonstring::nope","p":{"status":"error","message":"undefined method 'start_with?' for an instance of Integer"},"k":"STATUS","r":"puppet-crashes-hyera-answers"}
+{"scn":"lopts-shape-merge-deep-bad-ko","sha":"b1769be042e4a0cc"}
+{"q":"lopts-shape-merge-deep-bad-ko::plain","p":{"status":"found","value":"p"}}
 {"scn":"lopts-shape-merge-deep-bad-sort","sha":"9fcb632d4d072ce3"}
-{"q":"lopts-shape-merge-deep-bad-sort::nope","p":{"status":"not_found"}}
-{"scn":"lopts-shape-merge-deep-empty-ko","sha":"b8fb14f92bc970af"}
-{"q":"lopts-shape-merge-deep-empty-ko::h","p":{"status":"found","value":{"a":1}}}
-{"scn":"lopts-shape-merge-deep-keep-dups","sha":"65d0f50ed727a1aa"}
-{"q":"lopts-shape-merge-deep-keep-dups::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}}}
-{"scn":"lopts-shape-merge-deep-nil-values","sha":"ca942bcb2c01646c"}
-{"q":"lopts-shape-merge-deep-nil-values::h","p":{"status":"found","value":{"a":1}}}
+{"q":"lopts-shape-merge-deep-bad-sort::k","p":{"status":"error","message":"The merge options has wrong type, entry 'sort_merged_arrays' expects a value of type Undef or Boolean, got String"}}
+{"scn":"lopts-shape-merge-deep-extend","sha":"1c2178d65863a2e0"}
+{"q":"lopts-shape-merge-deep-extend::lookup_options","p":{"status":"not_found"}}
+{"scn":"lopts-shape-merge-deep-merge-debug","sha":"c0bd13b2630e1927"}
+{"q":"lopts-shape-merge-deep-merge-debug::k","p":{"status":"found","value":{"b":2,"l":["c","t"],"a":1}}}
 {"scn":"lopts-shape-merge-deep-overwrite","sha":"85ea93402639605a"}
-{"q":"lopts-shape-merge-deep-overwrite::plain","p":{"status":"found","value":"p"}}
-{"scn":"lopts-shape-merge-default","sha":"9eb2c08637f49fa3"}
-{"q":"lopts-shape-merge-default::k","p":{"status":"found","value":{"a":1,"l":["t"]}}}
-{"q":"lopts-shape-merge-default::lookup_options","p":{"status":"not_found"}}
+{"q":"lopts-shape-merge-deep-overwrite::h","p":{"status":"found","value":{"a":1}}}
+{"scn":"lopts-shape-merge-deep-unpack","sha":"f71846f0035ffa93"}
+{"q":"lopts-shape-merge-deep-unpack::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}}}
+{"q":"lopts-shape-merge-deep-unpack::nope","p":{"status":"not_found"}}
 {"scn":"lopts-shape-merge-hash-with-opts","sha":"3a9ae8fe0f09ee98"}
-{"q":"lopts-shape-merge-hash-with-opts::plain","p":{"status":"found","value":"p"}}
-{"scn":"lopts-shape-merge-null","sha":"b9e623845f6c7e34"}
-{"q":"lopts-shape-merge-null::nope","p":{"status":"not_found"}}
-{"scn":"lopts-shape-merge-unique-with-opts","sha":"3a8b0b5f2be64e87"}
-{"q":"lopts-shape-merge-unique-with-opts::nope","p":{"status":"not_found"}}
+{"q":"lopts-shape-merge-hash-with-opts::h","p":{"status":"found","value":{"a":1}}}
+{"scn":"lopts-shape-merge-list","sha":"03569d87485e71d8"}
+{"q":"lopts-shape-merge-list::plain","p":{"status":"found","value":"p"}}
+{"scn":"lopts-shape-merge-unconstrained","sha":"9f71f277df436ea3"}
+{"q":"lopts-shape-merge-unconstrained::plain","p":{"status":"found","value":"p"}}
+{"scn":"lopts-shape-merge-upper","sha":"b0cdc0cd6a52f83a"}
+{"q":"lopts-shape-merge-upper::lookup_options","p":{"status":"not_found"}}
 {"scn":"lopts-shape-regex-A-Z","sha":"5ae29b842ecbae20"}
-{"q":"lopts-shape-regex-A-Z::plain","p":{"status":"found","value":"p"}}
-{"q":"lopts-shape-regex-A-Z::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}}}
+{"q":"lopts-shape-regex-A-Z::h","p":{"status":"found","value":{"a":1}}}
 {"scn":"lopts-shape-regex-G-anchor","sha":"77547b96780e5716"}
 {"q":"lopts-shape-regex-G-anchor::h","p":{"status":"found","value":{"a":1}},"k":"STATUS","r":"ruby-regex-constructs"}
 {"scn":"lopts-shape-regex-R","sha":"11561d7bc61d61af"}
@@ -111,22 +108,22 @@
 {"scn":"lopts-shape-regex-X","sha":"6bf886ae1d547673"}
 {"q":"lopts-shape-regex-X::nope","p":{"status":"not_found"},"k":"STATUS","r":"ruby-regex-constructs"}
 {"scn":"lopts-shape-regex-backref","sha":"3fd60d260e247f92"}
-{"q":"lopts-shape-regex-backref::plain","p":{"status":"found","value":"p"}}
-{"scn":"lopts-shape-regex-escape-e","sha":"2217024a9fe567b6"}
-{"q":"lopts-shape-regex-escape-e::nope","p":{"status":"not_found"}}
-{"scn":"lopts-shape-regex-i-flag","sha":"7a726d8cf3447647"}
-{"q":"lopts-shape-regex-i-flag::h","p":{"status":"found","value":{"a":1}}}
-{"scn":"lopts-shape-regex-named-group","sha":"f4b97a4bf5b67ce7"}
-{"q":"lopts-shape-regex-named-group::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}}}
+{"q":"lopts-shape-regex-backref::h","p":{"status":"found","value":{"a":1}}}
+{"scn":"lopts-shape-regex-dollar-newline","sha":"9961998b2920660e"}
+{"q":"lopts-shape-regex-dollar-newline::plain","p":{"status":"found","value":"p"}}
+{"scn":"lopts-shape-regex-i-flag-mid","sha":"4c1a3389e9dd0d9f"}
+{"q":"lopts-shape-regex-i-flag-mid::k","p":{"status":"found","value":{"b":2,"l":["c","t"],"a":1}}}
+{"scn":"lopts-shape-regex-m-flag","sha":"0687cb8a4ac6f921"}
+{"q":"lopts-shape-regex-m-flag::lookup_options","p":{"status":"not_found"}}
 {"scn":"lopts-shape-regex-nested-class","sha":"6b612598243ffd1c"}
 {"q":"lopts-shape-regex-nested-class::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}},"k":"STATUS","r":"ruby-regex-constructs"}
 {"scn":"lopts-shape-regex-star-star","sha":"e18880ba408a4443"}
 {"q":"lopts-shape-regex-star-star::plain","p":{"status":"found","value":"p"},"k":"STATUS","r":"ruby-regex-constructs"}
-{"scn":"lopts-shape-regex-u4","sha":"9d2f12227caedb5e"}
-{"q":"lopts-shape-regex-u4::nope","p":{"status":"not_found"}}
-{"scn":"lopts-shape-strategy-reverse-deep-hash","sha":"7fe124971011f4a9"}
-{"q":"lopts-shape-strategy-reverse-deep-hash::k","p":{"status":"found","value":{"a":1,"l":["t","c"],"b":2}}}
-{"scn":"lopts-shape-unknown-plus-merge","sha":"3c18f3fb9d38eabd"}
-{"q":"lopts-shape-unknown-plus-merge::lookup_options","p":{"status":"not_found"}}
-{"scn":"lopts-shape-value-int","sha":"144deb8a352bf100"}
-{"q":"lopts-shape-value-int::k m=first","p":{"status":"error","message":"value of lookup_options must be a hash"}}
+{"scn":"lopts-shape-regex-u-brace","sha":"b3cf416c94b15959"}
+{"q":"lopts-shape-regex-u-brace::plain","p":{"status":"found","value":"p"}}
+{"scn":"lopts-shape-self-options","sha":"7b00527ccaecc82e"}
+{"q":"lopts-shape-self-options::k m=first","p":{"status":"found","value":{"a":1,"l":["t"]}}}
+{"scn":"lopts-shape-unknown-option","sha":"4d3ea5faf4a75604"}
+{"q":"lopts-shape-unknown-option::nope","p":{"status":"not_found"}}
+{"scn":"lopts-shape-value-empty","sha":"c5f5c882215b467b"}
+{"q":"lopts-shape-value-empty::lookup_options","p":{"status":"not_found"}}

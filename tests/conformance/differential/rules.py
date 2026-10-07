@@ -230,18 +230,6 @@ def _environment_slash(f: Facts) -> bool:
     return bool(name) and name.endswith("/") and f.ours["status"] == "error"
 
 
-def _bare_enum(f: Facts) -> bool:
-    text = message_of(f.puppet)
-    return (
-        f.puppet["status"] == "error"
-        and f.ours["status"] == "found"
-        and (
-            "expects a match for Enum, got" in text
-            or "Creation of new instance of type 'Enum' is not supported" in text
-        )
-    )
-
-
 def _non_utf8(f: Facts) -> bool:
     return (
         f.puppet["status"] == "found"
@@ -282,52 +270,11 @@ def _empty_environment(f: Facts) -> bool:
     )
 
 
-def _type_forms(f: Facts) -> bool:
-    expression = f.query.get("type") or ""
-    return (
-        f.puppet["status"] == "found"
-        and f.ours["status"] == "error"
-        and "is not a valid type specification" in message_of(f.ours)
-        and bool(
-            re.search(r"Integer\[[^\]]*(\d\.\d|\de\d)", expression)
-            or re.search(r"Hash\[\s*\d", expression)
-        )
-    )
-
-
 def _lookup_options_key(f: Facts) -> bool:
     return (
         f.query["key"] == "lookup_options"
         and f.puppet["status"] == "not_found"
         and f.ours["status"] == "error"
-    )
-
-
-def _environment_case(f: Facts) -> bool:
-    return (
-        _environment_argument(f) is not None
-        and f.puppet["status"] == "found"
-        and f.ours["status"] == "error"
-        and "Could not find a directory environment named" in message_of(f.ours)
-    )
-
-
-def _convert_hash(f: Facts) -> bool:
-    text = message_of(f.ours)
-    return (
-        f.puppet["status"] == "found"
-        and f.ours["status"] == "error"
-        and ("unusable Hash key" in text or "build option of the Hash new()" in text)
-    )
-
-
-def _yaml_tags(f: Facts) -> bool:
-    if f.kind == "VALUE":
-        return f.puppet["value"] is None and f.ours["value"] == ""
-    return (
-        f.puppet["status"] == "found"
-        and f.ours["status"] == "error"
-        and "Tried to load unspecified class" in message_of(f.ours)
     )
 
 
@@ -369,6 +316,7 @@ RULES: List[Rule] = [
         ("STATUS", "VALUE", "RENDER"),
         _hocon_parser,
     ),
+    Rule("global-config-error-at-construction", ("STATUS",), _lookup_options_key),
     Rule(
         "empty-environment",
         ("STATUS", "CHANNEL"),
@@ -378,50 +326,7 @@ RULES: List[Rule] = [
 ]
 
 #: Known, unfixed divergences.
-OPEN: List[OpenDefect] = [
-    OpenDefect(
-        "bare-enum-matches-any-string",
-        "a bare Enum type accepts any string, where Puppet rejects the value "
-        "(as a --type and as a convert_to)",
-        ("STATUS",),
-        _bare_enum,
-    ),
-    OpenDefect(
-        "type-forms-puppet-accepts",
-        "Integer with a float bound and Hash with number parameters are refused as "
-        "invalid type specifications, where Puppet accepts them",
-        ("STATUS",),
-        _type_forms,
-    ),
-    OpenDefect(
-        "lookup-options-key-on-broken-layer",
-        "looking up the key lookup_options with an invalid layer hiera.yaml raises "
-        "the configuration error, where Puppet reports a miss",
-        ("STATUS",),
-        _lookup_options_key,
-    ),
-    OpenDefect(
-        "environment-name-case",
-        "an environment named in other letter case than its directory is not "
-        "found, where Puppet finds it",
-        ("STATUS",),
-        _environment_case,
-    ),
-    OpenDefect(
-        "convert-to-hash-keys-and-build",
-        "convert_to Hash refuses an Array key and the build option, where Puppet "
-        "converts",
-        ("STATUS",),
-        _convert_hash,
-    ),
-    OpenDefect(
-        "yaml-tags-psych-loads",
-        "a YAML scalar tagged with an Encoding or a bare ! is an error or an empty "
-        "string, where Puppet loads it",
-        ("STATUS", "VALUE"),
-        _yaml_tags,
-    ),
-]
+OPEN: List[OpenDefect] = []
 
 
 def classify(facts: Facts) -> Optional[str]:

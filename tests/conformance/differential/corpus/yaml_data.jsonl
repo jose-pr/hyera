@@ -72,75 +72,72 @@
 {"q":"yamlrisky-03::other","p":{"status":"found","value":1}}
 {"scn":"yamlrisky-04","sha":"5b7611bd95545430"}
 {"q":"yamlrisky-04::other","p":{"status":"found","value":1}}
-{"scn":"yamlrisky-05","sha":"09a00bd8bba2a598"}
-{"q":"yamlrisky-05::k","p":{"status":"found","value":null},"k":"VALUE","r":"open:yaml-tags-psych-loads"}
-{"q":"yamlrisky-05::k d=dflt","p":{"status":"found","value":null},"k":"VALUE","r":"open:yaml-tags-psych-loads"}
 {"scn":"yamlrisky-16","sha":"b350e0bad65bcc85"}
-{"q":"yamlrisky-16::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): mapping keys are not allowed in this context at line 1 column 4"}}
-{"scn":"yamlrisky-30","sha":"b5740a60d327c48d"}
-{"q":"yamlrisky-30::k d=dflt","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): found invalid Unicode character escape code while parsing a quoted scalar at line 1 column 4"}}
+{"q":"yamlrisky-16::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): mapping keys are not allowed in this context at line 1 column 4"}}
+{"scn":"yamlrisky-26","sha":"1c728a66d2030f97"}
+{"q":"yamlrisky-26::other","p":{"status":"found","value":1}}
 {"scn":"yamlrisky-33","sha":"b372d9460cd18882"}
-{"q":"yamlrisky-33::other","p":{"status":"found","value":1}}
-{"scn":"yamlrisky-38","sha":"85721f9bdc678b52"}
-{"q":"yamlrisky-38::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): found invalid Unicode character escape code while parsing a quoted scalar at line 1 column 4"}}
+{"q":"yamlrisky-33::k","p":{"status":"found","value":"<<"}}
+{"scn":"yamlrisky-37","sha":"73c171b8032cb813"}
+{"q":"yamlrisky-37::k d=dflt","p":{"status":"found","value":""}}
 {"scn":"yamlrisky-39","sha":"8a84a7629c3201db"}
-{"q":"yamlrisky-39::other","p":{"status":"found","value":1}}
-{"scn":"yamlstruct-anchor-scalar","sha":"625b17bef0fe4e7d"}
-{"q":"yamlstruct-anchor-scalar::k","p":{"status":"found","value":"hello"}}
-{"scn":"yamlstruct-cr-only","sha":"d6c27bc455799274"}
-{"q":"yamlstruct-cr-only::fb","p":{"status":"found","value":"fallback"}}
-{"scn":"yamlstruct-invalid-unclosed-quote","sha":"6b3d2ba18169d331"}
-{"q":"yamlstruct-invalid-unclosed-quote::fb","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): found unexpected end of stream while scanning a quoted scalar at line 1 column 4"}}
+{"q":"yamlrisky-39::k","p":{"status":"found","value":"\u00ff"}}
+{"scn":"yamlrisky-47","sha":"6dc4d417771b2b38"}
+{"q":"yamlrisky-47::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): found unexpected end of stream while scanning a quoted scalar at line 1 column 6"}}
+{"scn":"yamlstruct-comments-everywhere","sha":"eb3d9386261b8a78"}
+{"q":"yamlstruct-comments-everywhere::k m=unique","p":{"status":"found","value":["v","fallback_k"]}}
+{"scn":"yamlstruct-invalid-tab-key","sha":"8332ba5901b8c619"}
+{"q":"yamlstruct-invalid-tab-key::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): found character that cannot start any token while scanning for the next token at line 1 column 1"}}
 {"scn":"yamlstruct-key-bool","sha":"93214c20f3409815"}
-{"q":"yamlstruct-key-bool::true","p":{"status":"not_found"}}
-{"q":"yamlstruct-key-bool::yes","p":{"status":"not_found"}}
-{"scn":"yamlstruct-key-complex","sha":"d4f813cba7dc0372"}
-{"q":"yamlstruct-key-complex::k","p":{"status":"found","value":1}}
+{"q":"yamlstruct-key-bool::k","p":{"status":"found","value":"v"}}
+{"q":"yamlstruct-key-bool::k m=unique","p":{"status":"found","value":["v","fallback_k"]}}
+{"scn":"yamlstruct-key-case","sha":"9ea2fb9f8ebd588a"}
+{"q":"yamlstruct-key-case::key","p":{"status":"found","value":"lower"}}
 {"scn":"yamlstruct-key-dotted","sha":"402c47e0bbdedd53"}
+{"q":"yamlstruct-key-dotted::\"a.b\"","p":{"status":"found","value":"flat"}}
 {"q":"yamlstruct-key-dotted::a","p":{"status":"found","value":{"b":"nested"}}}
-{"q":"yamlstruct-key-dotted::fb","p":{"status":"found","value":"fallback"}}
 {"scn":"yamlstruct-key-int-nested","sha":"11c23eb7f8bfe703"}
-{"q":"yamlstruct-key-int-nested::h.1","p":{"status":"found","value":"one"}}
-{"scn":"yamlstruct-key-list-nested","sha":"21c74d92bae4d53e"}
-{"q":"yamlstruct-key-list-nested::k m=unique","p":{"status":"found","value":["fallback_k"]}}
+{"q":"yamlstruct-key-int-nested::fb","p":{"status":"found","value":"fallback"}}
+{"q":"yamlstruct-key-int-nested::k m=unique","p":{"status":"found","value":["fallback_k"]}}
 {"scn":"yamlstruct-key-null","sha":"1772ae36763fa9c0"}
-{"q":"yamlstruct-key-null::k m=unique","p":{"status":"found","value":["v","fallback_k"]}}
+{"q":"yamlstruct-key-null::fb","p":{"status":"found","value":"fallback"}}
 {"scn":"yamlstruct-key-null-nested","sha":"8e599fa12017af36"}
-{"q":"yamlstruct-key-null-nested::k m=unique","p":{"status":"found","value":["fallback_k"]}}
-{"scn":"yamlstruct-key-quoted-num","sha":"f72faa4244fe0b95"}
-{"q":"yamlstruct-key-quoted-num::1","p":{"status":"found","value":"one"}}
-{"scn":"yamlstruct-long-line","sha":"5b2780491ace5173"}
-{"q":"yamlstruct-long-line::fb","p":{"status":"found","value":"fallback"}}
-{"scn":"yamlstruct-lookup-options-null","sha":"2f032ba1c10ba3ac"}
-{"q":"yamlstruct-lookup-options-null::k","p":{"status":"found","value":"v"}}
+{"q":"yamlstruct-key-null-nested::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-key-question","sha":"92f4e1f457823da7"}
+{"q":"yamlstruct-key-question::k","p":{"status":"found","value":"v"}}
+{"scn":"yamlstruct-key-unicode","sha":"1cba990fbd97ccb5"}
+{"q":"yamlstruct-key-unicode::k m=unique","p":{"status":"found","value":["fallback_k"]}}
+{"scn":"yamlstruct-lookup-options-list","sha":"141a9de583fac34a"}
+{"q":"yamlstruct-lookup-options-list::k m=unique","p":{"status":"error","message":"value of lookup_options must be a hash"}}
 {"scn":"yamlstruct-mac-ip-time","sha":"1783a9ef5925e534"}
-{"q":"yamlstruct-mac-ip-time::time","p":{"status":"found","value":45000}}
+{"q":"yamlstruct-mac-ip-time::mac","p":{"status":"found","value":"00:11:22:33:44:55"}}
 {"q":"yamlstruct-mac-ip-time::port","p":{"status":"found","value":"0:80"}}
-{"scn":"yamlstruct-merge-key-scalar","sha":"e74678f4bfb95978"}
-{"q":"yamlstruct-merge-key-scalar::k","p":{"status":"found","value":{"<<":"notamap","a":1}}}
+{"scn":"yamlstruct-merge-key-quoted","sha":"543a8309ac75fea6"}
+{"q":"yamlstruct-merge-key-quoted::k m=unique","p":{"status":"found","value":[{"a":1,"c":4},"fallback_k"]}}
+{"scn":"yamlstruct-nel","sha":"ddc3099df66b79e2"}
+{"q":"yamlstruct-nel::k m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): could not find expected ':' while scanning a simple key at line 2 column 1"}}
 {"scn":"yamlstruct-norway","sha":"49975666e78f9d74"}
-{"q":"yamlstruct-norway::answer","p":{"status":"found","value":"y"}}
-{"scn":"yamlstruct-octal-strings","sha":"5a80d02d9eaf1a2b"}
-{"q":"yamlstruct-octal-strings::fb","p":{"status":"found","value":"fallback"}}
+{"q":"yamlstruct-norway::ok","p":{"status":"found","value":true}}
 {"scn":"yamlstruct-only-doc-start-null","sha":"4f4e61a1afc1af51"}
-{"q":"yamlstruct-only-doc-start-null::k m=unique","p":{"status":"found","value":["fallback_k"]}}
-{"scn":"yamlstruct-tag-directive","sha":"1cb81cac9c46ddb4"}
-{"q":"yamlstruct-tag-directive::k","p":{"status":"found","value":"bar"}}
-{"q":"yamlstruct-tag-directive::fb","p":{"status":"found","value":"fallback"}}
-{"scn":"yamlstruct-top-string-quoted","sha":"cc4ffe242fa61deb"}
-{"q":"yamlstruct-top-string-quoted::fb","p":{"status":"found","value":"fallback"}}
+{"q":"yamlstruct-only-doc-start-null::fb","p":{"status":"found","value":"fallback"}}
+{"scn":"yamlstruct-tabs-indent","sha":"baee0899f92c2b77"}
+{"q":"yamlstruct-tabs-indent::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): found character that cannot start any token while scanning for the next token at line 2 column 1"}}
+{"q":"yamlstruct-tabs-indent::k m=unique","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/subject.yaml): found character that cannot start any token while scanning for the next token at line 2 column 1"}}
+{"scn":"yamlstruct-top-scalar","sha":"2fa7374e5b139def"}
+{"q":"yamlstruct-top-scalar::k","p":{"status":"found","value":"fallback_k"}}
 {"scn":"yamlsym-03","sha":"2b78d0b15dd7a55f"}
-{"q":"yamlsym-03::other","p":{"status":"found","value":1}}
+{"q":"yamlsym-03::k","p":{"status":"found","value":":dq"}}
 {"scn":"yamlsym-04","sha":"9744a6c991180283"}
-{"q":"yamlsym-04::other","p":{"status":"found","value":1}}
+{"q":"yamlsym-04::k","p":{"status":"found","value":":sq"}}
 {"scn":"yamlsym-20","sha":"43b4659246017c32"}
-{"q":"yamlsym-20::other","p":{"status":"found","value":1}}
+{"q":"yamlsym-20::k","p":{"status":"error","message":"Lookup of key 'k' failed: Value for key 'k', in hash returned from data_hash function 'yaml_data', when using location '<case>/data/common.yaml', has wrong type, expects Puppet::LookupValue, got Runtime[ruby, 'Symbol']"}}
+{"scn":"yamltag-03","sha":"83027b5a4871cab5"}
+{"q":"yamltag-03::k d=dflt","p":{"status":"found","value":1.0}}
 {"scn":"yamltag-04","sha":"0dc2c5a21f32cb57"}
 {"q":"yamltag-04::k","p":{"status":"found","value":1.5}}
-{"q":"yamltag-04::other","p":{"status":"found","value":1}}
-{"scn":"yamltag-40","sha":"4eb2026e2713a0f1"}
-{"q":"yamltag-40::k d=dflt","p":{"status":"found","value":"5"}}
+{"scn":"yamltag-38","sha":"26105bfefded42dc"}
+{"q":"yamltag-38::other","p":{"status":"found","value":1}}
 {"scn":"yamltag-54","sha":"e6985d8b681333fa"}
-{"q":"yamltag-54::other","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): Tried to load unspecified class: Foo"}}
-{"scn":"yamltag-57","sha":"2d70c7e2e293df55"}
-{"q":"yamltag-57::k d=dflt","p":{"status":"found","value":"2001-12-14"}}
+{"q":"yamltag-54::k","p":{"status":"error","message":"Lookup of key 'lookup_options' failed: Unable to parse (<case>/data/common.yaml): Tried to load unspecified class: Foo"}}
+{"scn":"yamltag-55","sha":"d6af9ab5171a1034"}
+{"q":"yamltag-55::other","p":{"status":"found","value":1}}

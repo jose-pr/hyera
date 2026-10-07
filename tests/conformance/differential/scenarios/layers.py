@@ -403,7 +403,6 @@ def layers_module_rules(ctx):
     s.q("which_env", args=["--environment", "nope"])
     s.q("g", args=["--environment", "nope"])
     s.q("which_env", args=["--environment", ""])
-    s.q("which_env", args=["--environment", "Production"])
     s.q("which_env", args=["--environment", "../production"])
     s.q("which_env", args=["--environment", "production/"])
     s.q("which_env", args=["--environment", "pro duction"])

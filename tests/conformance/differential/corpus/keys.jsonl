@@ -1,9 +1,8 @@
 {"format":1,"area":"keys","seed":1,"count":200,"agree":60,"per_rule":5,"puppet":"8.10.0","ruby":"4.0.7","gems":{"deep_merge":"1.2.2","hiera-eyaml":"5.0.1","hocon":"1.4.0","json":"2.19.9","psych":"5.3.1"},"node":"golden.example.com"}
 {"scn":"keys-default-type","sha":"3e82e82343a5a414"}
-{"q":"keys-default-type::str t=Optional[String]","p":{"status":"found","value":"hello"}}
+{"q":"keys-default-type::str t=Hash","p":{"status":"error","message":"Found value has wrong type, expects a Hash value, got String"}}
 {"q":"keys-default-type::str t=Iterable","p":{"status":"found","value":"hello"},"k":"STATUS","r":"unrunnable-types"}
-{"q":"keys-default-type::str t=Enum","p":{"status":"error","message":"Found value has wrong type, expects a match for Enum, got 'hello'"},"k":"STATUS","r":"open:bare-enum-matches-any-string"}
-{"q":"keys-default-type::str t=Hash[String]","p":{"status":"error","message":"Invalid number of type parameters specified: Hash requires 2 to 4, 1 provided"}}
+{"q":"keys-default-type::str t=Optional","p":{"status":"error","message":""}}
 {"q":"keys-default-type::str t=Init","p":{"status":"found","value":"hello"},"k":"STATUS","r":"unrunnable-types"}
 {"q":"keys-default-type::int t=Integer['1']","p":{"status":"error","message":"The expression <Integer['1']> is not a valid type specification."}}
 {"q":"keys-default-type::int t=Integer[default, default]","p":{"status":"found","value":42}}
@@ -20,10 +19,11 @@
 {"q":"keys-default-type::hash t=Hash[Scalar, Scalar]","p":{"status":"found","value":{"a":1,"b":"two"}}}
 {"q":"keys-default-type::nope t=Any","p":{"status":"not_found"}}
 {"q":"keys-default-type::arr d=","p":{"status":"found","value":[1,2,3]}}
-{"q":"keys-default-type::t_hash d=","p":{"status":"found","value":{}}}
+{"q":"keys-default-type::t_false d=D","p":{"status":"found","value":false}}
 {"q":"keys-default-type::nope|t_false","p":{"status":"found","value":false}}
 {"q":"keys-default-type::nope|t_false t=String","p":{"status":"error","message":"Found value has wrong type, expects a String value, got Boolean"}}
 {"q":"keys-default-type::nope|nope|int t=String","p":{"status":"error","message":"Found value has wrong type, expects a String value, got Integer"}}
+{"q":"keys-default-type::|str m=unique","p":{"status":"found","value":["hello"]}}
 {"q":"keys-default-type::str --default D --default E","p":{"status":"found","value":"hello"}}
 {"q":"keys-default-type::str --default=-x","p":{"status":"found","value":"hello"}}
 {"q":"keys-default-type::nope --default a b","p":{"status":"found","value":"a b"}}
@@ -36,51 +36,50 @@
 {"q":"keys-default-type::nope --hiera_config nope.yaml","p":{"status":"not_found"},"k":"STATUS","r":"missing-config-raises"}
 {"q":"keys-default-type::str --hiera_config nope.yaml","p":{"status":"found","value":"hello"},"k":"STATUS","r":"missing-config-raises"}
 {"scn":"keys-dotted-error","sha":"ac864eec1ee74060"}
-{"q":"keys-dotted-error::h.a --strict error","p":{"status":"found","value":{"b":"hab","b.c":"habc_quoted"}}}
-{"q":"keys-dotted-error::h.l.1 --strict error","p":{"status":"found","value":["l10","l11"]}}
-{"q":"keys-dotted-error::h.f.x --strict error","p":{"status":"error","message":"Data Provider type mismatch: Got FalseClass when a hash-like object was expected to access value using 'x' from key 'h.f.x'"}}
-{"q":"keys-dotted-error::arr.1.k --strict error","p":{"status":"found","value":"v"}}
-{"q":"keys-dotted-error::'a::b' --strict error","p":{"status":"found","value":"top_ns"}}
-{"q":"keys-dotted-error::::a::b --strict error","p":{"status":"not_found"}}
-{"q":"keys-dotted-error::''sq'' --strict error","p":{"status":"error","message":"Syntax error in key: '''sq'''"}}
-{"q":"keys-dotted-error::\nh --strict error","p":{"status":"not_found"}}
-{"q":"keys-dotted-error::a.b.c --strict error","p":{"status":"not_found"}}
+{"q":"keys-dotted-error::h.l.0x1 --strict error","p":{"status":"error","message":"Data Provider type mismatch: Got Array when a hash-like object was expected to access value using '0x1' from key 'h.l.0x1'"}}
+{"q":"keys-dotted-error::h.e.x --strict error","p":{"status":"error","message":"Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'h.e.x'"}}
+{"q":"keys-dotted-error::h.1.5 --strict error","p":{"status":"not_found"}}
+{"q":"keys-dotted-error::a --strict error","p":{"status":"not_found"}}
+{"q":"keys-dotted-error::arr.0.x --strict error","p":{"status":"error","message":"Data Provider type mismatch: Got String when a hash-like object was expected to access value using 'x' from key 'arr.0.x'"}}
+{"q":"keys-dotted-error::'1.2' --strict error","p":{"status":"found","value":"top_onetwo"}}
+{"q":"keys-dotted-error::'' --strict error","p":{"status":"error","message":"Syntax error in key: ''''"}}
+{"q":"keys-dotted-error::1e3 --strict error","p":{"status":"not_found"}}
+{"q":"keys-dotted-error::~ --strict error","p":{"status":"not_found"}}
 {"scn":"keys-dotted-merge","sha":"3098b0917fff280a"}
-{"q":"keys-dotted-merge::h.a m=deep d=D","p":{"status":"found","value":{"b":"hab","b.c":"habc_quoted","c":"top_c"}}}
-{"q":"keys-dotted-merge::h.a.b m=deep d=D","p":{"status":"found","value":"hab"}}
-{"q":"keys-dotted-merge::h.a.c","p":{"status":"found","value":"top_c"}}
-{"q":"keys-dotted-merge::h.a.c d=D","p":{"status":"found","value":"top_c"}}
-{"q":"keys-dotted-merge::h.l d=D","p":{"status":"found","value":["l0",["l10","l11"],{"k":"lk"},"t0"]}}
-{"q":"keys-dotted-merge::h.l.1 m=unique","p":{"status":"error","message":"Lookup of key 'h.l.1' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"},"r":"error-message-text"}
-{"q":"keys-dotted-merge::h.only_top m=deep","p":{"status":"found","value":1}}
-{"q":"keys-dotted-merge::h.z m=deep","p":{"status":"found","value":0}}
-{"q":"keys-dotted-merge::arr.0","p":{"status":"found","value":"t"}}
-{"q":"keys-dotted-merge::arr.0 m=hash","p":{"status":"error","message":"Lookup of key 'arr.0' failed: The first element of the merge has wrong type, expects a Hash value, got Tuple"}}
-{"q":"keys-dotted-merge::s.x","p":{"status":"found","value":1}}
-{"q":"keys-dotted-merge::s m=deep","p":{"status":"found","value":{"x":1}}}
-{"q":"keys-dotted-merge::s d=D","p":{"status":"found","value":{"x":1}}}
-{"q":"keys-dotted-merge::h.nope m=unique","p":{"status":"error","message":"Lookup of key 'h.nope' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"},"r":"error-message-text"}
-{"q":"keys-dotted-merge::h.e","p":{"status":"found","value":""}}
-{"q":"keys-dotted-merge::h.e d=D","p":{"status":"found","value":""}}
-{"q":"keys-dotted-merge::h.l.5 m=deep","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.a d=D","p":{"status":"found","value":{"b":"hab","b.c":"habc_quoted","c":"top_c"}}}
+{"q":"keys-dotted-merge::h.a.b m=first","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.a.b m=hash","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.a.b d=D","p":{"status":"found","value":"hab"}}
+{"q":"keys-dotted-merge::h.only_top","p":{"status":"found","value":1}}
+{"q":"keys-dotted-merge::h.only_top m=unique","p":{"status":"error","message":"Lookup of key 'h.only_top' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"},"r":"error-message-text"}
+{"q":"keys-dotted-merge::h.z","p":{"status":"found","value":0}}
+{"q":"keys-dotted-merge::h.z m=hash","p":{"status":"found","value":0}}
+{"q":"keys-dotted-merge::arr.0 m=deep d=D","p":{"status":"found","value":"a0"}}
+{"q":"keys-dotted-merge::s","p":{"status":"found","value":{"x":1}}}
+{"q":"keys-dotted-merge::s m=hash","p":{"status":"error","message":"Lookup of key 's' failed: The second element of the merge has wrong type, expects a Hash value, got String"}}
+{"q":"keys-dotted-merge::h.a.nope m=first","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.a.nope m=hash","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.f m=hash","p":{"status":"found","value":false}}
+{"q":"keys-dotted-merge::h.l.5","p":{"status":"not_found"}}
+{"q":"keys-dotted-merge::h.l.5 m=unique","p":{"status":"error","message":"Lookup of key 'h.l.5' failed: The second element of the merge has wrong type, expects a value of type Scalar or Array, got Hash"},"r":"error-message-text"}
 {"scn":"keys-dotted-warning","sha":"978e70255487059b"}
-{"q":"keys-dotted-warning::h.l.01","p":{"status":"found","value":["l10","l11"]}}
-{"q":"keys-dotted-warning::h.l. 1","p":{"status":"found","value":["l10","l11"]}}
-{"q":"keys-dotted-warning::h.nil","p":{"status":"found","value":null}}
-{"q":"keys-dotted-warning::h.nope.x","p":{"status":"not_found"}}
-{"q":"keys-dotted-warning::\"h\"","p":{"status":"found","value":{"a":{"b":"hab","b.c":"habc_quoted"},"0":"str_zero","l":["l0",["l10","l11"],{"k":"lk"}],"":"empty_key"," ":"space_key","x y":"spaced","nil":null,"f":false,"z":0,"e":"","a.b":"flat_ab","'q'":"single_quoted_key","\"dq\"":"double_quoted_key","1":"one","-1":"minus_one","1.5":"onefive","a::b":"nsd"}}}
+{"q":"keys-dotted-warning:: h","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h.nil.x","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h.f.x","p":{"status":"error","message":"Data Provider type mismatch: Got FalseClass when a hash-like object was expected to access value using 'x' from key 'h.f.x'"}}
+{"q":"keys-dotted-warning::'h.a'","p":{"status":"not_found"}}
 {"q":"keys-dotted-warning::\"h.a\"","p":{"status":"not_found"}}
-{"q":"keys-dotted-warning::h.'a::b'","p":{"status":"found","value":"nsd"}}
-{"q":"keys-dotted-warning::n","p":{"status":"found","value":null}}
-{"q":"keys-dotted-warning::x y","p":{"status":"found","value":"top_spaced"}}
-{"q":"keys-dotted-warning::\"\"","p":{"status":"error","message":"Syntax error in key: '\"\"'"}}
-{"q":"keys-dotted-warning::'","p":{"status":"error","message":"Syntax error in key: '''"}}
-{"q":"keys-dotted-warning::mod::h.a","p":{"status":"found","value":{"b":"modhab"}}}
-{"q":"keys-dotted-warning::\"'sq'\"","p":{"status":"found","value":"top_sq"}}
-{"q":"keys-dotted-warning::Upper","p":{"status":"not_found"}}
-{"q":"keys-dotted-warning::'.k'","p":{"status":"found","value":"top_lead_dot"}}
-{"q":"keys-dotted-warning::k..j","p":{"status":"error","message":"Syntax error in key: 'k..j'"}}
-{"q":"keys-dotted-warning::'k..j'","p":{"status":"found","value":"top_double_dot"}}
-{"q":"keys-dotted-warning::lookup_options","p":{"status":"not_found"}}
-{"q":"keys-dotted-warning::[","p":{"status":"not_found"}}
-{"q":"keys-dotted-warning::h a","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h.'a\"","p":{"status":"error","message":"Syntax error in key: 'h.'a\"'"}}
+{"q":"keys-dotted-warning::\"a.b\"","p":{"status":"found","value":"top_flat"}}
+{"q":"keys-dotted-warning::\"","p":{"status":"error","message":"Syntax error in key: '\"'"}}
+{"q":"keys-dotted-warning::''.x","p":{"status":"error","message":"Syntax error in key: '''.x'"}}
+{"q":"keys-dotted-warning::mod::k","p":{"status":"found","value":"modk"}}
+{"q":"keys-dotted-warning::mod::'dotted.key'","p":{"status":"error","message":"Syntax error in key: 'mod::'dotted.key''"}}
+{"q":"keys-dotted-warning::\"dq\"","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::UPPER","p":{"status":"found","value":"up"}}
+{"q":"keys-dotted-warning::under_score","p":{"status":"found","value":"us"}}
+{"q":"keys-dotted-warning::key with %{facts.a}","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::H","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h\\a","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h\n","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h.l.9999999999999999999999","p":{"status":"not_found"}}
+{"q":"keys-dotted-warning::h.l.0.0.0","p":{"status":"error","message":"Data Provider type mismatch: Got String when a hash-like object was expected to access value using '0' from key 'h.l.0.0.0'"}}

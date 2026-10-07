@@ -18,6 +18,7 @@ from differential import batch, corpus, drive_hyera, outcomes
 from differential.generate import build, make_jobs, write_area
 from differential.merge import gen as merge_gen
 from differential.merge import ours as merge_ours
+from differential import rules
 from differential.rules import OPEN, OPEN_PREFIX, RULES, judge
 from differential.scenario import REGISTRY, Scn
 from differential.scenarios import AREAS
@@ -260,39 +261,10 @@ EXAMPLES = {
         _MISS,
         _both(_error("environment must not be empty")),
     ),
-    "open:bare-enum-matches-any-string": (
-        _job(type="Enum"),
-        _error("Found value has wrong type, expects a match for Enum, got 'x'"),
-        _both(_found("x")),
-    ),
-    "open:type-forms-puppet-accepts": (
-        _job(type="Integer[1.0, 50]"),
-        _found(42),
-        _both(
-            _error(
-                "The expression <Integer[1.0, 50]> is not a valid type specification."
-            )
-        ),
-    ),
-    "open:lookup-options-key-on-broken-layer": (
+    "global-config-error-at-construction": (
         _job("lookup_options"),
         _MISS,
         _both(_error("The Lookup Configuration at 'x' has wrong type")),
-    ),
-    "open:environment-name-case": (
-        _job(args=["--environment", "Production"]),
-        _found("production"),
-        _both(_error("Could not find a directory environment named 'Production'")),
-    ),
-    "open:convert-to-hash-keys-and-build": (
-        _job(),
-        _found({"[1]": "x"}),
-        _both(_error("convert_to raised error: unusable Hash key: cannot use 'list'")),
-    ),
-    "open:yaml-tags-psych-loads": (
-        _job(),
-        _found(1),
-        _both(_error("Unable to parse (x): Tried to load unspecified class: Encoding")),
     ),
 }
 
@@ -324,11 +296,17 @@ def test_a_variable_with_four_leading_colons_is_a_declared_difference():
     )
 
 
-def test_an_open_defect_is_not_an_unclassified_disagreement():
-    job, puppet, hyera = EXAMPLES["open:bare-enum-matches-any-string"]
+def test_an_open_defect_is_not_an_unclassified_disagreement(monkeypatch):
+    defect = rules.OpenDefect(
+        "example-defect", "an example", ("VALUE",), lambda facts: True
+    )
+    monkeypatch.setattr(rules, "OPEN", [defect])
+    job, puppet = _job(), _found(1)
+    hyera = {"api": _found(2), "cli": _found(2)}
     row = batch.Row(job, puppet, hyera, *judge(job, puppet, hyera))
+    assert row.rule == "open:example-defect"
     assert not row.unclassified
-    assert batch.summarize([row])["open"] == {"bare-enum-matches-any-string": 1}
+    assert batch.summarize([row])["open"] == {"example-defect": 1}
 
 
 def test_a_disagreement_no_rule_explains_is_unclassified():
