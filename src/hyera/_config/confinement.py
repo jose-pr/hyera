@@ -89,18 +89,44 @@ def is_inside(path: str, root: str) -> bool:
     )
 
 
-def same_anchor(path: str, root: str) -> bool:
-    """Whether ``path`` and ``root`` share a drive or network share.
+def glob_stays_inside(root: str, pattern: str, confine_root: str) -> bool:
+    """Whether walking ``pattern`` from the directory ``root`` can only list
+    directories under ``confine_root``, decided on the text alone: the literal
+    directories the pattern names before its first wildcard must lead inside it,
+    and no later ``..`` segment may climb above it. A ``..`` inside a brace group
+    or after an escape is refused, whatever it climbs.
 
-    :param path: a location or glob root.
-    :param root: the confinement root.
-    :returns: whether the two start at the same anchor.
+    :param root: the literal directory the walk starts in.
+    :param pattern: the glob pattern under ``root``.
+    :param confine_root: the confinement root.
+    :returns: whether the walk stays inside.
     """
-
-    def anchor(p: str) -> str:
-        return os.path.normcase(os.path.splitdrive(os.path.abspath(p))[0])
-
-    return anchor(path) == anchor(root)
+    text = pattern.replace("\\", "")
+    segments = text.split("/")
+    literal = len(segments)
+    for index, segment in enumerate(segments):
+        if any(char in segment for char in "*?[{"):
+            literal = index
+            break
+    start = root.rstrip("/") + "/" + "/".join(segments[:literal])
+    if not lexically_inside(start, confine_root):
+        return False
+    rest = segments[literal:]
+    tail = "/".join(rest)
+    if ".." not in tail:
+        return True
+    if "{" in tail:
+        return False
+    relative = os.path.relpath(_normal(start), _normal(confine_root))
+    depth = 0 if relative == "." else len(relative.split(os.sep))
+    for segment in rest:
+        if segment == "..":
+            depth -= 1
+            if depth < 0:
+                return False
+        elif segment not in ("", ".", "**"):
+            depth += 1
+    return True
 
 
 class Confiner:
@@ -112,12 +138,39 @@ class Confiner:
         self._real_roots: _ty.Dict[str, str] = {}
         self._path_roots: _ty.Dict[str, str] = {}
         self._warned: _ty.Set[str] = set()
+        self._globs: _ty.Dict[_ty.Tuple[str, str, str], bool] = {}
 
     def clear(self) -> None:
-        """Forget every resolved root, verified file and warning."""
+        """Forget every resolved root, verified file, glob verdict and warning."""
         self._real_roots.clear()
         self._path_roots.clear()
         self._warned.clear()
+        self._globs.clear()
+
+    def glob_allowed(self, root: str, pattern: str, confine_root: str) -> bool:
+        """Whether a glob walk may start: :func:`glob_stays_inside`, decided
+        once per ``(root, pattern)`` and warned about once when refused.
+
+        :param root: the literal directory the walk starts in.
+        :param pattern: the glob pattern under ``root``.
+        :param confine_root: the level's confinement root.
+        :returns: whether the pattern may be walked at all.
+        """
+        key = (root, pattern, confine_root)
+        ok = self._globs.get(key)
+        if ok is None:
+            ok = glob_stays_inside(root, pattern, confine_root)
+            if len(self._globs) < _WARNED_LIMIT:
+                self._globs[key] = ok
+            if not ok and len(self._warned) < _WARNED_LIMIT:
+                self._warned.add(root + "/" + pattern)
+                _LOGGER.warning(
+                    "Ignoring glob %r under %r: it leaves its data directory "
+                    "(confine_locations)",
+                    pattern,
+                    root,
+                )
+        return ok
 
     def allowed(
         self, path: str, root: str, memo: "_ty.Optional[_ty.MutableMapping]" = None

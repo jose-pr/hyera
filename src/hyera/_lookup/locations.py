@@ -24,7 +24,6 @@ from .._config.confinement import (
     _INCLUDE_ROOT,
     Confiner,
     confinement_root,
-    same_anchor,
 )
 from .._config.dir_glob import glob as _dir_glob
 from .._config.location_resolver import resolve_glob_specs, resolve_locations
@@ -501,10 +500,10 @@ class _LocationStore:
 
     def _confined_matches(self, loc: _GlobLocation, invocation, memo) -> tuple:
         """:meth:`glob_matches` for ``loc``, keeping only the matches inside
-        its confinement root; no walk at all from another drive or share."""
+        its confinement root; no walk at all when the pattern leaves it."""
         if loc.confine is None:
             return self.glob_matches(loc.root, loc.pattern, invocation)
-        if not same_anchor(loc.root, loc.confine):
+        if not self.confiner.glob_allowed(loc.root, loc.pattern, loc.confine):
             return ()
         return tuple(
             m

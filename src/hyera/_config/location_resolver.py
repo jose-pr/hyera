@@ -28,7 +28,7 @@ from .._lookup.interpolation import (
 )
 from .._lookup.invocation import Invocation
 from ..exceptions import ConfigError
-from .confinement import confinement_root, lexically_inside
+from .confinement import Confiner, confinement_root, lexically_inside
 from .dir_glob import glob
 from .pathname import (
     _is_rooted,
@@ -39,6 +39,7 @@ from .pathname import (
 )
 
 if _ty.TYPE_CHECKING:
+    from .._limits import Limits
     from .._scope.scope import Scope
     from .hiera_config import HieraLevel
 
@@ -202,7 +203,9 @@ def resolve_glob_specs(level, base_path, scope, refs=None, fs_memo=None):
     return _glob_specs(config_root, datadir, level.locations, lenient_inv)
 
 
-def _expand_globs(config_root, datadir, declared, invocation):
+def _expand_globs(
+    config_root, datadir, declared, invocation, confine_root=None, limits=None
+):
     """``glob``/``globs`` (``location_resolver.rb:43-47``): each pattern
     interpolates (methods disallowed) and matches through hyera's own Ruby
     ``Dir.glob`` port (:func:`glob`), rooted by :func:`_glob_root_and_pattern`
@@ -211,16 +214,28 @@ def _expand_globs(config_root, datadir, declared, invocation):
     (``reject(&:directory?)``); a missing or unreadable directory simply
     contributes no matches.
 
+    With ``confine_root``, a pattern that leaves it is not walked and a match
+    outside it is dropped (:class:`~hyera._config.confinement.Confiner`, as the
+    lookup engine does); ``limits`` bounds the brace expansion.
+
     Eager, unlike :func:`resolve_glob_specs`: used by
     :meth:`~hyera._config.hiera_config.HieraLevel.paths`, which has no lazy
     materialization step to defer the walk to.
     """
     results = []
+    confiner = Confiner() if confine_root is not None else None
+    max_patterns = limits.glob_patterns if limits is not None else None
     for original, root, pattern in _glob_specs(
         config_root, datadir, declared, invocation
     ):
-        for match in glob(root, pattern):
+        if confiner is not None and not confiner.glob_allowed(
+            root, pattern, confine_root
+        ):
+            continue
+        for match in glob(root, pattern, None, None, max_patterns):
             if os.path.isdir(match):
+                continue
+            if confiner is not None and not confiner.allowed(match, confine_root):
                 continue
             results.append(ResolvedLocation(original, _native(match), False, True))
     return results
@@ -456,6 +471,7 @@ def resolve_locations(
     refs: "_ty.Optional[list]" = None,
     fs_memo: "_ty.Optional[dict]" = None,
     confine: bool = False,
+    limits: "_ty.Optional[Limits]" = None,
 ) -> "_ty.Optional[_ty.List[ResolvedLocation]]":
     """The candidate :class:`ResolvedLocation` list for one hierarchy level
     in a bound :class:`~hyera.Scope` (``hiera_config.rb:664-687``).
@@ -490,7 +506,9 @@ def resolve_locations(
 
     ``confine`` reports a ``path``/``paths``/``mapped_paths`` location whose
     text lies outside the level's confinement root
-    (:func:`~hyera._config.confinement.confinement_root`) as absent, unprobed.
+    (:func:`~hyera._config.confinement.confinement_root`) as absent, unprobed,
+    and drops a glob match outside it; ``limits`` bounds a glob's brace
+    expansion.
     """
     strict_inv = Invocation(
         scope, _no_lookup, scope_interpolations=refs, _fs_memo=fs_memo
@@ -523,7 +541,9 @@ def resolve_locations(
             base, level.locations, lenient_inv, extension, confine_root
         )
     if key in ("glob", "globs"):
-        return _expand_globs(config_root, datadir, level.locations, lenient_inv)
+        return _expand_globs(
+            config_root, datadir, level.locations, lenient_inv, confine_root, limits
+        )
     if key == "mapped_paths":
         return _expand_mapped_paths(base, level, lenient_inv, confine_root)
     # key in ("uri", "uris")

@@ -108,6 +108,145 @@ def test_a_link_that_stays_inside_is_allowed(make_tree):
     assert _read(on, "linked") == "inside"
 
 
+@pytest.fixture
+def scandirs(monkeypatch):
+    """Every directory ``os.scandir`` is asked to list."""
+    seen = []
+    real = os.scandir
+
+    def recording(path="."):
+        seen.append(os.path.normcase(os.path.abspath(os.fspath(path))))
+        return real(path)
+
+    monkeypatch.setattr(os, "scandir", recording)
+    return seen
+
+
+def _listed_outside(seen, root):
+    """The listed directories that are the tree's ``other`` directory or under it."""
+    other = os.path.normcase(str(root / "other"))
+    return [d for d in seen if d == other or d.startswith(other + os.sep)]
+
+
+ESCAPING_GLOBS = [
+    pytest.param("%{facts.x}/*.yaml", "../other", id="dotdot-in-the-prefix"),
+    pytest.param("%{facts.x}/*.yaml", "OTHER", id="absolute"),
+    pytest.param("*/../../other/*.yaml", "", id="dotdot-after-a-wildcard"),
+    pytest.param("{..,real}/../../other/*.yaml", "", id="dotdot-in-a-brace"),
+    pytest.param(
+        "%{facts.x}*/*.yaml", "../oth", id="dotdot-then-a-wildcard-in-one-segment"
+    ),
+]
+
+
+def _escaping_x(root, x):
+    return (root / "other").as_posix() if x == "OTHER" else x
+
+
+@pytest.mark.parametrize("pattern, x", ESCAPING_GLOBS)
+def test_a_glob_that_leaves_the_datadir_lists_nothing_outside_it(
+    make_tree, scandirs, pattern, x
+):
+    entry = {"name": "n", "glob": pattern}
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    facts = {"x": _escaping_x(root, x)}
+    off = hyera.Hiera(root / "hiera.yaml", scope=hyera.Scope(facts=facts))
+    on = hyera.Hiera(
+        root / "hiera.yaml", scope=hyera.Scope(facts=facts), confine_locations=True
+    )
+    del scandirs[:]
+    assert _read(on) == "ABSENT"
+    assert _listed_outside(scandirs, root) == []
+    assert _read(off) == "from-outside"
+    assert _listed_outside(scandirs, root) != []
+
+
+def test_a_refused_glob_is_warned_about_once(make_tree, caplog):
+    entry = {"name": "n", "glob": "%{facts.x}/*.yaml"}
+    _, on = _build(make_tree, entry, {"x": "../other"}, confine_locations=True)
+    with caplog.at_level(logging.WARNING, logger="hyera.core"):
+        for _ in range(3):
+            assert _read(on) == "ABSENT"
+    ours = [r for r in caplog.records if "confine_locations" in r.getMessage()]
+    assert len(ours) == 1
+
+
+@pytest.mark.parametrize("pattern", ["real/*.yaml", "real/../real/*.yaml", "*/*.yaml"])
+def test_a_glob_that_stays_inside_the_datadir_is_walked(make_tree, pattern):
+    _, on = _build(make_tree, {"name": "n", "glob": pattern}, confine_locations=True)
+    assert _read(on, "linked") == "inside"
+
+
+def _paths_level(entry):
+    return hyera.HieraLevel.new(entry, hyera.YAMLBackend())
+
+
+@pytest.mark.parametrize(
+    "entry, x",
+    [
+        ({"name": "n", "path": "%{facts.x}.yaml"}, "../other/secret"),
+        ({"name": "n", "glob": "%{facts.x}/*.yaml"}, "../other"),
+    ],
+    ids=["path", "glob"],
+)
+def test_level_paths_confine_drops_what_the_engine_drops(make_tree, scandirs, entry, x):
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    level = _paths_level(entry)
+    scope = hyera.Scope(facts={"x": x})
+    outside = (root / "other" / "secret.yaml").resolve()
+
+    unconfined = level.paths(root, scope)
+    assert any(os.path.samefile(p, outside) for p in unconfined if os.path.exists(p))
+    del scandirs[:]
+    assert level.paths(root, scope, confine=True) == []
+    assert _listed_outside(scandirs, root) == []
+
+
+def test_level_paths_confine_keeps_what_is_inside(make_tree):
+    entry = {"name": "n", "glob": "real/*.yaml"}
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    scope = hyera.Scope()
+    inside = _paths_level(entry).paths(root, scope, confine=True)
+    assert [os.path.basename(p) for p in inside] == ["f.yaml"]
+    assert inside == _paths_level(entry).paths(root, scope)
+
+
+def test_level_paths_default_is_unconfined_and_unbounded(make_tree):
+    entry = {"name": "n", "glob": "{real,real}/*.yaml"}
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    level = _paths_level(entry)
+    scope = hyera.Scope()
+    assert level.paths(root, scope) == level.paths(
+        root, scope, confine=False, limits=None
+    )
+
+
+def test_level_paths_refuses_what_the_limits_refuse(make_tree):
+    entry = {"name": "n", "glob": "{a,b,c}/*.yaml"}
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    level = _paths_level(entry)
+    scope = hyera.Scope()
+    with pytest.raises(hyera.BackendError, match="limits.glob_patterns"):
+        level.paths(root, scope, limits=hyera.Limits(glob_patterns=2))
+    assert level.paths(root, scope, limits=hyera.Limits(glob_patterns=3)) == []
+    engine = hyera.Hiera(
+        root / "hiera.yaml", limits=hyera.Limits(glob_patterns=2), scope=scope
+    )
+    with pytest.raises(hyera.BackendError, match="limits.glob_patterns"):
+        engine.lookup("k", None, None, "d")
+
+
+def test_level_paths_arguments_are_checked(make_tree):
+    entry = {"name": "n", "path": "common.yaml"}
+    root = make_tree({"hierarchy": [entry], "defaults": {}}, files=FILES)
+    level = _paths_level(entry)
+    for bad in (1, "yes", None):
+        with pytest.raises(TypeError):
+            level.paths(root, hyera.Scope(), confine=bad)
+    with pytest.raises(TypeError):
+        level.paths(root, hyera.Scope(), limits=5)
+
+
 def test_a_glob_inside_the_datadir_still_matches(make_tree):
     _, on = _build(
         make_tree, {"name": "n", "glob": "real/*.yaml"}, confine_locations=True

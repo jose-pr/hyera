@@ -21,6 +21,8 @@ from pathlib_next import Path
 from ..backends._base import Backend
 from ..backends._yaml import YAMLBackend
 from ..exceptions import BackendError, ConfigError
+from .._limits import Limits
+from .confinement import Confiner, confinement_root
 from .location_resolver import resolve_locations
 from .._scope.scope import Scope
 from ..backends._psych import symkeys_to_string
@@ -203,20 +205,49 @@ class HieraLevel(_ty.NamedTuple):
             lenient_locations=lenient_locations,
         )
 
-    def paths(self, base_path: Path, scope: Scope) -> "_ty.List[str]":
+    def paths(
+        self,
+        base_path: Path,
+        scope: Scope,
+        *,
+        confine: bool = False,
+        limits: "_ty.Optional[Limits]" = None,
+    ) -> "_ty.List[str]":
         """The candidate source (file) paths for this level in a bound
         :class:`~hyera.Scope`. A location-less entry, or one using ``uri``/
         ``uris`` (which never resolve to a filesystem path), yields ``[]``.
 
         :param base_path: the root relative locations resolve against.
         :param scope: the scope location templates interpolate against.
+        :param confine: as ``Hiera(confine_locations=...)``: a path outside
+            the level's ``datadir`` (symbolic links resolved) is left out, and
+            a ``glob`` that leaves it lists nothing outside it.
+        :param limits: as ``Hiera(limits=...)``; only ``glob_patterns``
+            applies here.
         :returns: the candidate paths, interpolated but not filtered by
             existence.
+        :raises TypeError: ``confine`` is not a ``bool``, or ``limits`` is not
+            a :class:`~hyera.Limits` or ``None``.
+        :raises BackendError: a ``glob`` expands to more patterns than
+            ``limits.glob_patterns`` allows.
         """
-        resolved = resolve_locations(self, base_path, scope)
+        if not isinstance(confine, bool):
+            raise TypeError(
+                "confine must be a bool, not {}".format(type(confine).__name__)
+            )
+        if limits is not None and not isinstance(limits, Limits):
+            raise TypeError("limits must be a hyera.Limits or None")
+        resolved = resolve_locations(
+            self, base_path, scope, confine=confine, limits=limits
+        )
         if resolved is None:
             return []
-        return [loc.location for loc in resolved if not loc.is_uri]
+        paths = [loc.location for loc in resolved if not loc.is_uri]
+        if not confine:
+            return paths
+        root = confinement_root(self, base_path)
+        confiner = Confiner()
+        return [p for p in paths if confiner.allowed(p, root)]
 
 
 def _read_base_config(base_config, base_path) -> "_ty.Tuple[_ConfigSource, dict]":

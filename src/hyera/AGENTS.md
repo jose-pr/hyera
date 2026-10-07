@@ -77,7 +77,10 @@ since Hiera data is dynamic.
   match, `mapped_paths`) whose real path, symbolic links resolved, is not
   inside its level's `datadir` is treated as absent — not opened, shown by
   `explain()` as a path not found, logged once per location at `WARNING`
-  on the `hyera.core` logger. A `datadir` holding `%{...}` confines to the
+  on the `hyera.core` logger. A `glob` whose pattern leaves the root (its
+  literal leading directories, or a later `..` or a `..` in a brace group,
+  lead outside) is not walked at all and is warned about once; nothing outside
+  is listed. A `datadir` holding `%{...}` confines to the
   whole directories before the first `%{`. A HOCON `include file(...)`
   outside the root raises `BackendError`. `uri`/`uris` levels, and what a
   `lookup_key` backend reads itself, are not files a level reads and are
@@ -634,7 +637,7 @@ since Hiera data is dynamic.
     4" above; `lenient_locations` is `False` for a version 3/4 level, whose
     undefined variable in a location fails under `strict="error"`).
   - ```python
-    HieraLevel.paths(base_path, scope)
+    HieraLevel.paths(base_path, scope, *, confine=False, limits=None)
     ```
 
     Returns a `list[str]` of candidate source
@@ -647,7 +650,13 @@ since Hiera data is dynamic.
     location itself, which is lenient only at version 5); method-call syntax
     (`%{lookup(...)}` etc.) raises `ConfigError` in any of these positions.
     A location-less entry, or one using `uri`/`uris`, contributes no paths
-    here (`[]`) — a `uri` is never a filesystem path.
+    here (`[]`) — a `uri` is never a filesystem path. `confine` (`bool`,
+    else `TypeError`) is `Hiera(confine_locations=...)` for this one level:
+    a path outside its `datadir`, symbolic links resolved, is left out, and a
+    `glob` is not walked at all when its literal directories, or a later `..`,
+    lead outside it. `limits` (a `hyera.Limits` or `None`, else `TypeError`)
+    is `Hiera(limits=...)`: a `glob` expanding to more patterns than
+    `glob_patterns` raises `BackendError`. Both default to off.
     A `mapped_paths` collection is a scope reference (dotted, `::`-qualified)
   — `None`/`""`/an empty Array/Hash contributes no paths, a `String`
   becomes a one-element list, an Array is used as-is, a Hash contributes
