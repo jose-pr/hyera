@@ -28,7 +28,7 @@ except ModuleNotFoundError as _e:
 
 from .. import __version__
 from ..exceptions import BackendError, KeyNotFoundError
-from ..backends import Backend
+from ..backends._base import Backend
 from . import _mcp_boundary
 from ._argv import _free_text, _puppet_argv
 from ._options import _merge_options

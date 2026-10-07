@@ -6,7 +6,7 @@ import os as _os
 import socket as _socket
 import typing as _ty
 
-from ..backends import Backend
+from ..backends._base import Backend
 from .._scope.facts import load_facts
 from .._scope.scope import Scope
 

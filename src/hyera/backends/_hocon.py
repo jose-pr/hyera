@@ -18,7 +18,7 @@ import typing as _ty
 
 from .._config.confinement import check_include
 from ..exceptions import BackendError, ConfigError, _one_line
-from . import Backend, _Names
+from ._base import Backend, _Names
 from ._hocon_includes import _allow_hocon_includes, _refuse_hocon_includes
 from ._hocon_limits import install_substitution_bound
 

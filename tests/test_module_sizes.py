@@ -16,10 +16,6 @@ ALLOWED = {
         "one public class, Hiera, whose docstrings (about 480 lines) are the "
         "API reference the docs site is built from"
     ),
-    "src/hyera/backends/__init__.py": (
-        "defines the public Backend class (about 465 lines, largely API "
-        "documentation) and the registry it keys"
-    ),
 }
 
 

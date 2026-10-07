@@ -9,7 +9,7 @@ import typing as _ty
 
 from .._digits import parse_decimal_int
 from ..exceptions import BackendError
-from . import Backend, _Names
+from ._base import Backend, _Names
 
 __all__ = ["JSONBackend"]
 

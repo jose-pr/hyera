@@ -18,7 +18,8 @@ import typing as _ty
 
 from pathlib_next import Path
 
-from ..backends import Backend, YAMLBackend
+from ..backends._base import Backend
+from ..backends._yaml import YAMLBackend
 from ..exceptions import BackendError, ConfigError
 from .location_resolver import resolve_locations
 from .._scope.scope import Scope

@@ -20,7 +20,7 @@ import typing as _ty
 
 from ..exceptions import BackendError, ConfigError
 from .._lookup.function_provider import LookupContext
-from . import Backend, _Names
+from ._base import Backend, _Names
 from ._pkcs7 import _pkcs7_decrypt
 from ._yaml import YAMLBackend
 

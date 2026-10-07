@@ -48,7 +48,7 @@ from ._lookup.merge_strategy import MergeLike, MergeStrategy
 from ._lookup.navigation import _MISSING, LOOKUP_OPTIONS, split_key
 from ._scope.scope import Scope, Strict
 from ._types.mismatch import assert_instance_of
-from .backends import Backend, default_backends
+from .backends._base import Backend, default_backends
 from .exceptions import BackendError, HieraLookupError, KeyNotFoundError
 from .types import TypeLike
 

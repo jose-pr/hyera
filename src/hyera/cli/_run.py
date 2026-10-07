@@ -5,7 +5,7 @@ from __future__ import annotations
 import os as _os
 import typing as _ty
 
-from ..backends import Backend
+from ..backends._base import Backend
 from ..core import Hiera
 from ..exceptions import HieraError, _one_line
 from .._types.parser import parse_type

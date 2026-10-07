@@ -9,7 +9,7 @@ Ports the function-kind resolution and the provider construction of Puppet's
 
 from __future__ import annotations
 
-from ..backends import Backend
+from ..backends._base import Backend
 from ..exceptions import ConfigError
 from .config_source import _ConfigSource, _config_error
 from .config_v5 import (

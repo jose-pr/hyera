@@ -16,7 +16,7 @@ from pathlib_next import Path
 
 from ..exceptions import BackendError, ConfigError
 from .._subprocess import run as _run
-from . import Backend, NamePattern, _Names
+from ._base import Backend, NamePattern, _Names
 
 __all__ = ["DotenvBackend", "SopsBackend"]
 

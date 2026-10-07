@@ -11,7 +11,7 @@ import typing as _ty
 import yaml
 
 from ..exceptions import BackendError
-from . import Backend, _Names
+from ._base import Backend, _Names
 from ._psych import symkeys_to_string
 from ._psych_loader import safe_load
 

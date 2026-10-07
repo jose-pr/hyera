@@ -11,7 +11,7 @@ by the package's own type describer, the rest by hand.
 from __future__ import annotations
 
 from .._types.parser import parse_type
-from ..backends import has_hocon
+from ..backends._hocon import has_hocon
 from .config_source import (
     _NES,
     _check_config_type,

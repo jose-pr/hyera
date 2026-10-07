@@ -17,7 +17,7 @@ import uuid as _uuid
 
 import yaml as _yaml
 
-from ..backends import Backend
+from ..backends._base import Backend
 from ..backends import _psych
 from ..exceptions import BackendError
 from .._digits import format_decimal_int as _format_int
