@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The `cli` extra needs `duho>=0.7.3,<0.8`, where it was `duho>=0.7.0`. The
+  command's flags, exit statuses and output are unchanged, and a value served
+  as an MCP tool comes back as the result's text, non-ASCII included.
+
 ## [0.1.0] - 2026-10-07
 
 ### Added
