@@ -67,7 +67,6 @@ if duho is not None:
         _mcp_ = True
         _utf8_stdio_ = False
         _parsername_ = "hyera"
-        _logger_name_ = "hyera"
         _exit_codes_ = _args._EXIT_CODES
         _examples_ = _args._EXAMPLES
 
