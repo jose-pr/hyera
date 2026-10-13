@@ -290,3 +290,59 @@ def test_agent_help_field_help_is_one_line_and_facts_is_required():
     assert "REQUIRED" in options["facts"]
     for dest, text in options.items():
         assert "\n" not in text, dest
+
+
+def test_mcp_tool_call_returns_a_non_ascii_value_as_text(make_tree):
+    # A tool call's stdout has a buffer, and the command writes UTF-8 bytes to
+    # it: bytes that are valid UTF-8 must come back as the result's text.
+    root = make_tree(
+        {
+            "version": 5,
+            "defaults": {"data_hash": "yaml_data", "datadir": "data"},
+            "hierarchy": [{"name": "Common", "path": "common.yaml"}],
+        },
+        files={"data/common.yaml": 'greeting: "café ✓ 日本"\n'},
+        facts={"os": "linux"},
+    )
+    messages = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "hyera",
+                "arguments": {
+                    "keys": ["greeting"],
+                    "hiera_config": str(root / "hiera.yaml"),
+                    "facts": str(root / "facts.yaml"),
+                    "render_as": "s",
+                },
+            },
+        },
+    ]
+    proc = subprocess.run(
+        [sys.executable, "-m", "hyera"],
+        input="".join(json.dumps(m) + "\n" for m in messages),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "HYERA_MCP": "stdio", "PYTHONPATH": _SRC},
+        timeout=60,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
+    result = replies[2]["result"]
+    assert not result.get("isError")
+    assert result["content"] == [{"type": "text", "text": "café ✓ 日本\n"}]
