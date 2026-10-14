@@ -1909,9 +1909,8 @@ Every class above is importable directly from `hyera` (e.g.
   `BackendTimeoutError` included), an unrenderable value, or stdout that
   cannot be written, a closed pipe included (both silent: nothing on
   stderr); `main()` returns `130` on Ctrl-C, with no traceback (under
-  `DUHO_TRACEBACK=1` the interrupt propagates). `main()` returns the status
-  in every case: `--help` and `--version` give `0` and a usage error `2`,
-  and none raises `SystemExit`.
+  `DUHO_TRACEBACK=1` the interrupt propagates). `--help`, `--version` and a
+  usage error raise `SystemExit` from `main()`, with `0`, `0` and `2`.
   `--explain`/`--explain-options` exit 0 even on a miss or most lookup
   failures (Puppet's own explain report documents the failure as its own
   last line instead); only a configuration/data problem building the

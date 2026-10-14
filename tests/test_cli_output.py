@@ -176,18 +176,19 @@ def test_default_in_each_format(fmt, expected, render_root, capsys):
 
 @pytest.mark.parametrize("flag", ["-o", "--output"])
 def test_output_flag_removed(flag, hiera_root):
-    rc = main(
-        [
-            "app::name",
-            "--hiera_config",
-            str(hiera_root / "hiera.yaml"),
-            "--facts",
-            str(hiera_root / "facts.yaml"),
-            flag,
-            "json",
-        ]
-    )
-    assert rc == 2
+    with pytest.raises(SystemExit) as exc:
+        main(
+            [
+                "app::name",
+                "--hiera_config",
+                str(hiera_root / "hiera.yaml"),
+                "--facts",
+                str(hiera_root / "facts.yaml"),
+                flag,
+                "json",
+            ]
+        )
+    assert exc.value.code == 2
 
 
 def test_sensitive_redacted_in_output(values_root, capsys):

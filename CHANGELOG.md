@@ -8,14 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The `cli` extra needs `duho>=0.7.4,<0.8`, where it was `duho>=0.7.0`. The
+- The `cli` extra needs `duho>=0.7.5,<0.8`, where it was `duho>=0.7.0`. The
   command's flags, exit statuses and output are unchanged, and a value served
   as an MCP tool comes back as the result's text, non-ASCII included.
-- **Breaking:** `hyera.cli.main()` returns the status in every case. `--help`
-  and `--version` return `0` and a usage error returns `2`, where each raised
-  `SystemExit`; the `hyera` command and `python -m hyera` end with the same
-  statuses. With `DUHO_TRACEBACK=1` Ctrl-C raises `KeyboardInterrupt` with
-  its traceback instead of returning `130`.
+- With `DUHO_TRACEBACK=1` Ctrl-C raises `KeyboardInterrupt` with its traceback
+  from `hyera.cli.main()` instead of returning `130`.
 
 ## [0.1.0] - 2026-10-07
 

@@ -245,7 +245,9 @@ def test_mcp_unknown_transport_exits_2(hiera_root, monkeypatch, capsys):
 
 
 def test_help_is_plain_text(capsys):
-    assert main(["--help"]) == 0
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+    assert exc.value.code == 0
     out = capsys.readouterr().out
     assert out.startswith("usage: hyera")
     assert "lookup_options" in out

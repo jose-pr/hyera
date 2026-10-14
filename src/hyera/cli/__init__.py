@@ -237,8 +237,8 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
         other error, or the CLI extra is not installed, 130 interrupted.
     """
     # duho.run sets up stderr logging (honoring -v/-q/--loglevel), dispatches
-    # to Lookup.__call__ and returns its status; a SystemExit (--help,
-    # --version, a usage error) becomes its status too.
+    # to Lookup.__call__ and returns its status; "parse" lets the parser's own
+    # SystemExit (--help, --version, a usage error) propagate.
     if duho is None:
         print(_NO_CLI_EXTRA_HINT, file=_sys.stderr)
         return 2
@@ -247,4 +247,4 @@ def main(argv: _ty.Optional[_ty.Sequence[str]] = None) -> int:
     except _UsageError as e:
         print("hyera: {}".format(e), file=_sys.stderr)
         return 2
-    return duho.run(Lookup, argv, exit=False)
+    return duho.run(Lookup, argv, exit="parse")

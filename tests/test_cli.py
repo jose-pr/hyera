@@ -248,7 +248,9 @@ def test_module_entrypoint_smoke(monkeypatch, hiera_root, capsys):
 
 
 def test_version_names_hyera(capsys):
-    assert main(["--version"]) == 0
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+    assert exc.value.code == 0
     assert capsys.readouterr().out.strip() == "hyera {}".format(hyera.__version__)
 
 
