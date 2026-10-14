@@ -161,6 +161,32 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
     assert _error_records(caplog)[-1].exc_info is not None
 
 
+def test_failures_keep_their_status_and_log_line_under_duho_traceback(
+    hiera_root, monkeypatch, caplog
+):
+    # duho re-raises a CommandError under DUHO_TRACEBACK, so the command
+    # logs and returns the status itself.
+    monkeypatch.setenv("DUHO_TRACEBACK", "1")
+    argv = [
+        "--hiera_config",
+        str(hiera_root / "hiera.yaml"),
+        "--facts",
+        str(hiera_root / "facts.yaml"),
+    ]
+
+    assert main(["no::such::key", *argv]) == 1
+
+    def _raise(self, *a, **kw):
+        raise RecursionError("boom")
+
+    monkeypatch.setattr(hyera.Hiera, "lookup", _raise)
+    with caplog.at_level(logging.ERROR):
+        assert main(["k", *argv]) == 2
+    record = _error_records(caplog)[-1]
+    assert record.getMessage() == "Lookup of key 'k' failed: RecursionError: boom"
+    assert record.exc_info is not None
+
+
 def test_render_error_exit_2(hiera_root, monkeypatch, caplog):
     monkeypatch.delenv("DUHO_TRACEBACK", raising=False)
 

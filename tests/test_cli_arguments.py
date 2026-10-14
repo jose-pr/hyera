@@ -248,9 +248,7 @@ def test_scope_flag_errors(case, scope_arg, flags_root, caplog):
     ["-c", "--config", "--deep", "--knockout-prefix", "--compile", "--trusted"],
 )
 def test_removed_flags_rejected(flag, flags_root):
-    with pytest.raises(SystemExit) as exc:
-        main(_flags_argv(flags_root, flag, "x", "str"))
-    assert exc.value.code == 2
+    assert main(_flags_argv(flags_root, flag, "x", "str")) == 2
 
 
 def test_keys_after_double_dash(flags_root, capsys):
