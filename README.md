@@ -752,7 +752,7 @@ silent miss -- `2` any other error: a usage problem, a missing or unreadable
 facts file, a bad config or data file, an unrenderable value, or a reader
 that closes the output early or a device that cannot be written (both
 silent: nothing on stderr) -- and `130` an interrupt (Ctrl-C), with no
-traceback. A `2` is reported as one stderr line
+traceback unless `DUHO_TRACEBACK=1` is set. A `2` is reported as one stderr line
 (`-v`, `-d` or `DUHO_TRACEBACK=1` adds the traceback). `puppet lookup`
 exits `1` for both a miss and an error, and prints `Error: Could not run:`
 and the message for an error; hyera's CLI tells the two apart, and its
