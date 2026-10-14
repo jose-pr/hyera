@@ -53,16 +53,6 @@ _NO_CLI_EXTRA_HINT = (
     "hyera: the command-line interface needs the cli extra: " 'pip install "hyera[cli]"'
 )
 
-
-def _report_failure(message: str, code: int, error: BaseException) -> None:
-    """Log one ERROR line for a failed command, nothing for an empty message.
-
-    ``error.__cause__`` is the exception whose traceback was asked for, if any.
-    """
-    if message:
-        _LOGGER.error("%s", message, exc_info=error.__cause__)
-
-
 if duho is not None:
     from . import _args
 
@@ -140,26 +130,16 @@ if duho is not None:
                 level = min(level, _logging.DEBUG)
             return level
 
-        _report_error_ = staticmethod(_report_failure)
+        def _fail(self, text) -> int:
+            """Log one ERROR-level line and return exit code 2.
 
-        def _fail(self, text: str, code: int = 2) -> int:
-            """End the command with ``text`` and ``code``.
-
-            On the command line the failure is raised and ``_report_error_``
-            logs it. Where duho would not call that function (an MCP tool call,
-            whose result carries the logged line and the exit code, and
-            ``DUHO_TRACEBACK``, under which duho re-raises) it is logged here
-            and the code returned. The traceback is attached only when asked
-            for (-v, -d/--debug or DUHO_TRACEBACK=1) and an exception is being
-            handled; it travels as the error's cause.
+            The traceback is attached only when asked for (-v, -d/--debug
+            or DUHO_TRACEBACK=1) and an exception is being handled.
             """
             wanted = self.verbose > 0 or self.debug or _duho_logging.traceback_enabled()
-            error = duho.CommandError(text, code)
-            error.__cause__ = _sys.exc_info()[1] if wanted else None
-            if duho.running_mode() == "mcp" or _duho_logging.traceback_enabled():
-                _report_failure(text, code, error)
-                return code
-            raise error
+            handling = _sys.exc_info()[0] is not None
+            _LOGGER.error("%s", text, exc_info=True if wanted and handling else None)
+            return 2
 
         def __call__(self) -> int:
             """Run the lookup duho parsed into this instance's fields and
@@ -221,7 +201,7 @@ if duho is not None:
                 # without -v; only -d/--debug (or -vv, or --loglevel) shows
                 # this DEBUG line.
                 _LOGGER.debug("%s", e)
-                return self._fail("", 1)
+                return 1
             except Exception as e:  # HieraError, OSError, anything unexpected
                 return self._fail(
                     "Lookup of key '{}' failed: {}".format(joined_keys, _describe(e))
