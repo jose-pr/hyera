@@ -164,8 +164,8 @@ def test_traceback_only_with_verbose(hiera_root, monkeypatch, caplog):
 def test_failures_keep_their_status_and_log_line_under_duho_traceback(
     hiera_root, monkeypatch, caplog
 ):
-    # duho re-raises a CommandError under DUHO_TRACEBACK, so the command
-    # logs and returns the status itself.
+    # Under DUHO_TRACEBACK a failure still ends with its status and one log
+    # line, the traceback attached.
     monkeypatch.setenv("DUHO_TRACEBACK", "1")
     argv = [
         "--hiera_config",
