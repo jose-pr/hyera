@@ -37,8 +37,9 @@ dependencies = [
 # options with (NS is gone), and with literal_value for an option whose value
 # may look like a flag. 0.7.3 is the first whose MCP tool call has a
 # sys.stdout.buffer, the stream the command writes its UTF-8 result to; the
-# tests pin that result as text there.
-cli = ["duho>=0.7.3,<0.8"]
+# tests pin that result as text there. 0.7.4 is the first with
+# run(..., exit=False), the entry, and _report_error_, which logs a failure.
+cli = ["duho>=0.7.4,<0.8"]
 # 0.3.29 is the first pyhocon that does not pin pyparsing 2.0.3-2.1.1, which
 # fails to import on Python 3.10 and later; 0.3.29-0.3.61 still call
 # pyparsing's deprecated setDefaultWhitespaceChars, which fails the suite
