@@ -420,18 +420,18 @@ def string_leaves(obj) -> str:
     return ""
 
 
-def _pathlib_next_includes_hidden_by_default() -> bool:
-    """Whether the installed pathlib_next's ``Path.glob`` defaults to matching dotfiles.
+def _pathapi_includes_hidden_by_default() -> bool:
+    """Whether the installed pathapi's ``Path.glob`` defaults to matching dotfiles.
 
-    The declared range ``pathlib_next>=0.9.0,<0.10`` spans ``include_hidden = False``
-    (through 0.9.2) and ``True`` (from 0.9.11), so a glob-over-a-dotfile golden's
-    divergence marker is gated on this probe.
+    ``include_hidden`` defaults to ``True`` in pathapi 0.1.0; a glob-over-a-dotfile
+    golden's divergence marker is gated on this probe in case a later release
+    in the declared range changes it.
     """
     import inspect
 
-    from pathlib_next import Path as _PNPath
+    from pathapi import Path as _PathapiPath
 
-    default = inspect.signature(_PNPath.glob).parameters["include_hidden"].default
+    default = inspect.signature(_PathapiPath.glob).parameters["include_hidden"].default
     return bool(default)
 
 
@@ -439,7 +439,7 @@ def _pathlib_next_includes_hidden_by_default() -> bool:
 # instead of the platform guard ``on``. Each is a zero-argument callable returning
 # a bool, evaluated per test run and never cached.
 RUNTIME_PREDICATES = {
-    "pathlib_next-includes-hidden": _pathlib_next_includes_hidden_by_default,
+    "pathapi-includes-hidden": _pathapi_includes_hidden_by_default,
 }
 
 

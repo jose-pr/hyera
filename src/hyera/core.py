@@ -13,7 +13,7 @@ import threading
 import typing as _ty
 from typing import Any
 
-from pathlib_next import Path
+from pathapi import Path
 
 from ._lookup import data_functions as _data_functions
 from ._lookup.cache import _ScopeKeyedCache

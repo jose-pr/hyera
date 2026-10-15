@@ -4,7 +4,7 @@ the global layer."""
 import logging
 
 import pytest
-from pathlib_next import Path
+from pathapi import Path
 
 from hyera import ConfigError, Hiera
 from hyera._config.config_source import _ConfigSource

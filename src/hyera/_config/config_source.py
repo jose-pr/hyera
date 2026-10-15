@@ -14,7 +14,7 @@ import re
 import typing as _ty
 
 import yaml
-from pathlib_next import Path
+from pathapi import Path
 
 from .._types.mismatch import describe_instance_of, format_mismatches
 from .._types.parser import parse_type

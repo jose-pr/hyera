@@ -19,7 +19,7 @@ import os
 import re
 import typing as _ty
 
-from pathlib_next import Path
+from pathapi import Path
 
 from ..backends._base import Backend
 from .hiera_config import (

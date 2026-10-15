@@ -12,7 +12,7 @@ import re
 import typing as _ty
 from typing import NamedTuple
 
-from pathlib_next import Path
+from pathapi import Path
 
 from ..exceptions import BackendError, ConfigError
 from .._limits import _LIMITS, Limits

@@ -11,7 +11,7 @@ import logging
 import os
 import typing as _ty
 
-from pathlib_next import Path
+from pathapi import Path
 
 from ..exceptions import BackendError
 from .pathname import _pathname_plus, _win_slash

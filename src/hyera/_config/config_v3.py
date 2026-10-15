@@ -15,7 +15,7 @@ import os
 import re
 import typing as _ty
 
-from pathlib_next import Path
+from pathapi import Path
 
 from .._lookup.interpolation import _to_puppet_str
 from .._types.compound_types import Struct, StructElement

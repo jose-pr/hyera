@@ -5,7 +5,7 @@ import copy
 import io
 
 import pytest
-from pathlib_next import Path
+from pathapi import Path
 
 from hyera import Backend, ConfigError, Hiera, Scope
 from hyera._config.config_source import _ConfigSource

@@ -12,7 +12,7 @@ import os
 import re
 import typing as _ty
 
-from pathlib_next import Path
+from pathapi import Path
 
 from ..exceptions import BackendError, ConfigError
 from .._lookup.function_provider import LookupContext
