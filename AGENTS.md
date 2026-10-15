@@ -3,7 +3,7 @@
 A small, dependency-light Python implementation of [Puppet
 Hiera](https://help.puppet.com/core/8/Content/PuppetCore/hiera_intro.htm) hierarchical data
 lookup — a `src/hyera` packaged library plus an optional `hyera` CLI, built on
-the `duho`/`pathlib_next` stack. The distribution, the import package and the
+the `duho`/`pathapi` stack. The distribution, the import package and the
 console script are all `hyera` (`pip install hyera`, `import hyera`, `hyera`
 or `python -m hyera`).
 
@@ -273,7 +273,7 @@ from a `hyera._*` module. `src/hyera/AGENTS.md` is the shipped API header (see
 [Packaging](#packaging) below) — every export with its exact signature,
 arguments and gotchas, so a consuming agent skips the source.
 
-`pathlib_next.Path` is used throughout instead of stdlib `pathlib`; glob
+`pathapi.Path` is used throughout instead of stdlib `pathlib`; glob
 levels use hyera's own Ruby `Dir.glob` port in `_config/dir_glob.py`, never
 `Path.glob`.
 

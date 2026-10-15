@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- hyera depends on `pathapi>=0.1.0,<0.2`, the successor of `pathlib-next`
+  (which 0.10.1 reduces to a deprecation shim), where it was
+  `pathlib_next>=0.9.0,<0.10`. The `path` a `Backend.data_hash`
+  override receives is now a `pathapi.Path`. What to do:
+  nothing for code that only reads the path; a backend that imports
+  `pathlib_next.Path` to annotate or test the argument imports
+  `pathapi.Path` instead, and installs that do not use `pathlib-next`
+  elsewhere can uninstall it.
+
 - The `cli` extra needs `duho>=0.7.5,<0.8`, where it was `duho>=0.7.0`. The
   command's flags, exit statuses and output are unchanged, and a value served
   as an MCP tool comes back as the result's text, non-ASCII included.

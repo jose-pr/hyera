@@ -667,7 +667,7 @@ since Hiera data is dynamic.
   location that names a directory raises `BackendError` ("Is a directory")
   when loaded, instead of reading its files; a glob match that is a
   directory is dropped instead. A `glob`/`globs` location matches through
-  hyera's own Ruby `Dir.glob` port, never `pathlib_next.Path.glob`: `{a,b}`
+  hyera's own Ruby `Dir.glob` port, never `pathapi.Path.glob`: `{a,b}`
   brace alternation (nested, in written order, duplicates kept); a
   dotfile matches only an explicit leading `.` in the pattern, never a
   bare `*`/`?`/`[...]`; `**/` never descends through a symlink or a
@@ -1143,7 +1143,8 @@ is a `Backend` subclass, found by name rather than passed around directly.
   `.data_dig` raise `NotImplementedError`
   in the base; a backend that overrides either is called per key and per
   location with a `hyera.LookupContext` as `context` (below), and
-  `.data_hash` is called with one too, per location, on a cache miss. A
+  `.data_hash` is called with one too, per location, on a cache miss; its
+  `path` is a `pathapi.Path`. A
   `data_hash` that still takes two parameters fails with Python's own
   `TypeError`; calling `context.not_found()` inside `.data_hash` raises
   `BackendError`. Neither
