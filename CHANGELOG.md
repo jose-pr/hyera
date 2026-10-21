@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-21
+
+### Changed
+
+- The `hyera` command steps its log level from duho's `_base_loglevel_`
+  instead of its own copy of the level table. The levels are unchanged:
+  none is WARNING, `-v` INFO, `-vv` and `-d`/`--debug` DEBUG, `-vvv` TRACE,
+  `-q` ERROR, `-qq` CRITICAL.
+
 ## [0.1.1] - 2026-10-15
 
 ### Changed
@@ -1320,7 +1329,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and fixed while widening the default's own capability, which makes the
   backstop's guarantee matter more, not less.
 
-[Unreleased]: https://github.com/jose-pr/hyera/compare/v0.1.1...main
+[Unreleased]: https://github.com/jose-pr/hyera/compare/v0.1.2...main
+[0.1.2]: https://github.com/jose-pr/hyera/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/jose-pr/hyera/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jose-pr/hyera/compare/v0.0.0...v0.1.0
 [0.0.0]: https://github.com/jose-pr/hyera/compare/v0.0.0a0...v0.0.0
