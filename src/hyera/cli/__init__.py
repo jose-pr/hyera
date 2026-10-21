@@ -117,18 +117,14 @@ if duho is not None:
         debug: _args._DebugArg = False
         """Log debug messages, same as -vv."""
 
+        _base_loglevel_ = _logging.WARNING
+
         def _verbose_loglevel_(self) -> int:
             """Puppet's own scheme from a WARNING base: none warning, -v
             info, -vv or -d/--debug debug, -vvv trace, -q error, -qq
             critical."""
-            levels = list(_duho_logging.VERBOSE_LEVELS.keys())
-            base = levels.index(_logging.WARNING)
-            index = base + self.verbose - self.quiet
-            index = max(0, min(index, len(levels) - 1))
-            level = levels[index]
-            if self.debug:
-                level = min(level, _logging.DEBUG)
-            return level
+            level = super()._verbose_loglevel_()
+            return min(level, _logging.DEBUG) if self.debug else level
 
         def _fail(self, text) -> int:
             """Log one ERROR-level line and return exit code 2.

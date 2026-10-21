@@ -79,11 +79,14 @@ def test_plain_miss_subprocess_is_silent(hiera_root):
         ([], logging.WARNING),
         (["-v"], logging.INFO),
         (["-v", "-v"], logging.DEBUG),
+        (["-v", "-v", "-v"], 5),
         (["-d"], logging.DEBUG),
+        (["-d", "-q"], logging.DEBUG),
+        (["-d", "-v", "-v", "-v"], 5),
         (["-q"], logging.ERROR),
         (["-q", "-q"], logging.CRITICAL),
     ],
-    ids=["none", "-v", "-vv", "-d", "-q", "-qq"],
+    ids=["none", "-v", "-vv", "-vvv", "-d", "-d-q", "-d-vvv", "-q", "-qq"],
 )
 def test_verbosity_levels(flags, expected_level, hiera_root, _reset_hyera_logger):
     rc = main(
